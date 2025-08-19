@@ -1,0 +1,248 @@
+# Getting Started Guide
+
+## Prerequisites
+
+Before you begin, ensure you have the following installed:
+- **Node.js** 18.0 or higher
+- **npm** or **yarn** package manager
+- **Git** for version control
+- **Chrome** browser for testing
+
+## Quick Start
+
+### 1. Clone the Repository
+```bash
+git clone https://github.com/yourusername/browser-sidebar.git
+cd browser-sidebar
+```
+
+### 2. Install Dependencies
+```bash
+npm install
+```
+
+### 3. Set Up Environment Variables
+```bash
+cp .env.example .env
+# Edit .env with your API keys (optional for development)
+```
+
+### 4. Start Development Server
+```bash
+npm run dev
+```
+
+### 5. Load Extension in Chrome
+1. Open Chrome and navigate to `chrome://extensions/`
+2. Enable "Developer mode" (top right)
+3. Click "Load unpacked"
+4. Select the `dist` folder from your project
+
+## Development Workflow
+
+### Available Scripts
+
+```bash
+# Development
+npm run dev          # Start dev server with hot reload
+npm run build        # Build for production
+npm run watch        # Build and watch for changes
+
+# Testing
+npm run test         # Run unit tests
+npm run test:ui      # Run tests with UI
+npm run test:coverage # Generate coverage report
+npm run test:e2e     # Run end-to-end tests
+
+# Code Quality
+npm run lint         # Run ESLint
+npm run format       # Format code with Prettier
+npm run typecheck    # Run TypeScript compiler checks
+```
+
+### Project Structure
+
+```
+browser-sidebar/
+├── src/
+│   ├── background/      # Service worker scripts
+│   ├── content/         # Content scripts
+│   ├── popup/           # Popup UI components
+│   ├── sidepanel/       # Side panel UI
+│   ├── components/      # Shared React components
+│   ├── providers/       # AI provider integrations
+│   ├── storage/         # Storage utilities
+│   └── utils/           # Helper functions
+├── tests/               # Test files
+├── public/              # Static assets
+│   └── icons/          # Extension icons
+└── docs/               # Documentation
+```
+
+## Stage-by-Stage Development
+
+### Stage 1: Extension Infrastructure (Current)
+Start with the foundation:
+1. Review `docs/stages/task-stage-1.md`
+2. Implement basic extension structure
+3. Set up message passing
+4. Configure testing framework
+
+### Stage 2: Chat UI
+Build the user interface:
+1. Create React components
+2. Implement chat interface
+3. Add theme support
+4. Set up state management
+
+### Stage 3: Storage & Security
+Implement secure storage:
+1. Set up Chrome storage
+2. Implement encryption
+3. Create settings management
+4. Add data persistence
+
+### Stage 4: AI Providers
+Integrate AI services:
+1. Implement provider abstraction
+2. Add OpenAI support
+3. Add Gemini support
+4. Add Anthropic support
+
+### Stage 5: Content Extraction
+Complete the feature set:
+1. Create content scripts
+2. Implement extraction logic
+3. Add multi-tab support
+4. Final integration
+
+## Common Development Tasks
+
+### Adding a New Component
+```bash
+# Create component file
+touch src/components/MyComponent.tsx
+
+# Create test file
+touch tests/components/MyComponent.test.tsx
+
+# Import and use in your code
+```
+
+### Testing Your Changes
+```bash
+# Run specific test file
+npm run test src/components/MyComponent.test.tsx
+
+# Run tests in watch mode
+npm run test -- --watch
+
+# Debug tests
+npm run test:ui
+```
+
+### Building for Production
+```bash
+# Create production build
+npm run build
+
+# Output will be in dist/ folder
+# Load this folder in Chrome for testing
+```
+
+## Debugging
+
+### Chrome DevTools
+1. Right-click extension icon → "Inspect Popup"
+2. Open DevTools → Sources tab for breakpoints
+3. Check Console for errors
+
+### Background Service Worker
+1. Go to `chrome://extensions/`
+2. Find your extension
+3. Click "Inspect views: service worker"
+
+### Content Scripts
+1. Open any webpage
+2. Open DevTools (F12)
+3. Check Console for content script logs
+
+## Troubleshooting
+
+### Extension Not Loading
+- Check `manifest.json` for syntax errors
+- Ensure all referenced files exist
+- Check Chrome console for errors
+
+### Build Errors
+```bash
+# Clear cache and rebuild
+rm -rf node_modules dist
+npm install
+npm run build
+```
+
+### Hot Reload Not Working
+- Ensure Vite server is running
+- Check that CRXJS plugin is configured
+- Manually reload extension if needed
+
+### TypeScript Errors
+```bash
+# Check for type errors
+npm run typecheck
+
+# Update TypeScript definitions
+npm install -D @types/chrome@latest
+```
+
+## Best Practices
+
+### Code Style
+- Follow TypeScript strict mode
+- Use functional React components
+- Implement proper error boundaries
+- Write tests for new features
+
+### Git Workflow
+```bash
+# Create feature branch
+git checkout -b feature/your-feature
+
+# Make changes and commit
+git add .
+git commit -m "feat: add new feature"
+
+# Push and create PR
+git push origin feature/your-feature
+```
+
+### Performance Tips
+- Lazy load heavy components
+- Use React.memo for expensive renders
+- Implement virtual scrolling for lists
+- Cache API responses appropriately
+
+## Getting Help
+
+### Resources
+- [Chrome Extension Documentation](https://developer.chrome.com/docs/extensions/mv3/)
+- [React Documentation](https://react.dev/)
+- [TypeScript Handbook](https://www.typescriptlang.org/docs/)
+- [Tailwind CSS Docs](https://tailwindcss.com/docs)
+
+### Project Documentation
+- [Product Requirements](../planning/PRD.md)
+- [Development Plan](../planning/development-plan.md)
+- [Architecture Guide](../architecture/system-architecture.md)
+- [API Design](../architecture/api-design.md)
+
+### Community
+- Create an issue on GitHub
+- Check existing issues for solutions
+- Join our Discord server (coming soon)
+
+---
+
+*Getting Started Guide Version: 1.0*  
+*Last Updated: 2025-08-19*
