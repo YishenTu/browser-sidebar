@@ -1,4 +1,4 @@
-import { render, screen } from '@tests/utils/test-utils';
+import { render, screen, waitFor, act } from '@tests/utils/test-utils';
 import userEvent from '@testing-library/user-event';
 import { vi } from 'vitest';
 import { MessageBubble } from '@/components/Chat/MessageBubble';
@@ -292,6 +292,158 @@ describe('MessageBubble', () => {
 
       // Check that hover timestamp exists
       expect(screen.getByTestId('message-timestamp-hover')).toBeInTheDocument();
+    });
+  });
+
+  describe('Copy Functionality', () => {
+    beforeEach(() => {
+      // Mock clipboard API
+      Object.defineProperty(navigator, 'clipboard', {
+        value: {
+          writeText: vi.fn().mockResolvedValue(undefined),
+        },
+        writable: true,
+        configurable: true,
+      });
+    });
+
+    afterEach(() => {
+      vi.restoreAllMocks();
+    });
+
+    test('shows copy button on hover', () => {
+      const message = createMessage();
+
+      render(<MessageBubble message={message} />);
+
+      const copyButton = screen.getByTestId('copy-button');
+      expect(copyButton).toBeInTheDocument();
+      expect(copyButton).toHaveAttribute('aria-label', 'Copy message');
+    });
+
+    test('copies message content when copy button is clicked', async () => {
+      const message = createMessage({
+        content: 'This is the content to copy',
+      });
+
+      render(<MessageBubble message={message} />);
+
+      const copyButton = screen.getByTestId('copy-button');
+      await mockUser.click(copyButton);
+
+      expect(navigator.clipboard.writeText).toHaveBeenCalledWith('This is the content to copy');
+    });
+
+    test('shows copy success feedback', async () => {
+      const message = createMessage();
+
+      render(<MessageBubble message={message} />);
+
+      const copyButton = screen.getByTestId('copy-button');
+      await mockUser.click(copyButton);
+
+      expect(screen.getByText('Copied!')).toBeInTheDocument();
+    });
+
+    test('copy feedback disappears after timeout', async () => {
+      vi.useFakeTimers();
+      const message = createMessage();
+
+      render(<MessageBubble message={message} />);
+
+      const copyButton = screen.getByTestId('copy-button');
+      await mockUser.click(copyButton);
+
+      expect(screen.getByText('Copied!')).toBeInTheDocument();
+
+      // Fast-forward time using act to properly handle state updates
+      act(() => {
+        vi.advanceTimersByTime(2000);
+      });
+
+      await waitFor(() => {
+        expect(screen.queryByText('Copied!')).not.toBeInTheDocument();
+      });
+
+      vi.useRealTimers();
+    });
+
+    test('handles copy failure gracefully', async () => {
+      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      Object.defineProperty(navigator, 'clipboard', {
+        value: {
+          writeText: vi.fn().mockRejectedValue(new Error('Copy failed')),
+        },
+        writable: true,
+        configurable: true,
+      });
+
+      const message = createMessage();
+
+      render(<MessageBubble message={message} />);
+
+      const copyButton = screen.getByTestId('copy-button');
+      await act(async () => {
+        await mockUser.click(copyButton);
+      });
+
+      await waitFor(() => {
+        expect(consoleSpy).toHaveBeenCalledWith('Failed to copy message:', expect.any(Error));
+      });
+      expect(screen.queryByText('Copied!')).not.toBeInTheDocument();
+
+      consoleSpy.mockRestore();
+    });
+
+    test('copy button is keyboard accessible', async () => {
+      const message = createMessage({
+        content: 'Keyboard accessible content',
+      });
+
+      render(<MessageBubble message={message} />);
+
+      const copyButton = screen.getByTestId('copy-button');
+      copyButton.focus();
+
+      await act(async () => {
+        await mockUser.keyboard('{Enter}');
+      });
+
+      await waitFor(() => {
+        expect(navigator.clipboard.writeText).toHaveBeenCalledWith('Keyboard accessible content');
+      });
+    });
+  });
+
+  describe('Avatar/Icon Support', () => {
+    test('shows user avatar for user messages', () => {
+      const message = createMessage({ role: 'user' });
+
+      render(<MessageBubble message={message} />);
+
+      const avatar = screen.getByTestId('message-avatar');
+      expect(avatar).toBeInTheDocument();
+      expect(avatar).toHaveAttribute('aria-label', 'User avatar');
+    });
+
+    test('shows AI avatar for assistant messages', () => {
+      const message = createMessage({ role: 'assistant' });
+
+      render(<MessageBubble message={message} />);
+
+      const avatar = screen.getByTestId('message-avatar');
+      expect(avatar).toBeInTheDocument();
+      expect(avatar).toHaveAttribute('aria-label', 'Assistant avatar');
+    });
+
+    test('shows system icon for system messages', () => {
+      const message = createMessage({ role: 'system' });
+
+      render(<MessageBubble message={message} />);
+
+      const avatar = screen.getByTestId('message-avatar');
+      expect(avatar).toBeInTheDocument();
+      expect(avatar).toHaveAttribute('aria-label', 'System message');
     });
   });
 

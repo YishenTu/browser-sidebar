@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card } from '@/components/ui/Card';
 import { cn } from '@/utils/cn';
 import { ChatMessage, MessageRole, MessageStatus } from '@/store/chat';
@@ -33,6 +33,27 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
   onRetry,
   ...props
 }) => {
+  const [copySuccess, setCopySuccess] = useState(false);
+
+  // Copy functionality
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(message.content);
+      setCopySuccess(true);
+    } catch (error) {
+      console.error('Failed to copy message:', error);
+    }
+  };
+
+  // Handle copy success timeout
+  useEffect(() => {
+    if (copySuccess) {
+      const timeout = setTimeout(() => setCopySuccess(false), 2000);
+      return () => clearTimeout(timeout);
+    }
+    return; // Return undefined when condition is not met
+  }, [copySuccess]);
+
   // Format timestamp based on options
   const formatTimestamp = (timestamp: Date) => {
     if (showFullDate) {
@@ -132,6 +153,47 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
     }
   };
 
+  // Get avatar component for different roles
+  const getAvatar = (role: MessageRole) => {
+    const avatarClasses =
+      'w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold mr-3';
+
+    switch (role) {
+      case 'user':
+        return (
+          <div
+            className={cn(avatarClasses, 'bg-blue-500 text-white')}
+            data-testid="message-avatar"
+            aria-label="User avatar"
+          >
+            U
+          </div>
+        );
+      case 'assistant':
+        return (
+          <div
+            className={cn(avatarClasses, 'bg-green-500 text-white')}
+            data-testid="message-avatar"
+            aria-label="Assistant avatar"
+          >
+            AI
+          </div>
+        );
+      case 'system':
+        return (
+          <div
+            className={cn(avatarClasses, 'bg-yellow-500 text-yellow-900')}
+            data-testid="message-avatar"
+            aria-label="System message"
+          >
+            !
+          </div>
+        );
+      default:
+        return null;
+    }
+  };
+
   return (
     <div
       className={cn('flex w-full mb-4 group', getAlignmentClasses(message.role), className)}
@@ -139,6 +201,9 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
       aria-label={getAriaLabel(message.role)}
       {...props}
     >
+      {/* Avatar - only for left-aligned messages */}
+      {message.role !== 'user' && getAvatar(message.role)}
+
       <Card
         className={cn(
           'relative p-3 rounded-lg shadow-sm',
@@ -152,6 +217,39 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
           className={cn('whitespace-pre-wrap break-words', getBubbleClasses(message.role))}
         >
           {message.content}
+        </div>
+
+        {/* Copy button and feedback */}
+        <div className="absolute -top-2 -right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+          {copySuccess ? (
+            <div className="bg-green-500 text-white px-2 py-1 rounded text-xs">Copied!</div>
+          ) : (
+            <button
+              onClick={handleCopy}
+              onKeyDown={e => {
+                if (e.key === 'Enter') {
+                  handleCopy();
+                }
+              }}
+              className="bg-gray-700 hover:bg-gray-600 text-white p-2 rounded-full shadow-lg focus:outline-none focus:ring-2 focus:ring-gray-500"
+              data-testid="copy-button"
+              aria-label="Copy message"
+              title="Copy message"
+            >
+              <svg
+                width="12"
+                height="12"
+                viewBox="0 0 24 24"
+                fill="none"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  d="M16 1H4C2.9 1 2 1.9 2 3V17H4V3H16V1ZM19 5H8C6.9 5 6 5.9 6 7V21C6 22.1 6.9 23 8 23H19C20.1 23 21 22.1 21 21V7C21 5.9 20.1 5 19 5ZM19 21H8V7H19V21Z"
+                  fill="currentColor"
+                />
+              </svg>
+            </button>
+          )}
         </div>
 
         {/* Timestamp and status */}
@@ -179,6 +277,9 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
           </time>
         )}
       </Card>
+
+      {/* Avatar - only for right-aligned messages (user) */}
+      {message.role === 'user' && <div className="ml-3">{getAvatar(message.role)}</div>}
     </div>
   );
 };

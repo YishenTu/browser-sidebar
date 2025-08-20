@@ -1,5 +1,6 @@
 @import './variables.css';
 @import './components.css';
+@import 'highlight.js/styles/github-dark.css';
 
 @tailwind base;
 @tailwind components;
@@ -160,6 +161,24 @@
 
   .dark .scrollbar-thin::-webkit-scrollbar-thumb:hover {
     background-color: rgba(75, 85, 99, 0.7);
+  }
+
+  /* Markdown-specific utilities */
+  .markdown-content {
+    @apply text-gray-800 dark:text-gray-200;
+  }
+
+  /* Override highlight.js background for better integration */
+  .markdown-content .hljs {
+    @apply bg-gray-900 text-gray-100;
+    padding: 1rem;
+    border-radius: 0.5rem;
+    margin: 0;
+  }
+
+  /* Inline code styling */
+  .markdown-content :not(pre) > code {
+    @apply bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100 px-1.5 py-0.5 rounded text-sm font-mono;
   }
 }
 
