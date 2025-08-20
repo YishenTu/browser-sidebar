@@ -1,32 +1,30 @@
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { ThemeToggle } from '../../../src/sidebar/components/ThemeToggle';
-import * as themeUtils from '../../../src/utils/theme';
+import type { Theme } from '../../../src/types/settings';
 
-// Mock the theme utilities
-vi.mock('../../../src/utils/theme', () => ({
-  getCurrentTheme: vi.fn(),
-  setTheme: vi.fn(),
+// Mock the ThemeContext
+const mockSetTheme = vi.fn();
+const mockUseTheme = vi.fn();
+
+vi.mock('../../../src/contexts/ThemeContext', () => ({
+  useTheme: () => mockUseTheme(),
 }));
 
+// Note: ThemeProviderWrapper removed as tests mock useTheme directly
+
 describe('ThemeToggle Component', () => {
-  let mockContainer: HTMLElement;
-
   beforeEach(() => {
-    // Create mock sidebar container
-    mockContainer = document.createElement('div');
-    mockContainer.className = 'ai-sidebar-container';
-    mockContainer.setAttribute('data-theme', 'light');
-    document.body.appendChild(mockContainer);
-
-    // Mock getCurrentTheme to return 'light' by default
-    vi.mocked(themeUtils.getCurrentTheme).mockReturnValue('light');
+    // Setup default theme context mock
+    mockUseTheme.mockReturnValue({
+      theme: 'light' as Theme,
+      effectiveTheme: 'light' as const,
+      isSystemTheme: false,
+      setTheme: mockSetTheme,
+    });
   });
 
   afterEach(() => {
-    if (document.body.contains(mockContainer)) {
-      document.body.removeChild(mockContainer);
-    }
     vi.clearAllMocks();
   });
 
@@ -40,7 +38,12 @@ describe('ThemeToggle Component', () => {
   });
 
   it('should show current theme as active', () => {
-    vi.mocked(themeUtils.getCurrentTheme).mockReturnValue('dark');
+    mockUseTheme.mockReturnValue({
+      theme: 'dark' as Theme,
+      effectiveTheme: 'dark' as const,
+      isSystemTheme: false,
+      setTheme: mockSetTheme,
+    });
 
     render(<ThemeToggle />);
 
@@ -54,7 +57,7 @@ describe('ThemeToggle Component', () => {
     const darkButton = screen.getByRole('button', { name: /🌙 Dark/i });
     fireEvent.click(darkButton);
 
-    expect(themeUtils.setTheme).toHaveBeenCalledWith('dark');
+    expect(mockSetTheme).toHaveBeenCalledWith('dark');
   });
 
   it('should update active state when theme changes', () => {
@@ -65,15 +68,17 @@ describe('ThemeToggle Component', () => {
     expect(lightButton).toHaveClass('theme-toggle__option--active');
 
     // Mock theme change to dark
-    vi.mocked(themeUtils.getCurrentTheme).mockReturnValue('dark');
-
-    // Click dark theme
-    const darkButton = screen.getByRole('button', { name: /🌙 Dark/i });
-    fireEvent.click(darkButton);
+    mockUseTheme.mockReturnValue({
+      theme: 'dark' as Theme,
+      effectiveTheme: 'dark' as const,
+      isSystemTheme: false,
+      setTheme: mockSetTheme,
+    });
 
     // Re-render to see state update
     rerender(<ThemeToggle />);
 
+    const darkButton = screen.getByRole('button', { name: /🌙 Dark/i });
     expect(darkButton).toHaveClass('theme-toggle__option--active');
   });
 
@@ -83,7 +88,7 @@ describe('ThemeToggle Component', () => {
     const autoButton = screen.getByRole('button', { name: /🌓 Auto/i });
     fireEvent.click(autoButton);
 
-    expect(themeUtils.setTheme).toHaveBeenCalledWith('auto');
+    expect(mockSetTheme).toHaveBeenCalledWith('auto');
   });
 
   it('should apply custom className', () => {
@@ -110,12 +115,15 @@ describe('ThemeToggle Component', () => {
     expect(screen.getByRole('button', { name: /🌓 Auto/i })).toBeInTheDocument();
   });
 
-  it('should initialize with current theme from utils', () => {
-    vi.mocked(themeUtils.getCurrentTheme).mockReturnValue('auto');
+  it('should initialize with current theme from context', () => {
+    mockUseTheme.mockReturnValue({
+      theme: 'auto' as Theme,
+      effectiveTheme: 'light' as const,
+      isSystemTheme: true,
+      setTheme: mockSetTheme,
+    });
 
     render(<ThemeToggle />);
-
-    expect(themeUtils.getCurrentTheme).toHaveBeenCalled();
 
     const autoButton = screen.getByRole('button', { name: /🌓 Auto/i });
     expect(autoButton).toHaveClass('theme-toggle__option--active');

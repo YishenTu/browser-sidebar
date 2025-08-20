@@ -476,9 +476,9 @@ describe('ChatInput Component', () => {
       const textarea = screen.getByRole('textbox');
 
       // Rapid typing
-      await user.type(textarea, 'abc', { delay: 1 });
+      await user.type(textarea, 'abc');
       await user.keyboard('{Enter}');
-      await user.type(textarea, 'def', { delay: 1 });
+      await user.type(textarea, 'def');
 
       // Should handle gracefully without errors
       expect(mockOnSend).toHaveBeenCalledWith('abc');

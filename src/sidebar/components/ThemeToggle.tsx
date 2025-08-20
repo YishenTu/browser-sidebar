@@ -1,5 +1,5 @@
-import React from 'react';
-import { getCurrentTheme, setTheme, type ThemeMode } from '../../utils/theme';
+import { useTheme } from '../../contexts/ThemeContext';
+import type { Theme } from '../../types/settings';
 
 interface ThemeToggleProps {
   className?: string;
@@ -9,36 +9,30 @@ interface ThemeToggleProps {
  * Theme toggle component that allows switching between light, dark, and auto themes
  */
 export function ThemeToggle({ className = '' }: ThemeToggleProps) {
-  const [currentTheme, setCurrentTheme] = React.useState<ThemeMode>('light');
+  const { theme, setTheme } = useTheme();
 
-  React.useEffect(() => {
-    // Get initial theme
-    setCurrentTheme(getCurrentTheme());
-  }, []);
-
-  const handleThemeChange = (newTheme: ThemeMode) => {
+  const handleThemeChange = (newTheme: Theme) => {
     setTheme(newTheme);
-    setCurrentTheme(newTheme);
   };
 
   return (
     <div className={`theme-toggle ${className}`}>
       <label className="theme-toggle__label">Theme:</label>
       <div className="theme-toggle__options">
-        {(['light', 'dark', 'auto'] as const).map(theme => (
+        {(['light', 'dark', 'auto'] as const).map(themeOption => (
           <button
-            key={theme}
+            key={themeOption}
             className={`theme-toggle__option ${
-              currentTheme === theme ? 'theme-toggle__option--active' : ''
+              theme === themeOption ? 'theme-toggle__option--active' : ''
             }`}
-            onClick={() => handleThemeChange(theme)}
-            title={`Switch to ${theme} theme`}
+            onClick={() => handleThemeChange(themeOption)}
+            title={`Switch to ${themeOption} theme`}
           >
-            {theme === 'light' && '☀️'}
-            {theme === 'dark' && '🌙'}
-            {theme === 'auto' && '🌓'}
+            {themeOption === 'light' && '☀️'}
+            {themeOption === 'dark' && '🌙'}
+            {themeOption === 'auto' && '🌓'}
             <span className="theme-toggle__text">
-              {theme.charAt(0).toUpperCase() + theme.slice(1)}
+              {themeOption.charAt(0).toUpperCase() + themeOption.slice(1)}
             </span>
           </button>
         ))}

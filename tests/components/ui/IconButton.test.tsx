@@ -1,3 +1,4 @@
+import React from 'react';
 import { screen, waitFor } from '@testing-library/react';
 import { render, userEvent } from '@tests/utils/test-utils';
 import { IconButton } from '../../../src/components/ui/IconButton';
