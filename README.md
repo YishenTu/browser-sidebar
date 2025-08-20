@@ -14,11 +14,12 @@ A privacy-focused browser extension that enables users to interact with web cont
 
 ## Tech Stack
 
-- **Frontend**: React 18 + TypeScript + Tailwind CSS
+- **Frontend**: React 18 + TypeScript
 - **Build**: Vite + CRXJS
-- **State**: Zustand
 - **Testing**: Vitest + React Testing Library
-- **AI SDKs**: OpenAI, Gemini, Anthropic
+- **Styling**: CSS with dark mode support (Tailwind ready for Stage 2)
+- **State**: Local React state (Zustand ready for Stage 2)
+- **AI SDKs**: Ready for Stage 4 integration
 
 ## Development
 

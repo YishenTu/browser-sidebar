@@ -5,6 +5,7 @@
 A privacy-focused browser extension that enables users to interact with web content through AI-powered chat. Users can capture content from single or multiple browser tabs and query AI models using their own API keys (BYOK - Bring Your Own Key).
 
 **Key Differentiators:**
+
 - Local-first privacy approach (no cloud storage)
 - Multi-tab context aggregation
 - Provider-agnostic with BYOK model
@@ -14,6 +15,7 @@ A privacy-focused browser extension that enables users to interact with web cont
 ## 2. Problem Statement
 
 Knowledge workers spend 2.5 hours daily researching across multiple browser tabs. Current solutions either:
+
 - Require copying content manually to separate AI tools
 - Send data through third-party servers (privacy concern)
 - Lock users into single AI providers
@@ -22,23 +24,26 @@ Knowledge workers spend 2.5 hours daily researching across multiple browser tabs
 **Opportunity:** Create a seamless, private, multi-source AI interaction layer directly in the browser.
 
 **Market Gap:** Current solutions suffer from:
+
 - Feature bloat with rarely-used functionality
 - Hidden costs and opaque pricing tiers
 - Forced subscriptions for basic features
 - Complex UIs that overwhelm users
 
-**Our Approach:** 
+**Our Approach:**
+
 - Minimalist design with only essential features
 - Transparent BYOK model - you only pay for what you use
 - No subscriptions, no hidden fees
-- Focus on core functionality that users actually need daily 
+- Focus on core functionality that users actually need daily
 
 ## 3. Feature Specifications
 
 ### 3.1 Tab Content Capture System
 
 #### Single Tab Capture
-- **Automatic extraction** when popup/side panel opens (all-sites host permission)
+
+- **Automatic extraction** when sidebar opens (all-sites host permission)
 - **Smart content detection**:
   - Article text (main content detection)
   - Code blocks with syntax preservation
@@ -58,6 +63,7 @@ Knowledge workers spend 2.5 hours daily researching across multiple browser tabs
 - Permissions: requires `<all_urls>` host permission granted at install to enable one-click capture across sites.
 
 #### Multi-Tab Capture
+
 - **Tab selector interface**:
   - `@` trigger for tab search
   - Fuzzy search by title/URL
@@ -92,25 +98,26 @@ Knowledge workers spend 2.5 hours daily researching across multiple browser tabs
    - Tables and structured data
    - Images (for multimodal models, it should be default, unless a clear non-multimodal model was selected)
 
-4. **Cross-Origin and Media Handling**:
+2. **Cross-Origin and Media Handling**:
    - Cross-origin iframes/PDF/canvas/shadow DOM: warn user and attempt limited extraction; provide open-in-new-tab option when blocked
    - Images: send URLs when accessible; embed data URIs for same-origin when supported; fall back to alt text/captions; log per-image failures
 
-2. **Format Preservation**:
+3. **Format Preservation**:
    - Clean markdown formatting
    - Maintain document structure
    - Preserve links and references
    - Include image URLs/data for multimodal processing
 
-3. **Token Management**:
+4. **Token Management**:
    - Cache formatted content for efficiency
 
 ### 3.2 AI Chat Interface
 
 #### Conversation Management
+
 - **Context window**:
   - Explicit context clearing button or new chat button
-  - Tab content persistence per session (session = active popup/side panel instance)
+  - Tab content persistence per session (session = active sidebar instance)
   - Optional conversation persistence across sessions (local, encrypted at rest)
   - Follow-up questions maintain context
 - **Message types**:
@@ -120,6 +127,7 @@ Knowledge workers spend 2.5 hours daily researching across multiple browser tabs
   - Source references
 
 #### Input Features
+
 - **Query composition**:
   - Multi-line input support
   - @mention for tab references
@@ -131,6 +139,7 @@ Knowledge workers spend 2.5 hours daily researching across multiple browser tabs
   - Custom saved prompts
 
 #### Response Handling
+
 - **Streaming display**:
   - Token-by-token rendering
   - Markdown rendering
@@ -141,22 +150,25 @@ Knowledge workers spend 2.5 hours daily researching across multiple browser tabs
 
 #### Provider Support
 
-| Provider | Models | Notes |
-|----------|--------|-------|
-| OpenAI | GPT-5, GPT-4.1, o3 | Response format API, multimodal |
-| Google Gemini | Gemini 2.5 Flash Lite, Gemini 2.5 Pro | Long context, multimodal |
-| Anthropic (via OpenRouter) | Claude Sonnet 4, Claude 3.5 Haiku | Analysis, coding |
-| Custom | OpenAI-compatible endpoints | Local LLMs, corporate |
+| Provider                   | Models                                | Notes                           |
+| -------------------------- | ------------------------------------- | ------------------------------- |
+| OpenAI                     | GPT-5, GPT-4.1, o3                    | Response format API, multimodal |
+| Google Gemini              | Gemini 2.5 Flash Lite, Gemini 2.5 Pro | Long context, multimodal        |
+| Anthropic (via OpenRouter) | Claude Sonnet 4, Claude 3.5 Haiku     | Analysis, coding                |
+| Custom                     | OpenAI-compatible endpoints           | Local LLMs, corporate           |
 
 Note: OpenAI should use the Response API.
 
 Common Provider Interface:
+
 - Unified streaming interface and error taxonomy across providers
 - Retries with exponential backoff per provider’s guidance
 - Reserved schema for tool/function calls to enable structured actions
 
 #### Configuration
+
 - **Multi-model provider settings**:
+
   ```javascript
   {
     "providers": {
@@ -180,7 +192,7 @@ Common Provider Interface:
         "defaultModel": "gpt-5",
         "temperature": 0.6
       },
-      
+
       "gemini": {
         "apiKey": "encrypted_key",
         "endpoint": "https://generativelanguage.googleapis.com",
@@ -204,6 +216,7 @@ Common Provider Interface:
   ```
 
 **Model Selection UI:**
+
 - Provider dropdown → Model dropdown (cascading)
 - Remember last used per domain
 
@@ -216,6 +229,7 @@ Common Provider Interface:
 ## 4. Technical Architecture
 
 ### 4.1 Extension Architecture
+
 ```
 ┌─────────────────────────────────────────┐
 │             Popup UI (React)            │
@@ -238,10 +252,12 @@ Common Provider Interface:
 ```
 
 Also supports:
-- Chrome Side Panel for persistent sessions in addition to popup
+
+- Custom sidebar for persistent sessions with resize/move capabilities
 - Storage retention windows for local caches (e.g., 15 minutes) and a “Clear all data” control
 
 ### 4.2 Technology Stack
+
 - **Frontend**: React 18 + TypeScript + Tailwind CSS
 - **State Management**: Zustand
 - **Build**: Vite + CRXJS
@@ -249,6 +265,7 @@ Also supports:
 - **Polyfills**: webextension-polyfill
 
 ### 4.3 Data Flow
+
 ```mermaid
 sequenceDiagram
     User->>Popup: Open extension
@@ -266,6 +283,7 @@ sequenceDiagram
 ## 5. Security & Privacy
 
 ### 5.1 Data Handling
+
 - **Zero-logging policy**: No user queries logged
 - **Local-only storage**: No cloud sync
 - **Encryption**:
@@ -276,6 +294,7 @@ sequenceDiagram
 - Optional anonymized telemetry toggle (default off) with clear list of collected fields
 
 ### 5.2 Content Security
+
 - **Blocked domains** (configurable):
   - Banking sites (default list)
   - Healthcare portals
@@ -287,6 +306,7 @@ sequenceDiagram
   - Email/phone masking option
 
 ### 5.3 API Security
+
 - **Rate limiting**:
   - Per-provider quotas
   - Backoff strategies
@@ -299,15 +319,17 @@ sequenceDiagram
 ## 6. Performance Requirements
 
 ### Metrics
-| Metric | Target | Measurement |
-|--------|--------|-------------|
-| Extension load time | < 100ms | Cold start to UI ready |
-| Content extraction | < 500ms | DOM to structured text |
-| First token latency | < 2s | Query sent to first response |
-| Memory usage | < 50MB | Baseline memory footprint |
-| Multi-tab extraction | < 3s | 5 tabs parallel extraction |
+
+| Metric               | Target  | Measurement                  |
+| -------------------- | ------- | ---------------------------- |
+| Extension load time  | < 100ms | Cold start to UI ready       |
+| Content extraction   | < 500ms | DOM to structured text       |
+| First token latency  | < 2s    | Query sent to first response |
+| Memory usage         | < 50MB  | Baseline memory footprint    |
+| Multi-tab extraction | < 3s    | 5 tabs parallel extraction   |
 
 ### Optimization Strategies
+
 - Lazy loading of UI components
 - Content extraction caching (5 min TTL)
 - Request debouncing
@@ -317,7 +339,8 @@ sequenceDiagram
 ## 7. User Experience
 
 ### 7.1 UI Specifications
-- **Popup dimensions**: 
+
+- **Popup dimensions**:
   - Default: 400x600px
   - Resizable: 350-500px width
   - Full height: 100vh max
@@ -329,6 +352,7 @@ sequenceDiagram
 - Keyboard shortcuts: open side panel (configurable), send (Cmd/Ctrl+Enter), cycle @-mention tabs
 
 ### 7.2 Accessibility
+
 - WCAG 2.1 AA compliance
 - Keyboard navigation
 - Screen reader support
@@ -338,6 +362,7 @@ sequenceDiagram
 - Define focus order, ARIA roles for chat list and code blocks; ensure high-contrast theme passes WCAG AA
 
 ### 7.3 Onboarding Flow
+
 1. **Welcome screen**: Value proposition
 2. **Provider selection**: Choose AI provider
 3. **API key input**: Secure entry and validation
@@ -347,24 +372,27 @@ sequenceDiagram
 ## 8. Error Handling
 
 ### Error Matrix
-| Error Type | User Message | Recovery Action |
-|------------|--------------|-----------------|
-| Extraction failed | "Unable to read page content" | Retry with fallback method |
-| API key invalid | "Check your API key" | Link to settings |
-| Rate limit exceeded | "Too many requests" | Show cooldown timer |
-| Network timeout | "Connection issue" | Retry button |
-| Content too large | "Content exceeds limit" | Offer truncation options |
-| Provider error | "AI service unavailable" | Suggest alternative provider |
+
+| Error Type          | User Message                  | Recovery Action              |
+| ------------------- | ----------------------------- | ---------------------------- |
+| Extraction failed   | "Unable to read page content" | Retry with fallback method   |
+| API key invalid     | "Check your API key"          | Link to settings             |
+| Rate limit exceeded | "Too many requests"           | Show cooldown timer          |
+| Network timeout     | "Connection issue"            | Retry button                 |
+| Content too large   | "Content exceeds limit"       | Offer truncation options     |
+| Provider error      | "AI service unavailable"      | Suggest alternative provider |
 
 ## 9. Success Metrics
 
 ### Primary KPIs
+
 - **Activation rate**: 50% complete first query
 - **Retention**: 30% WAU/MAU ratio
 - **Engagement**: 5 queries per session average
 - **Performance**: 95% queries < 5s total time
 
 ### Secondary Metrics
+
 - Provider distribution
 - Feature usage (multi-tab vs single)
 - Error rates by type
@@ -374,6 +402,7 @@ sequenceDiagram
 ## 10. Testing Strategy
 
 ### Test Coverage
+
 - **Unit tests**: 90% coverage
 - **Integration tests**: Critical paths
 - **E2E tests**: User journeys
@@ -381,6 +410,7 @@ sequenceDiagram
 - **Security tests**: Penetration testing
 
 ### Browser Compatibility
+
 - Chrome 120+
 - Edge 120+
 - Brave latest
@@ -388,6 +418,7 @@ sequenceDiagram
 - Arc Browser latest
 
 ### Test Scenarios
+
 1. Single tab extraction on news site
 2. Multi-tab with 10+ tabs
 3. SPA content extraction
@@ -396,15 +427,15 @@ sequenceDiagram
 6. Large content truncation
 7. Network failure recovery
 
-
-
 ### B. References
+
 - [Chrome Extension Manifest V3](https://developer.chrome.com/docs/extensions/mv3/)
 - [OpenAI API Documentation](https://platform.openai.com/docs)
 - [Anthropic Claude API](https://docs.anthropic.com/claude/reference)
 - [Web Content Extraction Best Practices](https://github.com/postlight/mercury-parser)
 
 ### C. Technical Dependencies
+
 ```json
 {
   "dependencies": {
@@ -420,7 +451,7 @@ sequenceDiagram
 
 ---
 
-*Document Version: 1.0*  
-*Last Updated: 2025-08-19*  
-*Owner: Product Team*  
-*Status: In Review*
+_Document Version: 1.0_  
+_Last Updated: 2025-08-19_  
+_Owner: Product Team_  
+_Status: In Review_

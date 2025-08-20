@@ -59,6 +59,27 @@ export const Sidebar: React.FC = () => {
     chrome.runtime.sendMessage({ type: 'sidebar-closed' });
   }, []);
 
+  // Handle Escape key to close sidebar
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        handleClose();
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [handleClose]);
+
+  // Auto-focus sidebar when opened for accessibility
+  useEffect(() => {
+    const sidebar = document.querySelector('.ai-sidebar-overlay') as HTMLElement;
+    if (sidebar) {
+      sidebar.setAttribute('tabindex', '-1');
+      sidebar.focus();
+    }
+  }, []);
+
   const handleHeaderMouseDown = useCallback(
     (e: React.MouseEvent) => {
       // Only start dragging if not clicking on close button
@@ -80,6 +101,9 @@ export const Sidebar: React.FC = () => {
   return (
     <div
       className="ai-sidebar-overlay"
+      role="dialog"
+      aria-label="AI Browser Sidebar"
+      aria-modal="false"
       style={{
         left: `${position.x}px`,
         top: `${position.y}px`,
@@ -97,7 +121,12 @@ export const Sidebar: React.FC = () => {
           style={{ cursor: isDragging ? 'grabbing' : 'grab' }}
         >
           <h2>AI Browser Sidebar</h2>
-          <button onClick={handleClose} className="ai-sidebar-close">
+          <button
+            onClick={handleClose}
+            className="ai-sidebar-close"
+            aria-label="Close sidebar"
+            title="Close (Esc)"
+          >
             ×
           </button>
         </div>

@@ -1,7 +1,9 @@
 # AI Browser Sidebar Extension - Task Execution Blueprint
 
 ## Project Overview
-Building a privacy-focused Chrome extension that enables AI-powered chat with web content using BYOK (Bring Your Own Key) model. The project follows a UI-first approach with Test-Driven Development (TDD) methodology.
+Building a privacy-focused browser extension that enables AI-powered chat with web content using BYOK (Bring Your Own Key) model. The project follows a UI-first approach with Test-Driven Development (TDD) methodology.
+
+Architecture: The extension uses ONLY a custom injected React sidebar (no popup, no Chrome sidepanel) for universal browser compatibility. The sidebar is resizable (300-800px width), draggable, and injected by the content script. Communication flow: Extension Icon Click → Background Service Worker → Content Script → Sidebar React App.
 
 ## Execution Guidelines for Sub-Agents
 - **Follow TDD cycle**: Write tests first (RED) → Implement code (GREEN) → Refactor (REFACTOR)
@@ -22,24 +24,25 @@ Building a privacy-focused Chrome extension that enables AI-powered chat with we
 - **E2E Tests**: For critical user journeys (Playwright)
 
 ## Progress Tracking
-- [ ] Stage 1: Extension Infrastructure (0/15 tasks)
+- [x] Stage 1: Extension Infrastructure (15/15 tasks) ✅ COMPLETED
 - [ ] Stage 2: Chat Panel UI (0/24 tasks)
 - [ ] Stage 3: Storage & Security (0/18 tasks)
 - [ ] Stage 4: AI Provider System (0/22 tasks)
 - [ ] Stage 5: Tab Content Extraction (0/21 tasks)
 
-**Total Progress: 0/100 tasks**
+**Total Progress: 15/100 tasks**
 
 ---
 
-## STAGE 1: EXTENSION INFRASTRUCTURE
+## STAGE 1: EXTENSION INFRASTRUCTURE ✅
+Deliverable highlight: Complete custom sidebar infrastructure with resizable (300-800px width) and draggable functionality. Message passing system between background service worker, content script, and React sidebar. Cross-browser compatible architecture using only custom injected UI.
 
-### Phase 1.1: Project Initialization
+### Phase 1.1: Project Initialization ✅
 **Synchronization Point: All tasks must complete before Phase 1.2**
 
 🔄 **Parallelizable Tasks:**
 
-- [ ] **Task 1.1.1a** - Initialize NPM Project 🧪
+- [x] **Task 1.1.1a** - Initialize NPM Project 🧪
   - Prerequisites: None
   - Tests First:
     - Test that package.json exists and is valid
@@ -52,7 +55,7 @@ Building a privacy-focused Chrome extension that enables AI-powered chat with we
     - `npm run test` script
   - Acceptance: `npm init` completes, scripts are defined
 
-- [ ] **Task 1.1.1b** - Setup Vite and CRXJS
+- [x] **Task 1.1.1b** - Setup Vite and CRXJS
   - Prerequisites: Task 1.1.1a
   - Tests First:
     - Test that vite.config.ts exports valid configuration
@@ -64,7 +67,7 @@ Building a privacy-focused Chrome extension that enables AI-powered chat with we
     - Build output configuration
   - Acceptance: `npm run dev` starts without errors
 
-- [ ] **Task 1.1.1c** - Create Folder Structure
+- [x] **Task 1.1.1c** - Create Folder Structure
   - Prerequisites: Task 1.1.1a
   - Tests First:
     - Test that all required directories exist
@@ -76,7 +79,7 @@ Building a privacy-focused Chrome extension that enables AI-powered chat with we
     - `.gitignore` file
   - Acceptance: All directories created
 
-- [ ] **Task 1.1.2a** - TypeScript Configuration 🧪
+- [x] **Task 1.1.2a** - TypeScript Configuration 🧪
   - Prerequisites: Task 1.1.1a
   - Tests First:
     - Test that tsconfig.json is valid
@@ -89,7 +92,7 @@ Building a privacy-focused Chrome extension that enables AI-powered chat with we
     - Type checking scripts
   - Acceptance: TypeScript compiles without errors
 
-- [ ] **Task 1.1.2b** - ESLint Setup 🧪
+- [x] **Task 1.1.2b** - ESLint Setup 🧪
   - Prerequisites: Task 1.1.2a
   - Tests First:
     - Test ESLint configuration is valid
@@ -101,7 +104,7 @@ Building a privacy-focused Chrome extension that enables AI-powered chat with we
     - Accessibility rules
   - Acceptance: ESLint runs without configuration errors
 
-- [ ] **Task 1.1.2c** - Prettier and Pre-commit Hooks
+- [x] **Task 1.1.2c** - Prettier and Pre-commit Hooks
   - Prerequisites: Task 1.1.2b
   - Tests First:
     - Test Prettier formats correctly
@@ -113,7 +116,7 @@ Building a privacy-focused Chrome extension that enables AI-powered chat with we
     - lint-staged configuration
   - Acceptance: Pre-commit hooks format and lint code
 
-- [ ] **Task 1.1.3a** - Manifest Schema and Validation 🧪
+- [x] **Task 1.1.3a** - Manifest Schema and Validation 🧪
   - Prerequisites: Task 1.1.2a
   - Tests First:
     - Test manifest.json against Chrome schema
@@ -124,7 +127,7 @@ Building a privacy-focused Chrome extension that enables AI-powered chat with we
     - Manifest validation script
   - Acceptance: Manifest passes Chrome validation
 
-- [ ] **Task 1.1.3b** - Manifest Implementation
+- [x] **Task 1.1.3b** - Manifest Implementation
   - Prerequisites: Task 1.1.3a
   - Description: Create actual manifest.json
   - Deliverables:
@@ -133,7 +136,7 @@ Building a privacy-focused Chrome extension that enables AI-powered chat with we
     - Content script registration
   - Acceptance: Extension loads in Chrome
 
-- [ ] **Task 1.1.3c** - Icon Assets
+- [x] **Task 1.1.3c** - Icon Assets
   - Prerequisites: Task 1.1.3b
   - Tests First:
     - Test all required icon sizes exist
@@ -144,12 +147,12 @@ Building a privacy-focused Chrome extension that enables AI-powered chat with we
     - Icons referenced in manifest
   - Acceptance: Icons display in Chrome
 
-### Phase 1.2: Test Infrastructure
+### Phase 1.2: Test Infrastructure ✅
 **Synchronization Point: Testing framework must be ready**
 
 ⚡ **Sequential Tasks:**
 
-- [ ] **Task 1.2.1** - Vitest Configuration 🧪
+- [x] **Task 1.2.1** - Vitest Configuration 🧪
   - Prerequisites: Task 1.1.2a
   - Description: Setup Vitest for unit testing
   - Deliverables:
@@ -158,7 +161,7 @@ Building a privacy-focused Chrome extension that enables AI-powered chat with we
     - Coverage configuration
   - Acceptance: `npm run test` executes successfully
 
-- [ ] **Task 1.2.2** - React Testing Library Setup 🧪
+- [x] **Task 1.2.2** - React Testing Library Setup 🧪
   - Prerequisites: Task 1.2.1
   - Description: Configure testing for React components
   - Deliverables:
@@ -167,7 +170,7 @@ Building a privacy-focused Chrome extension that enables AI-powered chat with we
     - Mock providers
   - Acceptance: Can test React components
 
-- [ ] **Task 1.2.3** - Chrome API Mocks 🧪
+- [x] **Task 1.2.3** - Chrome API Mocks 🧪
   - Prerequisites: Task 1.2.1
   - Description: Create mocks for Chrome extension APIs
   - Deliverables:
@@ -176,12 +179,12 @@ Building a privacy-focused Chrome extension that enables AI-powered chat with we
     - Runtime mocks
   - Acceptance: Can test extension-specific code
 
-### Phase 1.3: Core Extension Components
+### Phase 1.3: Core Extension Components ✅
 **Synchronization Point: Review after completion**
 
 ⚡ **Sequential Tasks:**
 
-- [ ] **Task 1.3.1** - Message Types and Protocol 🧪
+- [x] **Task 1.3.1** - Message Types and Protocol 🧪
   - Prerequisites: Task 1.1.2a
   - Tests First:
     - Test message type definitions compile
@@ -193,36 +196,40 @@ Building a privacy-focused Chrome extension that enables AI-powered chat with we
     - Message factory functions
   - Acceptance: Type-safe message definitions
 
-- [ ] **Task 1.3.2** - Background Service Worker 🧪
+- [x] **Task 1.3.2** - Background Service Worker 🧪
   - Prerequisites: Task 1.3.1
   - Tests First:
     - Test service worker initialization
     - Test message handler registration
-    - Test keep-alive mechanism
-  - Description: Implement background service worker
+    - Test sidebar state management
+  - Description: Implement background service worker with tab-specific sidebar state
   - Deliverables:
-    - `src/background/index.ts` - Worker entry
-    - `src/background/messageHandler.ts` - Routing
-    - `src/background/keepAlive.ts` - Persistence
+    - `src/background/index.ts` - Worker entry with action listener
+    - `src/background/messageHandler.ts` - Message routing
+    - `src/background/sidebarManager.ts` - Tab-specific state management
+    - `src/background/keepAlive.ts` - Service worker persistence
     - `tests/background/messageHandler.test.ts`
-  - Acceptance: Service worker handles messages
+  - Acceptance: Service worker manages sidebar state per tab
 
-- [ ] **Task 1.3.3** - Message Passing Utilities 🧪
+- [x] **Task 1.3.3** - Sidebar Integration and Content Script 🧪
   - Prerequisites: Task 1.3.2
   - Tests First:
-    - Test message sending functions
-    - Test response handling
-    - Test error propagation
-  - Description: Create message passing utilities
+    - Test sidebar injection and mounting
+    - Test resize and drag functionality
+    - Test toggle behavior via custom events
+  - Description: Implement content script that injects and manages the custom sidebar
   - Deliverables:
+    - `src/content/index.ts` - Content script with sidebar injection
+    - `src/sidebar/index.tsx` - React app mount/unmount logic
+    - `src/sidebar/Sidebar.tsx` - Resizable, draggable sidebar container
     - `src/utils/messaging.ts` - Message utilities
-    - `tests/utils/messaging.test.ts`
-    - Error handling utilities
-  - Acceptance: Messages pass between components
+    - `tests/integration/background-content.test.ts`
+  - Acceptance: Custom sidebar injects, resizes, drags, and toggles correctly
 
 ---
 
 ## STAGE 2: CHAT PANEL UI
+Building the React-based chat interface within the custom sidebar container. The sidebar foundation (resize, drag, toggle) is complete from Stage 1.
 
 ### Phase 2.1: UI Foundation
 **Synchronization Point: Design system must be established first**

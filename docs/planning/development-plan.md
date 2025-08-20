@@ -32,7 +32,7 @@ A privacy-focused browser extension that enables users to interact with web cont
 **Testing:**
 
 - Verify extension installation
-- Test popup opening/closing
+- Test sidebar opening/closing
 - Test side panel activation
 - Verify message passing works
 
@@ -215,13 +215,10 @@ browser-sidebar/
 │   │   ├── extractor.ts       # DOM extraction logic
 │   │   ├── monitor.ts         # Dynamic content monitoring
 │   │   └── selection.ts       # Selection handling
-│   ├── popup/
-│   │   ├── index.tsx          # Popup entry
-│   │   ├── App.tsx            # Main popup app
-│   │   └── components/        # Popup-specific components
-│   ├── sidepanel/
-│   │   ├── index.tsx          # Side panel entry
-│   │   └── App.tsx            # Side panel app
+│   ├── sidebar/
+│   │   ├── index.tsx          # Custom sidebar entry
+│   │   ├── Sidebar.tsx        # Main sidebar component
+│   │   └── styles/            # Sidebar-specific styles
 │   ├── components/
 │   │   ├── Chat/
 │   │   │   ├── ChatMessage.tsx

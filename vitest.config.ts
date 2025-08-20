@@ -11,7 +11,16 @@ export default defineConfig({
     coverage: {
       provider: 'v8',
       reporter: ['text', 'json', 'html'],
-      exclude: ['node_modules/', 'tests/', '*.config.ts', 'dist/', '.eslintrc.js', 'src/types/'],
+      exclude: [
+        'node_modules/**',
+        'tests/**',
+        '**/*.config.{js,ts}',
+        'dist/**',
+        '.eslintrc.js',
+        'src/types/**',
+        '**/*.d.ts',
+        '**/index.{js,ts,tsx}', // Exclude entry points
+      ],
     },
   },
   resolve: {
@@ -25,6 +34,7 @@ export default defineConfig({
       '@services': resolve(__dirname, './src/services'),
       '@types': resolve(__dirname, './src/types'),
       '@utils': resolve(__dirname, './src/utils'),
+      '@tests': resolve(__dirname, './tests'),
     },
   },
 });

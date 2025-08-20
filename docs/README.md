@@ -74,12 +74,12 @@ Development and contribution guides.
 
 | Stage                   | Tasks   | Status             | Progress |
 | ----------------------- | ------- | ------------------ | -------- |
-| Stage 1: Infrastructure | 15      | 🚧 Ready           | 0%       |
-| Stage 2: Chat UI        | 24      | ⏳ Planned         | 0%       |
+| Stage 1: Infrastructure | 15      | ✅ Completed       | 100%     |
+| Stage 2: Chat UI        | 24      | 🚧 In Progress     | 0%       |
 | Stage 3: Storage        | 18      | ⏳ Planned         | 0%       |
 | Stage 4: AI Providers   | 22      | ⏳ Planned         | 0%       |
 | Stage 5: Extraction     | 21      | ⏳ Planned         | 0%       |
-| **Total**               | **100** | **In Development** | **0%**   |
+| **Total**               | **100** | **In Development** | **15%**  |
 
 ## 🎯 Key Features
 

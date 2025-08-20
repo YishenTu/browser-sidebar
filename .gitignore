@@ -77,3 +77,5 @@ docs/.vitepress/dist/
 *.bak
 *.swp
 *~
+
+.claude/

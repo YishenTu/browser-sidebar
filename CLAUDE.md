@@ -117,13 +117,13 @@ src/
 - **Better UX control** with resize/move capabilities
 - **Single codebase** instead of popup + sidepanel variants
 
-### Dynamic Content Script Injection
+### Content Script Loading
 
-Content scripts are injected on-demand via `chrome.scripting.executeScript` to:
+Content scripts are statically defined in manifest.json and load automatically on all pages. The content script:
 
-- Reduce memory footprint
-- Avoid conflicts on system pages
-- Support dynamic loading after installation
+- Waits for sidebar toggle messages from background
+- Injects sidebar HTML/CSS on first activation
+- Handles subsequent show/hide toggles efficiently
 
 ### Build Configuration
 

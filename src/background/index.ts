@@ -1,67 +1,140 @@
+/**
+ * @file Background Service Worker
+ * 
+ * Main entry point for the extension's background service worker.
+ * Initializes all subsystems and handles core extension functionality.
+ */
+
+import { createDefaultMessageHandler } from './messageHandler.js';
+import { startKeepAlive } from './keepAlive.js';
+import { getSidebarManager } from './sidebarManager.js';
+import { createMessage, Message, ToggleSidebarPayload } from '../types/messages.js';
+
 console.log('Background service worker initialized');
 
-// Track sidebar state per tab
-const sidebarStates = new Map<number, boolean>();
+// Initialize subsystems
+const messageHandler = createDefaultMessageHandler();
+const sidebarManager = getSidebarManager({ verbose: true });
 
-chrome.runtime.onInstalled.addListener(details => {
-  console.log('Extension installed:', details);
+/**
+ * Initialize the service worker and set up all handlers
+ */
+function initializeServiceWorker(): void {
+  // Register sidebar-related message handlers
+  messageHandler.registerHandler(
+    'TOGGLE_SIDEBAR',
+    (message, sender) => sidebarManager.handleToggleSidebar(message as Message<ToggleSidebarPayload>, sender),
+    'Toggle sidebar visibility'
+  );
+
+  messageHandler.registerHandler(
+    'CLOSE_SIDEBAR',
+    (message, sender) => sidebarManager.handleCloseSidebar(message as Message<void>, sender),
+    'Close sidebar'
+  );
+
+  // Start keep-alive system to prevent service worker suspension
+  const keepAliveStarted = startKeepAlive({
+    interval: 20000, // 20 seconds
+    verbose: false, // Set to true for debugging
+  });
+
+  if (keepAliveStarted) {
+    console.log('Keep-alive system started');
+  } else {
+    console.warn('Keep-alive system failed to start');
+  }
+
+  console.log('Service worker initialization complete');
+  console.log('Registered message types:', messageHandler.getRegisteredTypes());
+}
+
+/**
+ * Handle extension installation and updates
+ */
+chrome.runtime.onInstalled.addListener(async (details) => {
+  console.log('Extension installed/updated:', details);
+
+  try {
+    // Set default extension settings
+    await chrome.storage.local.set({
+      'extension-version': chrome.runtime.getManifest().version,
+      'install-timestamp': Date.now(),
+      'sidebar-settings': {
+        defaultWidth: 400,
+        defaultPosition: 'right',
+        rememberState: true,
+      },
+    });
+
+    console.log('Default settings initialized');
+
+    // Show installation/update notification if needed
+    if (details.reason === 'install') {
+      console.log('Extension installed for the first time');
+    } else if (details.reason === 'update') {
+      console.log('Extension updated from version:', details.previousVersion);
+    }
+
+  } catch (error) {
+    console.error('Error during installation setup:', error);
+  }
 });
 
-// Handle extension icon click
-chrome.action.onClicked.addListener(async tab => {
-  if (!tab.id) return;
-
-  // Check if this is a restricted page
-  if (
-    tab.url?.startsWith('chrome://') ||
-    tab.url?.startsWith('chrome-extension://') ||
-    tab.url?.startsWith('edge://') ||
-    tab.url?.startsWith('about:') ||
-    tab.url?.startsWith('file://')
-  ) {
-    console.log('Cannot inject sidebar on browser pages');
+/**
+ * Handle extension icon click - toggle sidebar
+ */
+chrome.action.onClicked.addListener(async (tab) => {
+  if (!tab.id) {
+    console.warn('No tab ID available for action click');
     return;
   }
 
-  // Get current state for this tab
-  const isOpen = sidebarStates.get(tab.id) || false;
+  console.log('Extension icon clicked for tab:', tab.id);
 
   try {
-    // Try to send message to content script
-    await chrome.tabs.sendMessage(tab.id, {
-      type: isOpen ? 'close-sidebar' : 'toggle-sidebar',
+    // Create a toggle sidebar message
+    const toggleMessage = createMessage<ToggleSidebarPayload>({
+      type: 'TOGGLE_SIDEBAR',
+      source: 'background',
+      target: 'content',
     });
 
-    // Update state
-    sidebarStates.set(tab.id, !isOpen);
-  } catch (error) {
-    // Content script not loaded - this happens when the page was loaded before the extension
-    console.log(
-      'Content script not loaded. This page needs to be refreshed for the sidebar to work.'
-    );
+    // Handle through sidebar manager (which will handle content script injection if needed)
+    await sidebarManager.handleToggleSidebar(toggleMessage, { tab });
 
-    // Note: Dynamic injection of content scripts is complex with Vite/CRXJS
-    // The manifest handles injection for new pages
-    // For existing pages, a refresh is required
+  } catch (error) {
+    console.error('Error handling extension icon click:', error);
   }
 });
 
-// Handle messages from content script
+/**
+ * Handle messages from content script and other components
+ */
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-  console.log('Message received:', message, 'from:', sender);
-
-  if (message.type === 'sidebar-closed' && sender.tab?.id) {
-    // Update state when sidebar is closed via X button
-    sidebarStates.set(sender.tab.id, false);
-  }
-
-  sendResponse({ status: 'received' });
+  // Handle the message through the message handler registry
+  messageHandler.handleMessage(message, sender, sendResponse);
+  
+  // Return true to indicate we will send a response asynchronously
   return true;
 });
 
-// Clean up state when tab is closed
-chrome.tabs.onRemoved.addListener(tabId => {
-  sidebarStates.delete(tabId);
+/**
+ * Handle service worker startup
+ */
+chrome.runtime.onStartup.addListener(() => {
+  console.log('Service worker started');
+  initializeServiceWorker();
 });
+
+/**
+ * Handle service worker suspension (for debugging)
+ */
+self.addEventListener('beforeunload', () => {
+  console.log('Service worker being suspended');
+});
+
+// Initialize the service worker
+initializeServiceWorker();
 
 export {};
