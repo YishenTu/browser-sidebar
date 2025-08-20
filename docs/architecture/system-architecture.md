@@ -8,28 +8,34 @@ The AI Browser Sidebar Extension follows a modular Chrome Extension Manifest V3 
 
 ```
 ┌─────────────────────────────────────────────────────┐
-│                   User Interface                     │
-│  ┌──────────────┐           ┌──────────────┐       │
-│  │   Popup UI   │           │  Side Panel  │       │
-│  │   (React)    │           │   (React)    │       │
-│  └──────┬───────┘           └──────┬───────┘       │
-└─────────┼───────────────────────────┼───────────────┘
-          │                           │
-          └──────────┬────────────────┘
+│              Custom Sidebar (React)                  │
+│  ┌────────────────────────────────────────────┐    │
+│  │           Main Sidebar Container           │    │
+│  │  - Resizable & Movable UI                  │    │
+│  │  - Chat Interface                          │    │
+│  │  - Settings Panel                          │    │
+│  └──────────────────┬─────────────────────────┘    │
+└────────────────────┼───────────────────────────────┘
+                     │
+          ┌──────────▼──────────┐
+          │   Content Script     │
+          │  - Sidebar Injection │
+          │  - Event Bridge      │
+          └──────────┬──────────┘
                      │
           ┌──────────▼──────────┐
           │  Background Service  │
           │     (Worker)         │
           │  - Message Router    │
           │  - State Manager     │
-          │  - API Handler       │
+          │  - Tab Tracking      │
           └──────────┬──────────┘
                      │
        ┌─────────────┼─────────────┐
        │             │             │
 ┌──────▼──────┐ ┌───▼────┐ ┌──────▼──────┐
 │   Content    │ │Storage │ │ AI Provider │
-│   Scripts    │ │ Layer  │ │   System    │
+│  Extraction  │ │ Layer  │ │   System    │
 │              │ │        │ │             │
 │ - Extractor  │ │- Chrome│ │ - OpenAI    │
 │ - Monitor    │ │- Index │ │ - Gemini    │
@@ -39,31 +45,36 @@ The AI Browser Sidebar Extension follows a modular Chrome Extension Manifest V3 
 
 ## Core Components
 
-### 1. User Interface Layer
-- **Popup UI**: Quick access interface (400x600px)
-- **Side Panel**: Persistent chat interface
-- **Shared Components**: Reusable React components
-- **State Management**: Zustand for UI state
+### 1. User Interface Layer (Sidebar)
+
+- **Custom Sidebar**: Injected floating panel (resizable/movable)
+- **React Components**: Modular UI components in `/sidebar/components`
+- **Custom Hooks**: Reusable logic in `/sidebar/hooks`
+- **State Management**: Local React state (Zustand in Stage 2)
 
 ### 2. Background Service Worker
+
 - **Message Router**: Handles all inter-component communication
 - **State Coordinator**: Manages global extension state
 - **API Gateway**: Interfaces with AI providers
 - **Keep-Alive**: Maintains service worker persistence
 
 ### 3. Content Scripts
+
 - **DOM Extractor**: Extracts webpage content
 - **Mutation Monitor**: Watches for dynamic changes
 - **Selection Handler**: Manages text selection
 - **Context Markers**: Preserves selection context
 
 ### 4. Storage Layer
+
 - **Chrome Storage API**: Settings and small data
 - **IndexedDB**: Conversation history
 - **Encryption Service**: AES-256-GCM for API keys
 - **Cache Manager**: TTL-based caching
 
 ### 5. AI Provider System
+
 - **Provider Interface**: Unified API abstraction
 - **Stream Handler**: SSE/WebSocket streaming
 - **Rate Limiter**: Request throttling
@@ -72,6 +83,7 @@ The AI Browser Sidebar Extension follows a modular Chrome Extension Manifest V3 
 ## Data Flow
 
 ### 1. Content Extraction Flow
+
 ```
 User Action → Content Script → Background Worker → Storage
                      ↓
@@ -83,6 +95,7 @@ User Action → Content Script → Background Worker → Storage
 ```
 
 ### 2. AI Chat Flow
+
 ```
 User Input → UI → Background Worker → AI Provider
                         ↓
@@ -96,6 +109,7 @@ User Input → UI → Background Worker → AI Provider
 ```
 
 ### 3. Multi-Tab Aggregation Flow
+
 ```
 @-mention → Tab Selector → Parallel Extraction → Context Aggregation → AI Request
 ```
@@ -103,6 +117,7 @@ User Input → UI → Background Worker → AI Provider
 ## Message Protocol
 
 ### Message Structure
+
 ```typescript
 interface Message {
   id: string;
@@ -115,6 +130,7 @@ interface Message {
 ```
 
 ### Message Types
+
 - `EXTRACT_CONTENT`: Request content extraction
 - `CONTENT_EXTRACTED`: Content extraction complete
 - `SEND_TO_AI`: Send message to AI provider
@@ -125,16 +141,19 @@ interface Message {
 ## Security Model
 
 ### API Key Protection
+
 - Encrypted at rest using AES-256-GCM
 - Never transmitted to third parties
 - Isolated in secure storage
 
 ### Content Security
+
 - Content scripts run in isolated world
 - XSS protection via content sanitization
 - CSP headers enforced
 
 ### Data Privacy
+
 - Local-only storage
 - No telemetry by default
 - User-controlled data lifecycle
@@ -142,6 +161,7 @@ interface Message {
 ## Performance Considerations
 
 ### Optimization Strategies
+
 - Lazy loading of UI components
 - Content extraction caching (5 min TTL)
 - Request debouncing (300ms)
@@ -149,6 +169,7 @@ interface Message {
 - WebWorker for heavy processing
 
 ### Resource Limits
+
 - Memory budget: 50MB baseline
 - Storage quota: 10MB Chrome storage
 - IndexedDB: Browser-dependent (typically 50% of free disk)
@@ -157,15 +178,18 @@ interface Message {
 ## Browser Compatibility
 
 ### Primary Support
+
 - Chrome 120+
 - Edge 120+ (Chromium)
 
 ### Secondary Support
+
 - Brave (latest)
 - Opera (latest)
 - Arc Browser (latest)
 
 ### API Requirements
+
 - Manifest V3
 - Service Workers
 - Chrome Storage API
@@ -175,6 +199,7 @@ interface Message {
 ## Development Patterns
 
 ### Component Structure
+
 ```
 src/
 ├── components/     # Presentational components
@@ -185,12 +210,14 @@ src/
 ```
 
 ### State Management
+
 - **UI State**: Zustand stores
 - **Persistent State**: Chrome Storage
 - **Conversation History**: IndexedDB
 - **Temporary Cache**: In-memory with TTL
 
 ### Error Handling
+
 - Try-catch at boundaries
 - Error boundaries in React
 - Graceful degradation
@@ -199,6 +226,7 @@ src/
 ## Deployment Architecture
 
 ### Build Process
+
 1. TypeScript compilation
 2. React bundling
 3. Tailwind CSS generation
@@ -206,11 +234,12 @@ src/
 5. Source map generation (dev only)
 
 ### Distribution
+
 - Chrome Web Store (primary)
 - Edge Add-ons Store
 - Direct CRX distribution (enterprise)
 
 ---
 
-*Architecture Version: 1.0*  
-*Last Updated: 2025-08-19*
+_Architecture Version: 1.0_  
+_Last Updated: 2025-08-19_

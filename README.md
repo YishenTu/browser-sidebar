@@ -9,7 +9,8 @@ A privacy-focused browser extension that enables users to interact with web cont
 - 📑 **Smart Content Extraction**: Extract content from any webpage
 - 🎯 **Multi-Tab Context**: Aggregate information from multiple tabs
 - 💬 **Streaming Responses**: Real-time AI responses
-- 🎨 **Customizable UI**: Light/dark themes, adjustable settings
+- 🎨 **Customizable UI**: Resizable & movable sidebar, light/dark themes
+- 🌐 **Universal Compatibility**: Works in Chrome, Arc, Edge, and other Chromium browsers
 
 ## Tech Stack
 
@@ -24,7 +25,7 @@ A privacy-focused browser extension that enables users to interact with web cont
 ### Prerequisites
 
 - Node.js 18+
-- Chrome browser
+- Chromium-based browser (Chrome, Arc, Edge, Brave, etc.)
 - Git
 
 ### Installation
@@ -64,13 +65,34 @@ npm run test:coverage
 npm run test:ui
 ```
 
+## Usage
+
+1. **Install the extension**: Load the `dist` folder as an unpacked extension in your browser
+2. **Click the extension icon**: Opens a floating sidebar on the right side of the page
+3. **Interact with the sidebar**:
+   - Drag the header to move it anywhere
+   - Drag the left edge to resize (300-800px width)
+   - Click the X button or extension icon to close
+4. **Configure AI providers**: Add your API keys in the extension settings (coming soon)
+
 ## Project Structure
 
 ```
 browser-sidebar/
-├── src/               # Source code
+├── src/
+│   ├── background/    # Service worker for extension logic
+│   ├── content/       # Content script for page injection
+│   ├── sidebar/       # Main sidebar application (React)
+│   │   ├── components/  # Reusable UI components
+│   │   ├── hooks/       # Custom React hooks
+│   │   └── styles/      # CSS modules and styles
+│   ├── providers/     # AI provider integrations (Stage 4)
+│   ├── storage/       # Data persistence layer (Stage 3)
+│   ├── services/      # Business logic services (Stage 5)
+│   ├── types/         # TypeScript definitions
+│   └── utils/         # Utility functions
 ├── tests/             # Test files
-├── public/            # Static assets
+├── public/            # Static assets (icons)
 ├── dist/              # Build output
 └── docs/              # Documentation
 ```
@@ -96,12 +118,14 @@ Please read our contributing guidelines before submitting PRs.
 
 ### Current Stage: Stage 1 - Extension Infrastructure
 
-- [ ] Project setup
-- [ ] Chrome extension manifest
-- [ ] Message passing system
-- [ ] Testing infrastructure
+- [x] Project setup
+- [x] Chrome extension manifest
+- [x] Custom sidebar implementation (resizable, movable)
+- [x] Message passing system
+- [x] Testing infrastructure
+- [ ] AI provider integration (next stage)
 
 ---
 
 _Version: 0.1.0-dev_  
-_Last Updated: 2025-08-19_
+_Last Updated: 2025-08-20_

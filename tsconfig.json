@@ -39,14 +39,14 @@
     "baseUrl": ".",
     "paths": {
       "@/*": ["src/*"],
-      "@components/*": ["src/components/*"],
-      "@utils/*": ["src/utils/*"],
-      "@types/*": ["src/types/*"],
-      "@store/*": ["src/store/*"],
-      "@hooks/*": ["src/hooks/*"],
+      "@sidebar/*": ["src/sidebar/*"],
+      "@components/*": ["src/sidebar/components/*"],
+      "@hooks/*": ["src/sidebar/hooks/*"],
       "@providers/*": ["src/providers/*"],
       "@storage/*": ["src/storage/*"],
-      "@extraction/*": ["src/extraction/*"]
+      "@services/*": ["src/services/*"],
+      "@types/*": ["src/types/*"],
+      "@utils/*": ["src/utils/*"]
     }
   },
   "include": ["src", "tests"],

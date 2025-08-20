@@ -1,21 +1,26 @@
 # Stage 1: Extension Infrastructure - Detailed Task Breakdown
 
 ## Stage Overview
+
 **Goal:** Create the foundational Chrome extension architecture with complete testing infrastructure and message passing system.
 
 **Duration:** Estimated 1-2 weeks
 **Total Tasks:** 15
 **Parallelizable:** 9 (60%)
 **Sequential:** 6 (40%)
+**Status:** ✅ COMPLETED
 
 ## Prerequisites Checklist
-- [ ] Node.js 18+ installed
-- [ ] Chrome browser installed
-- [ ] VS Code or preferred IDE ready
-- [ ] Git initialized in project directory
+
+- [x] Node.js 18+ installed
+- [x] Chromium-based browser installed (Chrome, Arc, Edge, etc.)
+- [x] VS Code or preferred IDE ready
+- [x] Git initialized in project directory
 
 ## Stage 1 Deliverables
+
 By the end of this stage, you will have:
+
 1. ✅ Complete project setup with TypeScript, Vite, and CRXJS
 2. ✅ Working Chrome extension that loads in browser
 3. ✅ Test infrastructure with Vitest and React Testing Library
@@ -26,16 +31,19 @@ By the end of this stage, you will have:
 ---
 
 ## Phase 1.1: Project Initialization (9 tasks)
+
 **Goal:** Set up the development environment and project structure
 
 ### 🔄 Parallel Block A: Core Setup (3 tasks)
 
 #### Task 1.1.1a - Initialize NPM Project 🧪
-**Status:** [ ] Not Started
-**Assignee:** 
+
+**Status:** [x] Completed
+**Assignee:**
 **Dependencies:** None (can start immediately)
 
 **Test Requirements:**
+
 ```javascript
 // tests/setup/package.test.js
 describe('Package.json validation', () => {
@@ -44,7 +52,7 @@ describe('Package.json validation', () => {
     expect(pkg.name).toBe('browser-sidebar');
     expect(pkg.version).toBeDefined();
   });
-  
+
   it('should have all required scripts', () => {
     const pkg = require('../package.json');
     expect(pkg.scripts.dev).toBeDefined();
@@ -56,6 +64,7 @@ describe('Package.json validation', () => {
 ```
 
 **Implementation Steps:**
+
 1. Run `npm init -y`
 2. Edit package.json with proper name and description
 3. Add script definitions:
@@ -77,11 +86,13 @@ describe('Package.json validation', () => {
    ```
 
 **Deliverables:**
+
 - `package.json` with all metadata and scripts
 - Initial `node_modules/` (in .gitignore)
 - `package-lock.json`
 
 **Acceptance Criteria:**
+
 - [ ] `npm install` completes without errors
 - [ ] All scripts are defined in package.json
 - [ ] Package name and version are set correctly
@@ -89,11 +100,13 @@ describe('Package.json validation', () => {
 ---
 
 #### Task 1.1.1b - Setup Vite and CRXJS
+
 **Status:** [ ] Not Started
-**Assignee:** 
+**Assignee:**
 **Dependencies:** Task 1.1.1a must be complete
 
 **Test Requirements:**
+
 ```typescript
 // tests/setup/vite.test.ts
 import { describe, it, expect } from 'vitest';
@@ -101,12 +114,10 @@ import viteConfig from '../vite.config';
 
 describe('Vite Configuration', () => {
   it('should have CRXJS plugin configured', () => {
-    const hascrxjs = viteConfig.plugins.some(
-      plugin => plugin.name === 'crxjs'
-    );
+    const hascrxjs = viteConfig.plugins.some(plugin => plugin.name === 'crxjs');
     expect(hascrxjs).toBe(true);
   });
-  
+
   it('should have correct build output', () => {
     expect(viteConfig.build.outDir).toBe('dist');
     expect(viteConfig.build.sourcemap).toBeDefined();
@@ -115,11 +126,13 @@ describe('Vite Configuration', () => {
 ```
 
 **Implementation Steps:**
+
 1. Install dependencies:
    ```bash
    npm install -D vite @crxjs/vite-plugin @vitejs/plugin-react
    ```
 2. Create `vite.config.ts`:
+
    ```typescript
    import { defineConfig } from 'vite';
    import react from '@vitejs/plugin-react';
@@ -135,18 +148,20 @@ describe('Vite Configuration', () => {
          input: {
            popup: 'popup.html',
            sidepanel: 'sidepanel.html',
-         }
-       }
-     }
+         },
+       },
+     },
    });
    ```
 
 **Deliverables:**
+
 - `vite.config.ts` with CRXJS plugin
 - Updated package.json with Vite dependencies
 - Build configuration for extension
 
 **Acceptance Criteria:**
+
 - [ ] Vite config exports valid configuration
 - [ ] CRXJS plugin is properly configured
 - [ ] `npm run dev` starts without errors
@@ -154,11 +169,13 @@ describe('Vite Configuration', () => {
 ---
 
 #### Task 1.1.1c - Create Folder Structure
+
 **Status:** [ ] Not Started
-**Assignee:** 
+**Assignee:**
 **Dependencies:** Task 1.1.1a
 
 **Test Requirements:**
+
 ```typescript
 // tests/setup/structure.test.ts
 import fs from 'fs';
@@ -166,11 +183,19 @@ import path from 'path';
 
 describe('Project Structure', () => {
   const dirs = [
-    'src', 'src/background', 'src/content', 'src/popup',
-    'src/sidepanel', 'src/components', 'src/utils',
-    'src/types', 'src/store', 'public', 'tests'
+    'src',
+    'src/background',
+    'src/content',
+    'src/popup',
+    'src/sidepanel',
+    'src/components',
+    'src/utils',
+    'src/types',
+    'src/store',
+    'public',
+    'tests',
   ];
-  
+
   dirs.forEach(dir => {
     it(`should have ${dir} directory`, () => {
       expect(fs.existsSync(path.join(process.cwd(), dir))).toBe(true);
@@ -180,6 +205,7 @@ describe('Project Structure', () => {
 ```
 
 **Implementation Steps:**
+
 1. Create directory structure:
    ```bash
    mkdir -p src/{background,content,popup,sidepanel,components,utils,types,store,styles}
@@ -202,11 +228,13 @@ describe('Project Structure', () => {
 3. Create initial README.md
 
 **Deliverables:**
+
 - Complete directory structure
 - `.gitignore` file
 - `README.md` with project description
 
 **Acceptance Criteria:**
+
 - [ ] All required directories exist
 - [ ] .gitignore includes necessary patterns
 - [ ] Structure supports modular development
@@ -216,11 +244,13 @@ describe('Project Structure', () => {
 ### 🔄 Parallel Block B: Configuration (3 tasks)
 
 #### Task 1.1.2a - TypeScript Configuration 🧪
+
 **Status:** [ ] Not Started
-**Assignee:** 
+**Assignee:**
 **Dependencies:** Task 1.1.1a
 
 **Test Requirements:**
+
 ```typescript
 // tests/setup/typescript.test.ts
 import { describe, it, expect } from 'vitest';
@@ -232,7 +262,7 @@ describe('TypeScript Configuration', () => {
     expect(tsConfig.compilerOptions.noImplicitAny).toBe(true);
     expect(tsConfig.compilerOptions.strictNullChecks).toBe(true);
   });
-  
+
   it('should have path aliases configured', () => {
     expect(tsConfig.compilerOptions.paths['@/*']).toBeDefined();
     expect(tsConfig.compilerOptions.paths['@components/*']).toBeDefined();
@@ -241,6 +271,7 @@ describe('TypeScript Configuration', () => {
 ```
 
 **Implementation Steps:**
+
 1. Install TypeScript:
    ```bash
    npm install -D typescript @types/node @types/react @types/react-dom
@@ -281,11 +312,13 @@ describe('TypeScript Configuration', () => {
    ```
 
 **Deliverables:**
+
 - `tsconfig.json` with strict mode
 - Path aliases configuration
 - Type checking setup
 
 **Acceptance Criteria:**
+
 - [ ] TypeScript compiles without errors
 - [ ] Strict mode is enabled
 - [ ] Path aliases work correctly
@@ -294,39 +327,39 @@ describe('TypeScript Configuration', () => {
 ---
 
 #### Task 1.1.2b - ESLint Setup 🧪
+
 **Status:** [ ] Not Started
-**Assignee:** 
+**Assignee:**
 **Dependencies:** Task 1.1.2a
 
 **Test Requirements:**
+
 ```javascript
 // tests/setup/eslint.test.js
 const { ESLint } = require('eslint');
 
 describe('ESLint Configuration', () => {
   let eslint;
-  
+
   beforeAll(() => {
     eslint = new ESLint();
   });
-  
+
   it('should have valid configuration', async () => {
     const config = await eslint.calculateConfigForFile('src/test.ts');
     expect(config).toBeDefined();
     expect(config.rules).toBeDefined();
   });
-  
+
   it('should lint TypeScript files', async () => {
-    const results = await eslint.lintText(
-      'const x: number = 5;',
-      { filePath: 'test.ts' }
-    );
+    const results = await eslint.lintText('const x: number = 5;', { filePath: 'test.ts' });
     expect(results[0].errorCount).toBe(0);
   });
 });
 ```
 
 **Implementation Steps:**
+
 1. Install ESLint and plugins:
    ```bash
    npm install -D eslint @typescript-eslint/parser @typescript-eslint/eslint-plugin
@@ -367,11 +400,13 @@ describe('ESLint Configuration', () => {
    ```
 
 **Deliverables:**
+
 - `.eslintrc.json` configuration
 - ESLint plugins installed
 - Linting scripts working
 
 **Acceptance Criteria:**
+
 - [ ] ESLint configuration is valid
 - [ ] Can lint TypeScript files
 - [ ] React rules are configured
@@ -380,11 +415,13 @@ describe('ESLint Configuration', () => {
 ---
 
 #### Task 1.1.2c - Prettier and Pre-commit Hooks
+
 **Status:** [ ] Not Started
-**Assignee:** 
+**Assignee:**
 **Dependencies:** Task 1.1.2b
 
 **Test Requirements:**
+
 ```javascript
 // tests/setup/prettier.test.js
 describe('Prettier Configuration', () => {
@@ -393,7 +430,7 @@ describe('Prettier Configuration', () => {
     expect(config.semi).toBeDefined();
     expect(config.singleQuote).toBeDefined();
   });
-  
+
   it('should have husky hooks configured', () => {
     const huskyConfig = require('../.husky/pre-commit');
     expect(huskyConfig).toContain('lint-staged');
@@ -402,6 +439,7 @@ describe('Prettier Configuration', () => {
 ```
 
 **Implementation Steps:**
+
 1. Install Prettier and Husky:
    ```bash
    npm install -D prettier husky lint-staged
@@ -435,11 +473,13 @@ describe('Prettier Configuration', () => {
    ```
 
 **Deliverables:**
+
 - `.prettierrc` configuration
 - Husky pre-commit hooks
 - lint-staged configuration
 
 **Acceptance Criteria:**
+
 - [ ] Prettier formats code consistently
 - [ ] Pre-commit hooks run on commit
 - [ ] Files are auto-formatted before commit
@@ -449,11 +489,13 @@ describe('Prettier Configuration', () => {
 ### 🔄 Parallel Block C: Manifest (3 tasks)
 
 #### Task 1.1.3a - Manifest Schema and Validation 🧪
+
 **Status:** [ ] Not Started
-**Assignee:** 
+**Assignee:**
 **Dependencies:** Task 1.1.2a
 
 **Test Requirements:**
+
 ```typescript
 // tests/setup/manifest.test.ts
 import { describe, it, expect } from 'vitest';
@@ -465,12 +507,12 @@ describe('Manifest Validation', () => {
       manifest_version: 3,
       name: 'Browser Sidebar',
       version: '0.1.0',
-      permissions: ['storage', 'tabs']
+      permissions: ['storage', 'tabs'],
     };
-    
+
     expect(validateManifest(manifest)).toBe(true);
   });
-  
+
   it('should have required fields typed', () => {
     // Type checking will fail if types are wrong
     const manifest: ChromeManifest = {
@@ -482,7 +524,9 @@ describe('Manifest Validation', () => {
 ```
 
 **Implementation Steps:**
+
 1. Create manifest type definitions:
+
    ```typescript
    // src/types/manifest.ts
    export interface ChromeManifest {
@@ -510,7 +554,7 @@ describe('Manifest Validation', () => {
      }>;
      icons?: Record<string, string>;
    }
-   
+
    export function validateManifest(manifest: any): manifest is ChromeManifest {
      return (
        manifest.manifest_version === 3 &&
@@ -521,11 +565,13 @@ describe('Manifest Validation', () => {
    ```
 
 **Deliverables:**
+
 - `src/types/manifest.ts` with type definitions
 - Validation function for manifest
 - Type-safe manifest handling
 
 **Acceptance Criteria:**
+
 - [ ] Manifest types are comprehensive
 - [ ] Validation function works correctly
 - [ ] Types match Chrome's manifest v3 spec
@@ -533,11 +579,13 @@ describe('Manifest Validation', () => {
 ---
 
 #### Task 1.1.3b - Manifest Implementation
+
 **Status:** [ ] Not Started
-**Assignee:** 
+**Assignee:**
 **Dependencies:** Task 1.1.3a
 
 **Implementation Steps:**
+
 1. Create `public/manifest.json`:
    ```json
    {
@@ -545,15 +593,8 @@ describe('Manifest Validation', () => {
      "name": "AI Browser Sidebar",
      "version": "0.1.0",
      "description": "Chat with any webpage using AI",
-     "permissions": [
-       "storage",
-       "tabs",
-       "activeTab",
-       "sidePanel"
-     ],
-     "host_permissions": [
-       "<all_urls>"
-     ],
+     "permissions": ["storage", "tabs", "activeTab", "sidePanel"],
+     "host_permissions": ["<all_urls>"],
      "background": {
        "service_worker": "src/background/index.ts",
        "type": "module"
@@ -587,11 +628,13 @@ describe('Manifest Validation', () => {
    ```
 
 **Deliverables:**
+
 - `public/manifest.json` with all permissions
 - Proper service worker registration
 - Content script configuration
 
 **Acceptance Criteria:**
+
 - [ ] Manifest passes Chrome validation
 - [ ] All required permissions included
 - [ ] Extension loads in Chrome
@@ -599,11 +642,13 @@ describe('Manifest Validation', () => {
 ---
 
 #### Task 1.1.3c - Icon Assets
+
 **Status:** [ ] Not Started
-**Assignee:** 
+**Assignee:**
 **Dependencies:** Task 1.1.3b
 
 **Test Requirements:**
+
 ```javascript
 // tests/setup/icons.test.js
 import fs from 'fs';
@@ -611,7 +656,7 @@ import path from 'path';
 
 describe('Icon Assets', () => {
   const sizes = [16, 32, 48, 128];
-  
+
   sizes.forEach(size => {
     it(`should have ${size}x${size} icon`, () => {
       const iconPath = path.join('public', 'icons', `icon${size}.png`);
@@ -622,6 +667,7 @@ describe('Icon Assets', () => {
 ```
 
 **Implementation Steps:**
+
 1. Create placeholder icons (or use actual designs):
    ```bash
    # Create placeholder icons with ImageMagick or similar
@@ -636,11 +682,13 @@ describe('Icon Assets', () => {
 3. Ensure PNG format with transparency
 
 **Deliverables:**
+
 - Icon files: 16x16, 32x32, 48x48, 128x128
 - All icons in `public/icons/` directory
 - Icons referenced in manifest.json
 
 **Acceptance Criteria:**
+
 - [ ] All required icon sizes exist
 - [ ] Icons are valid PNG files
 - [ ] Icons display correctly in Chrome
@@ -648,22 +696,26 @@ describe('Icon Assets', () => {
 ---
 
 ## Phase 1.2: Test Infrastructure (3 tasks)
+
 **Goal:** Set up comprehensive testing framework
 
 ### ⚡ Sequential Block: Testing Setup
 
 #### Task 1.2.1 - Vitest Configuration 🧪
+
 **Status:** [ ] Not Started
-**Assignee:** 
+**Assignee:**
 **Dependencies:** Task 1.1.2a (TypeScript must be configured)
 
 **Implementation Steps:**
+
 1. Install Vitest and dependencies:
    ```bash
    npm install -D vitest @vitest/ui @vitest/coverage-c8
    npm install -D jsdom happy-dom
    ```
 2. Create `vitest.config.ts`:
+
    ```typescript
    import { defineConfig } from 'vitest/config';
    import react from '@vitejs/plugin-react';
@@ -678,23 +730,20 @@ describe('Icon Assets', () => {
        coverage: {
          provider: 'c8',
          reporter: ['text', 'json', 'html'],
-         exclude: [
-           'node_modules/',
-           'tests/',
-           '*.config.ts',
-           'dist/'
-         ]
+         exclude: ['node_modules/', 'tests/', '*.config.ts', 'dist/'],
        },
        alias: {
          '@': path.resolve(__dirname, './src'),
          '@components': path.resolve(__dirname, './src/components'),
          '@utils': path.resolve(__dirname, './src/utils'),
          '@types': path.resolve(__dirname, './src/types'),
-       }
-     }
+       },
+     },
    });
    ```
+
 3. Create test setup file:
+
    ```typescript
    // tests/setup.ts
    import '@testing-library/jest-dom';
@@ -710,11 +759,13 @@ describe('Icon Assets', () => {
    ```
 
 **Deliverables:**
+
 - `vitest.config.ts` configuration
 - Test setup files
 - Coverage configuration
 
 **Acceptance Criteria:**
+
 - [ ] `npm run test` executes successfully
 - [ ] Coverage reports generate
 - [ ] Test environment configured
@@ -722,17 +773,20 @@ describe('Icon Assets', () => {
 ---
 
 #### Task 1.2.2 - React Testing Library Setup 🧪
+
 **Status:** [ ] Not Started
-**Assignee:** 
+**Assignee:**
 **Dependencies:** Task 1.2.1
 
 **Implementation Steps:**
+
 1. Install React Testing Library:
    ```bash
    npm install -D @testing-library/react @testing-library/user-event
    npm install -D @testing-library/jest-dom
    ```
 2. Create custom render function:
+
    ```typescript
    // tests/utils/test-utils.tsx
    import React, { ReactElement } from 'react';
@@ -751,31 +805,35 @@ describe('Icon Assets', () => {
    export * from '@testing-library/react';
    export { customRender as render };
    ```
+
 3. Create sample component test:
+
    ```typescript
    // tests/components/Button.test.tsx
    import { describe, it, expect, vi } from 'vitest';
    import { render, screen, fireEvent } from '../utils/test-utils';
-   
+
    describe('Button Component', () => {
      it('should render and handle click', () => {
        const handleClick = vi.fn();
        render(<button onClick={handleClick}>Click me</button>);
-       
+
        const button = screen.getByText('Click me');
        fireEvent.click(button);
-       
+
        expect(handleClick).toHaveBeenCalledTimes(1);
      });
    });
    ```
 
 **Deliverables:**
+
 - Testing library setup
 - Custom render utilities
 - Mock providers setup
 
 **Acceptance Criteria:**
+
 - [ ] Can test React components
 - [ ] Custom render function works
 - [ ] User interactions testable
@@ -783,12 +841,15 @@ describe('Icon Assets', () => {
 ---
 
 #### Task 1.2.3 - Chrome API Mocks 🧪
+
 **Status:** [ ] Not Started
-**Assignee:** 
+**Assignee:**
 **Dependencies:** Task 1.2.1
 
 **Implementation Steps:**
+
 1. Create Chrome API mocks:
+
    ```typescript
    // tests/mocks/chrome.ts
    export const mockChrome = {
@@ -820,7 +881,7 @@ describe('Icon Assets', () => {
            if (callback) callback();
            return Promise.resolve();
          }),
-         clear: vi.fn((callback) => {
+         clear: vi.fn(callback => {
            if (callback) callback();
            return Promise.resolve();
          }),
@@ -832,9 +893,7 @@ describe('Icon Assets', () => {
      },
      tabs: {
        query: vi.fn((queryInfo, callback) => {
-         const tabs = [
-           { id: 1, url: 'https://example.com', title: 'Example' }
-         ];
+         const tabs = [{ id: 1, url: 'https://example.com', title: 'Example' }];
          if (callback) callback(tabs);
          return Promise.resolve(tabs);
        }),
@@ -847,7 +906,9 @@ describe('Icon Assets', () => {
    // Set up global chrome object
    global.chrome = mockChrome as any;
    ```
+
 2. Create mock setup for tests:
+
    ```typescript
    // tests/setup/chrome-mock.ts
    import { beforeEach, afterEach } from 'vitest';
@@ -863,12 +924,14 @@ describe('Icon Assets', () => {
    ```
 
 **Deliverables:**
+
 - `tests/mocks/chrome.ts` with API mocks
 - Storage mocks
 - Runtime mocks
 - Tab API mocks
 
 **Acceptance Criteria:**
+
 - [ ] Chrome APIs mocked successfully
 - [ ] Can test extension-specific code
 - [ ] Mocks reset between tests
@@ -876,24 +939,23 @@ describe('Icon Assets', () => {
 ---
 
 ## Phase 1.3: Core Extension Components (3 tasks)
+
 **Goal:** Implement message passing and service worker
 
 ### ⚡ Sequential Block: Core Implementation
 
 #### Task 1.3.1 - Message Types and Protocol 🧪
+
 **Status:** [ ] Not Started
-**Assignee:** 
+**Assignee:**
 **Dependencies:** Task 1.1.2a
 
 **Test Requirements:**
+
 ```typescript
 // tests/types/messages.test.ts
 import { describe, it, expect } from 'vitest';
-import { 
-  Message, 
-  isValidMessage, 
-  createMessage 
-} from '@/types/messages';
+import { Message, isValidMessage, createMessage } from '@/types/messages';
 
 describe('Message Protocol', () => {
   it('should validate message structure', () => {
@@ -902,13 +964,13 @@ describe('Message Protocol', () => {
     expect(message.type).toBe('TEST_ACTION');
     expect(message.payload).toEqual({ data: 'test' });
   });
-  
+
   it('should have unique message IDs', () => {
     const msg1 = createMessage('ACTION', {});
     const msg2 = createMessage('ACTION', {});
     expect(msg1.id).not.toBe(msg2.id);
   });
-  
+
   it('should validate message types', () => {
     const invalidMessage = { type: 123, payload: {} };
     expect(isValidMessage(invalidMessage)).toBe(false);
@@ -917,10 +979,12 @@ describe('Message Protocol', () => {
 ```
 
 **Implementation Steps:**
+
 1. Create message type definitions:
+
    ```typescript
    // src/types/messages.ts
-   export type MessageType = 
+   export type MessageType =
      | 'EXTRACT_CONTENT'
      | 'CONTENT_EXTRACTED'
      | 'SEND_TO_AI'
@@ -939,7 +1003,7 @@ describe('Message Protocol', () => {
    }
 
    export function createMessage<T>(
-     type: MessageType, 
+     type: MessageType,
      payload: T,
      source: Message['source'] = 'background'
    ): Message<T> {
@@ -962,7 +1026,9 @@ describe('Message Protocol', () => {
      );
    }
    ```
+
 2. Create message validation utilities:
+
    ```typescript
    // src/utils/messageValidation.ts
    import { Message, MessageType } from '@/types/messages';
@@ -975,7 +1041,7 @@ describe('Message Protocol', () => {
        'AI_RESPONSE',
        'ERROR',
        'PING',
-       'PONG'
+       'PONG',
      ]);
 
      static validate(message: any): message is Message {
@@ -995,12 +1061,14 @@ describe('Message Protocol', () => {
    ```
 
 **Deliverables:**
+
 - `src/types/messages.ts` with message types
 - `src/utils/messageValidation.ts` with validators
 - Message factory functions
 - Type guards for messages
 
 **Acceptance Criteria:**
+
 - [ ] Message types are comprehensive
 - [ ] Validation functions work correctly
 - [ ] Messages have unique IDs
@@ -1009,11 +1077,13 @@ describe('Message Protocol', () => {
 ---
 
 #### Task 1.3.2 - Background Service Worker 🧪
+
 **Status:** [ ] Not Started
-**Assignee:** 
+**Assignee:**
 **Dependencies:** Task 1.3.1
 
 **Test Requirements:**
+
 ```typescript
 // tests/background/messageHandler.test.ts
 import { describe, it, expect, vi, beforeEach } from 'vitest';
@@ -1022,37 +1092,37 @@ import { createMessage } from '@/types/messages';
 
 describe('Background Message Handler', () => {
   let handler: MessageHandler;
-  
+
   beforeEach(() => {
     handler = new MessageHandler();
   });
-  
+
   it('should handle PING messages', async () => {
     const pingMessage = createMessage('PING', {});
     const response = await handler.handleMessage(pingMessage);
-    
+
     expect(response.type).toBe('PONG');
     expect(response.payload).toEqual({ originalId: pingMessage.id });
   });
-  
+
   it('should route messages to correct handlers', async () => {
-    const contentMessage = createMessage('EXTRACT_CONTENT', { 
-      tabId: 1 
+    const contentMessage = createMessage('EXTRACT_CONTENT', {
+      tabId: 1,
     });
-    
+
     const mockTabsSendMessage = vi.spyOn(chrome.tabs, 'sendMessage');
     await handler.handleMessage(contentMessage);
-    
+
     expect(mockTabsSendMessage).toHaveBeenCalledWith(
       1,
       expect.objectContaining({ type: 'EXTRACT_CONTENT' })
     );
   });
-  
+
   it('should handle errors gracefully', async () => {
     const invalidMessage = createMessage('INVALID_TYPE' as any, {});
     const response = await handler.handleMessage(invalidMessage);
-    
+
     expect(response.type).toBe('ERROR');
     expect(response.payload.error).toBeDefined();
   });
@@ -1060,7 +1130,9 @@ describe('Background Message Handler', () => {
 ```
 
 **Implementation Steps:**
+
 1. Create service worker entry:
+
    ```typescript
    // src/background/index.ts
    import { MessageHandler } from './messageHandler';
@@ -1070,34 +1142,39 @@ describe('Background Message Handler', () => {
    const keepAlive = new KeepAlive();
 
    // Handle extension installation
-   chrome.runtime.onInstalled.addListener((details) => {
+   chrome.runtime.onInstalled.addListener(details => {
      console.log('Extension installed:', details);
-     
+
      // Set default settings
      chrome.storage.local.set({
        settings: {
          theme: 'auto',
          provider: 'openai',
-       }
+       },
      });
    });
 
    // Handle messages
    chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-     messageHandler.handleMessage(message, sender)
+     messageHandler
+       .handleMessage(message, sender)
        .then(sendResponse)
-       .catch(error => sendResponse({ 
-         type: 'ERROR', 
-         payload: { error: error.message } 
-       }));
-     
+       .catch(error =>
+         sendResponse({
+           type: 'ERROR',
+           payload: { error: error.message },
+         })
+       );
+
      return true; // Keep channel open for async response
    });
 
    // Keep service worker alive
    keepAlive.start();
    ```
+
 2. Create message handler:
+
    ```typescript
    // src/background/messageHandler.ts
    import { Message, createMessage } from '@/types/messages';
@@ -1120,11 +1197,11 @@ describe('Background Message Handler', () => {
        sender?: chrome.runtime.MessageSender
      ): Promise<Message> {
        const handler = this.handlers.get(message.type);
-       
+
        if (!handler) {
          return createMessage('ERROR', {
            error: `Unknown message type: ${message.type}`,
-           originalMessage: message
+           originalMessage: message,
          });
        }
 
@@ -1133,7 +1210,7 @@ describe('Background Message Handler', () => {
        } catch (error) {
          return createMessage('ERROR', {
            error: error.message,
-           originalMessage: message
+           originalMessage: message,
          });
        }
      }
@@ -1142,9 +1219,7 @@ describe('Background Message Handler', () => {
        return createMessage('PONG', { originalId: message.id });
      }
 
-     private async handleExtractContent(
-       message: Message<{ tabId: number }>
-     ): Promise<Message> {
+     private async handleExtractContent(message: Message<{ tabId: number }>): Promise<Message> {
        const response = await chrome.tabs.sendMessage(
          message.payload.tabId,
          createMessage('EXTRACT_CONTENT', {})
@@ -1157,12 +1232,14 @@ describe('Background Message Handler', () => {
      ): Promise<Message> {
        // Placeholder for AI integration
        return createMessage('AI_RESPONSE', {
-         response: 'AI response will be implemented in Stage 4'
+         response: 'AI response will be implemented in Stage 4',
        });
      }
    }
    ```
+
 3. Create keep-alive mechanism:
+
    ```typescript
    // src/background/keepAlive.ts
    export class KeepAlive {
@@ -1171,7 +1248,7 @@ describe('Background Message Handler', () => {
 
      start() {
        if (this.interval) return;
-       
+
        this.interval = setInterval(() => {
          chrome.runtime.getPlatformInfo(() => {
            // Keep-alive ping
@@ -1189,12 +1266,14 @@ describe('Background Message Handler', () => {
    ```
 
 **Deliverables:**
+
 - `src/background/index.ts` - Service worker entry
 - `src/background/messageHandler.ts` - Message routing
 - `src/background/keepAlive.ts` - Worker persistence
 - `tests/background/messageHandler.test.ts` - Tests
 
 **Acceptance Criteria:**
+
 - [ ] Service worker initializes
 - [ ] Messages are routed correctly
 - [ ] Keep-alive mechanism works
@@ -1204,11 +1283,13 @@ describe('Background Message Handler', () => {
 ---
 
 #### Task 1.3.3 - Message Passing Utilities 🧪
+
 **Status:** [ ] Not Started
-**Assignee:** 
+**Assignee:**
 **Dependencies:** Task 1.3.2
 
 **Test Requirements:**
+
 ```typescript
 // tests/utils/messaging.test.ts
 import { describe, it, expect, vi, beforeEach } from 'vitest';
@@ -1217,29 +1298,27 @@ import { createMessage } from '@/types/messages';
 
 describe('Message Bus', () => {
   let messageBus: MessageBus;
-  
+
   beforeEach(() => {
     messageBus = new MessageBus();
   });
-  
+
   it('should send messages and wait for response', async () => {
     const mockResponse = createMessage('PONG', {});
     chrome.runtime.sendMessage = vi.fn().mockResolvedValue(mockResponse);
-    
+
     const response = await messageBus.send('PING', {});
     expect(response.type).toBe('PONG');
   });
-  
+
   it('should timeout if no response', async () => {
     chrome.runtime.sendMessage = vi.fn().mockImplementation(
       () => new Promise(() => {}) // Never resolves
     );
-    
-    await expect(
-      messageBus.send('PING', {}, { timeout: 100 })
-    ).rejects.toThrow('Message timeout');
+
+    await expect(messageBus.send('PING', {}, { timeout: 100 })).rejects.toThrow('Message timeout');
   });
-  
+
   it('should retry on failure', async () => {
     let attempts = 0;
     chrome.runtime.sendMessage = vi.fn().mockImplementation(() => {
@@ -1249,11 +1328,15 @@ describe('Message Bus', () => {
       }
       return Promise.resolve(createMessage('PONG', {}));
     });
-    
-    const response = await messageBus.send('PING', {}, { 
-      retries: 3 
-    });
-    
+
+    const response = await messageBus.send(
+      'PING',
+      {},
+      {
+        retries: 3,
+      }
+    );
+
     expect(response.type).toBe('PONG');
     expect(attempts).toBe(3);
   });
@@ -1261,7 +1344,9 @@ describe('Message Bus', () => {
 ```
 
 **Implementation Steps:**
+
 1. Create message bus utility:
+
    ```typescript
    // src/utils/messaging.ts
    import { Message, MessageType, createMessage } from '@/types/messages';
@@ -1281,11 +1366,7 @@ describe('Message Bus', () => {
        payload: T,
        options: SendOptions = {}
      ): Promise<Message<R>> {
-       const {
-         timeout = this.DEFAULT_TIMEOUT,
-         retries = this.DEFAULT_RETRIES,
-         target
-       } = options;
+       const { timeout = this.DEFAULT_TIMEOUT, retries = this.DEFAULT_RETRIES, target } = options;
 
        const message = createMessage(type, payload);
        if (target) message.target = target;
@@ -1303,24 +1384,21 @@ describe('Message Bus', () => {
            return await this.sendWithTimeout(message, timeout);
          } catch (error) {
            if (attempt === retries) throw error;
-           
+
            // Exponential backoff
            await this.delay(Math.pow(2, attempt) * 100);
          }
        }
-       
+
        throw new Error('Max retries exceeded');
      }
 
-     private sendWithTimeout(
-       message: Message,
-       timeout: number
-     ): Promise<Message> {
+     private sendWithTimeout(message: Message, timeout: number): Promise<Message> {
        return Promise.race([
          chrome.runtime.sendMessage(message),
-         new Promise<never>((_, reject) => 
+         new Promise<never>((_, reject) =>
            setTimeout(() => reject(new Error('Message timeout')), timeout)
-         )
+         ),
        ]);
      }
 
@@ -1334,7 +1412,7 @@ describe('Message Bus', () => {
        handler: (message: Message) => void | Promise<void>
      ): () => void {
        const types = Array.isArray(type) ? type : [type];
-       
+
        const listener = (
          message: Message,
          sender: chrome.runtime.MessageSender,
@@ -1342,21 +1420,21 @@ describe('Message Bus', () => {
        ) => {
          if (types.includes(message.type)) {
            const result = handler(message);
-           
+
            if (result instanceof Promise) {
-             result
-               .then(sendResponse)
-               .catch(error => sendResponse({ 
-                 type: 'ERROR', 
-                 payload: { error: error.message } 
-               }));
+             result.then(sendResponse).catch(error =>
+               sendResponse({
+                 type: 'ERROR',
+                 payload: { error: error.message },
+               })
+             );
              return true; // Keep channel open
            }
          }
        };
 
        chrome.runtime.onMessage.addListener(listener);
-       
+
        // Return unsubscribe function
        return () => {
          chrome.runtime.onMessage.removeListener(listener);
@@ -1367,7 +1445,9 @@ describe('Message Bus', () => {
    // Export singleton instance
    export const messageBus = new MessageBus();
    ```
+
 2. Create error handling utilities:
+
    ```typescript
    // src/utils/errorHandling.ts
    export class ExtensionError extends Error {
@@ -1392,6 +1472,7 @@ describe('Message Bus', () => {
    ```
 
 **Deliverables:**
+
 - `src/utils/messaging.ts` - Message bus utility
 - `src/utils/errorHandling.ts` - Error utilities
 - `tests/utils/messaging.test.ts` - Tests
@@ -1399,6 +1480,7 @@ describe('Message Bus', () => {
 - Timeout handling
 
 **Acceptance Criteria:**
+
 - [ ] Messages send successfully
 - [ ] Timeout handling works
 - [ ] Retry logic implemented
@@ -1410,18 +1492,21 @@ describe('Message Bus', () => {
 ## Stage 1 Completion Checklist
 
 ### Testing Requirements
+
 - [ ] All unit tests written and passing
 - [ ] Test coverage > 90% for Stage 1 code
 - [ ] Integration tests for message passing
 - [ ] Manual testing in Chrome browser
 
 ### Documentation
+
 - [ ] README updated with setup instructions
 - [ ] API documentation for message protocol
 - [ ] Type definitions documented
 - [ ] Architecture diagram created
 
 ### Quality Gates
+
 - [ ] No TypeScript errors
 - [ ] No ESLint warnings
 - [ ] Prettier formatting applied
@@ -1429,6 +1514,7 @@ describe('Message Bus', () => {
 - [ ] Code reviewed
 
 ### Deliverables Verification
+
 - [ ] Extension loads in Chrome
 - [ ] Popup opens when clicked
 - [ ] Side panel accessible
@@ -1438,7 +1524,9 @@ describe('Message Bus', () => {
 - [ ] Development environment ready
 
 ## Next Stage Prerequisites
+
 Before moving to Stage 2 (Chat Panel UI), ensure:
+
 1. ✅ All Stage 1 tasks complete
 2. ✅ Message passing working reliably
 3. ✅ Test infrastructure operational
@@ -1448,18 +1536,23 @@ Before moving to Stage 2 (Chat Panel UI), ensure:
 ## Common Issues and Solutions
 
 ### Issue: Extension not loading
+
 **Solution:** Check manifest.json syntax and ensure all referenced files exist
 
 ### Issue: Service worker stops responding
+
 **Solution:** Implement keep-alive mechanism (Task 1.3.2)
 
 ### Issue: TypeScript path aliases not working
+
 **Solution:** Ensure tsconfig.json and vite.config.ts have matching aliases
 
 ### Issue: Tests failing with Chrome API errors
+
 **Solution:** Verify Chrome mocks are properly initialized (Task 1.2.3)
 
 ## Resources
+
 - [Chrome Extension Manifest V3 Documentation](https://developer.chrome.com/docs/extensions/mv3/)
 - [Vite + CRXJS Guide](https://crxjs.dev/vite-plugin)
 - [TypeScript Strict Mode Guide](https://www.typescriptlang.org/tsconfig#strict)
@@ -1467,7 +1560,7 @@ Before moving to Stage 2 (Chat Panel UI), ensure:
 
 ---
 
-*Stage 1 Task Guide Version: 1.0*
-*Total Tasks: 15*
-*Estimated Duration: 1-2 weeks*
-*Dependencies: Clearly mapped*
+_Stage 1 Task Guide Version: 1.0_
+_Total Tasks: 15_
+_Estimated Duration: 1-2 weeks_
+_Dependencies: Clearly mapped_

@@ -6,32 +6,23 @@ import manifest from './manifest.json';
 
 // https://vitejs.dev/config/
 export default defineConfig({
-  plugins: [
-    react(),
-    crx({ manifest }),
-  ],
+  plugins: [react(), crx({ manifest })],
   resolve: {
     alias: {
       '@': resolve(__dirname, './src'),
-      '@components': resolve(__dirname, './src/components'),
-      '@utils': resolve(__dirname, './src/utils'),
-      '@types': resolve(__dirname, './src/types'),
-      '@store': resolve(__dirname, './src/store'),
-      '@hooks': resolve(__dirname, './src/hooks'),
+      '@sidebar': resolve(__dirname, './src/sidebar'),
+      '@components': resolve(__dirname, './src/sidebar/components'),
+      '@hooks': resolve(__dirname, './src/sidebar/hooks'),
       '@providers': resolve(__dirname, './src/providers'),
       '@storage': resolve(__dirname, './src/storage'),
-      '@extraction': resolve(__dirname, './src/extraction'),
+      '@services': resolve(__dirname, './src/services'),
+      '@types': resolve(__dirname, './src/types'),
+      '@utils': resolve(__dirname, './src/utils'),
     },
   },
   build: {
     outDir: 'dist',
     sourcemap: process.env.NODE_ENV !== 'production',
-    rollupOptions: {
-      input: {
-        popup: resolve(__dirname, 'popup.html'),
-        sidepanel: resolve(__dirname, 'sidepanel.html'),
-      },
-    },
   },
   server: {
     port: 5173,
