@@ -1,0 +1,19 @@
+.sidepanel-container {
+  padding: 20px;
+  font-family:
+    system-ui,
+    -apple-system,
+    sans-serif;
+  height: 100vh;
+  box-sizing: border-box;
+}
+
+h1 {
+  font-size: 20px;
+  margin: 0 0 15px 0;
+}
+
+p {
+  color: #666;
+  margin: 0;
+}

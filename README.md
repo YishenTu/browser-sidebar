@@ -77,10 +77,10 @@ browser-sidebar/
 
 ## Documentation
 
-- [Product Requirements (PRD)](./PRD.md)
-- [Development Plan](./plan.md)
-- [Task Breakdown](./task.md)
-- Stage-specific tasks in `task-stage-*.md`
+- [Product Requirements (PRD)](./docs/planning/PRD.md)
+- [Development Plan](./docs/planning/development-plan.md)
+- [Task Breakdown](./docs/planning/task-overview.md)
+- Stage-specific tasks in `docs/stages/task-stage-*.md`
 
 ## Contributing
 
@@ -95,6 +95,7 @@ Please read our contributing guidelines before submitting PRs.
 🚧 **In Development** - Following staged development plan
 
 ### Current Stage: Stage 1 - Extension Infrastructure
+
 - [ ] Project setup
 - [ ] Chrome extension manifest
 - [ ] Message passing system
@@ -102,5 +103,5 @@ Please read our contributing guidelines before submitting PRs.
 
 ---
 
-*Version: 0.1.0-dev*  
-*Last Updated: 2025-08-19*
+_Version: 0.1.0-dev_  
+_Last Updated: 2025-08-19_
