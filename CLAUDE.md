@@ -19,10 +19,11 @@ npm run watch        # Build and watch for changes
 ### Testing
 
 ```bash
-npm run test         # Run all tests with Vitest
-npm run test:ui      # Open Vitest UI for interactive testing
+npm test              # Run all tests once (no watch)
+npm run test:watch    # Watch mode for development
+npm run test:ui       # Open Vitest UI for interactive testing
 npm run test:coverage # Generate coverage report
-npm run test -- path/to/file.test.ts  # Run specific test file
+npm test -- path/to/file.test.ts  # Run specific test file
 ```
 
 ### Code Quality
@@ -147,8 +148,8 @@ The test setup (`tests/setup/setup.ts`) provides Chrome API mocks. When testing 
 ### Running Specific Tests
 
 ```bash
-npm run test src/sidebar/Sidebar.test.tsx  # Single file
-npm run test -- --grep "resize"            # By test name pattern
+npm test src/sidebar/Sidebar.test.tsx      # Single file
+npm test -- --grep "resize"               # By test name pattern
 ```
 
 ## Common Pitfalls & Solutions

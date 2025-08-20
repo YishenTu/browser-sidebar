@@ -56,8 +56,11 @@ npm run watch
 ### Testing
 
 ```bash
-# Run unit tests
-npm run test
+# Run unit tests once (no watch)
+npm test
+
+# Watch mode for local development
+npm run test:watch
 
 # Run tests with coverage
 npm run test:coverage

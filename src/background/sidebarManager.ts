@@ -1,16 +1,11 @@
 /**
  * @file Sidebar Manager
- * 
+ *
  * Manages sidebar state across different tabs and handles sidebar-related
  * message routing between background script and content scripts.
  */
 
-import {
-  Message,
-  createMessage,
-  ToggleSidebarPayload,
-  ErrorPayload,
-} from '../types/messages.js';
+import { Message, createMessage, ToggleSidebarPayload, ErrorPayload } from '../types/messages.js';
 
 /**
  * Sidebar state information for a tab
@@ -52,7 +47,7 @@ export class SidebarManager {
 
   /**
    * Get the sidebar state for a specific tab
-   * 
+   *
    * @param tabId - Tab ID to get state for
    * @returns Sidebar state or null if tab not found
    */
@@ -62,7 +57,7 @@ export class SidebarManager {
 
   /**
    * Check if sidebar is open for a specific tab
-   * 
+   *
    * @param tabId - Tab ID to check
    * @returns True if sidebar is open
    */
@@ -73,7 +68,7 @@ export class SidebarManager {
 
   /**
    * Set the sidebar state for a specific tab
-   * 
+   *
    * @param tabId - Tab ID to set state for
    * @param isOpen - Whether the sidebar should be open
    * @returns The updated state
@@ -96,7 +91,7 @@ export class SidebarManager {
 
   /**
    * Toggle the sidebar state for a specific tab
-   * 
+   *
    * @param tabId - Tab ID to toggle
    * @returns The new state
    */
@@ -107,7 +102,7 @@ export class SidebarManager {
 
   /**
    * Close the sidebar for a specific tab
-   * 
+   *
    * @param tabId - Tab ID to close sidebar for
    * @returns The updated state
    */
@@ -117,7 +112,7 @@ export class SidebarManager {
 
   /**
    * Open the sidebar for a specific tab
-   * 
+   *
    * @param tabId - Tab ID to open sidebar for
    * @returns The updated state
    */
@@ -127,7 +122,7 @@ export class SidebarManager {
 
   /**
    * Get all active tab IDs with sidebar state
-   * 
+   *
    * @returns Array of tab IDs
    */
   getActiveTabs(): number[] {
@@ -136,7 +131,7 @@ export class SidebarManager {
 
   /**
    * Get count of tabs with open sidebars
-   * 
+   *
    * @returns Number of tabs with open sidebars
    */
   getOpenSidebarCount(): number {
@@ -145,13 +140,13 @@ export class SidebarManager {
 
   /**
    * Clean up state for a specific tab
-   * 
+   *
    * @param tabId - Tab ID to clean up
    * @returns True if state was removed
    */
   cleanupTab(tabId: number): boolean {
     const removed = this.sidebarStates.delete(tabId);
-    
+
     if (removed && this.verbose) {
       console.log(`SidebarManager: Cleaned up state for tab ${tabId}`);
     }
@@ -165,7 +160,7 @@ export class SidebarManager {
   cleanupAll(): void {
     const count = this.sidebarStates.size;
     this.sidebarStates.clear();
-    
+
     if (this.verbose) {
       console.log(`SidebarManager: Cleaned up state for ${count} tabs`);
     }
@@ -173,7 +168,7 @@ export class SidebarManager {
 
   /**
    * Handle TOGGLE_SIDEBAR message
-   * 
+   *
    * @param message - Toggle sidebar message
    * @param sender - Message sender
    * @returns Response message or error
@@ -183,7 +178,7 @@ export class SidebarManager {
     sender: chrome.runtime.MessageSender
   ): Promise<Message<void> | Message<ErrorPayload>> {
     const tabId = sender.tab?.id;
-    
+
     if (!tabId) {
       console.error('SidebarManager: No tab ID in toggle message sender');
       return createMessage<ErrorPayload>({
@@ -232,7 +227,6 @@ export class SidebarManager {
         source: 'background',
         target: message.source,
       });
-
     } catch (error) {
       console.error('SidebarManager: Error handling toggle:', error);
       return createMessage<ErrorPayload>({
@@ -250,7 +244,7 @@ export class SidebarManager {
 
   /**
    * Handle CLOSE_SIDEBAR message
-   * 
+   *
    * @param message - Close sidebar message
    * @param sender - Message sender
    * @returns Response message or error
@@ -260,7 +254,7 @@ export class SidebarManager {
     sender: chrome.runtime.MessageSender
   ): Promise<Message<void> | Message<ErrorPayload>> {
     const tabId = sender.tab?.id;
-    
+
     if (!tabId) {
       console.error('SidebarManager: No tab ID in close message sender');
       return createMessage<ErrorPayload>({
@@ -286,7 +280,6 @@ export class SidebarManager {
         source: 'background',
         target: message.source,
       });
-
     } catch (error) {
       console.error('SidebarManager: Error handling close:', error);
       return createMessage<ErrorPayload>({
@@ -304,25 +297,27 @@ export class SidebarManager {
 
   /**
    * Send message to content script for a specific tab
-   * 
+   *
    * @param tabId - Tab ID to send to
    * @param show - Whether to show or hide sidebar
    */
   private async sendToContentScript(tabId: number, show: boolean): Promise<void> {
     try {
       const messageType = show ? 'TOGGLE_SIDEBAR' : 'CLOSE_SIDEBAR';
-      
-      await chrome.tabs.sendMessage(tabId, createMessage<ToggleSidebarPayload>({
-        type: messageType,
-        payload: show ? { show } : undefined,
-        source: 'background',
-        target: 'content',
-      }));
+
+      await chrome.tabs.sendMessage(
+        tabId,
+        createMessage<ToggleSidebarPayload>({
+          type: messageType,
+          payload: show ? { show } : undefined,
+          source: 'background',
+          target: 'content',
+        })
+      );
 
       if (this.verbose) {
         console.log(`SidebarManager: Sent ${messageType} to tab ${tabId}`);
       }
-
     } catch (error) {
       // If content script is not loaded, try to inject it
       if (error instanceof Error && error.message.includes('Could not establish connection')) {
@@ -335,7 +330,7 @@ export class SidebarManager {
 
   /**
    * Inject content script if not already loaded
-   * 
+   *
    * @param tabId - Tab ID to inject into
    * @param show - Whether to show sidebar after injection
    */
@@ -345,18 +340,25 @@ export class SidebarManager {
     }
 
     try {
-      // Inject the content script
-      await chrome.scripting.executeScript({
-        target: { tabId },
-        files: ['src/content/index.js'], // This will be the built file path
-      });
+      // Try built JS first, then TS path as a fallback (dev)
+      try {
+        await chrome.scripting.executeScript({
+          target: { tabId },
+          files: ['content/index.js'],
+        });
+      } catch (e) {
+        // Fallback to TS path for dev environments with CRXJS
+        await chrome.scripting.executeScript({
+          target: { tabId },
+          files: ['src/content/index.ts'],
+        });
+      }
 
-      // Wait for script to initialize
-      await new Promise(resolve => setTimeout(resolve, 100));
+      // Wait briefly for the content script to initialize
+      await new Promise(resolve => setTimeout(resolve, 150));
 
       // Send the original message
       await this.sendToContentScript(tabId, show);
-
     } catch (injectionError) {
       console.error('SidebarManager: Failed to inject content script:', injectionError);
       throw new Error(`Content script injection failed: ${injectionError}`);
@@ -365,7 +367,7 @@ export class SidebarManager {
 
   /**
    * Check if a URL is restricted for content script injection
-   * 
+   *
    * @param url - URL to check
    * @returns True if URL is restricted
    */
@@ -388,7 +390,7 @@ export class SidebarManager {
    */
   private setupTabListeners(): void {
     // Clean up state when tab is closed
-    chrome.tabs.onRemoved.addListener((tabId) => {
+    chrome.tabs.onRemoved.addListener(tabId => {
       this.cleanupTab(tabId);
     });
 
@@ -408,7 +410,7 @@ let globalSidebarManager: SidebarManager | null = null;
 
 /**
  * Get or create the global sidebar manager instance
- * 
+ *
  * @param options - Configuration options
  * @returns The global SidebarManager instance
  */
@@ -418,3 +420,4 @@ export function getSidebarManager(options?: SidebarManagerOptions): SidebarManag
   }
   return globalSidebarManager;
 }
+/* eslint-disable no-console */

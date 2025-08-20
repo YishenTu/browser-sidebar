@@ -1,0 +1,228 @@
+/* CSS Variables and Theme System for AI Browser Sidebar Extension */
+
+/* Base CSS Variables - Scoped to sidebar container to avoid conflicts with host page */
+.ai-sidebar-container {
+  /* Color Palette - Blue Primary */
+  --primary-50: #eff6ff;
+  --primary-100: #dbeafe;
+  --primary-200: #bfdbfe;
+  --primary-300: #93c5fd;
+  --primary-400: #60a5fa;
+  --primary-500: #3b82f6;
+  --primary-600: #2563eb;
+  --primary-700: #1d4ed8;
+  --primary-800: #1e40af;
+  --primary-900: #1e3a8a;
+
+  /* Gray Scale */
+  --gray-50: #f9fafb;
+  --gray-100: #f3f4f6;
+  --gray-200: #e5e7eb;
+  --gray-300: #d1d5db;
+  --gray-400: #9ca3af;
+  --gray-500: #6b7280;
+  --gray-600: #4b5563;
+  --gray-700: #374151;
+  --gray-800: #1f2937;
+  --gray-900: #111827;
+
+  /* Success Colors */
+  --success-50: #f0fdf4;
+  --success-100: #dcfce7;
+  --success-500: #22c55e;
+  --success-600: #16a34a;
+  --success-700: #15803d;
+
+  /* Warning Colors */
+  --warning-50: #fffbeb;
+  --warning-100: #fef3c7;
+  --warning-500: #f59e0b;
+  --warning-600: #d97706;
+  --warning-700: #b45309;
+
+  /* Error Colors */
+  --error-50: #fef2f2;
+  --error-100: #fee2e2;
+  --error-500: #ef4444;
+  --error-600: #dc2626;
+  --error-700: #b91c1c;
+
+  /* Semantic Colors - Light Theme Default */
+  --background-primary: var(--gray-50);
+  --background-secondary: #ffffff;
+  --background-elevated: #ffffff;
+  --background-overlay: rgba(0, 0, 0, 0.1);
+  --background-muted: var(--gray-100);
+
+  --text-primary: var(--gray-900);
+  --text-secondary: var(--gray-600);
+  --text-muted: var(--gray-500);
+  --text-inverse: #ffffff;
+  --text-link: var(--primary-600);
+  --text-link-hover: var(--primary-700);
+
+  --border-primary: var(--gray-200);
+  --border-secondary: var(--gray-300);
+  --border-focus: var(--primary-500);
+  --border-error: var(--error-500);
+
+  /* Interaction States */
+  --hover-overlay: rgba(0, 0, 0, 0.05);
+  --active-overlay: rgba(0, 0, 0, 0.1);
+  --focus-ring: 0 0 0 3px rgba(59, 130, 246, 0.1);
+
+  /* Shadows */
+  --shadow-xs: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  --shadow-sm: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
+  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+  --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+  --shadow-2xl: 0 25px 50px -12px rgb(0 0 0 / 0.25);
+
+  /* Border Radius */
+  --radius-none: 0;
+  --radius-sm: 0.125rem; /* 2px */
+  --radius-md: 0.375rem; /* 6px */
+  --radius-lg: 0.5rem; /* 8px */
+  --radius-xl: 0.75rem; /* 12px */
+  --radius-2xl: 1rem; /* 16px */
+  --radius-full: 9999px;
+
+  /* Spacing Scale */
+  --spacing-0: 0;
+  --spacing-xs: 0.25rem; /* 4px */
+  --spacing-sm: 0.5rem; /* 8px */
+  --spacing-md: 0.75rem; /* 12px */
+  --spacing-lg: 1rem; /* 16px */
+  --spacing-xl: 1.25rem; /* 20px */
+  --spacing-2xl: 1.5rem; /* 24px */
+  --spacing-3xl: 2rem; /* 32px */
+  --spacing-4xl: 2.5rem; /* 40px */
+  --spacing-5xl: 3rem; /* 48px */
+
+  /* Typography Scale */
+  --font-size-xs: 0.75rem; /* 12px */
+  --font-size-sm: 0.875rem; /* 14px */
+  --font-size-base: 1rem; /* 16px */
+  --font-size-lg: 1.125rem; /* 18px */
+  --font-size-xl: 1.25rem; /* 20px */
+  --font-size-2xl: 1.5rem; /* 24px */
+  --font-size-3xl: 1.875rem; /* 30px */
+
+  --font-weight-normal: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 700;
+
+  --line-height-tight: 1.25;
+  --line-height-normal: 1.5;
+  --line-height-relaxed: 1.75;
+
+  /* Transitions */
+  --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-medium: 300ms cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-slow: 500ms cubic-bezier(0.4, 0, 0.2, 1);
+
+  /* Z-Index Scale */
+  --z-dropdown: 1000;
+  --z-sticky: 1020;
+  --z-fixed: 1030;
+  --z-modal-backdrop: 1040;
+  --z-modal: 1050;
+  --z-popover: 1060;
+  --z-tooltip: 1070;
+  --z-toast: 1080;
+
+  /* Layout */
+  --sidebar-width-min: 300px;
+  --sidebar-width-default: 400px;
+  --sidebar-width-max: 800px;
+  --sidebar-height: 85vh;
+  --header-height: 3rem; /* 48px */
+}
+
+/* Dark Theme Overrides */
+.ai-sidebar-container[data-theme='dark'] {
+  /* Semantic Colors - Dark Theme */
+  --background-primary: var(--gray-900);
+  --background-secondary: var(--gray-800);
+  --background-elevated: var(--gray-700);
+  --background-overlay: rgba(255, 255, 255, 0.1);
+  --background-muted: var(--gray-800);
+
+  --text-primary: var(--gray-50);
+  --text-secondary: var(--gray-300);
+  --text-muted: var(--gray-400);
+  --text-inverse: var(--gray-900);
+  --text-link: var(--primary-400);
+  --text-link-hover: var(--primary-300);
+
+  --border-primary: var(--gray-700);
+  --border-secondary: var(--gray-600);
+  --border-focus: var(--primary-400);
+
+  /* Interaction States - Dark Theme */
+  --hover-overlay: rgba(255, 255, 255, 0.05);
+  --active-overlay: rgba(255, 255, 255, 0.1);
+  --focus-ring: 0 0 0 3px rgba(96, 165, 250, 0.2);
+
+  /* Shadows - Dark Theme (more prominent) */
+  --shadow-xs: 0 1px 2px 0 rgb(0 0 0 / 0.2);
+  --shadow-sm: 0 1px 3px 0 rgb(0 0 0 / 0.3), 0 1px 2px -1px rgb(0 0 0 / 0.3);
+  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.3), 0 2px 4px -2px rgb(0 0 0 / 0.3);
+  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.3), 0 4px 6px -4px rgb(0 0 0 / 0.3);
+  --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.4), 0 8px 10px -6px rgb(0 0 0 / 0.4);
+  --shadow-2xl: 0 25px 50px -12px rgb(0 0 0 / 0.5);
+}
+
+/* Auto Theme - Uses system preference */
+.ai-sidebar-container[data-theme='auto'] {
+  /* Light theme variables by default, dark overrides in media query */
+}
+
+@media (prefers-color-scheme: dark) {
+  .ai-sidebar-container[data-theme='auto'] {
+    /* Apply dark theme variables when system prefers dark mode */
+    --background-primary: var(--gray-900);
+    --background-secondary: var(--gray-800);
+    --background-elevated: var(--gray-700);
+    --background-overlay: rgba(255, 255, 255, 0.1);
+    --background-muted: var(--gray-800);
+
+    --text-primary: var(--gray-50);
+    --text-secondary: var(--gray-300);
+    --text-muted: var(--gray-400);
+    --text-inverse: var(--gray-900);
+    --text-link: var(--primary-400);
+    --text-link-hover: var(--primary-300);
+
+    --border-primary: var(--gray-700);
+    --border-secondary: var(--gray-600);
+    --border-focus: var(--primary-400);
+
+    --hover-overlay: rgba(255, 255, 255, 0.05);
+    --active-overlay: rgba(255, 255, 255, 0.1);
+    --focus-ring: 0 0 0 3px rgba(96, 165, 250, 0.2);
+
+    --shadow-xs: 0 1px 2px 0 rgb(0 0 0 / 0.2);
+    --shadow-sm: 0 1px 3px 0 rgb(0 0 0 / 0.3), 0 1px 2px -1px rgb(0 0 0 / 0.3);
+    --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.3), 0 2px 4px -2px rgb(0 0 0 / 0.3);
+    --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.3), 0 4px 6px -4px rgb(0 0 0 / 0.3);
+    --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.4), 0 8px 10px -6px rgb(0 0 0 / 0.4);
+    --shadow-2xl: 0 25px 50px -12px rgb(0 0 0 / 0.5);
+  }
+}
+
+/* Transition Utility Class */
+.ai-sidebar-container * {
+  transition:
+    color var(--transition-fast),
+    background-color var(--transition-fast),
+    border-color var(--transition-fast),
+    box-shadow var(--transition-fast);
+}
+
+/* Disable transitions for initial theme application */
+.ai-sidebar-container.no-transitions * {
+  transition: none !important;
+}

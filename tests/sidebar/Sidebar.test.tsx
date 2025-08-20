@@ -13,7 +13,7 @@ describe('Sidebar Component', () => {
     // Clear DOM before each test
     document.body.innerHTML = '';
     document.head.innerHTML = '';
-    
+
     // Mock window dimensions for consistent testing
     Object.defineProperty(window, 'innerWidth', {
       writable: true,
@@ -85,8 +85,7 @@ describe('Sidebar Component', () => {
     render(<Sidebar />);
 
     const sidebar = screen.getByRole('dialog');
-    const styles = window.getComputedStyle(sidebar);
-    
+
     // Check that positioning and dimensions are set
     expect(sidebar).toHaveStyle({ width: '400px' }); // DEFAULT_WIDTH
     expect(sidebar).toHaveStyle({ height: '680px' }); // 85% of 800px window height
@@ -105,7 +104,7 @@ describe('Sidebar Component', () => {
 
     const header = document.querySelector('.ai-sidebar-header') as HTMLElement;
     expect(header).toBeInTheDocument();
-    
+
     // Default cursor should be grab
     expect(header).toHaveStyle({ cursor: 'grab' });
   });

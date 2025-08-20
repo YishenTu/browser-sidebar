@@ -16,45 +16,41 @@ interface AllTheProvidersProps {
  * Custom wrapper component that can be extended with providers
  * Currently just renders children, but can be extended with:
  * - Theme providers
- * - Redux/Zustand store providers
+ * - Zustand store providers (now available via useAppStore)
  * - React Query providers
  * - Any other context providers needed for testing
  */
 const AllTheProviders: React.FC<AllTheProvidersProps> = ({ children }) => {
-  // Future provider wrapping will go here
+  // Store is available globally via useAppStore hook
+  // Theme providers can be added here when implemented
   // Example:
   // return (
   //   <ThemeProvider theme={theme}>
-  //     <StoreProvider store={store}>
-  //       {children}
-  //     </StoreProvider>
+  //     {children}
   //   </ThemeProvider>
   // );
-  
+
   return <>{children}</>;
 };
 
 /**
  * Custom render function that wraps components with necessary providers
- * 
+ *
  * @param ui - The component to render
  * @param options - Custom render options
  * @returns RTL render result
- * 
+ *
  * @example
  * ```tsx
  * import { customRender } from '@tests/utils/test-utils';
- * 
+ *
  * test('renders component', () => {
  *   customRender(<MyComponent />);
  *   expect(screen.getByText('Hello')).toBeInTheDocument();
  * });
  * ```
  */
-const customRender = (
-  ui: ReactElement,
-  options?: CustomRenderOptions
-) => {
+const customRender = (ui: ReactElement, options?: CustomRenderOptions) => {
   return render(ui, {
     wrapper: AllTheProviders,
     ...options,

@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { unmountSidebar } from './index';
+import { useSettingsStore } from '@/store/settings';
+import { setTheme } from '@/utils/theme';
 
 const MIN_WIDTH = 300;
 const MAX_WIDTH = 800;
@@ -17,6 +19,14 @@ export const Sidebar: React.FC = () => {
   });
   const [isDragging, setIsDragging] = useState(false);
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
+
+  // Subscribe to theme changes
+  const theme = useSettingsStore(state => state.settings.theme);
+
+  // Apply theme when it changes
+  useEffect(() => {
+    setTheme(theme);
+  }, [theme]);
 
   // Handle resize and drag
   useEffect(() => {
@@ -132,12 +142,64 @@ export const Sidebar: React.FC = () => {
         </div>
 
         <div className="ai-sidebar-content">
-          <p>Chat with any webpage using AI</p>
-          <div className="ai-sidebar-info">
-            <small>Drag header to move • Drag left edge to resize</small>
-          </div>
+          <div className="space-y-4">
+            <div className="text-center">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+                Chat with any webpage using AI
+              </h3>
+              <p className="text-sm text-gray-600 dark:text-gray-400 mt-2">
+                Drag header to move • Drag left edge to resize
+              </p>
+            </div>
 
-          {/* This is where we'll add the chat interface components */}
+            {/* Demo chat interface preview */}
+            <div className="space-y-3">
+              <div className="chat-message user animate-slide-up">
+                <p className="text-sm">Hello! Can you help me understand this webpage?</p>
+              </div>
+
+              <div className="chat-message ai animate-slide-up" style={{ animationDelay: '0.2s' }}>
+                <p className="text-sm">
+                  I&apos;d be happy to help you understand the content on this webpage. What
+                  specific aspect would you like me to explain?
+                </p>
+              </div>
+            </div>
+
+            {/* Chat input area */}
+            <div className="mt-6 space-y-3">
+              <div className="relative">
+                <input
+                  type="text"
+                  placeholder="Ask about this webpage..."
+                  className="chat-input"
+                  disabled
+                />
+                <div className="absolute inset-y-0 right-0 pr-3 flex items-center">
+                  <div className="w-2 h-2 bg-primary-500 rounded-full animate-pulse-soft"></div>
+                </div>
+              </div>
+
+              <div className="flex gap-2">
+                <button className="chat-button flex-1" disabled>
+                  Send
+                </button>
+                <button className="chat-button secondary" disabled>
+                  Clear
+                </button>
+              </div>
+            </div>
+
+            {/* Status indicator */}
+            <div className="mt-4 p-3 bg-amber-50 dark:bg-amber-900/20 rounded-lg border border-amber-200 dark:border-amber-800">
+              <div className="flex items-center space-x-2">
+                <div className="w-2 h-2 bg-warning-500 rounded-full"></div>
+                <span className="text-xs text-amber-700 dark:text-amber-300">
+                  Stage 2: Chat interface coming soon
+                </span>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>

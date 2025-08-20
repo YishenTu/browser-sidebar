@@ -2,7 +2,8 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { flushSync } from 'react-dom';
 import { Sidebar } from './Sidebar';
-import sidebarStyles from './styles/sidebar.css?inline';
+import globalStyles from '../styles/globals.css?inline';
+// Theme is applied inside Sidebar.tsx via settings store effect
 
 let root: ReactDOM.Root | null = null;
 let keydownListener: ((e: KeyboardEvent) => void) | null = null;
@@ -15,7 +16,7 @@ export function mountSidebar() {
   if (!document.getElementById('ai-browser-sidebar-styles')) {
     const style = document.createElement('style');
     style.id = 'ai-browser-sidebar-styles';
-    style.textContent = sidebarStyles;
+    style.textContent = globalStyles;
     document.head.appendChild(style);
   }
 
@@ -23,6 +24,8 @@ export function mountSidebar() {
   const container = document.createElement('div');
   container.id = 'ai-browser-sidebar-root';
   document.body.appendChild(container);
+
+  // Theme is applied by the Sidebar component effect
 
   // Create React root and render synchronously for deterministic tests
   root = ReactDOM.createRoot(container);

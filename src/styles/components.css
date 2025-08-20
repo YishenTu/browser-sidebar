@@ -1,0 +1,426 @@
+/* Base Component Styles for AI Browser Sidebar Extension */
+/* All styles are scoped to the sidebar to prevent conflicts with host page */
+
+/* ===== BUTTON STYLES ===== */
+
+.ai-sidebar-container .btn {
+  @apply inline-flex items-center justify-center font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed;
+
+  /* CSS variables fallbacks for when variables.css is available */
+  border-radius: var(--radius-md, 6px);
+  font-size: var(--text-sm, 14px);
+  line-height: var(--leading-normal, 1.5);
+}
+
+/* Button Sizes */
+.ai-sidebar-container .btn-sm {
+  @apply px-3 py-1.5 text-sm;
+  min-height: var(--size-8, 32px);
+  font-size: var(--text-xs, 12px);
+}
+
+.ai-sidebar-container .btn-md {
+  @apply px-4 py-2;
+  min-height: var(--size-10, 40px);
+  font-size: var(--text-sm, 14px);
+}
+
+.ai-sidebar-container .btn-lg {
+  @apply px-6 py-3 text-base;
+  min-height: var(--size-12, 48px);
+  font-size: var(--text-base, 16px);
+}
+
+/* Button Variants */
+.ai-sidebar-container .btn-primary {
+  @apply bg-primary-600 text-white hover:bg-primary-700 focus:ring-primary-500;
+  background-color: var(--color-primary, #2563eb);
+  color: var(--color-primary-foreground, #ffffff);
+}
+
+.ai-sidebar-container .btn-primary:hover:not(:disabled) {
+  background-color: var(--color-primary-hover, #1d4ed8);
+}
+
+.ai-sidebar-container .btn-secondary {
+  @apply bg-gray-100 text-gray-900 hover:bg-gray-200 focus:ring-gray-500;
+  background-color: var(--color-secondary, #f3f4f6);
+  color: var(--color-secondary-foreground, #111827);
+}
+
+.ai-sidebar-container .btn-secondary:hover:not(:disabled) {
+  background-color: var(--color-secondary-hover, #e5e7eb);
+}
+
+.ai-sidebar-container .btn-ghost {
+  @apply bg-transparent text-gray-700 hover:bg-gray-100 focus:ring-gray-500;
+  background-color: transparent;
+  color: var(--color-text, #374151);
+}
+
+.ai-sidebar-container .btn-ghost:hover:not(:disabled) {
+  background-color: var(--color-muted, #f9fafb);
+}
+
+.ai-sidebar-container .btn-danger {
+  @apply bg-red-600 text-white hover:bg-red-700 focus:ring-red-500;
+  background-color: var(--color-destructive, #dc2626);
+  color: var(--color-destructive-foreground, #ffffff);
+}
+
+.ai-sidebar-container .btn-danger:hover:not(:disabled) {
+  background-color: var(--color-destructive-hover, #b91c1c);
+}
+
+.ai-sidebar-container .btn-outline {
+  @apply border border-gray-300 bg-transparent text-gray-700 hover:bg-gray-50 focus:ring-gray-500;
+  border-color: var(--color-border, #d1d5db);
+  color: var(--color-text, #374151);
+}
+
+.ai-sidebar-container .btn-outline:hover:not(:disabled) {
+  background-color: var(--color-accent, #f9fafb);
+}
+
+/* Button States */
+.ai-sidebar-container .btn:disabled {
+  opacity: var(--opacity-disabled, 0.5);
+  cursor: not-allowed;
+}
+
+.ai-sidebar-container .btn.loading {
+  @apply relative;
+  pointer-events: none;
+}
+
+.ai-sidebar-container .btn.loading::after {
+  @apply absolute inset-0 flex items-center justify-center;
+  content: '';
+  background: currentColor;
+  mask: url("data:image/svg+xml,%3csvg viewBox='0 0 16 16' fill='none' xmlns='http://www.w3.org/2000/svg'%3e%3cg%3e%3ccircle cx='8' cy='8' r='7' stroke='currentColor' stroke-opacity='0.25' stroke-width='2' vector-effect='non-scaling-stroke'%3e%3c/circle%3e%3cpath d='m15 8a7.002 7.002 0 0 0-7-7' stroke='currentColor' stroke-width='2' stroke-linecap='round' vector-effect='non-scaling-stroke'%3e%3c/path%3e%3c/g%3e%3c/svg%3e")
+    center / 1em no-repeat;
+  animation: spin 1s linear infinite;
+}
+
+/* ===== INPUT STYLES ===== */
+
+.ai-sidebar-container .input {
+  @apply w-full transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-offset-1 disabled:opacity-50 disabled:cursor-not-allowed;
+
+  border-radius: var(--radius-md, 6px);
+  border: 1px solid var(--color-border, #d1d5db);
+  background-color: var(--color-background, #ffffff);
+  color: var(--color-text, #111827);
+  font-size: var(--text-sm, 14px);
+}
+
+.ai-sidebar-container .input:focus {
+  border-color: var(--color-primary, #2563eb);
+  box-shadow: 0 0 0 2px var(--color-primary-focus, rgba(37, 99, 235, 0.1));
+}
+
+.ai-sidebar-container .input::placeholder {
+  color: var(--color-text-muted, #9ca3af);
+}
+
+/* Input Sizes */
+.ai-sidebar-container .input-sm {
+  @apply px-3 py-1.5 text-sm;
+  min-height: var(--size-8, 32px);
+}
+
+.ai-sidebar-container .input-md {
+  @apply px-3 py-2;
+  min-height: var(--size-10, 40px);
+}
+
+.ai-sidebar-container .input-lg {
+  @apply px-4 py-3 text-base;
+  min-height: var(--size-12, 48px);
+}
+
+/* Input States */
+.ai-sidebar-container .input.error {
+  border-color: var(--color-destructive, #dc2626);
+  box-shadow: 0 0 0 2px var(--color-destructive-focus, rgba(220, 38, 38, 0.1));
+}
+
+.ai-sidebar-container .input.success {
+  border-color: var(--color-success, #059669);
+  box-shadow: 0 0 0 2px var(--color-success-focus, rgba(5, 150, 105, 0.1));
+}
+
+/* Textarea Specific */
+.ai-sidebar-container .textarea {
+  @apply resize-y min-h-[80px];
+}
+
+.ai-sidebar-container .textarea.no-resize {
+  @apply resize-none;
+}
+
+/* ===== CARD STYLES ===== */
+
+.ai-sidebar-container .card {
+  @apply bg-white shadow-sm border border-gray-200;
+
+  border-radius: var(--radius-lg, 8px);
+  background-color: var(--color-card, #ffffff);
+  border-color: var(--color-border, #e5e7eb);
+  box-shadow: var(--shadow-sm, 0 1px 2px 0 rgba(0, 0, 0, 0.05));
+}
+
+.ai-sidebar-container .card-header {
+  @apply px-6 py-4 border-b border-gray-200;
+  border-bottom-color: var(--color-border, #e5e7eb);
+}
+
+.ai-sidebar-container .card-title {
+  @apply text-lg font-semibold text-gray-900 m-0;
+  color: var(--color-text, #111827);
+  font-size: var(--text-lg, 18px);
+}
+
+.ai-sidebar-container .card-description {
+  @apply text-sm text-gray-600 mt-1;
+  color: var(--color-text-muted, #6b7280);
+  font-size: var(--text-sm, 14px);
+}
+
+.ai-sidebar-container .card-body {
+  @apply px-6 py-4;
+}
+
+.ai-sidebar-container .card-footer {
+  @apply px-6 py-4 border-t border-gray-200 bg-gray-50;
+  border-top-color: var(--color-border, #e5e7eb);
+  background-color: var(--color-muted, #f9fafb);
+}
+
+/* Card Variants */
+.ai-sidebar-container .card-elevated {
+  box-shadow: var(
+    --shadow-md,
+    0 4px 6px -1px rgba(0, 0, 0, 0.1),
+    0 2px 4px -1px rgba(0, 0, 0, 0.06)
+  );
+}
+
+.ai-sidebar-container .card-interactive {
+  @apply cursor-pointer transition-all duration-200 hover:shadow-md;
+  transform: var(--transform-hover, translateY(0));
+}
+
+.ai-sidebar-container .card-interactive:hover {
+  transform: var(--transform-hover, translateY(-1px));
+  box-shadow: var(
+    --shadow-md,
+    0 4px 6px -1px rgba(0, 0, 0, 0.1),
+    0 2px 4px -1px rgba(0, 0, 0, 0.06)
+  );
+}
+
+/* ===== COMMON PATTERNS ===== */
+
+/* Focus Visible Styles */
+.ai-sidebar-container *:focus-visible {
+  outline: 2px solid var(--color-primary, #2563eb);
+  outline-offset: 2px;
+}
+
+/* High Contrast Mode Support */
+@media (prefers-contrast: high) {
+  .ai-sidebar-container .btn,
+  .ai-sidebar-container .input,
+  .ai-sidebar-container .card {
+    border-width: 2px;
+  }
+
+  .ai-sidebar-container .btn:focus,
+  .ai-sidebar-container .input:focus {
+    outline-width: 3px;
+  }
+}
+
+/* Reduced Motion Support */
+@media (prefers-reduced-motion: reduce) {
+  .ai-sidebar-container * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* Dark Mode Support */
+.dark .ai-sidebar-container .card {
+  background-color: var(--color-card-dark, #1f2937);
+  border-color: var(--color-border-dark, #374151);
+}
+
+.dark .ai-sidebar-container .card-header {
+  border-bottom-color: var(--color-border-dark, #374151);
+}
+
+.dark .ai-sidebar-container .card-footer {
+  background-color: var(--color-muted-dark, #111827);
+  border-top-color: var(--color-border-dark, #374151);
+}
+
+.dark .ai-sidebar-container .card-title {
+  color: var(--color-text-dark, #f9fafb);
+}
+
+.dark .ai-sidebar-container .card-description {
+  color: var(--color-text-muted-dark, #9ca3af);
+}
+
+.dark .ai-sidebar-container .input {
+  background-color: var(--color-background-dark, #1f2937);
+  border-color: var(--color-border-dark, #374151);
+  color: var(--color-text-dark, #f9fafb);
+}
+
+.dark .ai-sidebar-container .input::placeholder {
+  color: var(--color-text-muted-dark, #6b7280);
+}
+
+.dark .ai-sidebar-container .btn-secondary {
+  background-color: var(--color-secondary-dark, #374151);
+  color: var(--color-secondary-foreground-dark, #f9fafb);
+}
+
+.dark .ai-sidebar-container .btn-secondary:hover:not(:disabled) {
+  background-color: var(--color-secondary-hover-dark, #4b5563);
+}
+
+.dark .ai-sidebar-container .btn-ghost {
+  color: var(--color-text-dark, #d1d5db);
+}
+
+.dark .ai-sidebar-container .btn-ghost:hover:not(:disabled) {
+  background-color: var(--color-muted-dark, #374151);
+}
+
+.dark .ai-sidebar-container .btn-outline {
+  border-color: var(--color-border-dark, #4b5563);
+  color: var(--color-text-dark, #d1d5db);
+}
+
+.dark .ai-sidebar-container .btn-outline:hover:not(:disabled) {
+  background-color: var(--color-accent-dark, #374151);
+}
+
+/* ===== UTILITY CLASSES ===== */
+
+.ai-sidebar-container .loading-spinner {
+  animation: spin 1s linear infinite;
+}
+
+.ai-sidebar-container .fade-in {
+  animation: fadeIn 0.2s ease-in;
+}
+
+.ai-sidebar-container .slide-up {
+  animation: slideUp 0.3s ease-out;
+}
+
+/* Screen Reader Only */
+.ai-sidebar-container .sr-only {
+  @apply absolute w-px h-px p-0 -m-px overflow-hidden whitespace-nowrap border-0;
+  clip: rect(0, 0, 0, 0);
+}
+
+/* Animations */
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slideUp {
+  from {
+    transform: translateY(10px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+/* ===== COMPONENT-SPECIFIC MODIFIERS ===== */
+
+/* Interactive States */
+.ai-sidebar-container .hover-lift {
+  @apply transition-transform duration-200;
+}
+
+.ai-sidebar-container .hover-lift:hover {
+  transform: translateY(-1px);
+}
+
+/* Loading States */
+.ai-sidebar-container .loading-overlay {
+  @apply relative overflow-hidden;
+}
+
+.ai-sidebar-container .loading-overlay::after {
+  @apply absolute inset-0 bg-white bg-opacity-50 flex items-center justify-center;
+  content: '';
+  backdrop-filter: blur(1px);
+}
+
+.ai-sidebar-container .loading-overlay.dark::after {
+  background-color: rgba(0, 0, 0, 0.5);
+}
+
+/* Active States */
+.ai-sidebar-container .active {
+  background-color: var(--color-primary, #2563eb);
+  color: var(--color-primary-foreground, #ffffff);
+}
+
+/* Keyboard Navigation Indicators */
+.ai-sidebar-container .focusable {
+  @apply focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2;
+}
+
+.ai-sidebar-container .focusable:focus-visible {
+  box-shadow:
+    0 0 0 2px var(--color-background, #ffffff),
+    0 0 0 4px var(--color-primary, #2563eb);
+}
+
+/* Error States */
+.ai-sidebar-container .error-state {
+  border-color: var(--color-destructive, #dc2626);
+  background-color: var(--color-destructive-light, #fef2f2);
+}
+
+.ai-sidebar-container .error-text {
+  color: var(--color-destructive, #dc2626);
+  font-size: var(--text-xs, 12px);
+}
+
+/* Success States */
+.ai-sidebar-container .success-state {
+  border-color: var(--color-success, #059669);
+  background-color: var(--color-success-light, #ecfdf5);
+}
+
+.ai-sidebar-container .success-text {
+  color: var(--color-success, #059669);
+  font-size: var(--text-xs, 12px);
+}

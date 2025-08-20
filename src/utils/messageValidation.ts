@@ -1,15 +1,11 @@
 /**
  * @file Message Validation Utilities
- * 
+ *
  * Provides comprehensive validation for messages and their payloads
  * in the extension's message passing protocol.
  */
 
-import {
-  Message,
-  MessageType,
-  isValidMessage,
-} from '../types/messages';
+import { Message, MessageType, isValidMessage } from '../types/messages';
 
 /**
  * Validation result interface
@@ -29,7 +25,7 @@ export interface ValidationResult {
 export class MessageValidator {
   /**
    * Validates a message structure and content
-   * 
+   *
    * @param message - Message to validate
    * @returns Validation result
    */
@@ -59,10 +55,7 @@ export class MessageValidator {
     }
 
     // Validate payload based on message type
-    const payloadValidation = MessageValidator.validatePayload(
-      message.type,
-      message.payload
-    );
+    const payloadValidation = MessageValidator.validatePayload(message.type, message.payload);
 
     if (!payloadValidation.isValid) {
       return payloadValidation;
@@ -73,7 +66,7 @@ export class MessageValidator {
 
   /**
    * Validates message payload based on message type
-   * 
+   *
    * @param type - Message type
    * @param payload - Payload to validate
    * @returns Validation result
@@ -82,7 +75,7 @@ export class MessageValidator {
     switch (type) {
       case 'TOGGLE_SIDEBAR':
         return MessageValidator.validateToggleSidebarPayload(payload);
-      
+
       case 'CLOSE_SIDEBAR':
       case 'PING':
       case 'PONG':
@@ -94,22 +87,28 @@ export class MessageValidator {
           };
         }
         return { isValid: true };
-      
+
       case 'EXTRACT_CONTENT':
         return MessageValidator.validateExtractContentPayload(payload);
-      
+
       case 'CONTENT_EXTRACTED':
         return MessageValidator.validateContentExtractedPayload(payload);
-      
+
+      case 'CONTENT_READY':
+        return MessageValidator.validateContentReadyPayload(payload);
+
+      case 'SIDEBAR_STATE':
+        return MessageValidator.validateSidebarStatePayload(payload);
+
       case 'SEND_TO_AI':
         return MessageValidator.validateSendToAIPayload(payload);
-      
+
       case 'AI_RESPONSE':
         return MessageValidator.validateAIResponsePayload(payload);
-      
+
       case 'ERROR':
         return MessageValidator.validateErrorPayload(payload);
-      
+
       default:
         return {
           isValid: false,
@@ -134,11 +133,11 @@ export class MessageValidator {
     // Timestamp should be a positive number and not too far in the future
     const now = Date.now();
     const oneHourInMs = 60 * 60 * 1000;
-    
+
     return (
       timestamp > 0 &&
       timestamp <= now + oneHourInMs && // Allow some future tolerance
-      timestamp >= now - (24 * oneHourInMs) // Not too old
+      timestamp >= now - 24 * oneHourInMs // Not too old
     );
   }
 
@@ -268,6 +267,46 @@ export class MessageValidator {
   }
 
   /**
+   * Validates ContentReadyPayload
+   */
+  private static validateContentReadyPayload(payload: unknown): ValidationResult {
+    if (!payload || typeof payload !== 'object') {
+      return { isValid: false, error: 'ContentReady payload must be an object' };
+    }
+    const p = payload as Record<string, unknown>;
+    if (p['status'] !== 'content-script-ready') {
+      return { isValid: false, error: "ContentReady status must be 'content-script-ready'" };
+    }
+    if (typeof p['title'] !== 'string' || typeof p['url'] !== 'string') {
+      return { isValid: false, error: 'ContentReady title and url must be strings' };
+    }
+    if ('timestamp' in p && typeof p['timestamp'] !== 'number') {
+      return { isValid: false, error: 'ContentReady timestamp must be a number' };
+    }
+    return { isValid: true };
+  }
+
+  /**
+   * Validates SidebarStatePayload
+   */
+  private static validateSidebarStatePayload(payload: unknown): ValidationResult {
+    if (!payload || typeof payload !== 'object') {
+      return { isValid: false, error: 'SidebarState payload must be an object' };
+    }
+    const p = payload as Record<string, unknown>;
+    if (p['status'] !== 'sidebar-opened' && p['status'] !== 'sidebar-closed') {
+      return {
+        isValid: false,
+        error: "SidebarState status must be 'sidebar-opened' or 'sidebar-closed'",
+      };
+    }
+    if ('timestamp' in p && typeof p['timestamp'] !== 'number') {
+      return { isValid: false, error: 'SidebarState timestamp must be a number' };
+    }
+    return { isValid: true };
+  }
+
+  /**
    * Validates SendToAIPayload
    */
   private static validateSendToAIPayload(payload: unknown): ValidationResult {
@@ -381,7 +420,7 @@ export class MessageValidator {
 
 /**
  * Convenience function for validating messages
- * 
+ *
  * @param message - Message to validate
  * @returns Validation result
  */
@@ -391,7 +430,7 @@ export function validateMessage(message: unknown): ValidationResult {
 
 /**
  * Type-safe validation utility for messages
- * 
+ *
  * @param message - Message to validate
  * @param type - Expected message type
  * @returns True if message is valid and of the expected type

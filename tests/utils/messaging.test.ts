@@ -1,6 +1,6 @@
 /**
  * @file Messaging Utilities Tests
- * 
+ *
  * Comprehensive tests for the MessageBus class and messaging utilities
  * including timeout handling, retry logic, and subscription mechanisms.
  */
@@ -15,12 +15,7 @@ import {
   subscribeWithResponse,
   resetMessageBus,
 } from '../../src/utils/messaging';
-import {
-  ExtensionError,
-  ErrorCode,
-  createErrorResponse,
-  createSuccessResponse,
-} from '../../src/utils/errorHandling';
+import { ExtensionError, ErrorCode, createSuccessResponse } from '../../src/utils/errorHandling';
 import { createMessage } from '../../src/types/messages';
 import { chromeMocks } from '../mocks/chrome';
 
@@ -47,20 +42,22 @@ describe('MessageBus', () => {
     it('should create singleton instance with source', () => {
       const messageBus1 = MessageBus.getInstance('background');
       const messageBus2 = MessageBus.getInstance();
-      
+
       expect(messageBus1).toBe(messageBus2);
     });
 
     it('should throw error if no source provided on first call', () => {
       expect(() => MessageBus.getInstance()).toThrow(ExtensionError);
-      expect(() => MessageBus.getInstance()).toThrow('MessageBus must be initialized with a source');
+      expect(() => MessageBus.getInstance()).toThrow(
+        'MessageBus must be initialized with a source'
+      );
     });
 
     it('should reset singleton instance correctly', () => {
       const messageBus1 = MessageBus.getInstance('background');
       MessageBus.reset();
       const messageBus2 = MessageBus.getInstance('content');
-      
+
       expect(messageBus1).not.toBe(messageBus2);
     });
   });
@@ -74,12 +71,12 @@ describe('MessageBus', () => {
 
     it('should send message successfully', async () => {
       const mockResponse = { success: true, data: 'test response' };
-      (chrome.runtime.sendMessage as Mock).mockImplementation((message, callback) => {
-        callback(mockResponse);
+      (chrome.runtime.sendMessage as Mock).mockImplementation((_message, _callback) => {
+        _callback(mockResponse);
       });
 
       const response = await messageBus.send('PING');
-      
+
       expect(response.success).toBe(true);
       expect(chrome.runtime.sendMessage).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -93,12 +90,12 @@ describe('MessageBus', () => {
 
     it('should send message to specific tab', async () => {
       const mockResponse = { success: true };
-      (chrome.tabs.sendMessage as Mock).mockImplementation((tabId, message, callback) => {
+      (chrome.tabs.sendMessage as Mock).mockImplementation((_tabId, _message, callback) => {
         callback(mockResponse);
       });
 
       const response = await messageBus.send('TOGGLE_SIDEBAR', { show: true }, { tabId: 123 });
-      
+
       expect(response.success).toBe(true);
       expect(chrome.tabs.sendMessage).toHaveBeenCalledWith(
         123,
@@ -112,23 +109,27 @@ describe('MessageBus', () => {
 
     it('should handle Chrome runtime errors', async () => {
       chrome.runtime.lastError = { message: 'Extension context invalidated' };
-      
+
       const response = await messageBus.send('PING');
-      
+
       expect(response.success).toBe(false);
-      expect(response.error?.code).toBe(ErrorCode.CHROME_RUNTIME_ERROR);
+      if (!response.success) {
+        expect(response.error?.code).toBe(ErrorCode.CHROME_RUNTIME_ERROR);
+      }
     });
 
     it('should handle no response from target', async () => {
-      (chrome.runtime.sendMessage as Mock).mockImplementation((message, callback) => {
-        callback(undefined); // No response
+      (chrome.runtime.sendMessage as Mock).mockImplementation((_message, _callback) => {
+        _callback(undefined); // No response
       });
 
       const response = await messageBus.send('PING');
-      
+
       expect(response.success).toBe(false);
-      expect(response.error?.code).toBe(ErrorCode.MESSAGE_SEND_FAILED);
-      expect(response.error?.message).toContain('No response received');
+      if (!response.success) {
+        expect(response.error?.code).toBe(ErrorCode.MESSAGE_SEND_FAILED);
+        expect(response.error?.message).toContain('No response received');
+      }
     });
   });
 
@@ -140,7 +141,7 @@ describe('MessageBus', () => {
     });
 
     it('should validate message before sending', async () => {
-      // Import and mock validateMessage 
+      // Import and mock validateMessage
       const messageValidationModule = await import('../../src/utils/messageValidation');
       vi.mocked(messageValidationModule.validateMessage).mockReturnValueOnce({
         isValid: false,
@@ -148,9 +149,11 @@ describe('MessageBus', () => {
       });
 
       const response = await messageBus.send('PING');
-      
+
       expect(response.success).toBe(false);
-      expect(response.error?.code).toBe(ErrorCode.MESSAGE_VALIDATION_FAILED);
+      if (!response.success) {
+        expect(response.error?.code).toBe(ErrorCode.MESSAGE_VALIDATION_FAILED);
+      }
     });
   });
 
@@ -168,35 +171,39 @@ describe('MessageBus', () => {
 
     it('should timeout after specified duration', async () => {
       // Mock no response (simulate timeout)
-      (chrome.runtime.sendMessage as Mock).mockImplementation((message, callback) => {
+      (chrome.runtime.sendMessage as Mock).mockImplementation((_message, _callback) => {
         // Don't call callback to simulate timeout
         return;
       });
 
       const responsePromise = messageBus.sendWithTimeout('PING', undefined, 5000);
-      
+
       // Fast-forward time
       vi.advanceTimersByTime(5000);
-      
+
       const response = await responsePromise;
-      
+
       expect(response.success).toBe(false);
-      expect(response.error?.code).toBe(ErrorCode.MESSAGE_TIMEOUT);
+      if (!response.success) {
+        expect(response.error?.code).toBe(ErrorCode.MESSAGE_TIMEOUT);
+      }
     });
 
     it('should succeed if response arrives before timeout', async () => {
       const mockResponse = { success: true, data: 'quick response' };
-      (chrome.runtime.sendMessage as Mock).mockImplementation((message, callback) => {
+      (chrome.runtime.sendMessage as Mock).mockImplementation((_message, _callback) => {
         // Simulate immediate response
-        callback(mockResponse);
+        _callback(mockResponse);
       });
 
       const responsePromise = messageBus.sendWithTimeout('PING', undefined, 5000);
-      
+
       const response = await responsePromise;
-      
+
       expect(response.success).toBe(true);
-      expect(response.data).toEqual({ success: true, data: 'quick response' });
+      if (response.success) {
+        expect(response.data).toEqual({ success: true, data: 'quick response' });
+      }
     });
   });
 
@@ -214,14 +221,14 @@ describe('MessageBus', () => {
 
     it('should retry on retriable errors with exponential backoff', async () => {
       let callCount = 0;
-      (chrome.runtime.sendMessage as Mock).mockImplementation((message, callback) => {
+      (chrome.runtime.sendMessage as Mock).mockImplementation((_message, _callback) => {
         callCount++;
         if (callCount <= 2) {
           // Fail first 2 attempts - don't call callback to simulate timeout
           return;
         } else {
           // Succeed on 3rd attempt
-          callback({ success: true });
+          _callback({ success: true });
         }
       });
 
@@ -233,16 +240,16 @@ describe('MessageBus', () => {
         retries: 2,
         timeout: 100, // Short timeout for fast test
       });
-      
+
       // Restore original delay
       messageBus['delay'] = originalDelay;
-      
+
       expect(response.success).toBe(true);
       expect(callCount).toBe(3);
     });
 
     it('should fail after max retries', async () => {
-      (chrome.runtime.sendMessage as Mock).mockImplementation((message, callback) => {
+      (chrome.runtime.sendMessage as Mock).mockImplementation((_message, _callback) => {
         // Always timeout - don't call callback
         return;
       });
@@ -255,18 +262,20 @@ describe('MessageBus', () => {
         retries: 2,
         timeout: 100, // Short timeout for fast test
       });
-      
+
       // Restore original delay
       messageBus['delay'] = originalDelay;
-      
+
       expect(response.success).toBe(false);
-      expect(response.error?.message).toContain('failed after 3 attempts');
+      if (!response.success) {
+        expect(response.error?.message).toContain('failed after 3 attempts');
+      }
       expect(chrome.runtime.sendMessage).toHaveBeenCalledTimes(3);
     });
 
     it('should not retry non-retriable errors', async () => {
-      (chrome.runtime.sendMessage as Mock).mockImplementation((message, callback) => {
-        callback({ success: true, data: 'normal response' });
+      (chrome.runtime.sendMessage as Mock).mockImplementation((_message, _callback) => {
+        _callback({ success: true, data: 'normal response' });
       });
 
       // Test should pass normally since we're not actually testing validation errors
@@ -289,10 +298,10 @@ describe('MessageBus', () => {
 
     it('should subscribe to messages of specific type', () => {
       const listener = vi.fn();
-      const unsubscribe = messageBus.subscribe('AI_RESPONSE', listener);
+      const _unsubscribe = messageBus.subscribe('AI_RESPONSE', listener);
 
       expect(chrome.runtime.onMessage.addListener).toHaveBeenCalled();
-      expect(typeof unsubscribe).toBe('function');
+      expect(typeof _unsubscribe).toBe('function');
     });
 
     it('should call listener for matching message type', () => {
@@ -371,10 +380,10 @@ describe('MessageBus', () => {
       const result = chromeListener(message, {}, mockSendResponse);
 
       expect(result).toBe(true); // Indicates async response
-      
+
       // Wait for async handling
       await new Promise(resolve => setTimeout(resolve, 0));
-      
+
       expect(mockSendResponse).toHaveBeenCalledWith(
         expect.objectContaining({
           success: true,
@@ -413,12 +422,12 @@ describe('MessageBus', () => {
 
     it('should unsubscribe correctly', () => {
       const listener = vi.fn();
-      const unsubscribe = messageBus.subscribe('AI_RESPONSE', listener);
+      const _unsubscribe = messageBus.subscribe('AI_RESPONSE', listener);
 
       // Get the registered Chrome listener
       const chromeListener = (chrome.runtime.onMessage.addListener as Mock).mock.calls[0][0];
 
-      unsubscribe();
+      _unsubscribe();
 
       expect(chrome.runtime.onMessage.removeListener).toHaveBeenCalledWith(chromeListener);
     });
@@ -456,9 +465,9 @@ describe('MessageBus', () => {
   describe('Target Resolution', () => {
     it('should resolve correct default targets for message types', async () => {
       const messageBus = MessageBus.getInstance('background');
-      
-      (chrome.runtime.sendMessage as Mock).mockImplementation((message, callback) => {
-        callback({ success: true });
+
+      (chrome.runtime.sendMessage as Mock).mockImplementation((_message, _callback) => {
+        _callback({ success: true });
       });
 
       // Test TOGGLE_SIDEBAR from background should go to content
@@ -471,10 +480,10 @@ describe('MessageBus', () => {
       // Reset and test from content script
       resetMessageBus();
       const contentMessageBus = MessageBus.getInstance('content');
-      
-      await contentMessageBus.send('CONTENT_EXTRACTED');
+
+      await contentMessageBus.send('CONTENT_READY');
       expect(chrome.runtime.sendMessage).toHaveBeenLastCalledWith(
-        expect.objectContaining({ target: 'sidebar' }),
+        expect.objectContaining({ target: 'background' }),
         expect.any(Function)
       );
     });
@@ -495,7 +504,7 @@ describe('Convenience Functions', () => {
     it('should return singleton instance', () => {
       const bus1 = getMessageBus('background');
       const bus2 = getMessageBus();
-      
+
       expect(bus1).toBe(bus2);
     });
   });
@@ -503,13 +512,13 @@ describe('Convenience Functions', () => {
   describe('sendMessage', () => {
     it('should send message with retry', async () => {
       getMessageBus('background'); // Initialize
-      
-      (chrome.runtime.sendMessage as Mock).mockImplementation((message, callback) => {
-        callback({ success: true });
+
+      (chrome.runtime.sendMessage as Mock).mockImplementation((_message, _callback) => {
+        _callback({ success: true });
       });
 
       const response = await sendMessage('PING');
-      
+
       expect(response.success).toBe(true);
       expect(chrome.runtime.sendMessage).toHaveBeenCalled();
     });
@@ -521,40 +530,40 @@ describe('Convenience Functions', () => {
     });
 
     it('should return true for successful ping', async () => {
-      (chrome.runtime.sendMessage as Mock).mockImplementation((message, callback) => {
-        callback({ success: true });
+      (chrome.runtime.sendMessage as Mock).mockImplementation((_message, _callback) => {
+        _callback({ success: true });
       });
 
       const result = await ping();
-      
+
       expect(result).toBe(true);
     });
 
     it('should return false for failed ping', async () => {
-      (chrome.runtime.sendMessage as Mock).mockImplementation((message, callback) => {
+      (chrome.runtime.sendMessage as Mock).mockImplementation((_message, _callback) => {
         // Don't call callback to simulate failure/timeout
         return;
       });
 
       const result = await ping();
-      
+
       expect(result).toBe(false);
     });
 
     it('should return false for ping timeout', async () => {
       vi.useFakeTimers();
-      
-      (chrome.runtime.sendMessage as Mock).mockImplementation((message, callback) => {
-        setTimeout(() => callback({ success: true }), 5000);
+
+      (chrome.runtime.sendMessage as Mock).mockImplementation((_message, _callback) => {
+        setTimeout(() => _callback({ success: true }), 5000);
       });
 
       const pingPromise = ping();
       vi.advanceTimersByTime(2000); // Timeout is 2000ms for ping
-      
+
       const result = await pingPromise;
-      
+
       expect(result).toBe(false);
-      
+
       vi.useRealTimers();
     });
   });
@@ -566,10 +575,10 @@ describe('Convenience Functions', () => {
 
     it('should subscribe to messages', () => {
       const listener = vi.fn();
-      const unsubscribe = subscribeToMessages('AI_RESPONSE', listener);
-      
+      const _unsubscribe = subscribeToMessages('AI_RESPONSE', listener);
+
       expect(chrome.runtime.onMessage.addListener).toHaveBeenCalled();
-      expect(typeof unsubscribe).toBe('function');
+      expect(typeof _unsubscribe).toBe('function');
     });
   });
 
@@ -582,17 +591,17 @@ describe('Convenience Functions', () => {
 
     it('should subscribe with automatic response handling', () => {
       const handler = vi.fn().mockReturnValue('handled');
-      const unsubscribe = subscribeWithResponse('AI_RESPONSE', handler);
-      
+      subscribeWithResponse('AI_RESPONSE', handler);
+
       expect(chrome.runtime.onMessage.addListener).toHaveBeenCalled();
-      
+
       chromeListener = (chrome.runtime.onMessage.addListener as Mock).mock.calls[0][0];
     });
 
     it('should handle successful responses', async () => {
       const handler = vi.fn().mockReturnValue('test response');
       subscribeWithResponse('AI_RESPONSE', handler);
-      
+
       chromeListener = (chrome.runtime.onMessage.addListener as Mock).mock.calls[0][0];
 
       const message = createMessage({
@@ -617,7 +626,7 @@ describe('Convenience Functions', () => {
     it('should handle async handlers', async () => {
       const handler = vi.fn().mockResolvedValue('async response');
       subscribeWithResponse('AI_RESPONSE', handler);
-      
+
       chromeListener = (chrome.runtime.onMessage.addListener as Mock).mock.calls[0][0];
 
       const message = createMessage({
@@ -644,7 +653,7 @@ describe('Convenience Functions', () => {
     it('should handle handler errors', async () => {
       const handler = vi.fn().mockRejectedValue(new Error('Handler error'));
       subscribeWithResponse('AI_RESPONSE', handler);
-      
+
       chromeListener = (chrome.runtime.onMessage.addListener as Mock).mock.calls[0][0];
 
       const message = createMessage({
@@ -676,7 +685,7 @@ describe('Convenience Functions', () => {
       const bus1 = getMessageBus('background');
       resetMessageBus();
       const bus2 = getMessageBus('content');
-      
+
       expect(bus1).not.toBe(bus2);
     });
   });

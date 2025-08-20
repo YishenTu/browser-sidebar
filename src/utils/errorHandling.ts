@@ -1,6 +1,6 @@
 /**
  * @file Error Handling Utilities
- * 
+ *
  * Provides standardized error handling for the extension with custom error types,
  * Chrome API error handling, and standardized error responses.
  */
@@ -14,23 +14,23 @@ export enum ErrorCode {
   MESSAGE_VALIDATION_FAILED = 'MESSAGE_VALIDATION_FAILED',
   MESSAGE_SEND_FAILED = 'MESSAGE_SEND_FAILED',
   INVALID_MESSAGE_TARGET = 'INVALID_MESSAGE_TARGET',
-  
+
   // Chrome API errors
   CHROME_RUNTIME_ERROR = 'CHROME_RUNTIME_ERROR',
   CHROME_STORAGE_ERROR = 'CHROME_STORAGE_ERROR',
   CHROME_TABS_ERROR = 'CHROME_TABS_ERROR',
   CHROME_SCRIPTING_ERROR = 'CHROME_SCRIPTING_ERROR',
-  
+
   // Content script errors
   CONTENT_INJECTION_FAILED = 'CONTENT_INJECTION_FAILED',
   SIDEBAR_MOUNT_FAILED = 'SIDEBAR_MOUNT_FAILED',
   DOM_MANIPULATION_FAILED = 'DOM_MANIPULATION_FAILED',
-  
+
   // Network and external errors
   NETWORK_ERROR = 'NETWORK_ERROR',
   API_ERROR = 'API_ERROR',
   PERMISSION_DENIED = 'PERMISSION_DENIED',
-  
+
   // General errors
   UNKNOWN_ERROR = 'UNKNOWN_ERROR',
   CONFIGURATION_ERROR = 'CONFIGURATION_ERROR',
@@ -84,17 +84,18 @@ export class ExtensionError extends Error {
    * Creates an ExtensionError from a plain object
    */
   static fromJSON(obj: Record<string, unknown>): ExtensionError {
-    const error = new ExtensionError(
-      obj.message as string,
-      obj.code as ErrorCode,
-      obj.details as Record<string, unknown>,
-      obj.source as string
-    );
-    
-    if (obj.stack) {
-      error.stack = obj.stack as string;
+    const message = obj['message'] as string;
+    const code = obj['code'] as ErrorCode;
+    const details = obj['details'] as Record<string, unknown>;
+    const source = obj['source'] as string;
+
+    const error = new ExtensionError(message, code, details, source);
+
+    const stack = obj['stack'];
+    if (stack) {
+      error.stack = stack as string;
     }
-    
+
     return error;
   }
 }
@@ -102,35 +103,33 @@ export class ExtensionError extends Error {
 /**
  * Handles Chrome runtime errors and converts them to ExtensionErrors
  */
-export function handleChromeError(
-  operation: string,
-  source?: string
-): ExtensionError | null {
+export function handleChromeError(operation: string, source?: string): ExtensionError | null {
   const chromeError = chrome.runtime.lastError;
-  
+
   if (!chromeError) {
     return null;
   }
 
   // Determine error code based on error message patterns
   let errorCode: ErrorCode = ErrorCode.CHROME_RUNTIME_ERROR;
-  
-  if (chromeError.message.includes('storage')) {
+
+  const msg = chromeError.message ?? '';
+  if (msg.includes('storage')) {
     errorCode = ErrorCode.CHROME_STORAGE_ERROR;
-  } else if (chromeError.message.includes('tab')) {
+  } else if (msg.includes('tab')) {
     errorCode = ErrorCode.CHROME_TABS_ERROR;
-  } else if (chromeError.message.includes('script')) {
+  } else if (msg.includes('script')) {
     errorCode = ErrorCode.CHROME_SCRIPTING_ERROR;
-  } else if (chromeError.message.includes('permission')) {
+  } else if (msg.includes('permission')) {
     errorCode = ErrorCode.PERMISSION_DENIED;
   }
 
   return new ExtensionError(
-    `Chrome API error during ${operation}: ${chromeError.message}`,
+    `Chrome API error during ${operation}: ${msg}`,
     errorCode,
     {
       operation,
-      originalError: chromeError.message,
+      originalError: msg,
     },
     source
   );
@@ -177,11 +176,10 @@ export function createErrorResponse(
   } else if (error instanceof ExtensionError) {
     extensionError = error;
   } else {
-    extensionError = new ExtensionError(
-      error.message,
-      ErrorCode.UNKNOWN_ERROR,
-      { ...details, originalStack: error.stack }
-    );
+    extensionError = new ExtensionError(error.message, ErrorCode.UNKNOWN_ERROR, {
+      ...details,
+      originalStack: error.stack,
+    });
   }
 
   return {
@@ -217,20 +215,20 @@ export function withChromeErrorHandling<T extends unknown[], R>(
   return (...args: T): R => {
     try {
       const result = fn(...args);
-      
+
       // Check for Chrome runtime errors after execution
       const chromeError = handleChromeError(operation, source);
       if (chromeError) {
         throw chromeError;
       }
-      
+
       return result;
     } catch (error) {
       // If it's already an ExtensionError, re-throw it
       if (error instanceof ExtensionError) {
         throw error;
       }
-      
+
       // Otherwise, wrap it in an ExtensionError
       throw new ExtensionError(
         `Error during ${operation}: ${error instanceof Error ? error.message : String(error)}`,
@@ -250,7 +248,7 @@ export function withChromeErrorHandling<T extends unknown[], R>(
  */
 export function logError(error: ExtensionError | Error, context?: string): void {
   const prefix = context ? `[${context}]` : '[Extension]';
-  
+
   if (error instanceof ExtensionError) {
     console.error(`${prefix} ExtensionError [${error.code}]:`, {
       message: error.message,
@@ -293,10 +291,7 @@ export function shouldReportToUser(error: ExtensionError | Error): boolean {
     return true; // Report unexpected errors to user
   }
 
-  const internalErrorCodes = [
-    ErrorCode.MESSAGE_VALIDATION_FAILED,
-    ErrorCode.CONFIGURATION_ERROR,
-  ];
+  const internalErrorCodes = [ErrorCode.MESSAGE_VALIDATION_FAILED, ErrorCode.CONFIGURATION_ERROR];
 
   return !internalErrorCodes.includes(error.code);
 }
@@ -312,19 +307,19 @@ export function createUserFriendlyMessage(error: ExtensionError | Error): string
   switch (error.code) {
     case ErrorCode.MESSAGE_TIMEOUT:
       return 'Request timed out. Please try again.';
-    
+
     case ErrorCode.PERMISSION_DENIED:
       return 'Permission denied. Please check extension permissions.';
-    
+
     case ErrorCode.NETWORK_ERROR:
       return 'Network error. Please check your connection and try again.';
-    
+
     case ErrorCode.API_ERROR:
       return 'Service temporarily unavailable. Please try again later.';
-    
+
     case ErrorCode.CONTENT_INJECTION_FAILED:
       return 'Unable to load sidebar on this page. Try refreshing the page.';
-    
+
     default:
       return error.message || 'An error occurred. Please try again.';
   }

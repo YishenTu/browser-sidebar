@@ -1,23 +1,18 @@
 /**
  * @file Message Handler Tests
- * 
+ *
  * Comprehensive tests for the background service worker message handling system.
  */
 
-import { describe, it, expect, beforeEach, vi, type MockedFunction } from 'vitest';
+import { vi, describe, it, expect, beforeEach } from 'vitest';
 import {
   MessageHandlerRegistry,
   DefaultHandlers,
   createDefaultMessageHandler,
   type MessageHandler,
 } from '../../src/background/messageHandler.js';
-import {
-  createMessage,
-  type Message,
-  type MessageType,
-  type ErrorPayload,
-  type ToggleSidebarPayload,
-} from '../../src/types/messages.js';
+import { createMessage } from '../../src/types/messages.js';
+import { type ErrorPayload, type ToggleSidebarPayload } from '../../src/types/messages.js';
 
 // Mock Chrome APIs
 const mockSendResponse = vi.fn();
@@ -37,19 +32,19 @@ describe('MessageHandlerRegistry', () => {
   describe('Handler Registration', () => {
     it('should register a handler for a message type', () => {
       const handler: MessageHandler = vi.fn().mockResolvedValue('test response');
-      
+
       registry.registerHandler('PING', handler, 'Test ping handler');
-      
+
       expect(registry.hasHandler('PING')).toBe(true);
       expect(registry.getRegisteredTypes()).toContain('PING');
     });
 
     it('should unregister a handler', () => {
       const handler: MessageHandler = vi.fn();
-      
+
       registry.registerHandler('PING', handler);
       expect(registry.hasHandler('PING')).toBe(true);
-      
+
       const removed = registry.unregisterHandler('PING');
       expect(removed).toBe(true);
       expect(registry.hasHandler('PING')).toBe(false);
@@ -63,10 +58,10 @@ describe('MessageHandlerRegistry', () => {
     it('should replace existing handler when registering same type', () => {
       const handler1: MessageHandler = vi.fn().mockResolvedValue('response1');
       const handler2: MessageHandler = vi.fn().mockResolvedValue('response2');
-      
+
       registry.registerHandler('PING', handler1);
       registry.registerHandler('PING', handler2);
-      
+
       expect(registry.getRegisteredTypes()).toEqual(['PING']);
     });
   });
@@ -75,7 +70,7 @@ describe('MessageHandlerRegistry', () => {
     it('should handle valid messages with registered handlers', async () => {
       const handler: MessageHandler = vi.fn().mockResolvedValue('test response');
       registry.registerHandler('PING', handler);
-      
+
       const message = createMessage({
         type: 'PING',
         source: 'content',
@@ -83,7 +78,7 @@ describe('MessageHandlerRegistry', () => {
       });
 
       const result = await registry.handleMessage(message, mockSender, mockSendResponse);
-      
+
       expect(result).toBe(true);
       expect(handler).toHaveBeenCalledWith(message, mockSender);
       expect(mockSendResponse).toHaveBeenCalledWith('test response');
@@ -92,7 +87,7 @@ describe('MessageHandlerRegistry', () => {
     it('should handle synchronous handlers', async () => {
       const handler: MessageHandler = vi.fn().mockReturnValue('sync response');
       registry.registerHandler('PING', handler);
-      
+
       const message = createMessage({
         type: 'PING',
         source: 'content',
@@ -100,7 +95,7 @@ describe('MessageHandlerRegistry', () => {
       });
 
       const result = await registry.handleMessage(message, mockSender, mockSendResponse);
-      
+
       expect(result).toBe(true);
       expect(mockSendResponse).toHaveBeenCalledWith('sync response');
     });
@@ -111,7 +106,7 @@ describe('MessageHandlerRegistry', () => {
         return 'async response';
       });
       registry.registerHandler('PING', handler);
-      
+
       const message = createMessage({
         type: 'PING',
         source: 'content',
@@ -119,16 +114,16 @@ describe('MessageHandlerRegistry', () => {
       });
 
       const result = await registry.handleMessage(message, mockSender, mockSendResponse);
-      
+
       expect(result).toBe(true);
       expect(mockSendResponse).toHaveBeenCalledWith('async response');
     });
 
     it('should return error for invalid message format', async () => {
       const invalidMessage = { invalid: 'message' };
-      
+
       const result = await registry.handleMessage(invalidMessage, mockSender, mockSendResponse);
-      
+
       expect(result).toBe(false);
       expect(mockSendResponse).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -147,9 +142,9 @@ describe('MessageHandlerRegistry', () => {
         source: 'content',
         target: 'background',
       });
-      
+
       const result = await registry.handleMessage(message, mockSender, mockSendResponse);
-      
+
       expect(result).toBe(false);
       expect(mockSendResponse).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -166,7 +161,7 @@ describe('MessageHandlerRegistry', () => {
       const error = new Error('Handler failed');
       const handler: MessageHandler = vi.fn().mockRejectedValue(error);
       registry.registerHandler('PING', handler);
-      
+
       const message = createMessage({
         type: 'PING',
         source: 'content',
@@ -174,7 +169,7 @@ describe('MessageHandlerRegistry', () => {
       });
 
       const result = await registry.handleMessage(message, mockSender, mockSendResponse);
-      
+
       expect(result).toBe(false);
       expect(mockSendResponse).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -196,7 +191,7 @@ describe('MessageHandlerRegistry', () => {
         throw 'String error';
       });
       registry.registerHandler('PING', handler);
-      
+
       const message = createMessage({
         type: 'PING',
         source: 'content',
@@ -204,7 +199,7 @@ describe('MessageHandlerRegistry', () => {
       });
 
       const result = await registry.handleMessage(message, mockSender, mockSendResponse);
-      
+
       expect(result).toBe(false);
       expect(mockSendResponse).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -227,7 +222,7 @@ describe('MessageHandlerRegistry', () => {
       registry.registerHandler('PING', vi.fn());
       registry.registerHandler('TOGGLE_SIDEBAR', vi.fn());
       registry.registerHandler('CLOSE_SIDEBAR', vi.fn());
-      
+
       const types = registry.getRegisteredTypes();
       expect(types).toHaveLength(3);
       expect(types).toContain('PING');
@@ -237,7 +232,7 @@ describe('MessageHandlerRegistry', () => {
 
     it('should check handler existence correctly', () => {
       expect(registry.hasHandler('PING')).toBe(false);
-      
+
       registry.registerHandler('PING', vi.fn());
       expect(registry.hasHandler('PING')).toBe(true);
     });
@@ -258,7 +253,7 @@ describe('DefaultHandlers', () => {
       });
 
       const response = await DefaultHandlers.handlePing(pingMessage, mockSender);
-      
+
       expect(response).toEqual(
         expect.objectContaining({
           type: 'PONG',
@@ -270,7 +265,7 @@ describe('DefaultHandlers', () => {
 
     it('should log ping source information', async () => {
       const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
-      
+
       const pingMessage = createMessage({
         type: 'PING',
         source: 'content',
@@ -278,12 +273,9 @@ describe('DefaultHandlers', () => {
       });
 
       await DefaultHandlers.handlePing(pingMessage, mockSender);
-      
-      expect(consoleSpy).toHaveBeenCalledWith(
-        'PING received from:',
-        mockSender.tab?.id
-      );
-      
+
+      expect(consoleSpy).toHaveBeenCalledWith('PING received from:', mockSender.tab?.id);
+
       consoleSpy.mockRestore();
     });
 
@@ -291,7 +283,7 @@ describe('DefaultHandlers', () => {
       const extensionSender: chrome.runtime.MessageSender = {
         id: 'test-extension-id',
       };
-      
+
       const pingMessage = createMessage({
         type: 'PING',
         source: 'sidebar',
@@ -299,7 +291,7 @@ describe('DefaultHandlers', () => {
       });
 
       const response = await DefaultHandlers.handlePing(pingMessage, extensionSender);
-      
+
       expect(response.type).toBe('PONG');
       expect(response.target).toBe('sidebar');
     });
@@ -308,7 +300,7 @@ describe('DefaultHandlers', () => {
   describe('handleError', () => {
     it('should log error messages', async () => {
       const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
-      
+
       const errorMessage = createMessage<ErrorPayload>({
         type: 'ERROR',
         payload: {
@@ -320,14 +312,14 @@ describe('DefaultHandlers', () => {
       });
 
       await DefaultHandlers.handleError(errorMessage, mockSender);
-      
+
       expect(consoleSpy).toHaveBeenCalledWith(
         'Error message received:',
         errorMessage.payload,
         'from:',
         mockSender
       );
-      
+
       consoleSpy.mockRestore();
     });
   });
@@ -336,10 +328,10 @@ describe('DefaultHandlers', () => {
 describe('createDefaultMessageHandler', () => {
   it('should create a registry with default handlers', () => {
     const registry = createDefaultMessageHandler();
-    
+
     expect(registry.hasHandler('PING')).toBe(true);
     expect(registry.hasHandler('ERROR')).toBe(true);
-    
+
     const registeredTypes = registry.getRegisteredTypes();
     expect(registeredTypes).toContain('PING');
     expect(registeredTypes).toContain('ERROR');
@@ -347,7 +339,7 @@ describe('createDefaultMessageHandler', () => {
 
   it('should handle PING messages correctly', async () => {
     const registry = createDefaultMessageHandler();
-    
+
     const pingMessage = createMessage({
       type: 'PING',
       source: 'content',
@@ -355,7 +347,7 @@ describe('createDefaultMessageHandler', () => {
     });
 
     const result = await registry.handleMessage(pingMessage, mockSender, mockSendResponse);
-    
+
     expect(result).toBe(true);
     expect(mockSendResponse).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -368,7 +360,7 @@ describe('createDefaultMessageHandler', () => {
 
   it('should handle ERROR messages correctly', async () => {
     const registry = createDefaultMessageHandler();
-    
+
     const errorMessage = createMessage<ErrorPayload>({
       type: 'ERROR',
       payload: {
@@ -380,7 +372,7 @@ describe('createDefaultMessageHandler', () => {
     });
 
     const result = await registry.handleMessage(errorMessage, mockSender, mockSendResponse);
-    
+
     expect(result).toBe(true);
     expect(mockSendResponse).toHaveBeenCalledWith(undefined);
   });
@@ -395,7 +387,8 @@ describe('Integration Tests', () => {
 
   it('should handle multiple message types in sequence', async () => {
     // Register a custom handler
-    const customHandler: MessageHandler<ToggleSidebarPayload, string> = vi.fn()
+    const customHandler: MessageHandler<ToggleSidebarPayload, string> = vi
+      .fn()
       .mockResolvedValue('sidebar toggled');
     registry.registerHandler('TOGGLE_SIDEBAR', customHandler);
 
@@ -407,9 +400,7 @@ describe('Integration Tests', () => {
     });
 
     await registry.handleMessage(pingMessage, mockSender, mockSendResponse);
-    expect(mockSendResponse).toHaveBeenLastCalledWith(
-      expect.objectContaining({ type: 'PONG' })
-    );
+    expect(mockSendResponse).toHaveBeenLastCalledWith(expect.objectContaining({ type: 'PONG' }));
 
     mockSendResponse.mockClear();
 
@@ -429,7 +420,7 @@ describe('Integration Tests', () => {
   it('should maintain handler isolation', async () => {
     const handler1 = vi.fn().mockResolvedValue('response1');
     const handler2 = vi.fn().mockResolvedValue('response2');
-    
+
     registry.registerHandler('EXTRACT_CONTENT', handler1);
     registry.registerHandler('SEND_TO_AI', handler2);
 
@@ -456,12 +447,12 @@ describe('Integration Tests', () => {
 
   it('should handle concurrent messages safely', async () => {
     const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
-    
+
     const slowHandler: MessageHandler = vi.fn().mockImplementation(async () => {
       await delay(50);
       return 'slow response';
     });
-    
+
     const fastHandler: MessageHandler = vi.fn().mockImplementation(async () => {
       await delay(10);
       return 'fast response';

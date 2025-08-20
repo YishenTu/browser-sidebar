@@ -1,3 +1,6 @@
+/* Import CSS variables for theming */
+@import '../../styles/variables.css';
+
 /* Minimal styles for the injected sidebar to ensure visibility and layout */
 
 .ai-sidebar-overlay {
@@ -13,46 +16,62 @@
 .ai-sidebar-container {
   width: 100%;
   height: 100%;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
-  border-radius: 8px;
+  box-shadow: var(--shadow-lg);
+  border-radius: var(--radius-lg);
   overflow: hidden;
-  background: #fff;
-  color: #111;
+  background: var(--background-secondary);
+  color: var(--text-primary);
   display: flex;
   flex-direction: column;
-  border: 1px solid rgba(0, 0, 0, 0.08);
+  border: 1px solid var(--border-primary);
 }
 
 .ai-sidebar-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 8px 12px;
-  background: #f7f7f8;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+  padding: var(--spacing-sm) var(--spacing-md);
+  background: var(--background-muted);
+  border-bottom: 1px solid var(--border-primary);
   user-select: none;
   cursor: grab;
+  height: var(--header-height);
+  min-height: var(--header-height);
 }
 
 .ai-sidebar-header h2 {
   margin: 0;
-  font-size: 14px;
-  font-weight: 600;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  color: var(--text-primary);
 }
 
 .ai-sidebar-close {
   border: none;
   background: transparent;
-  font-size: 18px;
+  font-size: var(--font-size-lg);
   line-height: 1;
   cursor: pointer;
-  padding: 4px 6px;
+  padding: var(--spacing-xs) var(--spacing-sm);
+  color: var(--text-secondary);
+  border-radius: var(--radius-sm);
+  transition: var(--transition-fast);
+}
+
+.ai-sidebar-close:hover {
+  background: var(--hover-overlay);
+  color: var(--text-primary);
+}
+
+.ai-sidebar-close:active {
+  background: var(--active-overlay);
 }
 
 .ai-sidebar-content {
-  padding: 12px;
+  padding: var(--spacing-md);
   overflow: auto;
   flex: 1;
+  background: var(--background-primary);
 }
 
 .ai-sidebar-resize-handle {
@@ -62,5 +81,10 @@
   width: 8px;
   height: 100%;
   cursor: ew-resize;
+  background: transparent;
 }
 
+.ai-sidebar-resize-handle:hover {
+  background: var(--primary-500);
+  opacity: 0.3;
+}

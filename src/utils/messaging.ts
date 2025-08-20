@@ -1,17 +1,11 @@
 /**
  * @file Message Passing Utilities
- * 
+ *
  * Provides a high-level API for sending and receiving messages between extension
  * components with timeout, retry, and error handling support.
  */
 
-import {
-  Message,
-  MessageType,
-  MessageSource,
-  createMessage,
-  CreateMessageOptions,
-} from '../types/messages';
+import { Message, MessageType, MessageSource, createMessage } from '../types/messages';
 import { validateMessage } from './messageValidation';
 import {
   ExtensionError,
@@ -59,9 +53,9 @@ interface MessageSubscription {
   type: MessageType;
   listener: MessageListener;
   chromeListener: (
-    message: any,
+    message: unknown,
     sender: chrome.runtime.MessageSender,
-    sendResponse: (response?: any) => void
+    sendResponse: (response?: unknown) => void
   ) => boolean;
 }
 
@@ -111,11 +105,7 @@ export class MessageBus {
     payload?: T,
     options: SendOptions = {}
   ): Promise<StandardResponse<R>> {
-    const {
-      timeout = 5000,
-      target = this.getDefaultTarget(type),
-      tabId,
-    } = options;
+    const { timeout = 5000, target = this.getDefaultTarget(type), tabId } = options;
 
     return this.sendWithTimeout(type, payload, timeout, target, tabId);
   }
@@ -128,27 +118,30 @@ export class MessageBus {
     payload?: T,
     options: SendOptions = {}
   ): Promise<StandardResponse<R>> {
-    const {
-      retries = 3,
-      timeout = 5000,
-      target = this.getDefaultTarget(type),
-      tabId,
-    } = options;
+    const { retries = 3, timeout = 5000, target = this.getDefaultTarget(type), tabId } = options;
 
     // In test environments using fake timers, timeouts based on setTimeout will not
     // elapse unless the test advances timers. To keep retry-logic tests deterministic
     // without requiring manual timer advancement, collapse the per-attempt timeout to
     // an immediate microtask when fake timers are active.
     // This is a no-op in production environments.
-    const isFakeTimers = Boolean((globalThis as any)?.vi?.isFakeTimers?.());
+    const isFakeTimers = Boolean(
+      (globalThis as unknown as { vi?: { isFakeTimers?: () => boolean } })?.vi?.isFakeTimers?.()
+    );
     const effectiveTimeout = isFakeTimers ? 0 : timeout;
 
     let lastError: ExtensionError | null = null;
     let backoffMs = 100; // Start with 100ms
 
     for (let attempt = 0; attempt <= retries; attempt++) {
-      const response = await this.sendWithTimeout(type, payload, effectiveTimeout, target, tabId);
-      
+      const response = await this.sendWithTimeout<T, R>(
+        type,
+        payload,
+        effectiveTimeout,
+        target,
+        tabId
+      );
+
       if (response.success) {
         return response;
       }
@@ -230,22 +223,26 @@ export class MessageBus {
         // Use a double microtask to allow any synchronous callbacks to resolve first.
         Promise.resolve().then(() => {
           Promise.resolve().then(() => {
-            reject(new ExtensionError(
-              `Message timeout after ${timeoutMs}ms`,
-              ErrorCode.MESSAGE_TIMEOUT,
-              { type, target: actualTarget, timeoutMs },
-              this.source
-            ));
+            reject(
+              new ExtensionError(
+                `Message timeout after ${timeoutMs}ms`,
+                ErrorCode.MESSAGE_TIMEOUT,
+                { type, target: actualTarget, timeoutMs },
+                this.source
+              )
+            );
           });
         });
       } else {
         setTimeout(() => {
-          reject(new ExtensionError(
-            `Message timeout after ${timeoutMs}ms`,
-            ErrorCode.MESSAGE_TIMEOUT,
-            { type, target: actualTarget, timeoutMs },
-            this.source
-          ));
+          reject(
+            new ExtensionError(
+              `Message timeout after ${timeoutMs}ms`,
+              ErrorCode.MESSAGE_TIMEOUT,
+              { type, target: actualTarget, timeoutMs },
+              this.source
+            )
+          );
         }, timeoutMs);
       }
     });
@@ -253,14 +250,17 @@ export class MessageBus {
     try {
       // Race between send and timeout
       const response = await Promise.race([sendPromise, timeoutPromise]);
-      return createSuccessResponse(response);
+      return createSuccessResponse<R>(response as R);
     } catch (error) {
-      const extensionError = error instanceof ExtensionError ? error : new ExtensionError(
-        error instanceof Error ? error.message : String(error),
-        ErrorCode.MESSAGE_SEND_FAILED,
-        { type, target: actualTarget },
-        this.source
-      );
+      const extensionError =
+        error instanceof ExtensionError
+          ? error
+          : new ExtensionError(
+              error instanceof Error ? error.message : String(error),
+              ErrorCode.MESSAGE_SEND_FAILED,
+              { type, target: actualTarget },
+              this.source
+            );
 
       logError(extensionError, 'MessageBus');
       return createErrorResponse(extensionError);
@@ -270,17 +270,14 @@ export class MessageBus {
   /**
    * Subscribes to messages of a specific type
    */
-  subscribe<T = unknown>(
-    type: MessageType,
-    listener: MessageListener<T>
-  ): UnsubscribeFunction {
+  subscribe<T = unknown>(type: MessageType, listener: MessageListener<T>): UnsubscribeFunction {
     const subscriptionId = `${type}_${Date.now()}_${Math.random().toString(36).substring(2)}`;
 
     // Create Chrome listener wrapper
     const chromeListener = (
-      message: any,
+      message: unknown,
       sender: chrome.runtime.MessageSender,
-      sendResponse: (response?: any) => void
+      sendResponse: (response?: unknown) => void
     ): boolean => {
       // Validate incoming message
       const validation = validateMessage(message);
@@ -304,26 +301,26 @@ export class MessageBus {
         return false; // Let other listeners handle this message
       }
 
-      // Only handle messages targeted to this component or broadcast messages
-      if (validMessage.target !== this.source && validMessage.target !== 'content') {
+      // Only handle messages targeted to this component
+      if (validMessage.target !== this.source) {
         return false;
       }
 
       try {
         // Call the user's listener
-        const result = listener(validMessage, sender, (response) => {
+        const result = listener(validMessage, sender, response => {
           sendResponse(response);
         });
 
         // Handle async listeners
         if (result instanceof Promise) {
           result
-            .then((response) => {
+            .then(response => {
               if (response) {
                 sendResponse(response);
               }
             })
-            .catch((error) => {
+            .catch(error => {
               const errorResponse = createErrorResponse(
                 error instanceof Error ? error : new Error(String(error))
               );
@@ -351,7 +348,7 @@ export class MessageBus {
     // Store subscription
     this.subscriptions.set(subscriptionId, {
       type,
-      listener,
+      listener: listener as MessageListener,
       chromeListener,
     });
 
@@ -382,12 +379,9 @@ export class MessageBus {
   /**
    * Internal method to send messages using Chrome APIs
    */
-  private async sendMessage<R = unknown>(
-    message: Message,
-    tabId?: number
-  ): Promise<R> {
+  private async sendMessage<R = unknown>(message: Message, tabId?: number): Promise<R> {
     return new Promise((resolve, reject) => {
-      const handleResponse = (response: any) => {
+      const handleResponse = (response: unknown) => {
         // Check for Chrome runtime errors
         const chromeError = handleChromeError('sendMessage', this.source);
         if (chromeError) {
@@ -397,16 +391,18 @@ export class MessageBus {
 
         // Handle no response (connection closed)
         if (response === undefined) {
-          reject(new ExtensionError(
-            'No response received - target may not be available',
-            ErrorCode.MESSAGE_SEND_FAILED,
-            { target: message.target },
-            this.source
-          ));
+          reject(
+            new ExtensionError(
+              'No response received - target may not be available',
+              ErrorCode.MESSAGE_SEND_FAILED,
+              { target: message.target },
+              this.source
+            )
+          );
           return;
         }
 
-        resolve(response);
+        resolve(response as R);
       };
 
       try {
@@ -418,12 +414,14 @@ export class MessageBus {
           chrome.runtime.sendMessage(message, handleResponse);
         }
       } catch (error) {
-        reject(new ExtensionError(
-          `Failed to send message: ${error instanceof Error ? error.message : String(error)}`,
-          ErrorCode.MESSAGE_SEND_FAILED,
-          { target: message.target },
-          this.source
-        ));
+        reject(
+          new ExtensionError(
+            `Failed to send message: ${error instanceof Error ? error.message : String(error)}`,
+            ErrorCode.MESSAGE_SEND_FAILED,
+            { target: message.target },
+            this.source
+          )
+        );
       }
     });
   }
@@ -437,27 +435,33 @@ export class MessageBus {
       case 'TOGGLE_SIDEBAR':
       case 'CLOSE_SIDEBAR':
         return this.source === 'background' ? 'content' : 'background';
-      
+
       case 'EXTRACT_CONTENT':
         return 'content';
-      
+
       case 'CONTENT_EXTRACTED':
         return 'sidebar';
-      
+
+      case 'CONTENT_READY':
+        return 'background';
+
+      case 'SIDEBAR_STATE':
+        return 'background';
+
       case 'SEND_TO_AI':
         return 'background';
-      
+
       case 'AI_RESPONSE':
         return 'sidebar';
-      
+
       case 'ERROR':
         return 'background';
-      
+
       case 'PING':
       case 'PONG':
         // For ping/pong, target depends on source
         return this.source === 'background' ? 'content' : 'background';
-      
+
       default:
         return 'background'; // Default to background
     }
@@ -467,7 +471,7 @@ export class MessageBus {
    * Utility method for creating delays
    */
   private delay(ms: number): Promise<void> {
-    return new Promise((resolve) => setTimeout(resolve, ms));
+    return new Promise(resolve => setTimeout(resolve, ms));
   }
 
   /**
@@ -511,7 +515,7 @@ export async function sendMessage<T = unknown, R = unknown>(
 export async function ping(target?: MessageSource): Promise<boolean> {
   try {
     const messageBus = MessageBus.getInstance();
-    const response = await messageBus.send('PING', undefined, { 
+    const response = await messageBus.send('PING', undefined, {
       timeout: 2000,
       target,
     });
@@ -542,7 +546,7 @@ export function subscribeWithResponse<T = unknown, R = unknown>(
   return subscribeToMessages<T>(type, async (message, sender, sendResponse) => {
     try {
       const result = await handler(message.payload as T, sender);
-      const response = createSuccessResponse(result);
+      const response = createSuccessResponse<R>(result as R);
       if (sendResponse) {
         sendResponse(response);
       }

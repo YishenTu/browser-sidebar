@@ -1,6 +1,6 @@
 /**
  * @file Background Service Worker
- * 
+ *
  * Main entry point for the extension's background service worker.
  * Initializes all subsystems and handles core extension functionality.
  */
@@ -23,7 +23,8 @@ function initializeServiceWorker(): void {
   // Register sidebar-related message handlers
   messageHandler.registerHandler(
     'TOGGLE_SIDEBAR',
-    (message, sender) => sidebarManager.handleToggleSidebar(message as Message<ToggleSidebarPayload>, sender),
+    (message, sender) =>
+      sidebarManager.handleToggleSidebar(message as Message<ToggleSidebarPayload>, sender),
     'Toggle sidebar visibility'
   );
 
@@ -52,7 +53,7 @@ function initializeServiceWorker(): void {
 /**
  * Handle extension installation and updates
  */
-chrome.runtime.onInstalled.addListener(async (details) => {
+chrome.runtime.onInstalled.addListener(async details => {
   console.log('Extension installed/updated:', details);
 
   try {
@@ -75,7 +76,6 @@ chrome.runtime.onInstalled.addListener(async (details) => {
     } else if (details.reason === 'update') {
       console.log('Extension updated from version:', details.previousVersion);
     }
-
   } catch (error) {
     console.error('Error during installation setup:', error);
   }
@@ -84,7 +84,7 @@ chrome.runtime.onInstalled.addListener(async (details) => {
 /**
  * Handle extension icon click - toggle sidebar
  */
-chrome.action.onClicked.addListener(async (tab) => {
+chrome.action.onClicked.addListener(async tab => {
   if (!tab.id) {
     console.warn('No tab ID available for action click');
     return;
@@ -102,7 +102,6 @@ chrome.action.onClicked.addListener(async (tab) => {
 
     // Handle through sidebar manager (which will handle content script injection if needed)
     await sidebarManager.handleToggleSidebar(toggleMessage, { tab });
-
   } catch (error) {
     console.error('Error handling extension icon click:', error);
   }
@@ -114,7 +113,7 @@ chrome.action.onClicked.addListener(async (tab) => {
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   // Handle the message through the message handler registry
   messageHandler.handleMessage(message, sender, sendResponse);
-  
+
   // Return true to indicate we will send a response asynchronously
   return true;
 });
@@ -138,3 +137,4 @@ self.addEventListener('beforeunload', () => {
 initializeServiceWorker();
 
 export {};
+/* eslint-disable no-console */

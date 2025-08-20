@@ -2,7 +2,6 @@ import { vi } from 'vitest';
 
 // Types for Chrome API methods
 type Callback<T = any> = (result: T) => void;
-type ErrorCallback = () => void;
 
 interface ChromeRuntimeError {
   message: string;
@@ -14,11 +13,6 @@ interface ChromeTab {
   title?: string;
   active?: boolean;
   windowId?: number;
-}
-
-interface ChromeStorageChange {
-  oldValue?: any;
-  newValue?: any;
 }
 
 /**
@@ -71,7 +65,7 @@ export const createChromeMocks = () => {
 
     // Extension info
     id: 'test-extension-id',
-    
+
     // Error handling
     lastError: null as ChromeRuntimeError | null,
 
@@ -83,21 +77,27 @@ export const createChromeMocks = () => {
     }),
 
     // URL helpers
-    getURL: vi.fn().mockImplementation((path: string) => `chrome-extension://test-extension-id/${path}`),
+    getURL: vi
+      .fn()
+      .mockImplementation((path: string) => `chrome-extension://test-extension-id/${path}`),
   };
 
   // Storage API mocks
   const createStorageArea = () => ({
-    get: vi.fn().mockImplementation((keys?: string | string[] | Record<string, any> | null, callback?: Callback) => {
-      const result = {};
-      if (callback) {
-        // Callback-based API
-        setTimeout(() => callback(result), 0);
-      } else {
-        // Promise-based API
-        return Promise.resolve(result);
-      }
-    }),
+    get: vi
+      .fn()
+      .mockImplementation(
+        (keys?: string | string[] | Record<string, any> | null, callback?: Callback) => {
+          const result = {};
+          if (callback) {
+            // Callback-based API
+            setTimeout(() => callback(result), 0);
+          } else {
+            // Promise-based API
+            return Promise.resolve(result);
+          }
+        }
+      ),
 
     set: vi.fn().mockImplementation((items: Record<string, any>, callback?: Callback) => {
       if (callback) {
@@ -138,14 +138,16 @@ export const createChromeMocks = () => {
     },
 
     // Quota information
-    getBytesInUse: vi.fn().mockImplementation((keys?: string | string[] | null, callback?: Callback<number>) => {
-      const bytesInUse = 0;
-      if (callback) {
-        setTimeout(() => callback(bytesInUse), 0);
-      } else {
-        return Promise.resolve(bytesInUse);
-      }
-    }),
+    getBytesInUse: vi
+      .fn()
+      .mockImplementation((keys?: string | string[] | null, callback?: Callback<number>) => {
+        const bytesInUse = 0;
+        if (callback) {
+          setTimeout(() => callback(bytesInUse), 0);
+        } else {
+          return Promise.resolve(bytesInUse);
+        }
+      }),
   });
 
   const storage = {
@@ -182,7 +184,7 @@ export const createChromeMocks = () => {
           windowId: 1,
         },
       ];
-      
+
       if (callback) {
         // Callback-based API
         setTimeout(() => callback(mockTabs), 0);
@@ -211,7 +213,7 @@ export const createChromeMocks = () => {
         active: createProperties.active !== false,
         windowId: createProperties.windowId || 1,
       };
-      
+
       if (callback) {
         setTimeout(() => callback(newTab), 0);
       } else {
@@ -219,21 +221,25 @@ export const createChromeMocks = () => {
       }
     }),
 
-    update: vi.fn().mockImplementation((tabId: number, updateProperties: any, callback?: Callback<ChromeTab>) => {
-      const updatedTab: ChromeTab = {
-        id: tabId,
-        url: updateProperties.url || 'https://example.com',
-        title: updateProperties.title || 'Updated Tab',
-        active: updateProperties.active !== false,
-        windowId: 1,
-      };
-      
-      if (callback) {
-        setTimeout(() => callback(updatedTab), 0);
-      } else {
-        return Promise.resolve(updatedTab);
-      }
-    }),
+    update: vi
+      .fn()
+      .mockImplementation(
+        (tabId: number, updateProperties: any, callback?: Callback<ChromeTab>) => {
+          const updatedTab: ChromeTab = {
+            id: tabId,
+            url: updateProperties.url || 'https://example.com',
+            title: updateProperties.title || 'Updated Tab',
+            active: updateProperties.active !== false,
+            windowId: 1,
+          };
+
+          if (callback) {
+            setTimeout(() => callback(updatedTab), 0);
+          } else {
+            return Promise.resolve(updatedTab);
+          }
+        }
+      ),
 
     get: vi.fn().mockImplementation((tabId: number, callback?: Callback<ChromeTab>) => {
       const tab: ChromeTab = {
@@ -243,7 +249,7 @@ export const createChromeMocks = () => {
         active: true,
         windowId: 1,
       };
-      
+
       if (callback) {
         setTimeout(() => callback(tab), 0);
       } else {

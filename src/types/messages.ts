@@ -1,6 +1,6 @@
 /**
  * @file Message Types and Protocol
- * 
+ *
  * Defines the message passing protocol for communication between
  * the extension's background script, content script, and sidebar.
  */
@@ -13,6 +13,8 @@ export type MessageType =
   | 'CLOSE_SIDEBAR'
   | 'EXTRACT_CONTENT'
   | 'CONTENT_EXTRACTED'
+  | 'CONTENT_READY'
+  | 'SIDEBAR_STATE'
   | 'SEND_TO_AI'
   | 'AI_RESPONSE'
   | 'ERROR'
@@ -70,6 +72,24 @@ export interface ContentExtractedPayload {
   metadata?: Record<string, unknown>;
 }
 
+export interface ContentReadyPayload {
+  /** Ready status */
+  status: 'content-script-ready';
+  /** Page title at time of ready */
+  title: string;
+  /** Page URL at time of ready */
+  url: string;
+  /** Optional timestamp */
+  timestamp?: number;
+}
+
+export interface SidebarStatePayload {
+  /** Sidebar state event */
+  status: 'sidebar-opened' | 'sidebar-closed';
+  /** Optional timestamp */
+  timestamp?: number;
+}
+
 export interface SendToAIPayload {
   /** User message content */
   message: string;
@@ -118,6 +138,14 @@ export interface ContentExtractedMessage extends Message<ContentExtractedPayload
   type: 'CONTENT_EXTRACTED';
 }
 
+export interface ContentReadyMessage extends Message<ContentReadyPayload> {
+  type: 'CONTENT_READY';
+}
+
+export interface SidebarStateMessage extends Message<SidebarStatePayload> {
+  type: 'SIDEBAR_STATE';
+}
+
 export interface SendToAIMessage extends Message<SendToAIPayload> {
   type: 'SEND_TO_AI';
 }
@@ -146,6 +174,8 @@ export type TypedMessage =
   | CloseSidebarMessage
   | ExtractContentMessage
   | ContentExtractedMessage
+  | ContentReadyMessage
+  | SidebarStateMessage
   | SendToAIMessage
   | AIResponseMessage
   | ErrorMessage
@@ -172,7 +202,7 @@ function generateMessageId(): string {
 /**
  * Factory function to create properly formatted messages
  * Supports both options object and direct parameters for backwards compatibility
- * 
+ *
  * @param typeOrOptions - MessageType string or CreateMessageOptions object
  * @param payload - Message payload (when using direct parameters)
  * @param source - Message source (when using direct parameters)
@@ -196,7 +226,7 @@ export function createMessage<T = unknown>(
       target: target || 'background',
     };
   }
-  
+
   // Handle options object
   const options = typeOrOptions as CreateMessageOptions<T>;
   return {
@@ -211,7 +241,7 @@ export function createMessage<T = unknown>(
 
 /**
  * Type guard to check if an object is a valid message
- * 
+ *
  * @param obj - Object to validate
  * @returns True if the object is a valid message
  */
@@ -239,6 +269,8 @@ export function isValidMessage(obj: unknown): obj is Message {
     'CLOSE_SIDEBAR',
     'EXTRACT_CONTENT',
     'CONTENT_EXTRACTED',
+    'CONTENT_READY',
+    'SIDEBAR_STATE',
     'SEND_TO_AI',
     'AI_RESPONSE',
     'ERROR',
@@ -264,7 +296,7 @@ export function isValidMessage(obj: unknown): obj is Message {
 
 /**
  * Type guard to check if a message has a specific type
- * 
+ *
  * @param message - Message to check
  * @param type - Expected message type
  * @returns True if the message has the specified type

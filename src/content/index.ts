@@ -1,13 +1,12 @@
 // Content script - handles sidebar injection and communication with background
 
 import { createMessage, isValidMessage, Message } from '@/types/messages';
-import { MessageBus } from '@/utils/messaging';
+import { subscribeWithResponse } from '@/utils/messaging';
 
 let sidebarModule: { mountSidebar: () => void; unmountSidebar: () => void } | null = null;
 let sidebarOpen = false;
 
-// Initialize message bus for content script
-const messageBus = new MessageBus('content');
+// Initialize message bus for content script (handled lazily by helpers)
 
 // Function to inject or show sidebar
 async function injectSidebar() {
@@ -19,14 +18,17 @@ async function injectSidebar() {
   // Mount the sidebar
   sidebarModule.mountSidebar();
   sidebarOpen = true;
-  
+
   // Send confirmation back to background
-  const response = createMessage('CONTENT_EXTRACTED', {
-    status: 'sidebar-opened',
-    timestamp: Date.now(),
-  }, 'content');
-  
-  return response;
+  return createMessage({
+    type: 'SIDEBAR_STATE',
+    payload: {
+      status: 'sidebar-opened',
+      timestamp: Date.now(),
+    },
+    source: 'content',
+    target: 'background',
+  });
 }
 
 // Function to remove sidebar
@@ -34,20 +36,28 @@ function removeSidebar() {
   if (sidebarModule && sidebarOpen) {
     sidebarModule.unmountSidebar();
     sidebarOpen = false;
-    
+
     // Send confirmation back to background
-    const response = createMessage('CONTENT_EXTRACTED', {
-      status: 'sidebar-closed',
-      timestamp: Date.now(),
-    }, 'content');
-    
-    return response;
+    return createMessage({
+      type: 'SIDEBAR_STATE',
+      payload: {
+        status: 'sidebar-closed',
+        timestamp: Date.now(),
+      },
+      source: 'content',
+      target: 'background',
+    });
   }
-  
-  return createMessage('ERROR', {
-    error: 'Sidebar not open',
-    code: 'SIDEBAR_NOT_OPEN',
-  }, 'content');
+
+  return createMessage({
+    type: 'ERROR',
+    payload: {
+      message: 'Sidebar not open',
+      code: 'SIDEBAR_NOT_OPEN',
+    },
+    source: 'content',
+    target: 'background',
+  });
 }
 
 // Listen for messages from background using typed protocol
@@ -57,10 +67,14 @@ chrome.runtime.onMessage.addListener((message: Message, _sender, sendResponse) =
   // Validate message structure
   if (!isValidMessage(message)) {
     console.error('Invalid message received:', message);
-    sendResponse(createMessage('ERROR', {
-      error: 'Invalid message format',
-      code: 'INVALID_MESSAGE',
-    }, 'content'));
+    sendResponse(
+      createMessage({
+        type: 'ERROR',
+        payload: { message: 'Invalid message format', code: 'INVALID_MESSAGE' },
+        source: 'content',
+        target: 'background',
+      })
+    );
     return true;
   }
 
@@ -71,57 +85,79 @@ chrome.runtime.onMessage.addListener((message: Message, _sender, sendResponse) =
         const response = removeSidebar();
         sendResponse(response);
       } else {
-        injectSidebar().then(response => {
-          sendResponse(response);
-        }).catch(error => {
-          sendResponse(createMessage('ERROR', {
-            error: error.message,
-            code: 'INJECTION_FAILED',
-          }, 'content'));
-        });
+        injectSidebar()
+          .then(response => {
+            sendResponse(response);
+          })
+          .catch((error: any) => {
+            sendResponse(
+              createMessage({
+                type: 'ERROR',
+                payload: { message: error?.message || String(error), code: 'INJECTION_FAILED' },
+                source: 'content',
+                target: 'background',
+              })
+            );
+          });
       }
       break;
-      
-    case 'CLOSE_SIDEBAR':
+
+    case 'CLOSE_SIDEBAR': {
       const closeResponse = removeSidebar();
       sendResponse(closeResponse);
       break;
-      
+    }
+
     case 'PING':
-      sendResponse(createMessage('PONG', {
-        originalId: message.id,
-        source: 'content',
-      }, 'content'));
+      sendResponse(
+        createMessage({
+          type: 'PONG',
+          payload: { originalId: message.id, source: 'content' },
+          source: 'content',
+          target: 'background',
+        })
+      );
       break;
-      
+
     default:
-      sendResponse(createMessage('ERROR', {
-        error: `Unknown message type: ${message.type}`,
-        code: 'UNKNOWN_MESSAGE_TYPE',
-      }, 'content'));
+      sendResponse(
+        createMessage({
+          type: 'ERROR',
+          payload: {
+            message: `Unknown message type: ${message.type}`,
+            code: 'UNKNOWN_MESSAGE_TYPE',
+          },
+          source: 'content',
+          target: 'background',
+        })
+      );
   }
 
   return true; // Keep channel open for async response
 });
 
 // Subscribe to specific message types using MessageBus
-messageBus.subscribe(['EXTRACT_CONTENT'], async (message) => {
+subscribeWithResponse('EXTRACT_CONTENT', async () => {
   // Future: Implement content extraction logic
-  console.log('Content extraction requested:', message);
-  
-  return createMessage('CONTENT_EXTRACTED', {
+  return {
     content: document.body.innerText.substring(0, 1000), // Sample extraction
     url: window.location.href,
     title: document.title,
-  }, 'content');
+  };
 });
 
 // Notify background that content script is ready using typed message
-const readyMessage = createMessage('CONTENT_EXTRACTED', {
-  status: 'content-script-ready',
-  url: window.location.href,
-  title: document.title,
-}, 'content');
+const readyMessage = createMessage({
+  type: 'CONTENT_READY',
+  payload: {
+    status: 'content-script-ready',
+    url: window.location.href,
+    title: document.title,
+    timestamp: Date.now(),
+  },
+  source: 'content',
+  target: 'background',
+});
 
 chrome.runtime.sendMessage(readyMessage, response => {
   if (response && isValidMessage(response)) {
@@ -130,3 +166,4 @@ chrome.runtime.sendMessage(readyMessage, response => {
 });
 
 export {};
+/* eslint-disable no-console */

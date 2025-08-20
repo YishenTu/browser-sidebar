@@ -16,7 +16,7 @@
 - `npm run build`: Type-check then build to `dist/`
 - `npm run watch`: Build continuously on change
 - `npm run preview`: Serve built assets locally
-- `npm test` | `npm run test:ui` | `npm run test:coverage`: Run tests
+- `npm test` (once) | `npm run test:watch` (watch) | `npm run test:ui` | `npm run test:coverage`: Run tests
 - `npm run lint` | `npm run format` | `npm run typecheck`: Quality checks
 - Load in Chrome: `chrome://extensions` → Developer mode → Load unpacked → select `dist/`
 
@@ -32,7 +32,7 @@
 - Frameworks: Vitest + React Testing Library (jsdom)
 - Setup: `tests/setup/setup.ts` (jest-dom, Chrome API mocks)
 - Naming: `*.test.ts` / `*.test.tsx` under `tests/`
-- Run: `npm test` (watch) or `npm run test:coverage`
+- Run: `npm test` (once), `npm run test:watch` (watch), or `npm run test:coverage`
 
 ## Commit & Pull Request Guidelines
 

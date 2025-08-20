@@ -1,6 +1,6 @@
 /**
  * @file Keep Alive System
- * 
+ *
  * Prevents the service worker from being suspended by maintaining periodic activity.
  * Chrome extension service workers are suspended after 30 seconds of inactivity,
  * which can interrupt background operations.
@@ -33,7 +33,7 @@ export class KeepAlive {
 
   /**
    * Start the keep-alive system
-   * 
+   *
    * @returns True if started successfully, false if already running
    */
   start(): boolean {
@@ -61,7 +61,7 @@ export class KeepAlive {
 
   /**
    * Stop the keep-alive system
-   * 
+   *
    * @returns True if stopped successfully, false if not running
    */
   stop(): boolean {
@@ -87,7 +87,7 @@ export class KeepAlive {
 
   /**
    * Check if the keep-alive system is currently running
-   * 
+   *
    * @returns True if running
    */
   isActive(): boolean {
@@ -96,7 +96,7 @@ export class KeepAlive {
 
   /**
    * Get the current ping count
-   * 
+   *
    * @returns Number of pings performed
    */
   getPingCount(): number {
@@ -118,20 +118,19 @@ export class KeepAlive {
   private async performKeepAlivePing(): Promise<void> {
     try {
       this.pingCount++;
-      
+
       // Use a lightweight Chrome API call to maintain activity
       const platformInfo = await chrome.runtime.getPlatformInfo();
-      
+
       if (this.verbose) {
         console.log(`KeepAlive: Ping #${this.pingCount} - Platform: ${platformInfo.os}`);
       }
 
       // Additional lightweight operations to ensure activity
       await this.performAdditionalPings();
-
     } catch (error) {
       console.error('KeepAlive: Ping failed:', error);
-      
+
       // If the primary method fails, try alternative approaches
       this.performFallbackPing();
     }
@@ -151,7 +150,6 @@ export class KeepAlive {
       if (chrome.alarms) {
         await chrome.alarms.getAll();
       }
-
     } catch (error) {
       // These are optional operations, so we don't need to handle failures
       if (this.verbose) {
@@ -168,11 +166,10 @@ export class KeepAlive {
       // Use a simple calculation as absolute fallback
       const timestamp = Date.now();
       const calculation = Math.sqrt(timestamp) + Math.random();
-      
+
       if (this.verbose) {
         console.log(`KeepAlive: Fallback ping #${this.pingCount} - Result: ${calculation}`);
       }
-
     } catch (error) {
       console.error('KeepAlive: Even fallback ping failed:', error);
     }
@@ -186,7 +183,7 @@ let globalKeepAlive: KeepAlive | null = null;
 
 /**
  * Get or create the global keep-alive instance
- * 
+ *
  * @param options - Configuration options
  * @returns The global KeepAlive instance
  */
@@ -199,7 +196,7 @@ export function getKeepAlive(options?: KeepAliveOptions): KeepAlive {
 
 /**
  * Start the global keep-alive system
- * 
+ *
  * @param options - Configuration options
  * @returns True if started successfully
  */
@@ -210,7 +207,7 @@ export function startKeepAlive(options?: KeepAliveOptions): boolean {
 
 /**
  * Stop the global keep-alive system
- * 
+ *
  * @returns True if stopped successfully
  */
 export function stopKeepAlive(): boolean {
@@ -222,9 +219,10 @@ export function stopKeepAlive(): boolean {
 
 /**
  * Check if the global keep-alive system is active
- * 
+ *
  * @returns True if active
  */
 export function isKeepAliveActive(): boolean {
   return globalKeepAlive?.isActive() || false;
 }
+/* eslint-disable no-console */

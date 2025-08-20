@@ -1,9 +1,9 @@
 import { beforeEach, afterEach, vi } from 'vitest';
-import { chromeMocks, createChromeMocks } from '../mocks/chrome';
+import { createChromeMocks } from '../mocks/chrome';
 
 /**
  * Chrome API mock setup for tests
- * 
+ *
  * This module:
  * - Sets up fresh Chrome API mocks before each test
  * - Clears all mock functions after each test
@@ -14,10 +14,8 @@ declare global {
   interface Window {
     chrome: typeof chrome;
   }
-  
-  namespace globalThis {
-    var chrome: any;
-  }
+
+  const chrome: any;
 }
 
 let mockChrome: ReturnType<typeof createChromeMocks>;
@@ -28,10 +26,10 @@ let mockChrome: ReturnType<typeof createChromeMocks>;
 beforeEach(() => {
   // Create fresh mocks for each test
   mockChrome = createChromeMocks();
-  
+
   // Set up global chrome object
   global.chrome = mockChrome as any;
-  
+
   // Also set on window for browser environment compatibility
   if (typeof window !== 'undefined') {
     (window as any).chrome = mockChrome;
@@ -45,7 +43,7 @@ afterEach(() => {
   // Clear all mock functions
   if (mockChrome) {
     vi.clearAllMocks();
-    
+
     // Clear runtime mocks
     if (mockChrome.runtime) {
       Object.values(mockChrome.runtime).forEach(prop => {
@@ -60,7 +58,7 @@ afterEach(() => {
         }
       });
     }
-    
+
     // Clear storage mocks
     if (mockChrome.storage) {
       ['local', 'sync', 'session', 'managed'].forEach(area => {
@@ -80,7 +78,7 @@ afterEach(() => {
         }
       });
     }
-    
+
     // Clear tabs mocks
     if (mockChrome.tabs) {
       Object.values(mockChrome.tabs).forEach(method => {
@@ -95,7 +93,7 @@ afterEach(() => {
         }
       });
     }
-    
+
     // Clear action mocks
     if (mockChrome.action) {
       Object.values(mockChrome.action).forEach(method => {
@@ -111,7 +109,7 @@ afterEach(() => {
       });
     }
   }
-  
+
   // Reset lastError
   if (global.chrome?.runtime) {
     global.chrome.runtime.lastError = null;
@@ -168,7 +166,7 @@ export const chromeMockUtils = {
     if (global.chrome?.storage?.[area]?.get) {
       global.chrome.storage[area].get.mockImplementation((keys?: any, callback?: any) => {
         let result = data;
-        
+
         // Filter by keys if specified
         if (keys) {
           if (typeof keys === 'string') {
@@ -185,7 +183,7 @@ export const chromeMockUtils = {
             result = { ...keys, ...data };
           }
         }
-        
+
         if (callback) {
           setTimeout(() => callback(result), 0);
         } else {
