@@ -448,6 +448,7 @@ export const MessageList: React.FC<MessageListProps> = ({
       <List
         ref={virtualListRef}
         height={listHeight}
+        width="100%"
         itemCount={messages.length}
         itemSize={getItemHeight}
         itemData={virtualListData}
