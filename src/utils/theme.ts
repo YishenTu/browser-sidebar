@@ -85,6 +85,14 @@ export function setCSSVariable(variableName: string, value: string, container?: 
  * Gets the sidebar container element
  */
 export function getSidebarContainer(): HTMLElement | null {
+  // First try to find it in the shadow DOM
+  const hostContainer = document.getElementById('ai-browser-sidebar-host');
+  if (hostContainer && hostContainer.shadowRoot) {
+    const container = hostContainer.shadowRoot.querySelector('.ai-sidebar-container');
+    if (container) return container as HTMLElement;
+  }
+
+  // Fallback to document query (for tests or non-shadow DOM mode)
   return document.querySelector('.ai-sidebar-container');
 }
 

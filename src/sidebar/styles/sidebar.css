@@ -9,8 +9,9 @@
   left: 0;
   z-index: 2147483647; /* on top */
   box-sizing: border-box;
-  pointer-events: auto;
+  pointer-events: auto !important; /* Important to override container's none */
   background: transparent;
+  isolation: isolate; /* Create new stacking context */
 }
 
 .ai-sidebar-container {
