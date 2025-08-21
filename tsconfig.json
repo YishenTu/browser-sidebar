@@ -34,6 +34,7 @@
     "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true,
     "allowSyntheticDefaultImports": true,
+    "types": ["vite/client", "vitest/globals", "chrome"],
 
     /* Path Aliases */
     "baseUrl": ".",
@@ -50,7 +51,7 @@
       "@tests/*": ["tests/*"]
     }
   },
-  "include": ["src", "tests"],
+  "include": ["src"],
   "exclude": ["node_modules", "dist", "build"],
   "references": [{ "path": "./tsconfig.node.json" }]
 }

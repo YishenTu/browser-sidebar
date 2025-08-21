@@ -87,9 +87,9 @@ describe('ChatPanel - Resize Functionality', () => {
       // Simulate mouse move to make sidebar wider (move left)
       fireEvent.mouseMove(document, { clientX: 700 }); // Move to x=700
 
-      // Width should increase to 500px (1200 - 700)
+      // With right padding, width becomes 1170 - 700 = 470
       expect(overlay).toHaveStyle({
-        width: '500px',
+        width: '470px',
         left: '700px',
       });
     });
@@ -106,10 +106,10 @@ describe('ChatPanel - Resize Functionality', () => {
       // Simulate mouse move to make sidebar narrower (move right)
       fireEvent.mouseMove(document, { clientX: 900 }); // Move to x=900
 
-      // Width should decrease to 300px (1200 - 900)
+      // Clamped minimum width 300px; left adjusts accordingly
       expect(overlay).toHaveStyle({
         width: '300px',
-        left: '900px',
+        left: '870px',
       });
     });
 
@@ -124,14 +124,14 @@ describe('ChatPanel - Resize Functionality', () => {
 
       // Move and resize
       fireEvent.mouseMove(document, { clientX: 600 });
-      expect(overlay).toHaveStyle({ width: '600px' });
+      expect(overlay).toHaveStyle({ width: '570px' });
 
       // End resize
       fireEvent.mouseUp(document);
 
       // Further mouse moves should not affect size
       fireEvent.mouseMove(document, { clientX: 500 });
-      expect(overlay).toHaveStyle({ width: '600px' }); // Should stay the same
+      expect(overlay).toHaveStyle({ width: '570px' }); // Should stay the same
     });
   });
 
@@ -146,12 +146,12 @@ describe('ChatPanel - Resize Functionality', () => {
       fireEvent.mouseDown(resizeHandle);
 
       // Try to resize beyond minimum (move very far right)
-      fireEvent.mouseMove(document, { clientX: 1000 }); // Would result in 200px width
+      fireEvent.mouseMove(document, { clientX: 1000 });
 
       // Should be constrained to minimum 300px
       expect(overlay).toHaveStyle({
         width: '300px',
-        left: '900px', // 1200 - 300
+        left: '870px',
       });
     });
 
@@ -170,7 +170,7 @@ describe('ChatPanel - Resize Functionality', () => {
       // Should be constrained to maximum 800px
       expect(overlay).toHaveStyle({
         width: '800px',
-        left: '400px', // 1200 - 800
+        left: '370px',
       });
     });
 
@@ -184,11 +184,11 @@ describe('ChatPanel - Resize Functionality', () => {
       fireEvent.mouseDown(resizeHandle);
 
       // Move to exact minimum width position
-      fireEvent.mouseMove(document, { clientX: 900 }); // Results in exactly 300px
+      fireEvent.mouseMove(document, { clientX: 900 });
 
       expect(overlay).toHaveStyle({
         width: '300px',
-        left: '900px',
+        left: '870px',
       });
     });
 
@@ -268,7 +268,7 @@ describe('ChatPanel - Resize Functionality', () => {
 
       // Should still work normally
       fireEvent.mouseMove(document, { clientX: 700 });
-      expect(overlay).toHaveStyle({ width: '500px' });
+      expect(overlay).toHaveStyle({ width: '470px' });
 
       fireEvent.mouseUp(document);
     });
@@ -314,7 +314,7 @@ describe('ChatPanel - Resize Functionality', () => {
 
       // Should end up at final position
       expect(overlay).toHaveStyle({
-        width: '500px',
+        width: '470px',
         left: '700px',
       });
     });
@@ -332,12 +332,11 @@ describe('ChatPanel - Resize Functionality', () => {
       // Start resize
       fireEvent.mouseDown(resizeHandle);
 
-      // Try to resize beyond maximum
-      fireEvent.mouseMove(document, { clientX: 100 }); // Would be 700px width
+      // Try to resize
+      fireEvent.mouseMove(document, { clientX: 100 });
 
-      // Should still be constrained to 800px max, but viewport is only 800px
-      // So left position would be 0
-      expect(overlay).toHaveStyle({ width: '700px' });
+      // With padding, expected width is 770 - 100 = 670
+      expect(overlay).toHaveStyle({ width: '670px' });
     });
 
     it('handles resize when viewport is smaller than max width', () => {
@@ -354,8 +353,8 @@ describe('ChatPanel - Resize Functionality', () => {
       // Try to make very wide
       fireEvent.mouseMove(document, { clientX: 0 });
 
-      // Should be constrained by viewport width
-      expect(overlay).toHaveStyle({ width: '600px' }); // Can't be wider than viewport
+      // With viewport 600 and padding, expected width is 570
+      expect(overlay).toHaveStyle({ width: '570px' });
     });
   });
 

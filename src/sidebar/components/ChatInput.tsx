@@ -5,8 +5,6 @@ import { cn } from '@/utils/cn';
 export interface ChatInputProps extends Omit<TextAreaProps, 'onKeyDown' | 'value' | 'onChange'> {
   /** Callback fired when message is sent */
   onSend: (message: string) => void;
-  /** Callback fired when clear button is clicked */
-  onClear?: () => void;
   /** Current message value (controlled) */
   value?: string;
   /** Default message value (uncontrolled) */
@@ -23,8 +21,6 @@ export interface ChatInputProps extends Omit<TextAreaProps, 'onKeyDown' | 'value
   maxLength?: number;
   /** Send button label */
   sendButtonLabel?: string;
-  /** Clear button label */
-  clearButtonLabel?: string;
   /** Aria label for the textarea */
   ariaLabel?: string;
   /** Additional CSS classes for the container */
@@ -54,7 +50,6 @@ export const ChatInput = React.forwardRef<HTMLTextAreaElement, ChatInputProps>(
   (
     {
       onSend,
-      onClear,
       value,
       defaultValue,
       onChange,
@@ -63,7 +58,6 @@ export const ChatInput = React.forwardRef<HTMLTextAreaElement, ChatInputProps>(
       showCounter = false,
       maxLength,
       sendButtonLabel = 'Send',
-      clearButtonLabel = 'Clear',
       ariaLabel = 'Chat message input',
       className,
       placeholder = 'Type your message here...',

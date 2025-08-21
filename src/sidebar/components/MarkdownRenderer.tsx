@@ -106,7 +106,11 @@ const SANITIZE_CONFIG = {
 /**
  * Custom heading renderer with proper styling
  */
-const HeadingRenderer = ({ level, children, ...props }: any) => {
+type HeadingProps = React.HTMLAttributes<HTMLElement> & {
+  level: 1 | 2 | 3 | 4 | 5 | 6;
+  children?: React.ReactNode;
+};
+const HeadingRenderer = ({ level, children }: HeadingProps) => {
   const Tag = `h${level}` as keyof JSX.IntrinsicElements;
 
   const getHeadingClasses = (level: number): string => {
@@ -133,17 +137,13 @@ const HeadingRenderer = ({ level, children, ...props }: any) => {
     }
   };
 
-  return (
-    <Tag className={getHeadingClasses(level)} {...props}>
-      {children}
-    </Tag>
-  );
+  return <Tag className={getHeadingClasses(level)}>{children}</Tag>;
 };
 
 /**
  * Custom paragraph renderer
  */
-const ParagraphRenderer = ({ children, ...props }: any) => (
+const ParagraphRenderer = ({ children, ...props }: React.ComponentProps<'p'>) => (
   <p className="mb-4 leading-relaxed text-gray-800 dark:text-gray-200 last:mb-0" {...props}>
     {children}
   </p>
@@ -152,7 +152,14 @@ const ParagraphRenderer = ({ children, ...props }: any) => (
 /**
  * Custom list renderer
  */
-const ListRenderer = ({ ordered, children, ...props }: any) => {
+const ListRenderer = ({
+  ordered,
+  children,
+  ...props
+}: React.HTMLAttributes<HTMLElement> & {
+  ordered?: boolean;
+  children?: React.ReactNode;
+}) => {
   const Tag = ordered ? 'ol' : 'ul';
   const listClasses = ordered
     ? 'list-decimal ml-6 mb-4 space-y-1'
@@ -168,7 +175,7 @@ const ListRenderer = ({ ordered, children, ...props }: any) => {
 /**
  * Custom list item renderer
  */
-const ListItemRenderer = ({ children, ...props }: any) => (
+const ListItemRenderer = ({ children, ...props }: React.ComponentProps<'li'>) => (
   <li className="text-gray-800 dark:text-gray-200" {...props}>
     {children}
   </li>
@@ -177,7 +184,7 @@ const ListItemRenderer = ({ children, ...props }: any) => (
 /**
  * Custom blockquote renderer
  */
-const BlockquoteRenderer = ({ children, ...props }: any) => (
+const BlockquoteRenderer = ({ children, ...props }: React.ComponentProps<'blockquote'>) => (
   <blockquote
     className="border-l-4 border-blue-500 pl-4 py-2 mb-4 bg-blue-50 dark:bg-blue-900/20 italic text-gray-700 dark:text-gray-300"
     {...props}
@@ -189,12 +196,19 @@ const BlockquoteRenderer = ({ children, ...props }: any) => (
 /**
  * Custom link renderer with security features
  */
-const LinkRenderer = ({ href, children, onLinkClick, ...props }: any) => {
+const LinkRenderer = ({
+  href,
+  children,
+  onLinkClick,
+  ...props
+}: React.ComponentProps<'a'> & {
+  onLinkClick?: (url: string, event: React.MouseEvent) => void;
+}) => {
   const handleClick = useCallback(
     (e: React.MouseEvent) => {
       if (onLinkClick) {
         e.preventDefault();
-        onLinkClick(href, e);
+        onLinkClick(href ?? '', e);
       }
     },
     [href, onLinkClick]
@@ -221,7 +235,7 @@ const LinkRenderer = ({ href, children, onLinkClick, ...props }: any) => {
 /**
  * Custom code renderer (inline)
  */
-const InlineCodeRenderer = ({ children, ...props }: any) => (
+const InlineCodeRenderer = ({ children, ...props }: React.ComponentProps<'code'>) => (
   <code
     className="bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100 px-1.5 py-0.5 rounded text-sm font-mono"
     {...props}
@@ -233,11 +247,18 @@ const InlineCodeRenderer = ({ children, ...props }: any) => (
 /**
  * Custom pre renderer (code blocks) - uses CodeBlock component
  */
-const PreRenderer = ({ children, enableSyntaxHighlighting = true, ...props }: any) => {
+const PreRenderer = ({
+  children,
+  enableSyntaxHighlighting = true,
+}: React.ComponentProps<'pre'> & { enableSyntaxHighlighting?: boolean }) => {
   // Extract code content and language from children
-  const child = React.Children.only(children);
-  const code = child?.props?.children || '';
-  const className = child?.props?.className || '';
+  const child = React.Children.only(children) as React.ReactElement | string | number | boolean;
+  let code = '' as string;
+  let className = '' as string;
+  if (React.isValidElement(child)) {
+    code = (child.props as { children?: string }).children || '';
+    className = (child.props as { className?: string }).className || '';
+  }
   const language = enableSyntaxHighlighting
     ? className.replace('language-', '') || undefined
     : undefined;
@@ -249,7 +270,6 @@ const PreRenderer = ({ children, enableSyntaxHighlighting = true, ...props }: an
       showLineNumbers={false}
       showWordWrapToggle={false}
       className="mb-4"
-      {...props}
     />
   );
 };
@@ -257,14 +277,14 @@ const PreRenderer = ({ children, enableSyntaxHighlighting = true, ...props }: an
 /**
  * Custom horizontal rule renderer
  */
-const HrRenderer = (props: any) => (
+const HrRenderer = (props: React.ComponentProps<'hr'>) => (
   <hr className="border-gray-300 dark:border-gray-600 my-6" {...props} />
 );
 
 /**
  * Custom table renderer
  */
-const TableRenderer = ({ children, ...props }: any) => (
+const TableRenderer = ({ children, ...props }: React.ComponentProps<'table'>) => (
   <div className="overflow-x-auto mb-4">
     <table
       className="min-w-full border-collapse border border-gray-300 dark:border-gray-600"
@@ -278,7 +298,7 @@ const TableRenderer = ({ children, ...props }: any) => (
 /**
  * Custom table cell renderers
  */
-const ThRenderer = ({ children, ...props }: any) => (
+const ThRenderer = ({ children, ...props }: React.ComponentProps<'th'>) => (
   <th
     className="border border-gray-300 dark:border-gray-600 px-4 py-2 bg-gray-100 dark:bg-gray-800 font-semibold text-left"
     {...props}
@@ -287,7 +307,7 @@ const ThRenderer = ({ children, ...props }: any) => (
   </th>
 );
 
-const TdRenderer = ({ children, ...props }: any) => (
+const TdRenderer = ({ children, ...props }: React.ComponentProps<'td'>) => (
   <td className="border border-gray-300 dark:border-gray-600 px-4 py-2" {...props}>
     {children}
   </td>

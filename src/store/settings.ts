@@ -61,55 +61,59 @@ const DEFAULT_SETTINGS: Settings = {
 /**
  * Validate theme value
  */
-const isValidTheme = (theme: any): theme is Theme => {
-  return ['light', 'dark', 'auto'].includes(theme);
+const isValidTheme = (theme: unknown): theme is Theme => {
+  return typeof theme === 'string' && ['light', 'dark', 'auto'].includes(theme as string);
 };
 
 /**
  * Validate font size value
  */
-const isValidFontSize = (fontSize: any): fontSize is 'small' | 'medium' | 'large' => {
-  return ['small', 'medium', 'large'].includes(fontSize);
+const isValidFontSize = (fontSize: unknown): fontSize is 'small' | 'medium' | 'large' => {
+  return typeof fontSize === 'string' && ['small', 'medium', 'large'].includes(fontSize);
 };
 
 /**
  * Validate AI provider value
  */
-const isValidAIProvider = (provider: any): provider is 'openai' | 'anthropic' | 'google' | null => {
-  return provider === null || ['openai', 'anthropic', 'google'].includes(provider);
+const isValidAIProvider = (
+  provider: unknown
+): provider is 'openai' | 'anthropic' | 'google' | null => {
+  return (
+    provider === null ||
+    (typeof provider === 'string' && ['openai', 'anthropic', 'google'].includes(provider))
+  );
 };
 
 /**
  * Validate temperature range (0.0 - 1.0)
  */
-const isValidTemperature = (temp: any): boolean => {
+const isValidTemperature = (temp: unknown): boolean => {
   return typeof temp === 'number' && temp >= 0.0 && temp <= 1.0;
 };
 
 /**
  * Validate max tokens range (1 - 8192)
  */
-const isValidMaxTokens = (tokens: any): boolean => {
+const isValidMaxTokens = (tokens: unknown): boolean => {
   return typeof tokens === 'number' && tokens >= 1 && tokens <= 8192;
 };
 
 /**
  * Validate UI preferences
  */
-const validateUIPreferences = (ui: any): UIPreferences => {
+const validateUIPreferences = (ui: unknown): UIPreferences => {
+  const u = (ui && typeof ui === 'object' ? ui : {}) as Partial<UIPreferences>;
   return {
-    fontSize: isValidFontSize(ui?.fontSize) ? ui.fontSize : DEFAULT_SETTINGS.ui.fontSize,
+    fontSize: isValidFontSize(u.fontSize) ? u.fontSize! : DEFAULT_SETTINGS.ui.fontSize,
     compactMode:
-      typeof ui?.compactMode === 'boolean' ? ui.compactMode : DEFAULT_SETTINGS.ui.compactMode,
+      typeof u.compactMode === 'boolean' ? u.compactMode : DEFAULT_SETTINGS.ui.compactMode,
     showTimestamps:
-      typeof ui?.showTimestamps === 'boolean'
-        ? ui.showTimestamps
-        : DEFAULT_SETTINGS.ui.showTimestamps,
+      typeof u.showTimestamps === 'boolean' ? u.showTimestamps : DEFAULT_SETTINGS.ui.showTimestamps,
     showAvatars:
-      typeof ui?.showAvatars === 'boolean' ? ui.showAvatars : DEFAULT_SETTINGS.ui.showAvatars,
+      typeof u.showAvatars === 'boolean' ? u.showAvatars : DEFAULT_SETTINGS.ui.showAvatars,
     animationsEnabled:
-      typeof ui?.animationsEnabled === 'boolean'
-        ? ui.animationsEnabled
+      typeof u.animationsEnabled === 'boolean'
+        ? u.animationsEnabled
         : DEFAULT_SETTINGS.ui.animationsEnabled,
   };
 };
@@ -117,58 +121,58 @@ const validateUIPreferences = (ui: any): UIPreferences => {
 /**
  * Validate AI settings
  */
-const validateAISettings = (ai: any): AISettings => {
+const validateAISettings = (ai: unknown): AISettings => {
+  const a = (ai && typeof ai === 'object' ? ai : {}) as Partial<AISettings>;
   return {
-    defaultProvider: isValidAIProvider(ai?.defaultProvider)
-      ? ai.defaultProvider
+    defaultProvider: isValidAIProvider(a.defaultProvider)
+      ? a.defaultProvider
       : DEFAULT_SETTINGS.ai.defaultProvider,
-    temperature: isValidTemperature(ai?.temperature)
-      ? ai.temperature
+    temperature: isValidTemperature(a.temperature)
+      ? a.temperature!
       : DEFAULT_SETTINGS.ai.temperature,
-    maxTokens: isValidMaxTokens(ai?.maxTokens) ? ai.maxTokens : DEFAULT_SETTINGS.ai.maxTokens,
+    maxTokens: isValidMaxTokens(a.maxTokens) ? a.maxTokens! : DEFAULT_SETTINGS.ai.maxTokens,
     streamResponse:
-      typeof ai?.streamResponse === 'boolean'
-        ? ai.streamResponse
-        : DEFAULT_SETTINGS.ai.streamResponse,
+      typeof a.streamResponse === 'boolean' ? a.streamResponse : DEFAULT_SETTINGS.ai.streamResponse,
   };
 };
 
 /**
  * Validate privacy settings
  */
-const validatePrivacySettings = (privacy: any): PrivacySettings => {
+const validatePrivacySettings = (privacy: unknown): PrivacySettings => {
+  const p = (privacy && typeof privacy === 'object' ? privacy : {}) as Partial<PrivacySettings>;
   return {
     saveConversations:
-      typeof privacy?.saveConversations === 'boolean'
-        ? privacy.saveConversations
+      typeof p.saveConversations === 'boolean'
+        ? p.saveConversations
         : DEFAULT_SETTINGS.privacy.saveConversations,
     shareAnalytics:
-      typeof privacy?.shareAnalytics === 'boolean'
-        ? privacy.shareAnalytics
+      typeof p.shareAnalytics === 'boolean'
+        ? p.shareAnalytics
         : DEFAULT_SETTINGS.privacy.shareAnalytics,
     clearOnClose:
-      typeof privacy?.clearOnClose === 'boolean'
-        ? privacy.clearOnClose
-        : DEFAULT_SETTINGS.privacy.clearOnClose,
+      typeof p.clearOnClose === 'boolean' ? p.clearOnClose : DEFAULT_SETTINGS.privacy.clearOnClose,
   };
 };
 
 /**
  * Validate API key references
  */
-const validateAPIKeyReferences = (apiKeys: any): APIKeyReferences => {
+const validateAPIKeyReferences = (apiKeys: unknown): APIKeyReferences => {
+  const a = (apiKeys && typeof apiKeys === 'object' ? apiKeys : {}) as Partial<APIKeyReferences> &
+    Record<string, unknown>;
   return {
     openai:
-      typeof apiKeys?.openai === 'string' || apiKeys?.openai === null
-        ? apiKeys.openai
+      typeof a.openai === 'string' || a.openai === null
+        ? (a.openai as string | null)
         : DEFAULT_SETTINGS.apiKeys.openai,
     anthropic:
-      typeof apiKeys?.anthropic === 'string' || apiKeys?.anthropic === null
-        ? apiKeys.anthropic
+      typeof a.anthropic === 'string' || a.anthropic === null
+        ? (a.anthropic as string | null)
         : DEFAULT_SETTINGS.apiKeys.anthropic,
     google:
-      typeof apiKeys?.google === 'string' || apiKeys?.google === null
-        ? apiKeys.google
+      typeof a.google === 'string' || a.google === null
+        ? (a.google as string | null)
         : DEFAULT_SETTINGS.apiKeys.google,
   };
 };
@@ -176,25 +180,26 @@ const validateAPIKeyReferences = (apiKeys: any): APIKeyReferences => {
 /**
  * Migrate legacy settings to current format
  */
-const migrateSettings = (rawSettings: any): Settings => {
+const migrateSettings = (rawSettings: unknown): Settings => {
   if (!rawSettings || typeof rawSettings !== 'object') {
     return { ...DEFAULT_SETTINGS };
   }
 
   // If already current version, validate and return
-  if (rawSettings.version === SETTINGS_VERSION) {
+  const rs = rawSettings as Partial<Settings> & Record<string, unknown>;
+  if (rs.version === SETTINGS_VERSION) {
     return {
       version: SETTINGS_VERSION,
-      theme: isValidTheme(rawSettings.theme) ? rawSettings.theme : DEFAULT_SETTINGS.theme,
-      ui: validateUIPreferences(rawSettings.ui),
-      ai: validateAISettings(rawSettings.ai),
-      privacy: validatePrivacySettings(rawSettings.privacy),
-      apiKeys: validateAPIKeyReferences(rawSettings.apiKeys),
+      theme: isValidTheme(rs.theme) ? (rs.theme as Theme) : DEFAULT_SETTINGS.theme,
+      ui: validateUIPreferences(rs.ui),
+      ai: validateAISettings(rs.ai),
+      privacy: validatePrivacySettings(rs.privacy),
+      apiKeys: validateAPIKeyReferences(rs.apiKeys),
     };
   }
 
   // Migration from v0 (no version field)
-  if (!rawSettings.version) {
+  if (!rs.version) {
     const legacySettings = rawSettings as LegacySettings;
     return {
       version: SETTINGS_VERSION,

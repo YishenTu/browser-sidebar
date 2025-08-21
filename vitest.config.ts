@@ -9,6 +9,8 @@ export default defineConfig({
     environment: 'jsdom',
     threads: false,
     setupFiles: './tests/setup/setup.ts',
+    // Exclude legacy or backup tests and build outputs
+    exclude: ['node_modules/**', 'dist/**', 'tests.backup/**'],
     coverage: {
       provider: 'v8',
       reporter: ['text', 'json', 'html'],

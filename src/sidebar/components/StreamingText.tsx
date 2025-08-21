@@ -4,7 +4,7 @@ import { cn } from '@/utils/cn';
 /**
  * Props for the StreamingText component
  */
-export interface StreamingTextProps {
+export interface StreamingTextProps extends React.HTMLAttributes<HTMLSpanElement> {
   /** The complete text to stream */
   text: string;
   /** Whether the text is currently streaming */
@@ -19,8 +19,6 @@ export interface StreamingTextProps {
   onComplete?: (fullText: string) => void;
   /** Custom CSS class name */
   className?: string;
-  /** Additional HTML attributes */
-  [key: string]: any;
 }
 
 /**

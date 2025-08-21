@@ -1,3 +1,4 @@
+/* eslint-disable no-console */
 /**
  * @file Message Handler
  *
@@ -196,7 +197,7 @@ export class DefaultHandlers {
   static async handleContentReady(
     message: Message<unknown>,
     _sender: chrome.runtime.MessageSender
-  ): Promise<Message<any>> {
+  ): Promise<Message<unknown>> {
     // Echo back an acknowledgement using the same payload
     return createMessage({
       type: 'CONTENT_READY',
@@ -212,7 +213,7 @@ export class DefaultHandlers {
   static async handleSidebarState(
     message: Message<unknown>,
     _sender: chrome.runtime.MessageSender
-  ): Promise<Message<any>> {
+  ): Promise<Message<unknown>> {
     return createMessage({
       type: 'SIDEBAR_STATE',
       payload: message.payload,

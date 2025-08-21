@@ -168,7 +168,10 @@ export const MessageList: React.FC<MessageListProps> = ({
     if (isVirtualized && virtualListRef.current) {
       // For virtualized list, check if scrolled to bottom
       // Access the outer element through the ref's state
-      const listState = virtualListRef.current.state as any;
+      const listState = virtualListRef.current.state as unknown as {
+        scrollOffset?: number;
+        scrollHeight?: number;
+      };
       if (!listState || listState.scrollOffset === undefined) return true;
       const totalHeight = messages.length * DEFAULT_ITEM_HEIGHT;
       const scrollOffset = listState.scrollOffset;

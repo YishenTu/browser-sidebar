@@ -72,7 +72,7 @@ describe('ChatPanel - Drag Functionality', () => {
       const closeButton = screen.getByLabelText('Close sidebar');
       const overlay = screen.getByRole('dialog');
 
-      const initialLeft = '800px';
+      const initialLeft = '770px';
       const initialTop = '60px';
 
       expect(overlay).toHaveStyle({ left: initialLeft, top: initialTop });
@@ -106,7 +106,7 @@ describe('ChatPanel - Drag Functionality', () => {
       const clearButton = screen.getByLabelText('Clear conversation');
       const overlay = screen.getByRole('dialog');
 
-      const initialLeft = '800px';
+      const initialLeft = '770px';
       const initialTop = '60px';
 
       expect(overlay).toHaveStyle({ left: initialLeft, top: initialTop });
@@ -127,8 +127,8 @@ describe('ChatPanel - Drag Functionality', () => {
       const header = screen.getByTestId('sidebar-header');
       const overlay = screen.getByRole('dialog');
 
-      // Initial position: left: 800px, top: 60px
-      expect(overlay).toHaveStyle({ left: '800px', top: '60px' });
+      // Initial position: left: 770px, top: 60px
+      expect(overlay).toHaveStyle({ left: '770px', top: '60px' });
 
       // Start drag at specific coordinates
       fireEvent.mouseDown(header, { clientX: 850, clientY: 100 });
@@ -138,10 +138,10 @@ describe('ChatPanel - Drag Functionality', () => {
 
       // Position should update based on mouse movement
       // New position = mouse position - initial offset
-      // Offset x = 850 - 800 = 50, Offset y = 100 - 60 = 40
-      // New position: x = 900 - 50 = 850, y = 150 - 40 = 110
+      // Offset x = 850 - 770 = 80, Offset y = 100 - 60 = 40
+      // New position: x = 900 - 80 = 820, y = 150 - 40 = 110
       expect(overlay).toHaveStyle({
-        left: '850px',
+        left: '820px',
         top: '110px',
       });
     });
@@ -159,10 +159,10 @@ describe('ChatPanel - Drag Functionality', () => {
       fireEvent.mouseMove(document, { clientX: 200, clientY: 50 });
 
       // Calculate expected position (accounting for offset)
-      // Offset: x = 1000 - 800 = 200, y = 100 - 60 = 40
-      // New position: x = 200 - 200 = 0, y = 50 - 40 = 10
+      // Offset: x = 1000 - 770 = 230, y = 100 - 60 = 40
+      // New position: x = 200 - 230 = -30, y = 50 - 40 = 10
       expect(overlay).toHaveStyle({
-        left: '0px',
+        left: '-30px',
         top: '10px',
       });
     });
@@ -180,10 +180,10 @@ describe('ChatPanel - Drag Functionality', () => {
       fireEvent.mouseMove(document, { clientX: 600, clientY: 700 });
 
       // Calculate expected position
-      // Offset: x = 900 - 800 = 100, y = 200 - 60 = 140
-      // New position: x = 600 - 100 = 500, y = 700 - 140 = 560
+      // Offset: x = 900 - 770 = 130, y = 200 - 60 = 140
+      // New position: x = 600 - 130 = 470, y = 700 - 140 = 560
       expect(overlay).toHaveStyle({
-        left: '500px',
+        left: '470px',
         top: '560px',
       });
     });
@@ -200,7 +200,7 @@ describe('ChatPanel - Drag Functionality', () => {
       fireEvent.mouseUp(document);
 
       // Get current position
-      const currentLeft = '350px'; // 400 - (850 - 800) = 400 - 50 = 350
+      const currentLeft = '320px'; // 400 - (850 - 770) = 400 - 80 = 320
       const currentTop = '260px'; // 300 - (100 - 60) = 300 - 40 = 260
 
       expect(overlay).toHaveStyle({
@@ -234,11 +234,11 @@ describe('ChatPanel - Drag Functionality', () => {
       // Calculate expected position with offset
       // Initial position: 800, 60
       // Mouse down at: 950, 120
-      // Offset: 950-800=150, 120-60=60
+      // Offset: 950-770=180, 120-60=60
       // Mouse move to: 300, 400
-      // Final position: 300-150=150, 400-60=340
+      // Final position: 300-180=120, 400-60=340
       expect(overlay).toHaveStyle({
-        left: '150px',
+        left: '120px',
         top: '340px',
       });
     });
@@ -254,9 +254,10 @@ describe('ChatPanel - Drag Functionality', () => {
 
       // Multiple moves should maintain consistent offset
       const moves = [
-        { x: 500, y: 300, expectedLeft: '300px', expectedTop: '160px' },
-        { x: 700, y: 100, expectedLeft: '500px', expectedTop: '-40px' },
-        { x: 1100, y: 500, expectedLeft: '900px', expectedTop: '360px' },
+        // Offset: 1000-770=230, 200-60=140
+        { x: 500, y: 300, expectedLeft: '270px', expectedTop: '160px' }, // 500-230, 300-140
+        { x: 700, y: 100, expectedLeft: '470px', expectedTop: '-40px' }, // 700-230, 100-140
+        { x: 1100, y: 500, expectedLeft: '870px', expectedTop: '360px' }, // 1100-230, 500-140
       ];
 
       moves.forEach(({ x, y, expectedLeft, expectedTop }) => {
@@ -330,7 +331,7 @@ describe('ChatPanel - Drag Functionality', () => {
 
       // Should allow positioning outside viewport
       expect(overlay).toHaveStyle({
-        left: '-200px', // -100 - (900 - 800)
+        left: '-230px', // -100 - (900 - 770)
         top: '-90px', // -50 - (100 - 60)
       });
     });
@@ -349,7 +350,7 @@ describe('ChatPanel - Drag Functionality', () => {
 
       // Should allow positioning beyond viewport
       expect(overlay).toHaveStyle({
-        left: '1900px', // 2000 - (900 - 800)
+        left: '1870px', // 2000 - (900 - 770)
         top: '960px', // 1000 - (100 - 60)
       });
     });
@@ -366,20 +367,20 @@ describe('ChatPanel - Drag Functionality', () => {
       fireEvent.mouseUp(document);
 
       // Second drag operation from new position
-      const newPosition = { left: '400px', top: '160px' };
+      const newPosition = { left: '370px', top: '160px' };
       expect(overlay).toHaveStyle(newPosition);
 
       fireEvent.mouseDown(header, { clientX: 600, clientY: 250 });
       fireEvent.mouseMove(document, { clientX: 300, clientY: 350 });
 
       // Calculate offset for second drag
-      // Previous position: 400, 160
+      // Previous position: 370, 160
       // Mouse down at: 600, 250
-      // Offset: 600-400=200, 250-160=90
+      // Offset: 600-370=230, 250-160=90
       // Mouse move to: 300, 350
-      // Final position: 300-200=100, 350-90=260
+      // Final position: 300-230=70, 350-90=260
       expect(overlay).toHaveStyle({
-        left: '100px',
+        left: '70px',
         top: '260px',
       });
     });
@@ -399,13 +400,13 @@ describe('ChatPanel - Drag Functionality', () => {
       fireEvent.mouseUp(document);
 
       // Should end up at final position
-      // Initial position: 800, 60
+      // Initial position: 770, 60
       // Mouse down at: 850, 80
-      // Offset: 850-800=50, 80-60=20
+      // Offset: 850-770=80, 80-60=20
       // Mouse move to: 400, 300
-      // Final position: 400-50=350, 300-20=280
+      // Final position: 400-80=320, 300-20=280
       expect(overlay).toHaveStyle({
-        left: '350px', // 400 - (850 - 800) = 350
+        left: '320px', // 400 - (850 - 770) = 320
         top: '280px', // 300 - (80 - 60) = 280
       });
     });
@@ -420,7 +421,7 @@ describe('ChatPanel - Drag Functionality', () => {
 
       // Should not affect position
       expect(overlay).toHaveStyle({
-        left: '800px',
+        left: '770px',
         top: '60px',
       });
     });
@@ -435,7 +436,7 @@ describe('ChatPanel - Drag Functionality', () => {
 
       // Should not affect position
       expect(overlay).toHaveStyle({
-        left: '800px',
+        left: '770px',
         top: '60px',
       });
     });

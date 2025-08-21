@@ -52,7 +52,7 @@ describe('ChatPanel - Overlay Behavior', () => {
 
       // Position should be relative to viewport, not affected by scroll
       expect(overlay).toHaveStyle({
-        left: '800px', // Still 1200 - 400, not affected by scrollX
+        left: '770px', // 1200 - 400 - 30, not affected by scrollX
         top: '60px', // Still centered, not affected by scrollY
       });
       // Should have fixed positioning class
@@ -69,7 +69,7 @@ describe('ChatPanel - Overlay Behavior', () => {
       const overlay = screen.getByRole('dialog');
 
       expect(overlay).toHaveStyle({
-        left: '400px', // 800 - 400
+        left: '370px', // 800 - 400 - 30
         top: '45px', // (600 * 0.15) / 2
         width: '400px',
         height: '510px', // 600 * 0.85
@@ -87,7 +87,7 @@ describe('ChatPanel - Overlay Behavior', () => {
 
       // Should still maintain minimum width and proper positioning
       expect(overlay).toHaveStyle({
-        left: '-80px', // 320 - 400 (negative because sidebar wider than viewport)
+        left: '-110px', // 320 - 400 - 30
         top: '36px', // (480 * 0.15) / 2
         width: '400px', // Maintains minimum width
         height: '408px', // 480 * 0.85
@@ -202,10 +202,10 @@ describe('ChatPanel - Overlay Behavior', () => {
 
     it('positions correctly on the right edge by default', () => {
       const testCases = [
-        { width: 800, expectedLeft: 400 }, // 800 - 400
-        { width: 1200, expectedLeft: 800 }, // 1200 - 400
-        { width: 1600, expectedLeft: 1200 }, // 1600 - 400
-        { width: 300, expectedLeft: -100 }, // 300 - 400 (off-screen)
+        { width: 800, expectedLeft: 370 }, // 800 - 400 - 30
+        { width: 1200, expectedLeft: 770 }, // 1200 - 400 - 30
+        { width: 1600, expectedLeft: 1170 }, // 1600 - 400 - 30
+        { width: 300, expectedLeft: -130 }, // 300 - 400 - 30 (off-screen)
       ];
 
       testCases.forEach(({ width, expectedLeft }) => {
@@ -273,7 +273,7 @@ describe('ChatPanel - Overlay Behavior', () => {
       const { unmount } = render(<ChatPanel onClose={mockOnClose} />);
 
       let overlay = screen.getByRole('dialog');
-      expect(overlay).toHaveStyle({ width: '400px', left: '800px' });
+      expect(overlay).toHaveStyle({ width: '400px', left: '770px' });
 
       unmount();
 
@@ -284,7 +284,7 @@ describe('ChatPanel - Overlay Behavior', () => {
 
       overlay = screen.getByRole('dialog');
       // Position should update based on new window size
-      expect(overlay).toHaveStyle({ left: '600px' }); // 1000 - 400
+      expect(overlay).toHaveStyle({ left: '570px' }); // 1000 - 400 - 30
     });
 
     it('handles very wide viewports', () => {
@@ -296,7 +296,7 @@ describe('ChatPanel - Overlay Behavior', () => {
       const overlay = screen.getByRole('dialog');
 
       expect(overlay).toHaveStyle({
-        left: '3440px', // 3840 - 400
+        left: '3410px', // 3840 - 400 - 30
         top: '162px', // (2160 * 0.15) / 2
         width: '400px',
         height: '1836px', // 2160 * 0.85
@@ -313,7 +313,7 @@ describe('ChatPanel - Overlay Behavior', () => {
 
       // Should still render even if viewport is smaller than sidebar
       expect(overlay).toHaveStyle({
-        left: '-200px', // 200 - 400 (sidebar extends beyond viewport)
+        left: '-230px', // 200 - 400 - 30 (sidebar extends beyond viewport)
         top: '23px', // Math.round((300 * 0.15) / 2) = Math.round(22.5) = 23
         width: '400px', // Maintains minimum width
         height: '255px', // Math.round(300 * 0.85) = 255

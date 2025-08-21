@@ -1,3 +1,4 @@
+/* eslint-disable no-console */
 /**
  * @file Sidebar Manager
  *
@@ -432,4 +433,3 @@ export function getSidebarManager(options?: SidebarManagerOptions): SidebarManag
   }
   return globalSidebarManager;
 }
-/* eslint-disable no-console */

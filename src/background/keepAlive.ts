@@ -1,3 +1,4 @@
+/* eslint-disable no-console */
 /**
  * @file Keep Alive System
  *

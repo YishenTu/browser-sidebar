@@ -1,3 +1,4 @@
+/* eslint-disable no-console */
 // Content script - handles sidebar injection and communication with background
 
 import { createMessage, isValidMessage, Message } from '@/types/messages';
@@ -89,11 +90,14 @@ chrome.runtime.onMessage.addListener((message: Message, _sender, sendResponse) =
           .then(response => {
             sendResponse(response);
           })
-          .catch((error: any) => {
+          .catch((error: unknown) => {
             sendResponse(
               createMessage({
                 type: 'ERROR',
-                payload: { message: error?.message || String(error), code: 'INJECTION_FAILED' },
+                payload: {
+                  message: error instanceof Error ? error.message : String(error),
+                  code: 'INJECTION_FAILED',
+                },
                 source: 'content',
                 target: 'background',
               })
@@ -166,4 +170,3 @@ chrome.runtime.sendMessage(readyMessage, response => {
 });
 
 export {};
-/* eslint-disable no-console */

@@ -101,9 +101,7 @@ export const TextArea = forwardRef<HTMLTextAreaElement, TextAreaProps>(
     const mergedRef = useCallback((element: HTMLTextAreaElement | null) => {
       textAreaRef.current = element;
     }, []);
-    useImperativeHandle(ref, () => textAreaRef.current as unknown as HTMLTextAreaElement, [
-      textAreaRef.current,
-    ]);
+    useImperativeHandle(ref, () => textAreaRef.current as unknown as HTMLTextAreaElement, []);
 
     // Calculate line height based on size
     const getLineHeight = useCallback(() => {

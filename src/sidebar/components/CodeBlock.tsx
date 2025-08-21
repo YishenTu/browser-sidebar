@@ -9,10 +9,10 @@ const loadPrism = async () => {
 
   // Load common languages (with type assertions to avoid TS errors)
   await Promise.all([
-    import('prismjs/components/prism-typescript' as any),
-    import('prismjs/components/prism-python' as any),
-    import('prismjs/components/prism-java' as any),
-    import('prismjs/components/prism-css' as any),
+    import('prismjs/components/prism-typescript'),
+    import('prismjs/components/prism-python'),
+    import('prismjs/components/prism-java'),
+    import('prismjs/components/prism-css'),
   ]);
 
   return Prism.default;

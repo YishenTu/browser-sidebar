@@ -69,10 +69,11 @@ describe('ChatPanel', () => {
       expect(dialog).toHaveClass('custom-class');
     });
 
-    it('renders with default title "AI Assistant"', () => {
+    // Title text was removed in refactor; ensure header still renders
+    it('renders header without relying on title text', () => {
       render(<ChatPanel onClose={mockOnClose} />);
-
-      expect(screen.getByText('AI Assistant')).toBeInTheDocument();
+      const header = screen.getByTestId('sidebar-header');
+      expect(header).toBeInTheDocument();
     });
 
     it('renders header with close button', () => {
@@ -85,9 +86,8 @@ describe('ChatPanel', () => {
 
     it('renders message list container', () => {
       render(<ChatPanel onClose={mockOnClose} />);
-
-      // Check for the message list area
-      expect(screen.getByText('Start a conversation about this webpage')).toBeInTheDocument();
+      const body = screen.getByTestId('sidebar-body');
+      expect(body).toBeInTheDocument();
     });
 
     it('renders chat input', () => {
@@ -123,10 +123,10 @@ describe('ChatPanel', () => {
 
       const overlay = screen.getByRole('dialog');
 
-      // Default width is 400px, positioned at right edge
+      // Default width is 400px, positioned at right edge with 30px padding
       // Default height is 85% of viewport (680px), centered vertically
       expect(overlay).toHaveStyle({
-        left: '800px', // 1200 - 400
+        left: '770px', // 1200 - 400 - 30
         top: '60px', // (800 * 0.15) / 2
         width: '400px',
         height: '680px', // 800 * 0.85

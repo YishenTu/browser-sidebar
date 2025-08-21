@@ -1,3 +1,4 @@
+/* eslint-disable no-console */
 /**
  * @file Background Service Worker
  *
@@ -137,4 +138,3 @@ self.addEventListener('beforeunload', () => {
 initializeServiceWorker();
 
 export {};
-/* eslint-disable no-console */

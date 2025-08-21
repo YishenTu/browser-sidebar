@@ -161,86 +161,91 @@ export interface Conversation {
 /**
  * Type guard to check if a value is a valid MessageRole
  */
-export function isValidMessageRole(value: any): value is MessageRole {
+export function isValidMessageRole(value: unknown): value is MessageRole {
   return typeof value === 'string' && ['user', 'assistant', 'system'].includes(value);
 }
 
 /**
  * Type guard to check if a value is a valid MessageStatus
  */
-export function isValidMessageStatus(value: any): value is MessageStatus {
+export function isValidMessageStatus(value: unknown): value is MessageStatus {
   return typeof value === 'string' && ['sending', 'sent', 'error', 'streaming'].includes(value);
 }
 
 /**
  * Type guard to check if a value is a CodeBlock
  */
-export function isCodeBlock(value: any): value is CodeBlock {
+export function isCodeBlock(value: unknown): value is CodeBlock {
   return (
     typeof value === 'object' &&
     value !== null &&
-    typeof value.language === 'string' &&
-    typeof value.code === 'string' &&
-    (value.filename === undefined || typeof value.filename === 'string')
+    typeof (value as { language?: unknown }).language === 'string' &&
+    typeof (value as { code?: unknown }).code === 'string' &&
+    ((value as { filename?: unknown }).filename === undefined ||
+      typeof (value as { filename?: unknown }).filename === 'string')
   );
 }
 
 /**
  * Type guard to check if a value is ComplexMessageContent
  */
-export function isComplexMessageContent(value: any): value is ComplexMessageContent {
+export function isComplexMessageContent(value: unknown): value is ComplexMessageContent {
   return (
     typeof value === 'object' &&
     value !== null &&
-    typeof value.text === 'string' &&
-    (value.codeBlocks === undefined ||
-      (Array.isArray(value.codeBlocks) && value.codeBlocks.every(isCodeBlock)))
+    typeof (value as { text?: unknown }).text === 'string' &&
+    ((value as { codeBlocks?: unknown }).codeBlocks === undefined ||
+      (Array.isArray((value as { codeBlocks?: unknown }).codeBlocks) &&
+        ((value as { codeBlocks?: unknown }).codeBlocks as unknown[]).every(isCodeBlock)))
   );
 }
 
 /**
  * Type guard to check if a value is StreamingContent
  */
-export function isStreamingContent(value: any): value is StreamingContent {
+export function isStreamingContent(value: unknown): value is StreamingContent {
   return (
     typeof value === 'object' &&
     value !== null &&
-    typeof value.text === 'string' &&
-    typeof value.isStreaming === 'boolean' &&
-    typeof value.streamingId === 'string'
+    typeof (value as { text?: unknown }).text === 'string' &&
+    typeof (value as { isStreaming?: unknown }).isStreaming === 'boolean' &&
+    typeof (value as { streamingId?: unknown }).streamingId === 'string'
   );
 }
 
 /**
  * Type guard to check if a value is valid MessageContent
  */
-export function isMessageContent(value: any): value is MessageContent {
+export function isMessageContent(value: unknown): value is MessageContent {
   return typeof value === 'string' || isComplexMessageContent(value) || isStreamingContent(value);
 }
 
 /**
  * Type guard to check if a value is a valid ChatMessage
  */
-export function isChatMessage(value: any): value is ChatMessage {
+export function isChatMessage(value: unknown): value is ChatMessage {
   if (typeof value !== 'object' || value === null || Array.isArray(value)) {
     return false;
   }
 
   try {
     return (
-      typeof value.id === 'string' &&
-      isValidMessageRole(value.role) &&
-      isMessageContent(value.content) &&
-      typeof value.timestamp === 'number' &&
-      value.timestamp > 0 &&
-      isValidMessageStatus(value.status) &&
-      (value.error === undefined ||
-        (typeof value.error === 'object' &&
-          value.error !== null &&
-          typeof value.error.message === 'string')) &&
-      (value.editable === undefined || typeof value.editable === 'boolean') &&
-      (value.deletable === undefined || typeof value.deletable === 'boolean') &&
-      (value.metadata === undefined || typeof value.metadata === 'object')
+      typeof (value as { id?: unknown }).id === 'string' &&
+      isValidMessageRole((value as { role?: unknown }).role) &&
+      isMessageContent((value as { content?: unknown }).content) &&
+      typeof (value as { timestamp?: unknown }).timestamp === 'number' &&
+      (value as { timestamp: number }).timestamp > 0 &&
+      isValidMessageStatus((value as { status?: unknown }).status) &&
+      ((value as { error?: unknown }).error === undefined ||
+        (typeof (value as { error?: unknown }).error === 'object' &&
+          (value as { error?: unknown }).error !== null &&
+          typeof (value as { error?: { message?: unknown } }).error!.message === 'string')) &&
+      ((value as { editable?: unknown }).editable === undefined ||
+        typeof (value as { editable?: unknown }).editable === 'boolean') &&
+      ((value as { deletable?: unknown }).deletable === undefined ||
+        typeof (value as { deletable?: unknown }).deletable === 'boolean') &&
+      ((value as { metadata?: unknown }).metadata === undefined ||
+        typeof (value as { metadata?: unknown }).metadata === 'object')
     );
   } catch {
     // Handle circular references or other errors
@@ -251,56 +256,61 @@ export function isChatMessage(value: any): value is ChatMessage {
 /**
  * Type guard to check if a ChatMessage is a UserMessage
  */
-export function isUserMessage(value: any): value is UserMessage {
+export function isUserMessage(value: unknown): value is UserMessage {
   return isChatMessage(value) && value.role === 'user';
 }
 
 /**
  * Type guard to check if a ChatMessage is an AssistantMessage
  */
-export function isAssistantMessage(value: any): value is AssistantMessage {
+export function isAssistantMessage(value: unknown): value is AssistantMessage {
   return isChatMessage(value) && value.role === 'assistant';
 }
 
 /**
  * Type guard to check if a ChatMessage is a SystemMessage
  */
-export function isSystemMessage(value: any): value is SystemMessage {
+export function isSystemMessage(value: unknown): value is SystemMessage {
   return isChatMessage(value) && value.role === 'system';
 }
 
 /**
  * Type guard to check if a value is a valid ConversationMetadata
  */
-export function isConversationMetadata(value: any): value is ConversationMetadata {
+export function isConversationMetadata(value: unknown): value is ConversationMetadata {
   return (
     typeof value === 'object' &&
     value !== null &&
-    typeof value.createdAt === 'number' &&
-    typeof value.updatedAt === 'number' &&
-    typeof value.messageCount === 'number' &&
-    value.messageCount >= 0 &&
-    (value.tags === undefined ||
-      (Array.isArray(value.tags) && value.tags.every((tag: any) => typeof tag === 'string'))) &&
-    (value.model === undefined || typeof value.model === 'string') &&
-    (value.totalTokens === undefined || typeof value.totalTokens === 'number')
+    typeof (value as { createdAt?: unknown }).createdAt === 'number' &&
+    typeof (value as { updatedAt?: unknown }).updatedAt === 'number' &&
+    typeof (value as { messageCount?: unknown }).messageCount === 'number' &&
+    (value as { messageCount: number }).messageCount >= 0 &&
+    ((value as { tags?: unknown }).tags === undefined ||
+      (Array.isArray((value as { tags?: unknown }).tags) &&
+        ((value as { tags?: unknown }).tags as unknown[]).every(tag => typeof tag === 'string'))) &&
+    ((value as { model?: unknown }).model === undefined ||
+      typeof (value as { model?: unknown }).model === 'string') &&
+    ((value as { totalTokens?: unknown }).totalTokens === undefined ||
+      typeof (value as { totalTokens?: unknown }).totalTokens === 'number')
   );
 }
 
 /**
  * Type guard to check if a value is a valid Conversation
  */
-export function isConversation(value: any): value is Conversation {
+export function isConversation(value: unknown): value is Conversation {
   return (
     typeof value === 'object' &&
     value !== null &&
-    typeof value.id === 'string' &&
-    typeof value.title === 'string' &&
-    Array.isArray(value.messages) &&
-    value.messages.every(isChatMessage) &&
-    isConversationMetadata(value.metadata) &&
-    (value.archived === undefined || typeof value.archived === 'boolean') &&
-    (value.pinned === undefined || typeof value.pinned === 'boolean')
+    typeof (value as { id?: unknown }).id === 'string' &&
+    typeof (value as { title?: unknown }).title === 'string' &&
+    Array.isArray((value as { messages?: unknown }).messages) &&
+    ((value as { messages?: unknown }).messages as unknown[]).every(isChatMessage) &&
+    isConversationMetadata((value as { metadata?: unknown }).metadata) &&
+    ((value as { archived?: unknown }).archived === undefined ||
+      typeof (value as { archived?: unknown }).archived === 'boolean') &&
+    ((value as { pinned?: unknown }).pinned === undefined ||
+      typeof (value as { pinned?: unknown }).pinned === 'boolean')
   );
 }
 
