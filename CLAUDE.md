@@ -322,11 +322,10 @@ npm test -- --grep "resize" --run          # By test name pattern
 
 ## Linting & Formatting
 
-Pre-commit hooks via Husky run:
+Pre-commit hooks via Husky run lint-staged:
 
 1. ESLint with TypeScript rules
 2. Prettier formatting
-3. Tests for changed files
 
 Manual fixes:
 

@@ -84,10 +84,10 @@ Development and contribution guides.
 ## 🎯 Key Features
 
 - 🔒 **Privacy-First**: Local data, no cloud storage
-- 🤖 **Multi-Provider**: OpenAI, Gemini, Anthropic support
-- 📑 **Smart Extraction**: Content from any webpage
-- 💬 **Streaming Chat**: Real-time AI responses
+- 💬 **Streaming Chat UI**: Real-time display (mock-based today)
 - 🎨 **Beautiful UI**: Modern, responsive design
+- 🤖 **Planned: Multi-Provider**: OpenAI, Gemini, Anthropic support
+- 📑 **Planned: Smart Extraction**: Content from webpages
 
 ## 📈 Development Approach
 

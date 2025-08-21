@@ -24,7 +24,7 @@ const mockChromeStorage = {
 };
 
 // Override the global chrome mock before store import
-// @ts-ignore
+// @ts-expect-error: set global chrome in test environment
 global.chrome = {
   storage: mockChromeStorage,
   runtime: {
@@ -99,22 +99,21 @@ const MOCK_AVAILABLE_MODELS: Model[] = [
   },
 ];
 
-
 describe('Settings Store - Model Selection', () => {
   beforeEach(() => {
     // Clear all mocks before each test
     vi.clearAllMocks();
-    
+
     // Mock successful storage operations by default (must be done after clearAllMocks)
     mockChromeStorage.sync.get.mockResolvedValue({});
     mockChromeStorage.sync.set.mockResolvedValue(undefined);
     mockChromeStorage.local.get.mockResolvedValue({});
     mockChromeStorage.local.set.mockResolvedValue(undefined);
-    
+
     // Ensure our mock is the one being used by overriding again
-    // @ts-ignore
+    // @ts-expect-error: override chrome storage in test environment
     global.chrome.storage = mockChromeStorage;
-    
+
     // Reset store state
     useSettingsStore.setState({
       settings: {
@@ -159,7 +158,7 @@ describe('Settings Store - Model Selection', () => {
   describe('Store Initialization', () => {
     it('should initialize with default model selection', () => {
       const { settings } = useSettingsStore.getState();
-      
+
       // Should have a default selected model
       expect(settings.selectedModel).toBe('gpt-4');
       expect(typeof settings.selectedModel).toBe('string');
@@ -168,11 +167,11 @@ describe('Settings Store - Model Selection', () => {
 
     it('should initialize with available models list', () => {
       const { settings } = useSettingsStore.getState();
-      
+
       // Should have an array of available models
       expect(Array.isArray(settings.availableModels)).toBe(true);
       expect(settings.availableModels.length).toBeGreaterThan(0);
-      
+
       // Should include mock models as specified in requirements
       const modelIds = settings.availableModels.map((model: Model) => model.id);
       expect(modelIds).toContain('gpt-4');
@@ -185,20 +184,20 @@ describe('Settings Store - Model Selection', () => {
 
     it('should have properly structured Model objects', () => {
       const { settings } = useSettingsStore.getState();
-      
+
       settings.availableModels.forEach((model: Model) => {
         // Each model should have required properties
         expect(model).toHaveProperty('id');
         expect(model).toHaveProperty('name');
         expect(model).toHaveProperty('provider');
         expect(model).toHaveProperty('available');
-        
+
         // Type checks
         expect(typeof model.id).toBe('string');
         expect(typeof model.name).toBe('string');
         expect(typeof model.provider).toBe('string');
         expect(typeof model.available).toBe('boolean');
-        
+
         // Content validation
         expect(model.id.length).toBeGreaterThan(0);
         expect(model.name.length).toBeGreaterThan(0);
@@ -208,11 +207,11 @@ describe('Settings Store - Model Selection', () => {
 
     it('should have selected model available in models list', () => {
       const { settings } = useSettingsStore.getState();
-      
+
       const selectedModelExists = settings.availableModels.some(
         (model: Model) => model.id === settings.selectedModel
       );
-      
+
       expect(selectedModelExists).toBe(true);
     });
   });
@@ -220,27 +219,27 @@ describe('Settings Store - Model Selection', () => {
   describe('Model Selection Actions', () => {
     it('should provide updateSelectedModel action', () => {
       const store = useSettingsStore.getState();
-      
+
       // Should have the action method
       expect(typeof store.updateSelectedModel).toBe('function');
     });
 
     it('should update selected model successfully', async () => {
       const store = useSettingsStore.getState();
-      
+
       // Select a different model
       await store.updateSelectedModel('claude-3');
-      
+
       const updatedSettings = useSettingsStore.getState().settings;
       expect(updatedSettings.selectedModel).toBe('claude-3');
     });
 
     it('should validate model selection against available models', async () => {
       const store = useSettingsStore.getState();
-      
+
       // Try to select invalid model
       await expect(store.updateSelectedModel('invalid-model')).rejects.toThrow();
-      
+
       // Selected model should remain unchanged
       const settings = useSettingsStore.getState().settings;
       expect(settings.selectedModel).toBe('gpt-4'); // Should remain default
@@ -248,42 +247,42 @@ describe('Settings Store - Model Selection', () => {
 
     it('should handle loading state during model update', async () => {
       const store = useSettingsStore.getState();
-      
+
       // Mock delayed storage operation
       let resolveStorage: () => void;
-      const storagePromise = new Promise<void>((resolve) => {
+      const storagePromise = new Promise<void>(resolve => {
         resolveStorage = resolve;
       });
       mockChromeStorage.sync.set.mockReturnValue(storagePromise);
-      
+
       // Start model update
       const updatePromise = store.updateSelectedModel('gemini-pro');
-      
+
       // Should show loading state
       expect(useSettingsStore.getState().isLoading).toBe(true);
-      
+
       // Complete the operation
       resolveStorage!();
       await updatePromise;
-      
+
       // Should clear loading state
       expect(useSettingsStore.getState().isLoading).toBe(false);
     });
 
     it('should handle errors during model update', async () => {
       const store = useSettingsStore.getState();
-      
+
       // Mock storage failure
       mockChromeStorage.sync.set.mockRejectedValue(new Error('Storage failed'));
       mockChromeStorage.local.set.mockRejectedValue(new Error('Storage failed'));
-      
+
       // This should catch the error but still set error state
       try {
         await store.updateSelectedModel('claude-2');
       } catch (error) {
         // Expected to throw
       }
-      
+
       // Should set error state
       const errorState = useSettingsStore.getState().error;
       expect(errorState).not.toBeNull();
@@ -295,16 +294,16 @@ describe('Settings Store - Model Selection', () => {
   describe('Model Persistence', () => {
     it('should persist selected model to storage', async () => {
       const store = useSettingsStore.getState();
-      
+
       await store.updateSelectedModel('claude-3'); // Use available model
-      
+
       // Check if the store state was updated
       const updatedSettings = useSettingsStore.getState().settings;
       expect(updatedSettings.selectedModel).toBe('claude-3');
-      
+
       // Should have called chrome storage
       expect(mockChromeStorage.sync.set).toHaveBeenCalledTimes(1);
-      
+
       const savedData = mockChromeStorage.sync.set.mock.calls[0][0];
       expect(savedData.settings.selectedModel).toBe('claude-3');
     });
@@ -312,7 +311,8 @@ describe('Settings Store - Model Selection', () => {
     it('should load selected model from storage', async () => {
       // Mock stored settings with selected model (must match STORAGE_KEY from store)
       mockChromeStorage.sync.get.mockResolvedValue({
-        'settings': {  // This key matches STORAGE_KEY in the store
+        settings: {
+          // This key matches STORAGE_KEY in the store
           version: 1,
           theme: 'auto',
           ui: {
@@ -342,10 +342,10 @@ describe('Settings Store - Model Selection', () => {
           availableModels: [...MOCK_AVAILABLE_MODELS],
         },
       });
-      
+
       const store = useSettingsStore.getState();
       await store.loadSettings();
-      
+
       const settings = useSettingsStore.getState().settings;
       expect(settings.selectedModel).toBe('claude-3');
     });
@@ -353,7 +353,7 @@ describe('Settings Store - Model Selection', () => {
     it('should fall back to default model if stored model is invalid', async () => {
       // Mock stored settings with invalid model
       mockChromeStorage.sync.get.mockResolvedValue({
-        'settings': {
+        settings: {
           version: 1,
           theme: 'auto',
           ui: {
@@ -383,10 +383,10 @@ describe('Settings Store - Model Selection', () => {
           availableModels: [...MOCK_AVAILABLE_MODELS],
         },
       });
-      
+
       const store = useSettingsStore.getState();
       await store.loadSettings();
-      
+
       const settings = useSettingsStore.getState().settings;
       expect(settings.selectedModel).toBe('gpt-4'); // Should fall back to default
     });
@@ -395,15 +395,15 @@ describe('Settings Store - Model Selection', () => {
   describe('Available Models Management', () => {
     it('should provide getAvailableModels method', () => {
       const store = useSettingsStore.getState();
-      
+
       expect(typeof store.getAvailableModels).toBe('function');
     });
 
     it('should return only available models when requested', () => {
       const store = useSettingsStore.getState();
-      
+
       const availableModels = store.getAvailableModels();
-      
+
       // All returned models should be marked as available
       availableModels.forEach((model: Model) => {
         expect(model.available).toBe(true);
@@ -412,9 +412,9 @@ describe('Settings Store - Model Selection', () => {
 
     it('should return all models including unavailable ones', () => {
       const store = useSettingsStore.getState();
-      
+
       const allModels = store.getAvailableModels(false); // false = include unavailable
-      
+
       expect(allModels.length).toBeGreaterThanOrEqual(6); // At least the 6 required models
     });
   });
@@ -422,7 +422,7 @@ describe('Settings Store - Model Selection', () => {
   describe('Integration with Existing Store', () => {
     it('should maintain compatibility with existing settings structure', () => {
       const { settings } = useSettingsStore.getState();
-      
+
       // Should have all existing settings properties
       expect(settings).toHaveProperty('version');
       expect(settings).toHaveProperty('theme');
@@ -430,7 +430,7 @@ describe('Settings Store - Model Selection', () => {
       expect(settings).toHaveProperty('ai');
       expect(settings).toHaveProperty('privacy');
       expect(settings).toHaveProperty('apiKeys');
-      
+
       // Should have new model-related properties
       expect(settings).toHaveProperty('selectedModel');
       expect(settings).toHaveProperty('availableModels');
@@ -438,14 +438,14 @@ describe('Settings Store - Model Selection', () => {
 
     it('should work with existing resetToDefaults action', async () => {
       const store = useSettingsStore.getState();
-      
+
       // Change selected model
       await store.updateSelectedModel('claude-3');
       expect(useSettingsStore.getState().settings.selectedModel).toBe('claude-3');
-      
+
       // Reset to defaults
       await store.resetToDefaults();
-      
+
       // Should reset to default model
       expect(useSettingsStore.getState().settings.selectedModel).toBe('gpt-4');
     });
@@ -453,7 +453,7 @@ describe('Settings Store - Model Selection', () => {
     it('should validate selectedModel during settings validation', () => {
       // This tests the validation functions that should be added
       // The actual validation logic will be implemented in the store
-      
+
       const store = useSettingsStore.getState();
       expect(() => {
         // This should not throw for valid model

@@ -24,7 +24,7 @@ Architecture: The extension uses ONLY a custom injected React sidebar (no popup,
 - **Unit Tests**: For all utility functions and business logic (Vitest)
 - **Component Tests**: For all React components (React Testing Library)
 - **Integration Tests**: For message passing and API interactions
-- **E2E Tests**: For critical user journeys (Playwright)
+- **E2E-style UI Flows**: For critical user journeys (Vitest + RTL)
 
 ## Progress Tracking
 
@@ -40,7 +40,7 @@ Architecture: The extension uses ONLY a custom injected React sidebar (no popup,
 
 ## STAGE 2: CHAT PANEL UI
 
-Deliverable highlight: Complete React-based chat interface within the custom sidebar container. Chat UI with message display, markdown rendering, streaming text, theme system, and Zustand state management. All components mount inside existing Sidebar.tsx from Stage 1.
+Deliverable highlight: Complete React-based chat interface within the custom sidebar container. Chat UI with message display, markdown rendering, streaming text, theme system, and Zustand state management. All components render via `src/sidebar/ChatPanel.tsx` and are mounted through `src/sidebar/index.tsx` (Shadow DOM overlay).
 
 ### Phase 2.1: UI Foundation
 
@@ -134,8 +134,8 @@ Deliverable highlight: Complete React-based chat interface within the custom sid
     - Test loading state
   - Description: Create reusable button component
   - Deliverables:
-    - `src/components/ui/Button.tsx`
-    - `tests/components/ui/Button.test.tsx`
+    - `src/sidebar/components/ui/Button.tsx`
+    - `tests/sidebar/components/ui/Button.test.tsx`
   - Acceptance: Button works in all states
 
 - [x] **Task 2.2.1b** - Input Component 🧪
@@ -147,8 +147,8 @@ Deliverable highlight: Complete React-based chat interface within the custom sid
     - Test error states
   - Description: Create input component
   - Deliverables:
-    - `src/components/ui/Input.tsx`
-    - `tests/components/ui/Input.test.tsx`
+    - `src/sidebar/components/ui/Input.tsx`
+    - `tests/sidebar/components/ui/Input.test.tsx`
   - Acceptance: Input handles all cases
 
 - [x] **Task 2.2.1c** - Card Component 🧪
@@ -159,8 +159,8 @@ Deliverable highlight: Complete React-based chat interface within the custom sid
     - Test hover states
   - Description: Create card container component
   - Deliverables:
-    - `src/components/ui/Card.tsx`
-    - `tests/components/ui/Card.test.tsx`
+    - `src/sidebar/components/ui/Card.tsx`
+    - `tests/sidebar/components/ui/Card.test.tsx`
   - Acceptance: Card displays content
 
 - [x] **Task 2.2.1d** - IconButton Component 🧪
@@ -171,8 +171,8 @@ Deliverable highlight: Complete React-based chat interface within the custom sid
     - Test sizes work
   - Description: Create icon button component
   - Deliverables:
-    - `src/components/ui/IconButton.tsx`
-    - `tests/components/ui/IconButton.test.tsx`
+    - `src/sidebar/components/ui/IconButton.tsx`
+    - `tests/sidebar/components/ui/IconButton.test.tsx`
   - Acceptance: Icon buttons work
 
 - [x] **Task 2.2.1e** - Spinner Component 🧪
@@ -183,8 +183,8 @@ Deliverable highlight: Complete React-based chat interface within the custom sid
     - Test sizes
   - Description: Create loading spinner
   - Deliverables:
-    - `src/components/ui/Spinner.tsx`
-    - `tests/components/ui/Spinner.test.tsx`
+    - `src/sidebar/components/ui/Spinner.tsx`
+    - `tests/sidebar/components/ui/Spinner.test.tsx`
   - Acceptance: Spinner animates
 
 ### Phase 2.3: Chat Components
@@ -212,8 +212,8 @@ Deliverable highlight: Complete React-based chat interface within the custom sid
     - Test timestamp displays
   - Description: Create message bubble
   - Deliverables:
-    - `src/components/Chat/MessageBubble.tsx`
-    - `tests/components/Chat/MessageBubble.test.tsx`
+    - `src/sidebar/components/MessageBubble.tsx`
+    - `tests/sidebar/components/MessageBubble.test.tsx`
   - Acceptance: Messages display correctly
 
 - [x] **Task 2.3.1c** - Markdown Renderer 🧪
@@ -225,8 +225,8 @@ Deliverable highlight: Complete React-based chat interface within the custom sid
     - Test XSS prevention
   - Description: Integrate react-markdown
   - Deliverables:
-    - `src/components/Chat/MarkdownRenderer.tsx`
-    - `tests/components/Chat/MarkdownRenderer.test.tsx`
+    - `src/sidebar/components/MarkdownRenderer.tsx`
+    - `tests/sidebar/components/MarkdownRenderer.test.tsx`
     - Custom renderers
   - Acceptance: Markdown renders safely
 
@@ -238,8 +238,8 @@ Deliverable highlight: Complete React-based chat interface within the custom sid
     - Test language detection
   - Description: Create code block with highlighting
   - Deliverables:
-    - `src/components/Chat/CodeBlock.tsx`
-    - `tests/components/Chat/CodeBlock.test.tsx`
+    - `src/sidebar/components/CodeBlock.tsx`
+    - `tests/sidebar/components/CodeBlock.test.tsx`
   - Acceptance: Code highlights correctly
 
 - [x] **Task 2.3.2a** - Message List Container 🧪
@@ -250,8 +250,8 @@ Deliverable highlight: Complete React-based chat interface within the custom sid
     - Test empty state
   - Description: Create scrollable message list
   - Deliverables:
-    - `src/components/Chat/MessageList.tsx`
-    - `tests/components/Chat/MessageList.test.tsx`
+    - `src/sidebar/components/MessageList.tsx`
+    - `tests/sidebar/components/MessageList.test.tsx`
   - Acceptance: List scrolls correctly
 
 - [x] **Task 2.3.2b** - Virtual Scrolling 🧪
@@ -273,8 +273,8 @@ Deliverable highlight: Complete React-based chat interface within the custom sid
     - Test max height
   - Description: Create auto-resizing textarea
   - Deliverables:
-    - `src/components/ui/TextArea.tsx`
-    - `tests/components/ui/TextArea.test.tsx`
+    - `src/sidebar/components/ui/TextArea.tsx`
+    - `tests/sidebar/components/ui/TextArea.test.tsx`
   - Acceptance: TextArea resizes properly
 
 - [x] **Task 2.3.3b** - Chat Input Component 🧪
@@ -285,8 +285,8 @@ Deliverable highlight: Complete React-based chat interface within the custom sid
     - Test disabled during send
   - Description: Create chat input with controls
   - Deliverables:
-    - `src/components/Chat/ChatInput.tsx`
-    - `tests/components/Chat/ChatInput.test.tsx`
+    - `src/sidebar/components/ChatInput.tsx`
+    - `tests/sidebar/components/ChatInput.test.tsx`
   - Acceptance: Input handles all interactions
 
 - [x] **Task 2.3.4a** - Streaming Text Component 🧪
@@ -297,8 +297,8 @@ Deliverable highlight: Complete React-based chat interface within the custom sid
     - Test completion detection
   - Description: Create streaming text display
   - Deliverables:
-    - `src/components/Chat/StreamingText.tsx`
-    - `tests/components/Chat/StreamingText.test.tsx`
+    - `src/sidebar/components/StreamingText.tsx`
+    - `tests/sidebar/components/StreamingText.test.tsx`
   - Acceptance: Smooth streaming display
 
 - [x] **Task 2.3.4b** - Typing Indicator 🧪
@@ -308,8 +308,8 @@ Deliverable highlight: Complete React-based chat interface within the custom sid
     - Test show/hide logic
   - Description: Create typing indicator
   - Deliverables:
-    - `src/components/Chat/TypingIndicator.tsx`
-    - `tests/components/Chat/TypingIndicator.test.tsx`
+    - `src/sidebar/components/TypingIndicator.tsx`
+    - `tests/sidebar/components/TypingIndicator.test.tsx`
   - Acceptance: Indicator animates
 
 ### Phase 2.4: UI Integration
@@ -326,8 +326,8 @@ Deliverable highlight: Complete React-based chat interface within the custom sid
     - Test component integration
   - Description: Assemble chat components
   - Deliverables:
-    - `src/components/Chat/ChatPanel.tsx`
-    - `tests/components/Chat/ChatPanel.test.tsx`
+    - `src/sidebar/ChatPanel.tsx`
+    - `tests/sidebar/ChatPanel.test.tsx`
     - Header, body, footer sections
   - Acceptance: Complete chat UI works
 
@@ -339,8 +339,8 @@ Deliverable highlight: Complete React-based chat interface within the custom sid
     - Test system detection
   - Description: Implement theme context
   - Deliverables:
-    - `src/contexts/ThemeContext.tsx`
-    - `tests/contexts/ThemeContext.test.tsx`
+    - `src/sidebar/contexts/ThemeContext.tsx`
+    - `tests/sidebar/ThemeContext.test.tsx`
     - Theme toggle component
   - Acceptance: Themes switch correctly
 

@@ -123,8 +123,8 @@ interface Message {
   id: string;
   type: MessageType;
   payload: any;
-  source: 'popup' | 'content' | 'background' | 'sidepanel';
-  target?: 'popup' | 'content' | 'background' | 'sidepanel';
+  source: 'background' | 'content' | 'sidebar';
+  target: 'background' | 'content' | 'sidebar';
   timestamp: number;
 }
 ```
@@ -202,11 +202,19 @@ interface Message {
 
 ```
 src/
-├── components/     # Presentational components
-├── containers/     # Container components
-├── hooks/          # Custom React hooks
-├── contexts/       # React contexts
-└── utils/          # Utility functions
+├── sidebar/            # Injected UI (React)
+│   ├── components/     # Reusable components (incl. ui/)
+│   ├── hooks/          # Custom React hooks
+│   ├── contexts/       # React contexts
+│   ├── styles/         # Sidebar styles
+│   ├── ChatPanel.tsx   # Unified chat panel
+│   └── index.tsx       # Shadow DOM mount/unmount
+├── backend/            # Service worker
+├── tabext/             # Content script
+├── core/               # Messaging helpers
+├── store/              # Zustand stores
+├── types/              # Shared types
+└── utils/              # Utilities
 ```
 
 ### State Management

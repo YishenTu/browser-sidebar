@@ -88,16 +88,18 @@ class KeyManager {
 
 ### Content Script Isolation
 
-```javascript
-// Isolated world execution
+Content scripts in MV3 execute in an isolated world by default. For programmatic injection via `chrome.scripting.executeScript`, specify the world as needed.
+
+```json
 {
-  "content_scripts": [{
-    "matches": ["<all_urls>"],
-    "js": ["content.js"],
-    "run_at": "document_idle",
-    "all_frames": false,
-    "world": "ISOLATED"  // Isolated from page scripts
-  }]
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["src/tabext/index.ts"],
+      "run_at": "document_idle",
+      "all_frames": false
+    }
+  ]
 }
 ```
 
@@ -189,7 +191,7 @@ function detectSensitiveData(text: string): SensitiveDataWarning[] {
     "storage", // Store settings and data
     "tabs", // Access tab information
     "activeTab", // Access current tab only
-    "sidePanel" // Side panel API
+    "scripting" // Programmatic injection
   ],
   "host_permissions": [
     "<all_urls>" // Required for content extraction

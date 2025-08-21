@@ -24,7 +24,7 @@ Architecture: The extension uses ONLY a custom injected React sidebar (no popup,
 - **Unit Tests**: For all utility functions and business logic (Vitest)
 - **Component Tests**: For all React components (React Testing Library)
 - **Integration Tests**: For message passing and API interactions
-- **E2E Tests**: For critical user journeys (Playwright)
+- **E2E-style UI Flows**: For critical user journeys (Vitest + RTL)
 
 ## Progress Tracking
 

@@ -11,11 +11,11 @@ interface Message<T = any> {
   payload: T; // Type-safe payload
   timestamp: number; // Unix timestamp
   source: ComponentType; // Origin component
-  target?: ComponentType; // Target component (optional)
+  target: ComponentType; // Target component
   error?: ErrorInfo; // Error information (if applicable)
 }
 
-type ComponentType = 'popup' | 'content' | 'background' | 'sidepanel';
+type ComponentType = 'background' | 'content' | 'sidebar';
 
 interface ErrorInfo {
   code: string;

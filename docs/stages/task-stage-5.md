@@ -24,7 +24,7 @@ Architecture: The extension uses ONLY a custom injected React sidebar (no popup,
 - **Unit Tests**: For all utility functions and business logic (Vitest)
 - **Component Tests**: For all React components (React Testing Library)
 - **Integration Tests**: For message passing and API interactions
-- **E2E Tests**: For critical user journeys (Playwright)
+- **E2E-style UI Flows**: For critical user journeys (Vitest + RTL)
 
 ## Progress Tracking
 
@@ -241,8 +241,8 @@ Deliverable highlight: Complete tab content extraction system with multi-tab sup
     - Test keyboard navigation
   - Description: Create tab search UI
   - Deliverables:
-    - `src/components/Chat/TabSearch.tsx`
-    - `tests/components/Chat/TabSearch.test.tsx`
+    - `src/sidebar/components/TabSearch.tsx`
+    - `tests/sidebar/components/TabSearch.test.tsx`
   - Acceptance: Tab search works
 
 - [ ] **Task 5.3.1b** - @Mention Handler 🧪
@@ -253,8 +253,8 @@ Deliverable highlight: Complete tab content extraction system with multi-tab sup
     - Test insertion
   - Description: Implement @mention
   - Deliverables:
-    - `src/components/Chat/MentionHandler.tsx`
-    - `tests/components/Chat/MentionHandler.test.tsx`
+    - `src/sidebar/components/MentionHandler.tsx`
+    - `tests/sidebar/components/MentionHandler.test.tsx`
   - Acceptance: @mentions work
 
 - [ ] **Task 5.3.2** - Content Preview 🧪
@@ -265,8 +265,8 @@ Deliverable highlight: Complete tab content extraction system with multi-tab sup
     - Test source attribution
   - Description: Display extracted content
   - Deliverables:
-    - `src/components/Chat/ContentPreview.tsx`
-    - `tests/components/Chat/ContentPreview.test.tsx`
+    - `src/sidebar/components/ContentPreview.tsx`
+    - `tests/sidebar/components/ContentPreview.test.tsx`
   - Acceptance: Content displays clearly
 
 - [ ] **Task 5.3.3a** - Context Aggregator 🧪

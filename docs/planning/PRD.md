@@ -232,7 +232,7 @@ Common Provider Interface:
 
 ```
 ┌─────────────────────────────────────────┐
-│             Popup UI (React)            │
+│         Custom Sidebar UI (React)       │
 ├─────────────────────────────────────────┤
 │          Background Service              │
 │  - API calls                            │
@@ -261,23 +261,23 @@ Also supports:
 - **Frontend**: React 18 + TypeScript + Tailwind CSS
 - **State Management**: Zustand
 - **Build**: Vite + CRXJS
-- **Testing**: Vitest + Playwright
-- **Polyfills**: webextension-polyfill
+- **Testing**: Vitest + React Testing Library (jsdom)
+- **Polyfills**: (none required currently)
 
 ### 4.3 Data Flow
 
 ```mermaid
 sequenceDiagram
-    User->>Popup: Open extension
-    Popup->>Content Script (tabext): Request extraction
-    Content Script (tabext)->>Background: Send content
-    Background->>Storage: Cache content
-    User->>Popup: Enter query
-    Popup->>Background: Process query
-    Background->>AI Provider: API call
-    AI Provider->>Background: Stream response
-    Background->>Popup: Update UI
-    Popup->>User: Display response
+    User->>Extension Icon: Toggle sidebar
+    Extension Icon->>Background: Action clicked
+    Background->>Content Script (tabext): Toggle message
+    Content Script (tabext)->>Sidebar: Mount/Show
+    User->>Sidebar: Enter query
+    Sidebar->>Background: Process query
+    Background->>AI Provider: API call (planned)
+    AI Provider->>Background: Stream response (planned)
+    Background->>Sidebar: Update UI
+    Sidebar->>User: Display response
 ```
 
 ## 5. Security & Privacy

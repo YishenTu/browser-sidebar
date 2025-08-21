@@ -33,7 +33,7 @@ A privacy-focused browser extension that enables users to interact with web cont
 
 - Verify extension installation
 - Test sidebar opening/closing
-- Test side panel activation
+- Test sidebar toggle via extension icon
 - Verify message passing works
 
 ---
@@ -44,18 +44,18 @@ A privacy-focused browser extension that enables users to interact with web cont
 
 **Tasks:**
 
-- [ ] Set up React 18 + Tailwind CSS
-- [ ] Create chat message component
-- [ ] Implement message list with scrolling
-- [ ] Build input area with multi-line support
-- [ ] Add send button with Cmd/Ctrl+Enter shortcut
-- [ ] Implement message streaming display (mock data)
-- [ ] Add markdown rendering support
-- [ ] Implement syntax highlighting for code blocks
-- [ ] Add copy button for code blocks
-- [ ] Create theme switcher (light/dark/auto)
-- [ ] Add loading states and animations
-- [ ] Implement responsive layout (350-500px width)
+- [x] Set up React 18 + Tailwind CSS
+- [x] Create chat message component
+- [x] Implement message list with scrolling
+- [x] Build input area with multi-line support
+- [x] Add send button with Cmd/Ctrl+Enter shortcut
+- [x] Implement message streaming display (mock data)
+- [x] Add markdown rendering support
+- [x] Implement syntax highlighting for code blocks
+- [x] Add copy button for code blocks
+- [x] Create theme switcher (light/dark/auto)
+- [x] Add loading states and animations
+- [x] Implement responsive layout (350-800px width)
 
 **Deliverables:**
 
@@ -206,56 +206,21 @@ A privacy-focused browser extension that enables users to interact with web cont
 ```
 browser-sidebar/
 ├── src/
-│   ├── backend/
-│   │   ├── index.ts           # Service worker entry
-│   │   ├── messageHandler.ts  # Message routing
-│   │   └── contextMenus.ts    # Context menu setup
-│   ├── tabext/
-│   │   ├── index.ts           # Content script entry
-│   │   ├── extractor.ts       # DOM extraction logic
-│   │   ├── monitor.ts         # Dynamic content monitoring
-│   │   └── selection.ts       # Selection handling
-│   ├── sidebar/
-│   │   ├── index.tsx          # Custom sidebar entry
-│   │   ├── Sidebar.tsx        # Main sidebar component
-│   │   └── styles/            # Sidebar-specific styles
-│   ├── components/
-│   │   ├── Chat/
-│   │   │   ├── ChatMessage.tsx
-│   │   │   ├── ChatInput.tsx
-│   │   │   ├── MessageList.tsx
-│   │   │   └── TabMention.tsx
-│   │   └── Settings/
-│   │       ├── ApiKeyInput.tsx
-│   │       ├── ProviderSelect.tsx
-│   │       └── ThemeToggle.tsx
-│   ├── provider/
-│   │   ├── base.ts            # Provider interface
-│   │   ├── openai.ts          # OpenAI implementation
-│   │   ├── gemini.ts          # Gemini implementation
-│   │   └── anthropic.ts       # Anthropic via OpenRouter
-│   ├── extraction/
-│   │   ├── readability.ts     # Readability integration
-│   │   ├── markdown.ts        # Markdown conversion
-│   │   └── multiTab.ts        # Multi-tab aggregation
-│   ├── storage/
-│   │   ├── encryption.ts      # Crypto utilities
-│   │   ├── settings.ts        # Settings management
-│   │   └── conversations.ts   # Chat history
-│   ├── utils/
-│   │   ├── constants.ts
-│   │   ├── errors.ts
-│   │   └── helpers.ts
-│   └── types/
-│       └── index.ts           # TypeScript definitions
+│   ├── backend/        # Service worker (index, keepAlive, messageHandler, sidebarManager)
+│   ├── tabext/         # Content script entry
+│   ├── sidebar/        # Injected UI (ChatPanel, components, hooks, styles, contexts, index)
+│   ├── core/           # Messaging helpers
+│   ├── store/          # Zustand stores (chat, settings)
+│   ├── types/          # Shared types (messages, manifest, settings, chat)
+│   └── utils/          # Utilities (theme, mockChat, cn)
 ├── public/
-│   ├── manifest.json
-│   └── icons/
+│   └── icons/          # Extension icons
 ├── tests/
-│   ├── unit/
+│   ├── e2e/
 │   ├── integration/
-│   └── e2e/
-├── .env.example
+│   ├── sidebar/        # components/, performance*, accessibility*
+│   └── store/
+├── manifest.json
 ├── package.json
 ├── tsconfig.json
 ├── vite.config.ts
@@ -273,16 +238,15 @@ browser-sidebar/
 
 ### Libraries
 
-- **Content Extraction:** @mozilla/readability
-- **AI SDKs:** openai, @anthropic-ai/sdk, @google/generative-ai
-- **Markdown:** react-markdown, remark-gfm
-- **Syntax Highlighting:** prism-react-renderer
-- **Encryption:** crypto-js
-- **Cross-browser:** webextension-polyfill
+- **Markdown:** react-markdown, remark-gfm, rehype-highlight
+- **Syntax Highlighting:** highlight.js, prismjs
+- **(Planned) Content Extraction:** @mozilla/readability
+- **(Planned) AI SDKs:** openai, @anthropic-ai/sdk, @google/generative-ai
+- **(Planned) Encryption:** WebCrypto (AES‑GCM)
 
 ### Development
 
-- **Testing:** Vitest, @testing-library/react, Playwright
+- **Testing:** Vitest, @testing-library/react
 - **Linting:** ESLint, Prettier
 - **Type Checking:** TypeScript strict mode
 

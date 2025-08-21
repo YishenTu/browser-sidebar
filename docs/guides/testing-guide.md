@@ -12,22 +12,24 @@ Target: **>90% code coverage** across all modules.
 
 ## Testing Stack
 
-- **Unit Testing**: Vitest
-- **Component Testing**: React Testing Library
-- **E2E Testing**: Playwright
+- **Unit/Integration**: Vitest
+- **Component Testing**: React Testing Library + user-event
+- **E2E-style flows**: Vitest (jsdom) covering full UI flows where feasible
 - **Mocking**: Vitest built-in mocks
-- **Coverage**: Vitest coverage (v8)
+- **Coverage**: @vitest/coverage-v8
 
 ## Test Structure
 
 ```
 tests/
-├── unit/              # Business logic tests
-├── integration/       # Component integration tests
-├── e2e/              # End-to-end tests
-├── mocks/            # Mock data and utilities
-├── setup/            # Test configuration
-└── utils/            # Test helper functions
+├── e2e/                # Full UI flows in jsdom (Vitest)
+├── integration/        # Component interaction tests
+├── sidebar/            # Sidebar component tests (incl. performance/accessibility)
+│   ├── components/     # Individual component tests
+│   ├── performance-*.test.tsx
+│   └── accessibility-*.test.tsx
+├── store/              # Zustand store tests
+└── setup/              # Test configuration (jest-dom + Chrome API mocks)
 ```
 
 ## Writing Tests
@@ -68,10 +70,10 @@ describe('Encryption Utilities', () => {
 #### Testing React Components
 
 ```typescript
-// tests/components/ChatMessage.test.tsx
+// tests/sidebar/components/ChatMessage.test.tsx
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
-import { ChatMessage } from '@/components/Chat/ChatMessage';
+import { ChatMessage } from '@sidebar/components/MessageBubble';
 
 describe('ChatMessage Component', () => {
   const mockMessage = {
@@ -121,7 +123,7 @@ describe('ChatMessage Component', () => {
 // tests/integration/chat-flow.test.tsx
 import { describe, it, expect, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import { ChatPanel } from '@/components/Chat/ChatPanel';
+import { ChatPanel } from '@sidebar/ChatPanel';
 import { mockProviders } from '../mocks/providers';
 
 describe('Chat Flow Integration', () => {
@@ -151,33 +153,25 @@ describe('Chat Flow Integration', () => {
 });
 ```
 
-### E2E Tests
+### E2E-style UI Flows (Vitest)
 
-#### Testing Complete User Journey
+Use Vitest + RTL to simulate full interaction flows in jsdom.
 
-```typescript
-// tests/e2e/extraction.spec.ts
-import { test, expect } from '@playwright/test';
+```tsx
+// tests/e2e/sidebar-core.test.tsx (excerpt)
+import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { describe, it, expect } from 'vitest';
+import { ModelSelector } from '@sidebar/components/ModelSelector';
 
-test.describe('Content Extraction', () => {
-  test.beforeEach(async ({ page }) => {
-    // Load extension
-    await page.goto('chrome://extensions/');
-    // ... load extension logic
-  });
-
-  test('should extract content from webpage', async ({ page }) => {
-    // Navigate to test page
-    await page.goto('https://example.com');
-
-    // Open extension popup
-    await page.click('[aria-label="AI Browser Sidebar"]');
-
-    // Click extract button
-    await page.click('[data-testid="extract-content"]');
-
-    // Verify content appears
-    await expect(page.locator('[data-testid="extracted-content"]')).toContainText('Example Domain');
+describe('Model selection flow', () => {
+  it('allows selecting a model via keyboard', async () => {
+    const user = userEvent.setup();
+    render(<ModelSelector value="GPT-4" onChange={() => {}} models={['GPT-4', 'Claude 3']} />);
+    const combo = screen.getByRole('combobox');
+    combo.focus();
+    await user.keyboard('{Enter}{ArrowDown}{Enter}');
+    expect(combo).toHaveAttribute('aria-expanded', 'false');
   });
 });
 ```
@@ -186,34 +180,20 @@ test.describe('Content Extraction', () => {
 
 ### Chrome API Mocks
 
-```typescript
-// tests/mocks/chrome.ts
+See `tests/setup/setup.ts` for the global Chrome mock. Example shape:
+
+```ts
 import { vi } from 'vitest';
 
-export const mockChrome = {
-  runtime: {
-    sendMessage: vi.fn(message => Promise.resolve({ success: true })),
-    onMessage: {
-      addListener: vi.fn(),
-      removeListener: vi.fn(),
-    },
-  },
-  storage: {
-    local: {
-      get: vi.fn(keys => Promise.resolve({})),
-      set: vi.fn(items => Promise.resolve()),
-      remove: vi.fn(keys => Promise.resolve()),
-      clear: vi.fn(() => Promise.resolve()),
-    },
-  },
-  tabs: {
-    query: vi.fn(() => Promise.resolve([{ id: 1, title: 'Test Tab', url: 'https://example.com' }])),
-    sendMessage: vi.fn(() => Promise.resolve()),
-  },
-};
-
-// Apply mock
-global.chrome = mockChrome as any;
+beforeAll(() => {
+  // @ts-expect-error test env mock
+  global.chrome = {
+    storage: { local: { get: vi.fn(), set: vi.fn() }, sync: { get: vi.fn(), set: vi.fn() } },
+    runtime: { sendMessage: vi.fn(), onMessage: { addListener: vi.fn(), removeListener: vi.fn() } },
+    tabs: { query: vi.fn(), sendMessage: vi.fn() },
+    action: { onClicked: { addListener: vi.fn(), removeListener: vi.fn() } },
+  };
+});
 ```
 
 ### API Provider Mocks
@@ -303,7 +283,7 @@ npm run test
 npm run test -- --watch
 
 # Run specific test file
-npm run test ChatMessage.test.tsx
+npm test -- tests/sidebar/components/ChatMessage.test.tsx --run
 
 # Run tests matching pattern
 npm run test -- --grep "should render"
@@ -311,8 +291,8 @@ npm run test -- --grep "should render"
 # Run with coverage
 npm run test:coverage
 
-# Run E2E tests
-npm run test:e2e
+# E2E-style flows (Vitest + RTL)
+# Already included under tests/e2e/**/*
 ```
 
 ### VS Code Integration

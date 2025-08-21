@@ -64,10 +64,10 @@ npm run build        # Build for production
 npm run watch        # Build and watch for changes
 
 # Testing
-npm run test         # Run unit tests
-npm run test:ui      # Run tests with UI
+npm run test          # Run tests once (Vitest)
+npm run test:watch    # Watch mode (TDD)
+npm run test:ui       # Run tests with UI
 npm run test:coverage # Generate coverage report
-npm run test:e2e     # Run end-to-end tests
 
 # Code Quality
 npm run lint         # Run ESLint
@@ -83,11 +83,11 @@ browser-sidebar/
 │   ├── backend/         # Service worker: routing, tab state
 │   ├── tabext/          # Content script: sidebar injection + tab content capture
 │   ├── sidebar/         # Main sidebar application (React)
-│   │   ├── components/  # Reusable UI components
+│   │   ├── components/  # Reusable UI components (MessageList, Markdown, ModelSelector, UI)
 │   │   ├── hooks/       # Custom React hooks
-│   │   ├── styles/      # CSS modules and styles
-│   │   ├── Sidebar.tsx  # Main sidebar container
-│   │   └── index.tsx    # Sidebar mounting logic
+│   │   ├── styles/      # Unified sidebar styles
+│   │   ├── ChatPanel.tsx# Unified chat panel (overlay, resize/drag)
+│   │   └── index.tsx    # Shadow DOM mounting logic
 │   ├── provider/        # AI provider integrations (Stage 4)
 │   ├── storage/         # Data persistence layer (Stage 3)
 │   ├── services/        # Business logic services (Stage 5)
@@ -151,11 +151,11 @@ Complete the feature set:
 ### Adding a New Component
 
 ```bash
-# Create component file
-touch src/components/MyComponent.tsx
+# Create component file (example)
+touch src/sidebar/components/MyComponent.tsx
 
-# Create test file
-touch tests/components/MyComponent.test.tsx
+# Create test file mirroring structure
+touch tests/sidebar/components/MyComponent.test.tsx
 
 # Import and use in your code
 ```
@@ -164,7 +164,7 @@ touch tests/components/MyComponent.test.tsx
 
 ```bash
 # Run specific test file
-npm run test src/components/MyComponent.test.tsx
+npm test -- tests/sidebar/components/MyComponent.test.tsx --run
 
 # Run tests in watch mode
 npm run test -- --watch

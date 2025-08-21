@@ -24,7 +24,7 @@ Architecture: The extension uses ONLY a custom injected React sidebar (no popup,
 - **Unit Tests**: For all utility functions and business logic (Vitest)
 - **Component Tests**: For all React components (React Testing Library)
 - **Integration Tests**: For message passing and API interactions
-- **E2E Tests**: For critical user journeys (Playwright)
+- **E2E-style UI Flows**: For critical user journeys (Vitest + RTL)
 
 ## Progress Tracking
 
@@ -260,7 +260,7 @@ Deliverable highlight: Unified AI provider system supporting OpenAI, Gemini, and
   - Description: Create provider UI
   - Deliverables:
     - `src/components/Settings/ProviderSettings.tsx`
-    - `tests/components/Settings/ProviderSettings.test.tsx`
+    - `tests/sidebar/components/Settings/ProviderSettings.test.tsx`
   - Acceptance: UI configures providers
 
 - [ ] **Task 4.3.4b** - API Key Input UI 🧪
@@ -272,7 +272,7 @@ Deliverable highlight: Unified AI provider system supporting OpenAI, Gemini, and
   - Description: Create key input component
   - Deliverables:
     - `src/components/Settings/ApiKeyInput.tsx`
-    - `tests/components/Settings/ApiKeyInput.test.tsx`
+    - `tests/sidebar/components/Settings/ApiKeyInput.test.tsx`
   - Acceptance: Keys entered securely
 
 - [ ] **Task 4.3.5** - Chat-Provider Integration 🧪

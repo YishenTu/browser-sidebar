@@ -131,19 +131,18 @@ src/
 ├── tabext/
 │   └── index.ts          # Sidebar injection
 ├── sidebar/
-│   ├── index.tsx         # React app mount
-│   └── Sidebar.tsx       # Container component
+│   ├── index.tsx         # React app mount (Shadow DOM)
+│   └── (container)       # Container (later unified as ChatPanel in Stage 2)
 ├── types/
 │   ├── index.ts          # Core types
 │   ├── messages.ts       # Message protocol
 │   └── manifest.ts       # Manifest types
-└── utils/
+└── core/
     └── messaging.ts      # Message bus utility
 
 tests/
 ├── setup/
-│   ├── setup.ts          # Vitest setup
-│   └── chrome-mock.ts    # Chrome API mocks
+│   └── setup.ts          # Vitest setup (jest-dom + Chrome API mocks)
 └── integration/          # Message passing tests
 ```
 

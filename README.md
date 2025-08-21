@@ -5,12 +5,12 @@ A privacy‑focused browser extension for AI‑powered chat with web content usi
 ## Features
 
 - 🔒 **Privacy-First**: All data stays local, no cloud storage
-- 🤖 **Multi-Provider Support**: OpenAI, Google Gemini, Anthropic
-- 📑 **Smart Content Extraction**: Extract content from any webpage
-- 🎯 **Multi-Tab Context**: Aggregate information from multiple tabs
-- 💬 **Streaming Responses**: Real-time AI responses
+- 💬 **Streaming UI**: Smooth streaming display in the chat UI (mock-based today)
 - 🎨 **Customizable UI**: Resizable & movable sidebar, light/dark themes
 - 🌐 **Universal Compatibility**: Works in Chrome, Arc, Edge, and other Chromium browsers
+- 🧩 **Planned: Multi-Provider (BYOK)**: OpenAI, Google Gemini, Anthropic (Stage 4)
+- 📑 **Planned: Smart Content Extraction**: Extract/format page content (Stage 5)
+- 🎯 **Planned: Multi-Tab Context**: Aggregate information from multiple tabs (Stage 5)
 
 ## Tech Stack
 
@@ -116,11 +116,11 @@ Please read our contributing guidelines before submitting PRs.
 
 ## License
 
-[License Type] - See LICENSE file for details
+MIT — see `package.json` for the license field (LICENSE file TBD)
 
 ## Status
 
-✅ **Stage 2 complete** — Unified sidebar UI, Shadow DOM overlay preserved, model selector integrated, tests passing.
+✅ **Stage 2 complete** — Unified sidebar UI, Shadow DOM overlay preserved, model selector integrated, tests passing. AI provider integration and extraction are planned next.
 
 ### Current Focus
 

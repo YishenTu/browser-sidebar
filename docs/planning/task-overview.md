@@ -6,6 +6,8 @@ Building a privacy-focused browser extension that enables AI-powered chat with w
 
 Architecture: The extension uses ONLY a custom injected React sidebar (no popup, no Chrome sidepanel) for universal browser compatibility. The sidebar is resizable (300-800px width), draggable, and injected by the content script. Communication flow: Extension Icon Click → Background Service Worker → Content Script → Sidebar React App.
 
+Note: Some example paths below use generic `src/components/...` style. The actual implementation consolidates UI under `src/sidebar/` (see `src/sidebar/components/...`).
+
 ## Execution Guidelines for Sub-Agents
 
 - **Follow TDD cycle**: Write tests first (RED) → Implement code (GREEN) → Refactor (REFACTOR)
@@ -24,7 +26,7 @@ Architecture: The extension uses ONLY a custom injected React sidebar (no popup,
 - **Unit Tests**: For all utility functions and business logic (Vitest)
 - **Component Tests**: For all React components (React Testing Library)
 - **Integration Tests**: For message passing and API interactions
-- **E2E Tests**: For critical user journeys (Playwright)
+- **E2E-style UI Flows**: For critical user journeys (Vitest + RTL in jsdom)
 
 ## Progress Tracking
 
@@ -137,7 +139,7 @@ Deliverable highlight: Complete custom sidebar infrastructure with resizable (30
   - Prerequisites: Task 1.1.3a
   - Description: Create actual manifest.json
   - Deliverables:
-    - `public/manifest.json` with all permissions
+    - `manifest.json` with required permissions
     - Version and metadata
     - Content script registration
   - Acceptance: Extension loads in Chrome
