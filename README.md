@@ -1,6 +1,6 @@
 # AI Browser Sidebar Extension
 
-A privacy-focused browser extension that enables users to interact with web content through AI-powered chat using their own API keys (BYOK - Bring Your Own Key).
+A privacy‑focused browser extension for AI‑powered chat with web content using your own API keys (BYOK). The sidebar is a Shadow DOM overlay that’s resizable, draggable, and works across Chromium browsers.
 
 ## Features
 
@@ -16,10 +16,11 @@ A privacy-focused browser extension that enables users to interact with web cont
 
 - **Frontend**: React 18 + TypeScript
 - **Build**: Vite + CRXJS
+- **Styling**: CSS + Tailwind tokens + dark mode
+- **State**: Zustand stores (`@store/*`) for chat/settings
 - **Testing**: Vitest + React Testing Library
-- **Styling**: CSS with dark mode support (Tailwind ready for Stage 2)
-- **State**: Local React state (Zustand ready for Stage 2)
-- **AI SDKs**: Ready for Stage 4 integration
+- **Virtualization**: react-window
+- **Markdown**: react-markdown + remark-gfm + rehype-highlight
 
 ## Development
 
@@ -51,6 +52,9 @@ npm run build
 
 # Build and watch for changes
 npm run watch
+
+# Regenerate dist after changes (Chrome load)
+npx vite build
 ```
 
 ### Testing
@@ -86,11 +90,11 @@ browser-sidebar/
 ├── src/
 │   ├── backend/       # Service worker, routing, tab state
 │   ├── tabext/        # Content script: sidebar injection + tab content capture
-│   ├── sidebar/       # Sidebar React app (components, hooks, styles, contexts)
+│   ├── sidebar/       # Sidebar React app (unified ChatPanel, components, hooks, styles, contexts)
 │   ├── core/          # Messaging and shared infra
-│   ├── provider/      # AI provider integrations (BYOK, Stage 4)
-│   ├── storage/       # Data persistence layer (Stage 3)
-│   ├── services/      # Backend services (Stage 5)
+│   ├── provider/      # Provider clients & BYOK (Stage 4)
+│   ├── storage/       # Secure storage & encryption (Stage 3)
+│   ├── services/      # Extraction/aggregation services (Stage 5)
 │   ├── types/         # TypeScript definitions
 │   └── utils/         # Utility functions
 ├── tests/             # Test files
@@ -104,7 +108,7 @@ browser-sidebar/
 - [Product Requirements (PRD)](./docs/planning/PRD.md)
 - [Development Plan](./docs/planning/development-plan.md)
 - [Task Breakdown](./docs/planning/task-overview.md)
-- Stage-specific tasks in `docs/stages/task-stage-*.md`
+- Stage guides: `docs/stages/task-stage-*.md` — Stage 2 now includes the merged Refactoring Blueprint from `task.md` (file removed)
 
 ## Contributing
 
@@ -116,18 +120,14 @@ Please read our contributing guidelines before submitting PRs.
 
 ## Status
 
-🚧 **In Development** - Following staged development plan
+✅ **Stage 2 complete** — Unified sidebar UI, Shadow DOM overlay preserved, model selector integrated, tests passing.
 
-### Current Stage: Stage 1 - Extension Infrastructure
+### Current Focus
 
-- [x] Project setup
-- [x] Chrome extension manifest
-- [x] Custom sidebar implementation (resizable, movable)
-- [x] Message passing system
-- [x] Testing infrastructure
-- [ ] AI provider integration (next stage)
+- Stage 3: Storage & Security (planned)
+- Stage 4: AI Provider System (planned)
 
 ---
 
-_Version: 0.1.0-dev_  
-_Last Updated: 2025-08-20_
+_Version: 0.1.0-dev_
+_Last Updated: 2025-08-21_

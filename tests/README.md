@@ -1,6 +1,6 @@
 # Comprehensive Test Suite
 
-This directory contains comprehensive tests for the refactored AI Browser Sidebar Extension, developed using Test-Driven Development (TDD) methodology as part of Task 5. All tests are working and passing with >90% coverage.
+This directory contains comprehensive tests for the refactored AI Browser Sidebar Extension, developed using Test-Driven Development (TDD). All tests are passing with >90% coverage. Stage 2’s Refactoring Blueprint has been merged into `docs/stages/task-stage-2.md`.
 
 ## Test Architecture
 
@@ -158,13 +158,13 @@ All tests properly mock Chrome extension APIs:
 
 ### Component Dependencies
 
-Tests work with the actual refactored components using path aliases:
+Tests work with the actual refactored components using path aliases (from `tsconfig.json` and Vite):
 
 - `@components/ModelSelector` - AI model selection component
 - `@sidebar/ChatPanel` - Unified chat interface
-- `@sidebar/index` - Mount/unmount functions
+- `@sidebar/index` - Shadow DOM mount/unmount
 - `@ui/*` - Reusable UI components (Button, Input, Card, etc.)
-- `@store/settings` - Settings state management
+- `@store/settings` - Settings state management (selectedModel, availableModels)
 - `@store/chat` - Chat state management
 - `@utils/*` - Utility functions and helpers
 

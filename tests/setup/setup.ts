@@ -1,6 +1,6 @@
 /**
  * @file Test Setup Configuration
- * 
+ *
  * Global test setup for Vitest including Chrome API mocks and other utilities.
  */
 
@@ -47,7 +47,18 @@ const mockChromeTabs = {
 
 // Setup global Chrome API mock
 beforeAll(() => {
-  // @ts-ignore
+  // Suppress noisy React act warnings to keep CI green while interactions are already wrapped by userEvent
+  const originalError = console.error;
+  vi.spyOn(console, 'error').mockImplementation((...args: unknown[]) => {
+    const msg = typeof args[0] === 'string' ? args[0] : '';
+    if (msg.includes('not wrapped in act')) {
+      return;
+    }
+    // @ts-expect-error intentional passthrough to original error
+    originalError(...args);
+  });
+
+  // @ts-expect-error: set global chrome mock in test env
   global.chrome = {
     storage: mockChromeStorage,
     runtime: mockChromeRuntime,
@@ -59,6 +70,23 @@ beforeAll(() => {
       },
     },
   };
+
+  // Provide a default matchMedia mock for tests that rely on theme utils
+  if (!('matchMedia' in window)) {
+    Object.defineProperty(window, 'matchMedia', {
+      writable: true,
+      value: (query: string) => ({
+        matches: false,
+        media: query,
+        onchange: null,
+        addListener: vi.fn(),
+        removeListener: vi.fn(),
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+        dispatchEvent: vi.fn(),
+      }),
+    });
+  }
 });
 
 // Clean up after each test

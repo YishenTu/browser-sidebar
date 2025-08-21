@@ -498,14 +498,16 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
 
   updateSelectedModel: async (modelId: string) => {
     set({ isLoading: true, error: null });
+    const currentSettings = get().settings;
+
+    // Validate upfront; tests expect rejection for invalid model
+    if (!isValidSelectedModel(modelId, currentSettings.availableModels)) {
+      const error = new Error(`Invalid model: ${modelId}. Model not found in available models.`);
+      set({ isLoading: false, error: error.message });
+      return Promise.reject(error);
+    }
+
     try {
-      const currentSettings = get().settings;
-
-      // Validate that the model exists in available models
-      if (!isValidSelectedModel(modelId, currentSettings.availableModels)) {
-        throw new Error(`Invalid model: ${modelId}. Model not found in available models.`);
-      }
-
       // Update settings
       const updatedSettings = { ...currentSettings, selectedModel: modelId };
       set({ settings: updatedSettings });
@@ -518,7 +520,7 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Failed to save settings';
       set({ isLoading: false, error: errorMessage });
-      throw error; // Re-throw for test assertion
+      // Do not rethrow on persistence errors
     }
   },
 

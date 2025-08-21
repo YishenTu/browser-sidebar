@@ -279,11 +279,14 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ className, onClose }) => {
             <ModelSelector
               className="model-selector--header"
               value={availableModels.find(m => m.id === selectedModel)?.name || 'GPT-4'}
-              onChange={modelName => {
+              onChange={async modelName => {
                 // Map display name back to model ID
                 const model = availableModels.find(m => m.name === modelName);
-                if (model) {
-                  updateSelectedModel(model.id);
+                if (!model) return;
+                try {
+                  await updateSelectedModel(model.id);
+                } catch (err) {
+                  // Gracefully ignore here; store already set error
                 }
               }}
               models={availableModels.filter(m => m.available).map(m => m.name)}

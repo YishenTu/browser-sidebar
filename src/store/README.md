@@ -137,6 +137,26 @@ interface AppActions {
 - `appStore`: Default store instance
 - `storeUtils`: Utility functions for direct store access
 
+### Settings Store (Model Selector)
+
+```ts
+// src/store/settings.ts
+interface Model {
+  id: string;
+  name: string;
+  provider: string;
+  available: boolean;
+}
+
+interface SettingsState {
+  selectedModel: string;
+  availableModels: Model[];
+  setModel: (id: string) => void;
+}
+```
+
+Used by `@components/ModelSelector` in the ChatPanel header. Persists via `chrome.storage` where available.
+
 ## Chrome Extension Integration
 
 The store works seamlessly within the Chrome extension environment. Future versions will include:

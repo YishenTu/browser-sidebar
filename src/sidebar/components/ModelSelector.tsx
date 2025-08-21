@@ -44,7 +44,6 @@ export function ModelSelector({
 }: ModelSelectorProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [highlightedIndex, setHighlightedIndex] = useState(-1);
-  const [isFocused, setIsFocused] = useState(false);
 
   const containerRef = useRef<HTMLDivElement>(null);
   const comboboxRef = useRef<HTMLButtonElement>(null);
@@ -85,13 +84,8 @@ export function ModelSelector({
     // Get the root node (shadow root or document) where this component is mounted
     const rootNode = (containerRef.current?.getRootNode() || document) as Document | ShadowRoot;
 
-    // Use a small timeout to prevent the dropdown from closing immediately when opened
-    const timeoutId = setTimeout(() => {
-      rootNode.addEventListener('mousedown', handleClickOutside);
-    }, 0);
-
+    rootNode.addEventListener('mousedown', handleClickOutside);
     return () => {
-      clearTimeout(timeoutId);
       rootNode.removeEventListener('mousedown', handleClickOutside);
     };
   }, [isOpen]);
@@ -159,9 +153,9 @@ export function ModelSelector({
         const listRect = listboxRef.current.getBoundingClientRect();
 
         if (optionRect.bottom > listRect.bottom) {
-          option.scrollIntoView({ block: 'end', behavior: 'smooth' });
+          option.scrollIntoView({ block: 'end' });
         } else if (optionRect.top < listRect.top) {
-          option.scrollIntoView({ block: 'start', behavior: 'smooth' });
+          option.scrollIntoView({ block: 'start' });
         }
       }
     }
@@ -197,6 +191,14 @@ export function ModelSelector({
     }
   };
 
+  const handleFocus = () => {
+    comboboxRef.current?.classList.add('model-selector__trigger--focused');
+  };
+
+  const handleBlur = () => {
+    comboboxRef.current?.classList.remove('model-selector__trigger--focused');
+  };
+
   const handleOptionClick = (model: string, index: number, e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
@@ -225,15 +227,23 @@ export function ModelSelector({
         className={cn('model-selector__trigger', {
           'model-selector__trigger--open': isOpen,
           'model-selector__trigger--disabled': disabled,
-          'model-selector__trigger--focused': isFocused,
+          'model-selector__trigger--focused':
+            typeof document !== 'undefined' && document.activeElement === comboboxRef.current,
         })}
         onClick={e => handleToggleDropdown(e)}
         onKeyDown={handleComboboxKeyDown}
-        onFocus={() => setIsFocused(true)}
-        onBlur={() => setIsFocused(false)}
+        onFocus={handleFocus}
+        onBlur={handleBlur}
         value={value}
+        style={{ cursor: disabled ? 'not-allowed' : 'pointer' }}
       >
         <span className="model-selector__value">{value || 'Select model...'}</span>
+        <span
+          className={cn('model-selector__icon', {
+            'model-selector__icon--rotated': isOpen,
+          })}
+          aria-hidden="true"
+        />
       </button>
 
       {isOpen && (

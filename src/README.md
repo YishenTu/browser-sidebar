@@ -5,15 +5,21 @@ This layout groups code by the three major functions: sidebar (frontend UI), pro
 ## Modules
 
 ### `/sidebar`
-React UI for the sidebar.
-- `components/` – Reusable UI components
+
+React UI for the sidebar (Shadow DOM overlay).
+
+- `ChatPanel.tsx` – Unified chat panel (overlay, resize/drag)
+- `components/` – Reusable UI components (MessageList, Markdown, ModelSelector, UI)
+- `components/ui/` – Button, Input, Card, IconButton, Spinner, TextArea
 - `hooks/` – Sidebar-specific hooks
-- `styles/` – Sidebar CSS and theme variables
+- `styles/` – Unified sidebar stylesheet + theme variables
 - `contexts/` – UI contexts (e.g., theme)
-- `index.tsx` – Mount/unmount logic for the sidebar
+- `index.tsx` – Shadow DOM mount/unmount logic
 
 ### `/tabext`
+
 Content script injected into pages. This module owns the Tab Content Capture System described in the PRD — collecting content from the current tab (and later multiple tabs) and sending it into the chat context so the user can ask AI questions about it.
+
 - `index.ts` – Sidebar injection and message handling
 - Future (planned):
   - `services/extraction/` – Readability-based main content, code blocks, tables, selection markers, images
@@ -22,29 +28,36 @@ Content script injected into pages. This module owns the Tab Content Capture Sys
   - `bridge/` – Packaging content into typed messages for backend/provider
 
 ### `/provider`
+
 AI provider configuration and clients (BYOK).
+
 - Provider abstraction, per-provider clients (OpenAI/Gemini/Anthropic), settings schema (future)
 
 ### `/backend`
+
 Background/service worker and backend services.
+
 - `index.ts` – Service worker entry
 - `keepAlive.ts`, `messageHandler.ts`, `sidebarManager.ts`
 - Storage and backend services (future: `storage/`, `services/`)
 
 ### `/core`
+
 Shared protocol/infra used across modules.
+
 - `messaging.ts` – High-level message bus and helpers
 - `types/` (in `src/types`) – Message and configuration types used by all modules
 - Shared constants/utilities (future)
 
 ### Other
+
 - `/types` – TypeScript definitions (messages, settings, manifest, etc.)
 - `/utils` – Cross-cutting utilities (e.g., theme utils)
 - `/styles` – Global theme tokens (CSS variables) consumed by sidebar
-- `/store` – Zustand stores for UI state (sidebar-only):
+- `/store` – Zustand stores for UI state (sidebar):
   - `index.ts` app store (loading/error)
   - `chat.ts` conversation state (messages, statuses)
-  - `settings.ts` UI/AI settings with chrome.storage persistence
+  - `settings.ts` UI/AI settings (includes `selectedModel`, `availableModels`) with chrome.storage persistence
 
 ## Module Dependencies
 
@@ -71,6 +84,7 @@ backend → storage/services (future)
 ## Import Aliases
 
 Configured in `vite.config.ts` and `tsconfig.json`:
+
 - `@/` – `src/`
 - `@sidebar` – `src/sidebar`
 - `@components` – `src/sidebar/components`
@@ -83,3 +97,5 @@ Configured in `vite.config.ts` and `tsconfig.json`:
 - `@services` – `src/services`
 - `@types` – `src/types`
 - `@utils` – `src/utils`
+- `@ui` – `src/sidebar/components/ui`
+- `@store` – `src/store`

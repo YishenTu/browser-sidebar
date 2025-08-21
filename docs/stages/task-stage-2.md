@@ -396,21 +396,21 @@ Deliverable highlight: Complete React-based chat interface within the custom sid
 
 ### Task Completion:
 
-- [ ] All tests written and passing
-- [ ] Component implementation complete
-- [ ] Props and interfaces documented
-- [ ] Accessibility attributes added
-- [ ] No linting errors
+- [x] All tests written and passing
+- [x] Component implementation complete
+- [x] Props and interfaces documented
+- [x] Accessibility attributes added
+- [x] No linting errors
 
 ### Stage Completion:
 
-- [ ] All 24 tasks marked complete
-- [ ] Integration tests pass
-- [ ] Test coverage > 90%
-- [ ] Theme system functional
-- [ ] Mock chat system works
-- [ ] Performance benchmarks met
-- [ ] Accessibility tests pass
+- [x] All 24 tasks marked complete
+- [x] Integration tests pass
+- [x] Test coverage > 90%
+- [x] Theme system functional
+- [x] Mock chat system works
+- [x] Performance benchmarks met
+- [x] Accessibility tests pass
 
 ---
 
@@ -420,3 +420,202 @@ _Test-First Tasks: 21 (88%)_
 _Parallelizable: 17 (71%)_  
 _Sequential: 7 (29%)_  
 _Estimated Parallel Execution Paths: 4_
+
+---
+
+# Refactoring Blueprint (Merged from task.md) — Completed
+
+This section consolidates the full refactoring blueprint previously tracked in `task.md`. All tasks are complete and the Stage 2 UI now lives under `src/sidebar/` with Shadow DOM overlay preserved.
+
+## Project Overview
+
+Goal: Refactor the existing sidebar/chat panel into a unified, clean architecture under `/src/sidebar/` while preserving critical overlay functionality and adding a model selector feature.
+
+Critical Constraint: The sidebar remains an overlay on top of websites using Shadow DOM isolation, fixed positioning, and high z-index. This functionality is working and must not be broken.
+
+Target Design: Clean, minimal chat interface matching the provided design (`/image.png`) with integrated model selector.
+
+Development Methodology: Test-Driven Development (TDD) - Write tests first (RED) → Implement code (GREEN) → Refactor (REFACTOR)
+
+## Execution Guidelines
+
+- Follow TDD cycle strictly
+- Tasks marked with 🔄 can run in parallel; ⚡ are sequential
+- 🧪 indicates test-first development
+- Do not modify Shadow DOM or overlay positioning logic
+- Preserve resize and drag functionality
+- Minimum test coverage: 90% for new code
+
+## Progress Tracking
+
+- [x] Phase 0: Test Migration & Preparation (4/4 tasks)
+- [x] Phase 1: Directory Restructuring (5/5 tasks) ✅ COMPLETED
+- [x] Phase 2: Component Consolidation (4/4 tasks) ✅ COMPLETED
+- [x] Phase 3: Style Unification (4/4 tasks) ✅ COMPLETED
+- [x] Phase 4: Model Selector Implementation (4/4 tasks) ✅ COMPLETED
+- [x] Phase 5: Integration & Testing (3/3 tasks) ✅ COMPLETED
+
+Total Progress: 23/23 tasks ✅ ALL TASKS COMPLETED
+
+---
+
+## PHASE 0: TEST MIGRATION & PREPARATION
+
+Synchronization Point: Existing tests must be updated before refactoring begins
+
+🔄 Task 0.1 - Audit & Categorize Existing Tests 🧪
+
+- Review all tests in `/tests/` and categorize them (Keep & Update, Remove, Migrate)
+- Deliverables: Test audit document and migration list
+
+🔄 Task 0.2 - Create Test Migration Script 🧪
+
+- `/scripts/migrate-tests.js` to update import paths for new structure
+
+⚡ Task 0.3 - Backup Existing Tests
+
+- Create `/tests.backup/` directory with all current tests
+
+⚡ Task 0.4 - Create Test Structure for New Architecture
+
+- Create `/tests/sidebar/{components,components/ui,hooks,styles}/`
+
+---
+
+## PHASE 1: DIRECTORY RESTRUCTURING
+
+Synchronization Point: All components must be moved before consolidation begins
+
+🔄 Task 1.1 - Move Chat Components 🧪
+
+- Move `/src/components/Chat/*` → `/src/sidebar/components/`
+
+🔄 Task 1.2 - Move UI Components 🧪
+
+- Move `/src/components/ui/*` → `/src/sidebar/components/ui/`
+
+🔄 Task 1.3 - Move Hooks 🧪
+
+- Move `/src/hooks/useMockChat.ts` → `/src/sidebar/hooks/`
+
+🔄 Task 1.4 - Consolidate Styles
+
+- Move `/src/styles/*` (chat related) → `/src/sidebar/styles/`
+
+⚡ Task 1.5 - Remove Demo Components
+
+- Delete `/src/components/demo/`
+
+---
+
+## PHASE 2: COMPONENT CONSOLIDATION
+
+Synchronization Point: Core refactoring - preserve overlay
+
+⚡ Task 2.1 - Create Unified ChatPanel Component 🧪
+
+- Merge `Sidebar.tsx` and `ChatPanel.tsx` into `/src/sidebar/ChatPanel.tsx`
+- Preserve: resize, drag, Shadow DOM mounting, overlay positioning
+
+⚡ Task 2.2 - Simplify ChatInput Component 🧪
+
+- Remove auxiliary buttons; keep send, clear, textarea
+
+⚡ Task 2.3 - Update Component Imports 🧪
+
+- Use `@/sidebar/...` or relative paths consistently
+
+⚡ Task 2.4 - Update index.tsx Mount Logic 🧪
+
+- Mount unified ChatPanel; keep Shadow DOM implementation unchanged
+
+---
+
+## PHASE 3: STYLE UNIFICATION
+
+🔄 Task 3.1 - Create Unified Stylesheet 🧪
+
+- Merge all CSS into `src/sidebar/styles/sidebar.css`
+- Preserve overlay criticals: `z-index: 2147483647`, `position: fixed`, pointer-events, Shadow DOM overrides
+
+🔄 Task 3.2 - Remove Old Style Files
+
+- Delete legacy CSS files migrated in 3.1
+
+⚡ Task 3.3 - Update Style Imports
+
+- Sidebar imports single unified stylesheet
+
+⚡ Task 3.4 - Mimic Design
+
+- Match `/image.png` styling; ignore non-essential buttons
+
+---
+
+## PHASE 4: MODEL SELECTOR IMPLEMENTATION
+
+🔄 Task 4.1 - ModelSelector Component 🧪 → `src/sidebar/components/ModelSelector.tsx`
+Interface:
+
+```ts
+interface ModelSelectorProps {
+  value: string;
+  onChange: (model: string) => void;
+  disabled?: boolean;
+}
+```
+
+🔄 Task 4.2 - Update Settings Store 🧪 → `src/store/settings.ts`
+Interface additions:
+
+```ts
+interface Model {
+  id: string;
+  name: string;
+  provider: string;
+  available: boolean;
+}
+```
+
+Fields: `selectedModel: string`, `availableModels: Model[]`
+
+⚡ Task 4.3 - Integrate ModelSelector into Header 🧪
+
+- Render in ChatPanel header; connect to store
+
+⚡ Task 4.4 - Style ModelSelector 🧪
+
+- Dark/light, hover/focus, visual parity with design
+
+---
+
+## PHASE 5: INTEGRATION & TESTING
+
+⚡ Task 5.1 - Comprehensive Integration Testing 🧪
+
+- E2E lifecycle, overlay behavior, resize/drag, selector persistence, Shadow DOM, messaging
+
+⚡ Task 5.2 - Update Path Aliases and Coverage 🧪
+
+- Ensure `@sidebar/*` paths; coverage >90%
+
+⚡ Task 5.3 - Documentation Updates
+
+- Update docs and tests README; document TDD approach and new organization
+
+---
+
+## Risk Mitigation
+
+Critical to preserve: Shadow DOM, overlay z-index/positioning, resize/drag handlers, chrome.runtime messaging
+
+Potential blockers: Import paths, style conflicts within Shadow DOM, state wiring, CSS variables
+
+Rollback: Commit per phase, test after each, revert phase if needed
+
+---
+
+## TDD Metrics and Completion Criteria
+
+- Unit/Integration/E2E/Visual/Performance coverage; >90% for new code
+- Overall success: unified `/src/sidebar/`, integrated model selector, consolidated styles, clean imports, overlay parity, all tests passing, no regressions

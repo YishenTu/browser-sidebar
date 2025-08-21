@@ -20,7 +20,7 @@ Detailed implementation guides for each development stage.
 - **[Stage 1: Extension Infrastructure](./stages/task-stage-1.md)** ✅  
   15 tasks - Foundation setup, custom sidebar implementation
 - **[Stage 2: Chat Panel UI](./stages/task-stage-2.md)** ✅  
-  24 tasks - React UI components, chat interface
+  24 tasks - React UI components, chat interface. Note: The Refactoring Blueprint from `task.md` has been merged into this Stage 2 document and `task.md` was removed.
 - **[Stage 3: Storage & Security](./stages/task-stage-3.md)**  
   18 tasks - Secure storage, encryption, data management
 - **[Stage 4: AI Provider System](./stages/task-stage-4.md)**  
@@ -104,5 +104,5 @@ Development and contribution guides.
 
 ---
 
-_Documentation Version: 1.0_  
-_Last Updated: 2025-08-19_
+_Documentation Version: 1.1_
+_Last Updated: 2025-08-21_
