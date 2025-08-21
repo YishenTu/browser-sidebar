@@ -4,11 +4,11 @@ import React from 'react';
 
 /**
  * Test Suite: UI Components Import and Rendering from New Location
- * 
+ *
  * This test suite verifies that all UI components can be successfully
  * imported from their new location at /src/sidebar/components/ui/
  * and that they render correctly with their existing props.
- * 
+ *
  * Tests should FAIL initially during RED phase since components
  * haven't been moved to new location yet.
  */
@@ -30,10 +30,12 @@ describe('UI Components - Import and Basic Rendering Tests', () => {
 
     it('should render Button with different variants', async () => {
       const { Button } = await import('@/sidebar/components/ui/Button');
-      render(React.createElement(Button, { 
-        variant: 'primary', 
-        children: 'Primary Button' 
-      }));
+      render(
+        React.createElement(Button, {
+          variant: 'primary',
+          children: 'Primary Button',
+        })
+      );
       const button = screen.getByRole('button', { name: 'Primary Button' });
       expect(button).toHaveClass('btn-primary');
     });
@@ -62,10 +64,12 @@ describe('UI Components - Import and Basic Rendering Tests', () => {
 
     it('should render IconButton with icon', async () => {
       const { IconButton } = await import('@/sidebar/components/ui/IconButton');
-      render(React.createElement(IconButton, { 
-        icon: '✨',
-        'aria-label': 'Test Icon Button'
-      }));
+      render(
+        React.createElement(IconButton, {
+          icon: '✨',
+          'aria-label': 'Test Icon Button',
+        })
+      );
       expect(screen.getByRole('button', { name: 'Test Icon Button' })).toBeInTheDocument();
     });
   });
@@ -79,9 +83,11 @@ describe('UI Components - Import and Basic Rendering Tests', () => {
 
     it('should render Input with placeholder', async () => {
       const { Input } = await import('@/sidebar/components/ui/Input');
-      render(React.createElement(Input, { 
-        placeholder: 'Test Input'
-      }));
+      render(
+        React.createElement(Input, {
+          placeholder: 'Test Input',
+        })
+      );
       expect(screen.getByPlaceholderText('Test Input')).toBeInTheDocument();
     });
   });
@@ -109,9 +115,11 @@ describe('UI Components - Import and Basic Rendering Tests', () => {
 
     it('should render TextArea with placeholder', async () => {
       const { TextArea } = await import('@/sidebar/components/ui/TextArea');
-      render(React.createElement(TextArea, { 
-        placeholder: 'Test TextArea'
-      }));
+      render(
+        React.createElement(TextArea, {
+          placeholder: 'Test TextArea',
+        })
+      );
       expect(screen.getByPlaceholderText('Test TextArea')).toBeInTheDocument();
     });
   });
@@ -119,7 +127,7 @@ describe('UI Components - Import and Basic Rendering Tests', () => {
   describe('UI Index Exports', () => {
     it('should import all components from index file', async () => {
       const exports = await import('@/sidebar/components/ui/index');
-      
+
       // Verify all component exports exist
       expect(exports.Button).toBeDefined();
       expect(exports.Card).toBeDefined();
@@ -127,7 +135,7 @@ describe('UI Components - Import and Basic Rendering Tests', () => {
       expect(exports.Input).toBeDefined();
       expect(exports.Spinner).toBeDefined();
       expect(exports.TextArea).toBeDefined();
-      
+
       // Verify type exports exist (these should not throw)
       expect(typeof exports.Button).toBe('object'); // forwardRef components
       expect(typeof exports.Card).toBe('object');
@@ -142,21 +150,25 @@ describe('UI Components - Import and Basic Rendering Tests', () => {
     it('should render components with correct CSS classes (no regressions)', async () => {
       const { Button } = await import('@/sidebar/components/ui/Button');
       const { Card } = await import('@/sidebar/components/ui/Card');
-      
+
       // Test Button styles
-      render(React.createElement(Button, { 
-        variant: 'primary',
-        size: 'md',
-        children: 'Styled Button'
-      }));
+      render(
+        React.createElement(Button, {
+          variant: 'primary',
+          size: 'md',
+          children: 'Styled Button',
+        })
+      );
       const button = screen.getByRole('button', { name: 'Styled Button' });
       expect(button).toHaveClass('btn', 'btn-primary', 'btn-md');
-      
-      // Test Card styles  
-      render(React.createElement(Card, { 
-        className: 'test-card',
-        children: 'Styled Card'
-      }));
+
+      // Test Card styles
+      render(
+        React.createElement(Card, {
+          className: 'test-card',
+          children: 'Styled Card',
+        })
+      );
       const card = screen.getByText('Styled Card').closest('div');
       expect(card).toHaveClass('test-card');
     });

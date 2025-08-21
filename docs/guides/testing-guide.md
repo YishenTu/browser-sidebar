@@ -3,6 +3,7 @@
 ## Testing Philosophy
 
 We follow Test-Driven Development (TDD) principles:
+
 1. **Red**: Write a failing test
 2. **Green**: Make the test pass
 3. **Refactor**: Improve the code
@@ -34,6 +35,7 @@ tests/
 ### Unit Tests
 
 #### Basic Test Structure
+
 ```typescript
 // tests/unit/utils/encryption.test.ts
 import { describe, it, expect, beforeEach } from 'vitest';
@@ -41,21 +43,21 @@ import { encrypt, decrypt } from '@/utils/encryption';
 
 describe('Encryption Utilities', () => {
   let testData: string;
-  
+
   beforeEach(() => {
     testData = 'sensitive-api-key';
   });
-  
+
   it('should encrypt and decrypt data correctly', async () => {
     const encrypted = await encrypt(testData, 'password');
     const decrypted = await decrypt(encrypted, 'password');
-    
+
     expect(decrypted).toBe(testData);
   });
-  
+
   it('should fail with wrong password', async () => {
     const encrypted = await encrypt(testData, 'password');
-    
+
     await expect(decrypt(encrypted, 'wrong')).rejects.toThrow();
   });
 });
@@ -64,6 +66,7 @@ describe('Encryption Utilities', () => {
 ### Component Tests
 
 #### Testing React Components
+
 ```typescript
 // tests/components/ChatMessage.test.tsx
 import { describe, it, expect, vi } from 'vitest';
@@ -77,33 +80,33 @@ describe('ChatMessage Component', () => {
     role: 'user' as const,
     timestamp: Date.now()
   };
-  
+
   it('should render message content', () => {
     render(<ChatMessage message={mockMessage} />);
-    
+
     expect(screen.getByText('Hello, world!')).toBeInTheDocument();
   });
-  
+
   it('should handle copy button click', async () => {
     const mockCopy = vi.fn();
     global.navigator.clipboard = { writeText: mockCopy };
-    
+
     render(<ChatMessage message={mockMessage} />);
-    
+
     const copyButton = screen.getByRole('button', { name: /copy/i });
     fireEvent.click(copyButton);
-    
+
     expect(mockCopy).toHaveBeenCalledWith('Hello, world!');
   });
-  
+
   it('should render markdown correctly', () => {
     const markdownMessage = {
       ...mockMessage,
       content: '**Bold** and *italic* text'
     };
-    
+
     render(<ChatMessage message={markdownMessage} />);
-    
+
     const boldText = screen.getByText('Bold');
     expect(boldText).toHaveStyle({ fontWeight: 'bold' });
   });
@@ -113,6 +116,7 @@ describe('ChatMessage Component', () => {
 ### Integration Tests
 
 #### Testing Component Integration
+
 ```typescript
 // tests/integration/chat-flow.test.tsx
 import { describe, it, expect, beforeEach } from 'vitest';
@@ -124,21 +128,21 @@ describe('Chat Flow Integration', () => {
   beforeEach(() => {
     mockProviders.setup();
   });
-  
+
   it('should complete a full chat interaction', async () => {
     render(<ChatPanel />);
-    
+
     // Type message
     const input = screen.getByPlaceholderText('Type your message...');
     fireEvent.change(input, { target: { value: 'Hello AI' } });
-    
+
     // Send message
     const sendButton = screen.getByRole('button', { name: /send/i });
     fireEvent.click(sendButton);
-    
+
     // Verify user message appears
     expect(screen.getByText('Hello AI')).toBeInTheDocument();
-    
+
     // Wait for AI response
     await waitFor(() => {
       expect(screen.getByText(/AI response/i)).toBeInTheDocument();
@@ -150,6 +154,7 @@ describe('Chat Flow Integration', () => {
 ### E2E Tests
 
 #### Testing Complete User Journey
+
 ```typescript
 // tests/e2e/extraction.spec.ts
 import { test, expect } from '@playwright/test';
@@ -160,20 +165,19 @@ test.describe('Content Extraction', () => {
     await page.goto('chrome://extensions/');
     // ... load extension logic
   });
-  
+
   test('should extract content from webpage', async ({ page }) => {
     // Navigate to test page
     await page.goto('https://example.com');
-    
+
     // Open extension popup
     await page.click('[aria-label="AI Browser Sidebar"]');
-    
+
     // Click extract button
     await page.click('[data-testid="extract-content"]');
-    
+
     // Verify content appears
-    await expect(page.locator('[data-testid="extracted-content"]'))
-      .toContainText('Example Domain');
+    await expect(page.locator('[data-testid="extracted-content"]')).toContainText('Example Domain');
   });
 });
 ```
@@ -181,32 +185,31 @@ test.describe('Content Extraction', () => {
 ## Mocking Strategies
 
 ### Chrome API Mocks
+
 ```typescript
 // tests/mocks/chrome.ts
 import { vi } from 'vitest';
 
 export const mockChrome = {
   runtime: {
-    sendMessage: vi.fn((message) => Promise.resolve({ success: true })),
+    sendMessage: vi.fn(message => Promise.resolve({ success: true })),
     onMessage: {
       addListener: vi.fn(),
-      removeListener: vi.fn()
-    }
+      removeListener: vi.fn(),
+    },
   },
   storage: {
     local: {
-      get: vi.fn((keys) => Promise.resolve({})),
-      set: vi.fn((items) => Promise.resolve()),
-      remove: vi.fn((keys) => Promise.resolve()),
-      clear: vi.fn(() => Promise.resolve())
-    }
+      get: vi.fn(keys => Promise.resolve({})),
+      set: vi.fn(items => Promise.resolve()),
+      remove: vi.fn(keys => Promise.resolve()),
+      clear: vi.fn(() => Promise.resolve()),
+    },
   },
   tabs: {
-    query: vi.fn(() => Promise.resolve([
-      { id: 1, title: 'Test Tab', url: 'https://example.com' }
-    ])),
-    sendMessage: vi.fn(() => Promise.resolve())
-  }
+    query: vi.fn(() => Promise.resolve([{ id: 1, title: 'Test Tab', url: 'https://example.com' }])),
+    sendMessage: vi.fn(() => Promise.resolve()),
+  },
 };
 
 // Apply mock
@@ -214,28 +217,32 @@ global.chrome = mockChrome as any;
 ```
 
 ### API Provider Mocks
+
 ```typescript
 // tests/mocks/providers.ts
 import { vi } from 'vitest';
 
 export const mockOpenAI = {
   chat: vi.fn().mockResolvedValue({
-    choices: [{
-      message: { content: 'Mocked AI response' }
-    }]
+    choices: [
+      {
+        message: { content: 'Mocked AI response' },
+      },
+    ],
   }),
-  
+
   streamChat: vi.fn((request, callback) => {
     callback({ type: 'content', content: 'Streaming', finished: false });
     callback({ type: 'content', content: ' response', finished: false });
     callback({ type: 'done', finished: true });
-  })
+  }),
 };
 ```
 
 ## Test Utilities
 
 ### Custom Render Function
+
 ```typescript
 // tests/utils/test-utils.tsx
 import { ReactElement } from 'react';
@@ -263,6 +270,7 @@ export { customRender as render };
 ```
 
 ### Test Data Factories
+
 ```typescript
 // tests/utils/factories.ts
 export const createMessage = (overrides = {}) => ({
@@ -270,7 +278,7 @@ export const createMessage = (overrides = {}) => ({
   content: 'Test message',
   role: 'user' as const,
   timestamp: Date.now(),
-  ...overrides
+  ...overrides,
 });
 
 export const createConversation = (overrides = {}) => ({
@@ -279,13 +287,14 @@ export const createConversation = (overrides = {}) => ({
   messages: [createMessage()],
   createdAt: Date.now(),
   updatedAt: Date.now(),
-  ...overrides
+  ...overrides,
 });
 ```
 
 ## Running Tests
 
 ### Command Line
+
 ```bash
 # Run all tests
 npm run test
@@ -307,6 +316,7 @@ npm run test:e2e
 ```
 
 ### VS Code Integration
+
 ```json
 // .vscode/settings.json
 {
@@ -319,6 +329,7 @@ npm run test:e2e
 ## Coverage Requirements
 
 ### Target Coverage
+
 - **Overall**: >90%
 - **Statements**: >90%
 - **Branches**: >85%
@@ -326,6 +337,7 @@ npm run test:e2e
 - **Lines**: >90%
 
 ### Viewing Coverage
+
 ```bash
 # Generate coverage report
 npm run test:coverage
@@ -335,6 +347,7 @@ open coverage/index.html
 ```
 
 ### Coverage Configuration
+
 ```typescript
 // vitest.config.ts
 export default defineConfig({
@@ -342,32 +355,29 @@ export default defineConfig({
     coverage: {
       provider: 'v8',
       reporter: ['text', 'json', 'html'],
-      exclude: [
-        'node_modules/',
-        'tests/',
-        '*.config.ts',
-        'src/types/'
-      ],
+      exclude: ['node_modules/', 'tests/', '*.config.ts', 'src/types/'],
       thresholds: {
         statements: 90,
         branches: 85,
         functions: 90,
-        lines: 90
-      }
-    }
-  }
+        lines: 90,
+      },
+    },
+  },
 });
 ```
 
 ## Best Practices
 
 ### Test Organization
+
 - One test file per source file
 - Group related tests with `describe`
 - Use descriptive test names
 - Follow AAA pattern: Arrange, Act, Assert
 
 ### Test Quality
+
 ```typescript
 // ❌ Bad: Too many assertions
 it('should work', () => {
@@ -385,7 +395,7 @@ describe('processData', () => {
     const result = processData(input);
     expect(result.status).toBe('success');
   });
-  
+
   it('should return correct data length', () => {
     const result = processData(input);
     expect(result.data).toHaveLength(10);
@@ -394,6 +404,7 @@ describe('processData', () => {
 ```
 
 ### Async Testing
+
 ```typescript
 // Testing async functions
 it('should fetch data', async () => {
@@ -413,6 +424,7 @@ it('should reject on error', () => {
 ```
 
 ### Mocking Best Practices
+
 ```typescript
 // Reset mocks between tests
 beforeEach(() => {
@@ -424,7 +436,7 @@ const spy = vi.spyOn(console, 'log');
 
 // Mock modules
 vi.mock('@/utils/api', () => ({
-  fetchData: vi.fn()
+  fetchData: vi.fn(),
 }));
 
 // Mock timers
@@ -436,21 +448,23 @@ vi.useRealTimers();
 ## Debugging Tests
 
 ### Using Debug Output
+
 ```typescript
 import { screen, debug } from '@testing-library/react';
 
 it('should render correctly', () => {
   render(<Component />);
-  
+
   // Print DOM tree
   debug();
-  
+
   // Print specific element
   debug(screen.getByRole('button'));
 });
 ```
 
 ### Interactive Debugging
+
 ```bash
 # Run tests with UI
 npm run test:ui
@@ -461,6 +475,7 @@ debugger;
 ```
 
 ### VS Code Debugging
+
 ```json
 // .vscode/launch.json
 {
@@ -480,6 +495,7 @@ debugger;
 ## Continuous Integration
 
 ### GitHub Actions
+
 ```yaml
 # .github/workflows/test.yml
 name: Tests
@@ -499,5 +515,5 @@ jobs:
 
 ---
 
-*Testing Guide Version: 1.0*  
-*Last Updated: 2025-08-19*
+_Testing Guide Version: 1.0_  
+_Last Updated: 2025-08-19_

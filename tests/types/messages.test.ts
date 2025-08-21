@@ -1,6 +1,6 @@
 /**
  * @file Tests for Message Types and Protocol
- * 
+ *
  * Comprehensive tests for the message passing system including
  * message creation, validation, and type guards.
  */
@@ -123,49 +123,59 @@ describe('Message Validation', () => {
     });
 
     it('should reject message with invalid field types', () => {
-      expect(isValidMessage({
-        id: 123, // should be string
-        type: 'PING',
-        timestamp: Date.now(),
-        source: 'background',
-        target: 'content',
-      })).toBe(false);
+      expect(
+        isValidMessage({
+          id: 123, // should be string
+          type: 'PING',
+          timestamp: Date.now(),
+          source: 'background',
+          target: 'content',
+        })
+      ).toBe(false);
 
-      expect(isValidMessage({
-        id: 'test',
-        type: 123, // should be string
-        timestamp: Date.now(),
-        source: 'background',
-        target: 'content',
-      })).toBe(false);
+      expect(
+        isValidMessage({
+          id: 'test',
+          type: 123, // should be string
+          timestamp: Date.now(),
+          source: 'background',
+          target: 'content',
+        })
+      ).toBe(false);
     });
 
     it('should reject message with invalid message type', () => {
-      expect(isValidMessage({
-        id: 'test',
-        type: 'INVALID_TYPE',
-        timestamp: Date.now(),
-        source: 'background',
-        target: 'content',
-      })).toBe(false);
+      expect(
+        isValidMessage({
+          id: 'test',
+          type: 'INVALID_TYPE',
+          timestamp: Date.now(),
+          source: 'background',
+          target: 'content',
+        })
+      ).toBe(false);
     });
 
     it('should reject message with invalid source/target', () => {
-      expect(isValidMessage({
-        id: 'test',
-        type: 'PING',
-        timestamp: Date.now(),
-        source: 'invalid',
-        target: 'content',
-      })).toBe(false);
+      expect(
+        isValidMessage({
+          id: 'test',
+          type: 'PING',
+          timestamp: Date.now(),
+          source: 'invalid',
+          target: 'content',
+        })
+      ).toBe(false);
 
-      expect(isValidMessage({
-        id: 'test',
-        type: 'PING',
-        timestamp: Date.now(),
-        source: 'background',
-        target: 'invalid',
-      })).toBe(false);
+      expect(
+        isValidMessage({
+          id: 'test',
+          type: 'PING',
+          timestamp: Date.now(),
+          source: 'background',
+          target: 'invalid',
+        })
+      ).toBe(false);
     });
   });
 

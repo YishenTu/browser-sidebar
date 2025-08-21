@@ -20,7 +20,7 @@ test('renders component', () => {
 test('handles user interaction', async () => {
   const user = userEvent.setup();
   render(<MyButton />);
-  
+
   await user.click(screen.getByRole('button'));
   expect(screen.getByText('Clicked!')).toBeInTheDocument();
 });
@@ -46,16 +46,14 @@ The `AllTheProviders` wrapper is designed to be extended with:
 
 ```tsx
 // Future provider wrapping example
-const AllTheProviders: React.FC<AllTheProvidersProps> = ({ 
-  children, 
+const AllTheProviders: React.FC<AllTheProvidersProps> = ({
+  children,
   theme = 'light',
-  initialStore 
+  initialStore,
 }) => {
   return (
     <ThemeProvider theme={theme}>
-      <StoreProvider store={initialStore}>
-        {children}
-      </StoreProvider>
+      <StoreProvider store={initialStore}>{children}</StoreProvider>
     </ThemeProvider>
   );
 };

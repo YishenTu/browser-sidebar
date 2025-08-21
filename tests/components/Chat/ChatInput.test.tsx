@@ -382,7 +382,6 @@ describe('ChatInput Component', () => {
     });
   });
 
-
   describe('Accessibility', () => {
     it('has proper ARIA labels', () => {
       render(<ChatInput onSend={mockOnSend} />);

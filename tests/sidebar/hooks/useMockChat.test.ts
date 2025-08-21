@@ -1,6 +1,6 @@
 /**
  * @file Tests for useMockChat hook
- * 
+ *
  * Tests the useMockChat hook functionality in its new location within the sidebar module.
  * Tests integration with chat store and streaming functionality.
  */
@@ -26,7 +26,7 @@ describe('useMockChat Hook', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    
+
     // Setup chat store mock
     mockUseChatStore.mockReturnValue({
       addMessage: mockAddMessage,
@@ -47,13 +47,11 @@ describe('useMockChat Hook', () => {
     });
 
     // Setup streaming simulation
-    vi.mocked(mockChatUtils.simulateStreaming).mockImplementation(
-      async (content, options) => {
-        // Simulate immediate streaming completion
-        options?.onChunk?.('Mock response content', { isComplete: true });
-        options?.onComplete?.();
-      }
-    );
+    vi.mocked(mockChatUtils.simulateStreaming).mockImplementation(async (content, options) => {
+      // Simulate immediate streaming completion
+      options?.onChunk?.('Mock response content', { isComplete: true });
+      options?.onComplete?.();
+    });
 
     // Reset mock message creation
     mockAddMessage.mockReturnValue({
@@ -99,7 +97,10 @@ describe('useMockChat Hook', () => {
       });
 
       expect(mockSetLoading).toHaveBeenCalledWith(true);
-      expect(mockChatUtils.generateMockResponse).toHaveBeenCalledWith('text', 'Hello, how are you?');
+      expect(mockChatUtils.generateMockResponse).toHaveBeenCalledWith(
+        'text',
+        'Hello, how are you?'
+      );
       expect(mockAddMessage).toHaveBeenCalledWith({
         role: 'assistant',
         content: '',
@@ -119,9 +120,7 @@ describe('useMockChat Hook', () => {
     });
 
     it('should use correct response type', async () => {
-      const { result } = renderHook(() => 
-        useMockChat({ responseType: 'code' })
-      );
+      const { result } = renderHook(() => useMockChat({ responseType: 'code' }));
 
       await act(async () => {
         await result.current.generateResponse('Write some code');
@@ -146,15 +145,13 @@ describe('useMockChat Hook', () => {
       mockMessages.push(testMessage);
 
       // Mock streaming with multiple chunks
-      vi.mocked(mockChatUtils.simulateStreaming).mockImplementation(
-        async (content, options) => {
-          // Simulate chunk updates
-          options?.onChunk?.('Hello', { isComplete: false });
-          options?.onChunk?.(' world', { isComplete: false });
-          options?.onChunk?.('!', { isComplete: true });
-          options?.onComplete?.();
-        }
-      );
+      vi.mocked(mockChatUtils.simulateStreaming).mockImplementation(async (content, options) => {
+        // Simulate chunk updates
+        options?.onChunk?.('Hello', { isComplete: false });
+        options?.onChunk?.(' world', { isComplete: false });
+        options?.onChunk?.('!', { isComplete: true });
+        options?.onComplete?.();
+      });
 
       await act(async () => {
         await result.current.generateResponse('Hello');
@@ -181,11 +178,9 @@ describe('useMockChat Hook', () => {
       const { result } = renderHook(() => useMockChat());
 
       // Mock streaming error
-      vi.mocked(mockChatUtils.simulateStreaming).mockImplementation(
-        async (content, options) => {
-          options?.onError?.(new Error('Streaming failed'));
-        }
-      );
+      vi.mocked(mockChatUtils.simulateStreaming).mockImplementation(async (content, options) => {
+        options?.onError?.(new Error('Streaming failed'));
+      });
 
       await act(async () => {
         await result.current.generateResponse('Test message');
@@ -206,12 +201,10 @@ describe('useMockChat Hook', () => {
       expect(result.current.isStreaming()).toBe(false);
 
       // Start streaming (don't complete immediately)
-      vi.mocked(mockChatUtils.simulateStreaming).mockImplementation(
-        async (content, options) => {
-          // Don't call onComplete immediately
-          options?.onChunk?.('Streaming...', { isComplete: false });
-        }
-      );
+      vi.mocked(mockChatUtils.simulateStreaming).mockImplementation(async (content, options) => {
+        // Don't call onComplete immediately
+        options?.onChunk?.('Streaming...', { isComplete: false });
+      });
 
       await act(async () => {
         result.current.generateResponse('Test message');
@@ -285,12 +278,10 @@ describe('useMockChat Hook', () => {
 
       const { result } = renderHook(() => useMockChat());
 
-      vi.mocked(mockChatUtils.simulateStreaming).mockImplementation(
-        async (content, options) => {
-          options?.onChunk?.(' new content', { isComplete: false });
-          options?.onComplete?.();
-        }
-      );
+      vi.mocked(mockChatUtils.simulateStreaming).mockImplementation(async (content, options) => {
+        options?.onChunk?.(' new content', { isComplete: false });
+        options?.onComplete?.();
+      });
 
       await act(async () => {
         await result.current.generateResponse('Test message');
@@ -302,9 +293,7 @@ describe('useMockChat Hook', () => {
 
   describe('Custom Configuration', () => {
     it('should respect custom streaming speed', async () => {
-      const { result } = renderHook(() => 
-        useMockChat({ streamingSpeed: 'fast' })
-      );
+      const { result } = renderHook(() => useMockChat({ streamingSpeed: 'fast' }));
 
       await act(async () => {
         await result.current.generateResponse('Speed test');
@@ -319,9 +308,7 @@ describe('useMockChat Hook', () => {
     });
 
     it('should respect custom thinking delay', async () => {
-      const { result } = renderHook(() => 
-        useMockChat({ thinkingDelay: 2000 })
-      );
+      const { result } = renderHook(() => useMockChat({ thinkingDelay: 2000 }));
 
       await act(async () => {
         await result.current.generateResponse('Delay test');

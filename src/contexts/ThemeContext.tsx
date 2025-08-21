@@ -74,40 +74,49 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
   /**
    * Apply theme to DOM
    */
-  const applyTheme = useCallback((theme: Theme) => {
-    try {
-      setDOMTheme(theme);
-      updateEffectiveTheme();
-    } catch (error) {
-      console.error('Failed to apply theme to DOM:', error);
-    }
-  }, [updateEffectiveTheme]);
+  const applyTheme = useCallback(
+    (theme: Theme) => {
+      try {
+        setDOMTheme(theme);
+        updateEffectiveTheme();
+      } catch (error) {
+        console.error('Failed to apply theme to DOM:', error);
+      }
+    },
+    [updateEffectiveTheme]
+  );
 
   /**
    * Handle theme changes
    */
-  const handleSetTheme = useCallback(async (newTheme: Theme) => {
-    try {
-      // Apply theme to DOM immediately for responsiveness
-      applyTheme(newTheme);
-      
-      // Persist to storage
-      await updateTheme(newTheme);
-    } catch (error) {
-      console.error('Failed to update theme:', error);
-      // Revert DOM changes on error
-      applyTheme(settings.theme);
-    }
-  }, [applyTheme, updateTheme, settings.theme]);
+  const handleSetTheme = useCallback(
+    async (newTheme: Theme) => {
+      try {
+        // Apply theme to DOM immediately for responsiveness
+        applyTheme(newTheme);
+
+        // Persist to storage
+        await updateTheme(newTheme);
+      } catch (error) {
+        console.error('Failed to update theme:', error);
+        // Revert DOM changes on error
+        applyTheme(settings.theme);
+      }
+    },
+    [applyTheme, updateTheme, settings.theme]
+  );
 
   /**
    * Handle system theme changes when in auto mode
    */
-  const handleSystemThemeChange = useCallback((_isDark: boolean) => {
-    if (settings.theme === 'auto') {
-      updateEffectiveTheme();
-    }
-  }, [settings.theme, updateEffectiveTheme]);
+  const handleSystemThemeChange = useCallback(
+    (_isDark: boolean) => {
+      if (settings.theme === 'auto') {
+        updateEffectiveTheme();
+      }
+    },
+    [settings.theme, updateEffectiveTheme]
+  );
 
   // Load settings on mount
   useEffect(() => {
@@ -139,11 +148,7 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
     setTheme: handleSetTheme,
   };
 
-  return (
-    <ThemeContext.Provider value={contextValue}>
-      {children}
-    </ThemeContext.Provider>
-  );
+  return <ThemeContext.Provider value={contextValue}>{children}</ThemeContext.Provider>;
 }
 
 /**

@@ -1,6 +1,6 @@
 /**
  * TypeScript type definitions for Chrome Extension Manifest V3
- * 
+ *
  * This module provides comprehensive type definitions for Chrome extension
  * manifest.json files following the Manifest V3 specification, with
  * specific support for the custom sidebar architecture.
@@ -100,7 +100,7 @@ export type HostPermission = string;
 /**
  * Chrome extension permissions
  */
-export type Permission = 
+export type Permission =
   | 'activeTab'
   | 'alarms'
   | 'background'
@@ -180,7 +180,7 @@ export interface OptionalPermissions {
 
 /**
  * Chrome Extension Manifest V3 interface
- * 
+ *
  * This interface defines the complete structure for a Chrome extension
  * manifest.json file following Manifest V3 specifications, with support
  * for the custom sidebar architecture used in this project.
@@ -188,77 +188,77 @@ export interface OptionalPermissions {
 export interface ChromeManifest {
   /** Manifest version - must be 3 for modern extensions */
   manifest_version: 3;
-  
+
   /** Extension name displayed to users */
   name: string;
-  
+
   /** Extension version (semver format recommended) */
   version: string;
-  
+
   /** Brief description of the extension */
   description: string;
-  
+
   /** Required permissions for the extension */
   permissions?: Permission[];
-  
+
   /** Host permissions for accessing web content */
   host_permissions?: HostPermission[];
-  
+
   /** Background script configuration */
   background?: BackgroundConfig;
-  
+
   /** Browser action (toolbar button) configuration */
   action?: ActionConfig;
-  
+
   /** Content scripts to inject into web pages */
   content_scripts?: ContentScript[];
-  
+
   /** Extension icons */
   icons?: IconConfig;
-  
+
   /** Resources accessible to web pages */
   web_accessible_resources?: WebAccessibleResource[];
-  
+
   /** Content Security Policy */
   content_security_policy?: ContentSecurityPolicy;
-  
+
   /** Optional permissions */
   optional_permissions?: OptionalPermissions;
-  
+
   /** Minimum Chrome version required */
   minimum_chrome_version?: string;
-  
+
   /** Short extension name for space-constrained areas */
   short_name?: string;
-  
+
   /** Author information */
   author?: string;
-  
+
   /** Homepage URL */
   homepage_url?: string;
-  
+
   /** Update URL for extension updates */
   update_url?: string;
-  
+
   /** Default locale for internationalization */
   default_locale?: string;
-  
+
   /** Key for extension ID consistency during development */
   key?: string;
-  
+
   /** OAuth2 configuration */
   oauth2?: {
     client_id: string;
     scopes: string[];
   };
-  
+
   /** Chrome URL overrides */
   chrome_url_overrides?: {
     newtab?: string;
     bookmarks?: string;
     history?: string;
   };
-  
+
   /** Commands (keyboard shortcuts) */
   commands?: {
     [commandName: string]: {
@@ -273,33 +273,33 @@ export interface ChromeManifest {
       global?: boolean;
     };
   };
-  
+
   /** Omnibox keyword */
   omnibox?: {
     keyword: string;
   };
-  
+
   /** File browser handlers */
   file_browser_handlers?: Array<{
     id: string;
     default_title: string;
     file_filters: string[];
   }>;
-  
+
   /** Import/export configuration */
   import?: Array<{
     id: string;
     minimum_version?: string;
   }>;
-  
+
   /** Export configuration */
   export?: {
     whitelist?: string[];
   };
-  
+
   /** Incognito behavior */
   incognito?: 'spanning' | 'split' | 'not_allowed';
-  
+
   /** Side panel configuration (not used in custom sidebar architecture) */
   side_panel?: {
     default_path: string;
@@ -313,9 +313,9 @@ export function isChromeManifest(obj: unknown): obj is ChromeManifest {
   if (typeof obj !== 'object' || obj === null) {
     return false;
   }
-  
+
   const manifest = obj as Partial<ChromeManifest>;
-  
+
   // Check required fields
   return (
     manifest.manifest_version === 3 &&
@@ -339,7 +339,7 @@ export interface ManifestValidationResult {
 
 /**
  * Validates a Chrome extension manifest object
- * 
+ *
  * @param manifest - The manifest object to validate
  * @returns Validation result with errors and warnings
  */
@@ -347,51 +347,51 @@ export function validateManifest(manifest: unknown): ManifestValidationResult {
   const result: ManifestValidationResult = {
     isValid: true,
     errors: [],
-    warnings: []
+    warnings: [],
   };
-  
+
   // Check if manifest is an object
   if (typeof manifest !== 'object' || manifest === null) {
     result.isValid = false;
     result.errors.push('Manifest must be an object');
     return result;
   }
-  
+
   const m = manifest as Partial<ChromeManifest>;
-  
+
   // Validate required fields
   if (m.manifest_version !== 3) {
     result.isValid = false;
     result.errors.push('manifest_version must be 3');
   }
-  
+
   if (typeof m.name !== 'string' || m.name.trim() === '') {
     result.isValid = false;
     result.errors.push('name must be a non-empty string');
   }
-  
+
   if (typeof m.version !== 'string' || m.version.trim() === '') {
     result.isValid = false;
     result.errors.push('version must be a non-empty string');
   }
-  
+
   if (typeof m.description !== 'string' || m.description.trim() === '') {
     result.isValid = false;
     result.errors.push('description must be a non-empty string');
   }
-  
+
   // Validate permissions array
   if (m.permissions && !Array.isArray(m.permissions)) {
     result.isValid = false;
     result.errors.push('permissions must be an array');
   }
-  
+
   // Validate host_permissions array
   if (m.host_permissions && !Array.isArray(m.host_permissions)) {
     result.isValid = false;
     result.errors.push('host_permissions must be an array');
   }
-  
+
   // Validate background configuration
   if (m.background) {
     if (typeof m.background !== 'object') {
@@ -404,7 +404,7 @@ export function validateManifest(manifest: unknown): ManifestValidationResult {
       }
     }
   }
-  
+
   // Validate content_scripts array
   if (m.content_scripts) {
     if (!Array.isArray(m.content_scripts)) {
@@ -419,40 +419,40 @@ export function validateManifest(manifest: unknown): ManifestValidationResult {
       });
     }
   }
-  
+
   // Validate icons object
   if (m.icons && typeof m.icons !== 'object') {
     result.isValid = false;
     result.errors.push('icons must be an object');
   }
-  
+
   // Custom sidebar architecture validation
   if (m.action?.default_popup) {
     result.warnings.push(
       'default_popup is set but this extension uses a custom sidebar architecture. ' +
-      'Consider removing default_popup for consistency.'
+        'Consider removing default_popup for consistency.'
     );
   }
-  
+
   if (m.side_panel) {
     result.warnings.push(
       'side_panel is configured but this extension uses a custom sidebar architecture. ' +
-      'The side_panel configuration will be ignored.'
+        'The side_panel configuration will be ignored.'
     );
   }
-  
+
   // Check for required permissions for custom sidebar
   const requiredPermissions = ['tabs', 'activeTab', 'scripting'];
   const missingPermissions = requiredPermissions.filter(
     perm => !m.permissions?.includes(perm as Permission)
   );
-  
+
   if (missingPermissions.length > 0) {
     result.warnings.push(
       `Missing recommended permissions for custom sidebar: ${missingPermissions.join(', ')}`
     );
   }
-  
+
   return result;
 }
 
@@ -465,40 +465,40 @@ export function createSidebarManifestTemplate(): ChromeManifest {
     name: 'AI Browser Sidebar',
     version: '1.0.0',
     description: 'Chat with any webpage using AI. Privacy-focused extension with BYOK support.',
-    
+
     permissions: ['storage', 'tabs', 'activeTab', 'scripting'],
     host_permissions: ['<all_urls>'],
-    
+
     background: {
       service_worker: 'src/background/index.ts',
-      type: 'module'
+      type: 'module',
     },
-    
+
     action: {
-      default_title: 'Toggle AI Browser Sidebar'
+      default_title: 'Toggle AI Browser Sidebar',
     },
-    
+
     content_scripts: [
       {
         matches: ['<all_urls>'],
         js: ['src/content/index.ts'],
         run_at: 'document_idle',
-        all_frames: false
-      }
+        all_frames: false,
+      },
     ],
-    
+
     icons: {
       '16': 'icons/icon16.png',
       '32': 'icons/icon32.png',
       '48': 'icons/icon48.png',
-      '128': 'icons/icon128.png'
+      '128': 'icons/icon128.png',
     },
-    
+
     web_accessible_resources: [
       {
         resources: ['icons/*'],
-        matches: ['<all_urls>']
-      }
-    ]
+        matches: ['<all_urls>'],
+      },
+    ],
   };
 }

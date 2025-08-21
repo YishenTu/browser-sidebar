@@ -60,7 +60,7 @@ describe('Sidebar Import Resolution Integration', () => {
   it('should import components from barrel export (components/index.ts)', async () => {
     // Components index should NOT export ChatPanel (since it's moved)
     const componentsIndexModule = await import('@/sidebar/components/index');
-    
+
     // These should be available
     expect(componentsIndexModule.ChatInput).toBeDefined();
     expect(componentsIndexModule.MessageList).toBeDefined();
@@ -125,7 +125,7 @@ describe('Sidebar Import Resolution Integration', () => {
     const pathTests = [
       // ChatPanel at sidebar root
       () => import('@/sidebar/ChatPanel'),
-      
+
       // Components in components directory
       () => import('@/sidebar/components/ChatInput'),
       () => import('@/sidebar/components/MessageList'),
@@ -135,10 +135,10 @@ describe('Sidebar Import Resolution Integration', () => {
       () => import('@/sidebar/components/MarkdownRenderer'),
       () => import('@/sidebar/components/CodeBlock'),
       () => import('@/sidebar/components/ThemeToggle'),
-      
+
       // Hooks in hooks directory
       () => import('@/sidebar/hooks/useMockChat'),
-      
+
       // Index files
       () => import('@/sidebar/index'),
       () => import('@/sidebar/components/index'),
@@ -153,7 +153,7 @@ describe('Sidebar Import Resolution Integration', () => {
   it('should validate build compatibility with new imports', async () => {
     // This test ensures that the import structure is compatible with the build process
     // by testing dynamic imports that would be used in production builds
-    
+
     const dynamicImports = await Promise.all([
       import('@/sidebar/ChatPanel'),
       import('@/sidebar/components/ChatInput'),

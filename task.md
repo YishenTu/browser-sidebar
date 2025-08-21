@@ -51,7 +51,7 @@
     - **Migrate**: Tests that need to move to new locations
   - Deliverables:
     - Test audit document listing all tests and their fate
-    - List of tests to keep: 
+    - List of tests to keep:
       - `/tests/components/Chat/*.test.tsx` → Will move to `/tests/sidebar/components/`
       - `/tests/components/ui/*.test.tsx` → Will move to `/tests/sidebar/components/ui/`
       - `/tests/sidebar/*.test.tsx` → Will be updated for unified component
@@ -205,7 +205,7 @@
     - `/tests/sidebar/ChatPanel.overlay.test.tsx` - overlay behavior tests
     - `/tests/sidebar/ChatPanel.resize.test.tsx` - resize functionality tests
     - `/tests/sidebar/ChatPanel.drag.test.tsx` - drag functionality tests
-  - Deliverables: 
+  - Deliverables:
     - `/src/sidebar/ChatPanel.tsx` - unified component
     - Remove old `ChatPanel.tsx` from components folder
   - Interface Contract:
@@ -315,6 +315,7 @@
 
 - [x] **Task 3.4** - Mimic Style
   - @image.png in root dir is the desire style, mimic it! ignore function buttons
+
 ---
 
 ## PHASE 4: MODEL SELECTOR IMPLEMENTATION
@@ -459,7 +460,7 @@
     - Update component locations
     - Add model selector documentation
     - Document TDD approach used
-  - Deliverables: 
+  - Deliverables:
     - Updated CLAUDE.md
     - Updated /tests/README.md
   - Acceptance: Documentation complete and accurate
@@ -469,18 +470,21 @@
 ## Risk Mitigation
 
 ### Critical Areas to Preserve:
+
 1. **Shadow DOM Implementation** - Do not modify mounting logic
 2. **Overlay Positioning** - Maintain z-index and fixed positioning
 3. **Resize/Drag** - Keep all mouse event handlers intact
 4. **Message Passing** - Preserve chrome.runtime communication
 
 ### Potential Blockers:
+
 1. **Import Path Issues** - Test thoroughly after moving files
 2. **Style Conflicts** - Verify Shadow DOM isolation after merging styles
 3. **State Management** - Ensure stores connect properly after refactoring
 4. **Theme Variables** - Verify CSS variables work in unified stylesheet
 
 ### Rollback Plan:
+
 - Git commit before each phase
 - Test after each phase completion
 - Ability to revert individual phases if issues arise
@@ -490,6 +494,7 @@
 ## Test-Driven Development Metrics
 
 ### Test Requirements by Phase:
+
 - **Phase 0**: 4 tasks - Test migration and preparation
 - **Phase 1**: 5 tasks - All with test-first approach
 - **Phase 2**: 4 tasks - Critical overlay behavior tests
@@ -498,6 +503,7 @@
 - **Phase 5**: 3 tasks - Integration and E2E testing
 
 ### Test Coverage Goals:
+
 - **Unit Tests**: >90% coverage for all new code
 - **Integration Tests**: All component interactions tested
 - **E2E Tests**: Critical user journeys covered
@@ -507,6 +513,7 @@
 ## Completion Criteria
 
 ### Phase Completion Requirements:
+
 - [ ] All tests written before implementation (RED phase)
 - [ ] All tests passing after implementation (GREEN phase)
 - [ ] Code refactored for quality (REFACTOR phase)
@@ -517,6 +524,7 @@
 - [ ] Test coverage >90%
 
 ### Overall Success Metrics:
+
 - [ ] Single unified component structure under `/src/sidebar/`
 - [ ] Model selector integrated and functional
 - [ ] All styles consolidated into one file

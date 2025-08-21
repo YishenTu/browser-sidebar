@@ -4,16 +4,16 @@ export type { ButtonProps, ButtonVariant, ButtonSize } from './Button';
 
 // Card exports
 export { Card } from './Card';
-export type { 
-  CardProps, 
-  CardHeaderProps, 
-  CardBodyProps, 
-  CardFooterProps, 
-  CardTitleProps, 
+export type {
+  CardProps,
+  CardHeaderProps,
+  CardBodyProps,
+  CardFooterProps,
+  CardTitleProps,
   CardDescriptionProps,
   CardVariant,
   CardPadding,
-  CardBorder
+  CardBorder,
 } from './Card';
 
 // IconButton exports

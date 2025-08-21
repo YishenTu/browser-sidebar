@@ -6,7 +6,7 @@ import { afterEach, vi } from 'vitest';
 import './chrome-mock';
 
 // Mock IntersectionObserver for MessageList component
-global.IntersectionObserver = vi.fn().mockImplementation((_callback) => ({
+global.IntersectionObserver = vi.fn().mockImplementation(_callback => ({
   observe: vi.fn(),
   unobserve: vi.fn(),
   disconnect: vi.fn(),

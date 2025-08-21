@@ -32,7 +32,6 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
   onRetry,
   ...props
 }) => {
-
   // Format timestamp based on options
   const formatTimestamp = (timestamp: Date) => {
     if (showFullDate) {
@@ -48,7 +47,6 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
       minute: '2-digit',
     });
   };
-
 
   // Get message bubble styling based on role
   const getMessageClasses = (role: MessageRole) => {
@@ -109,7 +107,6 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
     }
   };
 
-
   return (
     <div
       className={cn('message-row', `message-row--${message.role}`, className)}
@@ -117,50 +114,63 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
       aria-label={getAriaLabel(message.role)}
       {...props}
     >
-      <div style={{ 
-        display: 'flex', 
-        flexDirection: 'column', 
-        alignItems: message.role === 'user' ? 'flex-end' : message.role === 'assistant' ? 'flex-start' : 'center',
-        paddingRight: message.role === 'user' ? '20px' : '0',
-        paddingLeft: '0', // No padding for AI messages
-        width: '100%'
-      }}>
-        {/* Model name for AI messages */}
-        {message.role === 'assistant' && (
-          <div style={{
-            fontSize: '11px',
-            color: '#9ca3af',
-            marginBottom: '4px',
-            paddingLeft: '12px', // Match bubble's left padding
-            fontWeight: '500'
-          }}>
-            AI Assistant
-          </div>
-        )}
+      <div
+        style={{
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems:
+            message.role === 'user'
+              ? 'flex-end'
+              : message.role === 'assistant'
+                ? 'flex-start'
+                : 'center',
+          paddingRight: message.role === 'user' ? '20px' : '0',
+          paddingLeft: '0', // No padding for AI messages
+          width: '100%',
+        }}
+      >
         <div className={cn(getMessageClasses(message.role))}>
-          <span data-testid="message-content">
-            {message.content}
-          </span>
+          <span data-testid="message-content">{message.content}</span>
         </div>
-        
-        {/* Timestamp - underneath bubble with proper alignment */}
-        {showTimestamp && (
-          <time
-            data-testid="message-timestamp"
-            dateTime={message.timestamp.toISOString()}
-            className="text-xs text-gray-500"
-            style={{ 
-              fontSize: '10px', 
-              color: '#6b7280', 
+
+        {/* Timestamp and model name (for assistant) - same row under bubble */}
+        {(showTimestamp && (message.role !== 'assistant' || message.status === 'sent' || message.status === 'received')) && (
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'baseline',
+              gap: '6px',
               marginTop: '4px',
-              paddingLeft: message.role === 'assistant' ? '12px' : '0', // Match bubble's left padding
-              paddingRight: message.role === 'user' ? '4px' : '0'
+              paddingLeft: message.role === 'assistant' ? '12px' : '0',
+              paddingRight: message.role === 'user' ? '4px' : '0',
             }}
           >
-            {formatTimestamp(message.timestamp)}
-          </time>
+            {message.role === 'assistant' && (
+              <span
+                style={{
+                  fontSize: '10px',
+                  color: '#6b7280',
+                  fontWeight: 500,
+                }}
+                aria-label="model-name"
+              >
+                AI Assistant
+              </span>
+            )}
+            <time
+              data-testid="message-timestamp"
+              dateTime={message.timestamp.toISOString()}
+              className="text-xs text-gray-500"
+              style={{
+                fontSize: '10px',
+                color: '#6b7280',
+              }}
+            >
+              {formatTimestamp(message.timestamp)}
+            </time>
+          </div>
         )}
-        
+
         {/* Status indicator */}
         {message.status !== 'sent' && (
           <div className="mt-1" style={{ fontSize: '12px' }}>

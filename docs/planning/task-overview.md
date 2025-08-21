@@ -1,11 +1,13 @@
 # AI Browser Sidebar Extension - Task Execution Blueprint
 
 ## Project Overview
+
 Building a privacy-focused browser extension that enables AI-powered chat with web content using BYOK (Bring Your Own Key) model. The project follows a UI-first approach with Test-Driven Development (TDD) methodology.
 
 Architecture: The extension uses ONLY a custom injected React sidebar (no popup, no Chrome sidepanel) for universal browser compatibility. The sidebar is resizable (300-800px width), draggable, and injected by the content script. Communication flow: Extension Icon Click → Background Service Worker → Content Script → Sidebar React App.
 
 ## Execution Guidelines for Sub-Agents
+
 - **Follow TDD cycle**: Write tests first (RED) → Implement code (GREEN) → Refactor (REFACTOR)
 - Each task is self-contained with clear test requirements and deliverables
 - Tasks marked with 🔄 can be executed in parallel
@@ -18,12 +20,14 @@ Architecture: The extension uses ONLY a custom injected React sidebar (no popup,
 - Implement proper error boundaries and handling
 
 ## TDD Strategy
+
 - **Unit Tests**: For all utility functions and business logic (Vitest)
 - **Component Tests**: For all React components (React Testing Library)
 - **Integration Tests**: For message passing and API interactions
 - **E2E Tests**: For critical user journeys (Playwright)
 
 ## Progress Tracking
+
 - [x] Stage 1: Extension Infrastructure (15/15 tasks) ✅ COMPLETED
 - [x] Stage 2: Chat Panel UI (24/24 tasks) ✅ COMPLETED
 - [ ] Stage 3: Storage & Security (0/18 tasks)
@@ -35,9 +39,11 @@ Architecture: The extension uses ONLY a custom injected React sidebar (no popup,
 ---
 
 ## STAGE 1: EXTENSION INFRASTRUCTURE ✅
+
 Deliverable highlight: Complete custom sidebar infrastructure with resizable (300-800px width) and draggable functionality. Message passing system between background service worker, content script, and React sidebar. Cross-browser compatible architecture using only custom injected UI.
 
 ### Phase 1.1: Project Initialization ✅
+
 **Synchronization Point: All tasks must complete before Phase 1.2**
 
 🔄 **Parallelizable Tasks:**
@@ -148,6 +154,7 @@ Deliverable highlight: Complete custom sidebar infrastructure with resizable (30
   - Acceptance: Icons display in Chrome
 
 ### Phase 1.2: Test Infrastructure ✅
+
 **Synchronization Point: Testing framework must be ready**
 
 ⚡ **Sequential Tasks:**
@@ -180,6 +187,7 @@ Deliverable highlight: Complete custom sidebar infrastructure with resizable (30
   - Acceptance: Can test extension-specific code
 
 ### Phase 1.3: Core Extension Components ✅
+
 **Synchronization Point: Review after completion**
 
 ⚡ **Sequential Tasks:**
@@ -229,9 +237,11 @@ Deliverable highlight: Complete custom sidebar infrastructure with resizable (30
 ---
 
 ## STAGE 2: CHAT PANEL UI
+
 Building the React-based chat interface within the custom sidebar container. The sidebar foundation (resize, drag, toggle) is complete from Stage 1.
 
 ### Phase 2.1: UI Foundation
+
 **Synchronization Point: Design system must be established first**
 
 🔄 **Parallelizable Tasks:**
@@ -308,6 +318,7 @@ Building the React-based chat interface within the custom sidebar container. The
   - Acceptance: Settings persist correctly
 
 ### Phase 2.2: Base Components
+
 **Synchronization Point: Base components needed for complex ones**
 
 🔄 **Parallelizable Tasks:**
@@ -375,6 +386,7 @@ Building the React-based chat interface within the custom sidebar container. The
   - Acceptance: Spinner animates
 
 ### Phase 2.3: Chat Components
+
 **Synchronization Point: All components integrate in Phase 2.4**
 
 🔄 **Parallelizable Tasks:**
@@ -499,6 +511,7 @@ Building the React-based chat interface within the custom sidebar container. The
   - Acceptance: Indicator animates
 
 ### Phase 2.4: UI Integration
+
 **Synchronization Point: Complete UI ready for testing**
 
 ⚡ **Sequential Tasks:**
@@ -546,6 +559,7 @@ Building the React-based chat interface within the custom sidebar container. The
 ## STAGE 3: STORAGE & SECURITY
 
 ### Phase 3.1: Storage Foundation
+
 **Synchronization Point: Storage layer must be ready before encryption**
 
 🔄 **Parallelizable Tasks:**
@@ -620,6 +634,7 @@ Building the React-based chat interface within the custom sidebar container. The
   - Acceptance: Queries are fast
 
 ### Phase 3.2: Security Implementation
+
 **Synchronization Point: Encryption must work before key storage**
 
 ⚡ **Sequential Tasks:**
@@ -695,6 +710,7 @@ Building the React-based chat interface within the custom sidebar container. The
   - Acceptance: Invalid keys rejected
 
 ### Phase 3.3: Data Management
+
 **Synchronization Point: Complete storage system ready**
 
 🔄 **Parallelizable Tasks:**
@@ -772,6 +788,7 @@ Building the React-based chat interface within the custom sidebar container. The
 ## STAGE 4: AI PROVIDER SYSTEM
 
 ### Phase 4.1: Provider Foundation
+
 **Synchronization Point: Base interface required for all providers**
 
 ⚡ **Sequential Tasks:**
@@ -823,6 +840,7 @@ Building the React-based chat interface within the custom sidebar container. The
   - Acceptance: Buffers tokens correctly
 
 ### Phase 4.2: Provider Implementations
+
 **Synchronization Point: All providers ready for integration**
 
 🔄 **Parallelizable Tasks:**
@@ -915,6 +933,7 @@ Building the React-based chat interface within the custom sidebar container. The
   - Acceptance: Claude chat works
 
 ### Phase 4.3: Provider Management
+
 **Synchronization Point: Complete AI system ready**
 
 ⚡ **Sequential Tasks:**
@@ -1019,6 +1038,7 @@ Building the React-based chat interface within the custom sidebar container. The
 ## STAGE 5: TAB CONTENT EXTRACTION
 
 ### Phase 5.1: Content Script Foundation
+
 **Synchronization Point: Content script infrastructure required first**
 
 ⚡ **Sequential Tasks:**
@@ -1092,6 +1112,7 @@ Building the React-based chat interface within the custom sidebar container. The
   - Acceptance: Fallbacks work
 
 ### Phase 5.2: Extraction Features
+
 **Synchronization Point: All extraction features ready**
 
 🔄 **Parallelizable Tasks:**
@@ -1202,6 +1223,7 @@ Building the React-based chat interface within the custom sidebar container. The
   - Acceptance: Parallel extraction works
 
 ### Phase 5.3: UI Integration
+
 **Synchronization Point: Complete extraction system**
 
 ⚡ **Sequential Tasks:**
@@ -1283,6 +1305,7 @@ Building the React-based chat interface within the custom sidebar container. The
 ## Synchronization Points
 
 ### Critical Review Points:
+
 1. **After Stage 1**: Extension loads and all tests pass
 2. **After Stage 2**: UI complete with full test coverage
 3. **After Stage 3**: Storage layer secure and tested
@@ -1290,6 +1313,7 @@ Building the React-based chat interface within the custom sidebar container. The
 5. **After Stage 5**: Complete product with E2E tests passing
 
 ### Test Coverage Requirements:
+
 - Unit Tests: > 90% coverage
 - Component Tests: All components tested
 - Integration Tests: All API boundaries tested
@@ -1298,6 +1322,7 @@ Building the React-based chat interface within the custom sidebar container. The
 ## Risk Mitigation
 
 ### Testing Strategy:
+
 1. **Unit Tests First**: Write failing tests before implementation
 2. **Mock External Dependencies**: Mock Chrome APIs, AI providers
 3. **Component Isolation**: Test components in isolation
@@ -1305,6 +1330,7 @@ Building the React-based chat interface within the custom sidebar container. The
 5. **E2E Testing**: Test complete user flows
 
 ### Potential Blockers:
+
 1. **Chrome API Mocking**: Use chrome-mock library
 2. **Async Testing**: Use proper async/await in tests
 3. **React Testing**: Use React Testing Library best practices
@@ -1314,6 +1340,7 @@ Building the React-based chat interface within the custom sidebar container. The
 ## Completion Criteria
 
 ### Task Completion:
+
 - [ ] All tests written and passing
 - [ ] Code implementation complete
 - [ ] Code review passed
@@ -1321,6 +1348,7 @@ Building the React-based chat interface within the custom sidebar container. The
 - [ ] No linting errors
 
 ### Stage Completion:
+
 - [ ] All tasks marked complete
 - [ ] Integration tests pass
 - [ ] Test coverage > 90%
@@ -1328,6 +1356,7 @@ Building the React-based chat interface within the custom sidebar container. The
 - [ ] Accessibility tests pass
 
 ### Project Completion:
+
 - [ ] All 100 tasks complete
 - [ ] E2E test suite passes
 - [ ] Security audit complete
@@ -1336,9 +1365,9 @@ Building the React-based chat interface within the custom sidebar container. The
 
 ---
 
-*Task Blueprint Version: 2.0 (TDD Edition)*  
-*Total Tasks: 100*  
-*Test-First Tasks: 85 (85%)*  
-*Parallelizable: 45 (45%)*  
-*Sequential: 55 (55%)*  
-*Estimated Parallel Execution Paths: 12*
+_Task Blueprint Version: 2.0 (TDD Edition)_  
+_Total Tasks: 100_  
+_Test-First Tasks: 85 (85%)_  
+_Parallelizable: 45 (45%)_  
+_Sequential: 55 (55%)_  
+_Estimated Parallel Execution Paths: 12_

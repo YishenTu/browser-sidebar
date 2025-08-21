@@ -12,6 +12,7 @@ const MIN_WIDTH = 300;
 const MAX_WIDTH = 800;
 const DEFAULT_WIDTH = 400;
 const SIDEBAR_HEIGHT_RATIO = 0.85;
+const RIGHT_PADDING = 30; // default space from the right edge
 
 export const Sidebar: React.FC = () => {
   const [width, setWidth] = useState(DEFAULT_WIDTH);
@@ -19,7 +20,7 @@ export const Sidebar: React.FC = () => {
   const sidebarHeight = window.innerHeight * SIDEBAR_HEIGHT_RATIO;
   const initialY = window.innerHeight * ((1 - SIDEBAR_HEIGHT_RATIO) / 2);
   const [position, setPosition] = useState({
-    x: window.innerWidth - DEFAULT_WIDTH,
+    x: window.innerWidth - DEFAULT_WIDTH - RIGHT_PADDING,
     y: initialY,
   });
   const [isDragging, setIsDragging] = useState(false);

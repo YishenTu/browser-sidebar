@@ -99,7 +99,7 @@ describe('mockChat utilities', () => {
   describe('generateMockResponse', () => {
     it('should generate a text response', () => {
       const response = generateMockResponse('text');
-      
+
       expect(response).toEqual({
         content: expect.any(String),
         type: 'text',
@@ -116,7 +116,7 @@ describe('mockChat utilities', () => {
 
     it('should generate a code response with proper structure', () => {
       const response = generateMockResponse('code');
-      
+
       expect(response.content).toContain('```');
       expect(response.type).toBe('code');
       expect(response.metadata.tokens).toBeGreaterThan(0);
@@ -124,14 +124,14 @@ describe('mockChat utilities', () => {
 
     it('should generate a list response', () => {
       const response = generateMockResponse('list');
-      
+
       expect(response.content).toMatch(/^\d+\./m); // Should contain numbered items
       expect(response.type).toBe('list');
     });
 
     it('should generate a table response with markdown table syntax', () => {
       const response = generateMockResponse('table');
-      
+
       expect(response.content).toContain('|');
       expect(response.content).toContain('---');
       expect(response.type).toBe('table');
@@ -139,7 +139,7 @@ describe('mockChat utilities', () => {
 
     it('should generate a long response with significant content', () => {
       const response = generateMockResponse('long');
-      
+
       expect(response.content.length).toBeGreaterThan(500);
       expect(response.type).toBe('long');
     });
@@ -147,7 +147,7 @@ describe('mockChat utilities', () => {
     it('should accept custom prompt and incorporate it', () => {
       const customPrompt = 'Tell me about React hooks';
       const response = generateMockResponse('text', customPrompt);
-      
+
       expect(response.content.toLowerCase()).toContain('react');
       expect(response.metadata.prompt).toBe(customPrompt);
     });
@@ -155,7 +155,7 @@ describe('mockChat utilities', () => {
     it('should generate responses with varying lengths', () => {
       const responses = Array.from({ length: 10 }, () => generateMockResponse('text'));
       const lengths = responses.map(r => r.content.length);
-      
+
       // Should have some variation in response lengths
       const uniqueLengths = new Set(lengths);
       expect(uniqueLengths.size).toBeGreaterThan(1);
@@ -165,14 +165,14 @@ describe('mockChat utilities', () => {
   describe('generateMockError', () => {
     it('should generate a network error', () => {
       const error = generateMockError('network');
-      
+
       expect(error).toMatchObject({
         message: expect.any(String),
         code: 'NETWORK_ERROR',
         type: 'network',
         recoverable: true,
       });
-      
+
       // Message should be one of the expected network error messages
       const expectedMessages = [
         'Network connection failed. Please check your internet connection.',
@@ -184,7 +184,7 @@ describe('mockChat utilities', () => {
 
     it('should generate an API error', () => {
       const error = generateMockError('api');
-      
+
       expect(error).toMatchObject({
         message: expect.any(String),
         code: expect.stringMatching(/^(API_ERROR|RATE_LIMIT|UNAUTHORIZED)$/),
@@ -195,14 +195,14 @@ describe('mockChat utilities', () => {
 
     it('should generate a parsing error', () => {
       const error = generateMockError('parsing');
-      
+
       expect(error).toMatchObject({
         message: expect.any(String),
         code: 'PARSING_ERROR',
         type: 'parsing',
         recoverable: false,
       });
-      
+
       // Message should be one of the expected parsing error messages
       const expectedMessages = [
         'Failed to parse the AI response. The format was unexpected.',
@@ -214,14 +214,14 @@ describe('mockChat utilities', () => {
 
     it('should generate a timeout error', () => {
       const error = generateMockError('timeout');
-      
+
       expect(error).toMatchObject({
         message: expect.any(String),
         code: 'TIMEOUT_ERROR',
         type: 'timeout',
         recoverable: true,
       });
-      
+
       // Message should be one of the expected timeout error messages
       const expectedMessages = [
         'Request timeout. The AI is taking too long to respond.',
@@ -233,7 +233,7 @@ describe('mockChat utilities', () => {
 
     it('should generate a generic error by default', () => {
       const error = generateMockError();
-      
+
       expect(error).toMatchObject({
         message: expect.any(String),
         code: expect.any(String),
@@ -246,7 +246,7 @@ describe('mockChat utilities', () => {
   describe('generateMockConversation', () => {
     it('should generate a greeting conversation', () => {
       const conversation = generateMockConversation('greeting');
-      
+
       expect(conversation.length).toBeGreaterThan(1);
       expect(conversation[0].role).toBe('user');
       expect(conversation[0].content.toLowerCase()).toMatch(/(hello|hi|hey)/);
@@ -255,31 +255,32 @@ describe('mockChat utilities', () => {
 
     it('should generate a coding conversation', () => {
       const conversation = generateMockConversation('coding');
-      
+
       expect(conversation.length).toBeGreaterThan(1);
-      expect(conversation.some(msg => 
-        msg.content.toLowerCase().includes('code') || 
-        msg.content.includes('```')
-      )).toBe(true);
+      expect(
+        conversation.some(
+          msg => msg.content.toLowerCase().includes('code') || msg.content.includes('```')
+        )
+      ).toBe(true);
     });
 
     it('should generate a help conversation', () => {
       const conversation = generateMockConversation('help');
-      
+
       expect(conversation.length).toBeGreaterThan(1);
       expect(conversation[0].content.toLowerCase()).toMatch(/(help|how|what)/);
     });
 
     it('should generate an error conversation', () => {
       const conversation = generateMockConversation('error');
-      
+
       expect(conversation.length).toBeGreaterThan(1);
       expect(conversation.some(msg => msg.status === 'error')).toBe(true);
     });
 
     it('should generate a long conversation', () => {
       const conversation = generateMockConversation('long');
-      
+
       expect(conversation.length).toBeGreaterThanOrEqual(6);
       expect(conversation.filter(msg => msg.role === 'user').length).toBeGreaterThanOrEqual(3);
       expect(conversation.filter(msg => msg.role === 'assistant').length).toBeGreaterThanOrEqual(3);
@@ -287,14 +288,14 @@ describe('mockChat utilities', () => {
 
     it('should create conversation with proper message flow', () => {
       const conversation = generateMockConversation('greeting');
-      
+
       // Check that messages have increasing timestamps
       for (let i = 1; i < conversation.length; i++) {
         expect(conversation[i].timestamp.getTime()).toBeGreaterThanOrEqual(
           conversation[i - 1].timestamp.getTime()
         );
       }
-      
+
       // Check that messages have unique IDs
       const ids = conversation.map(msg => msg.id);
       expect(new Set(ids).size).toBe(ids.length);
@@ -302,7 +303,7 @@ describe('mockChat utilities', () => {
 
     it('should handle custom message count', () => {
       const conversation = generateMockConversation('greeting', { messageCount: 6 });
-      
+
       expect(conversation.length).toBe(6);
     });
   });
@@ -326,11 +327,11 @@ describe('mockChat utilities', () => {
       expect(onChunk).toHaveBeenCalled();
       expect(onComplete).toHaveBeenCalledWith('Hello world');
       expect(onError).not.toHaveBeenCalled();
-      
+
       // Check that chunks were called with progressive content
       const calls = onChunk.mock.calls;
       expect(calls.length).toBeGreaterThan(1);
-      
+
       // Each call should have more content than the previous
       for (let i = 1; i < calls.length; i++) {
         expect(calls[i][0].length).toBeGreaterThanOrEqual(calls[i - 1][0].length);
@@ -355,7 +356,7 @@ describe('mockChat utilities', () => {
 
     it('should simulate slow streaming', async () => {
       const onChunk = vi.fn();
-      
+
       const promise = simulateStreaming('Slow test', {
         onChunk,
         speed: 'slow',
@@ -364,7 +365,7 @@ describe('mockChat utilities', () => {
       // Should not complete quickly
       await vi.advanceTimersByTimeAsync(1000);
       expect(onChunk).toHaveBeenCalled();
-      
+
       // Complete the streaming
       await vi.advanceTimersByTimeAsync(10000);
       await promise;
@@ -423,7 +424,7 @@ describe('mockChat utilities', () => {
 
       const calls = onChunk.mock.calls;
       expect(calls.length).toBeGreaterThan(1);
-      
+
       // Should have progressive chunks
       expect(calls[0][0]).toBe('This');
       expect(calls[1][0]).toBe('This is a');
@@ -465,24 +466,24 @@ describe('mockChat utilities', () => {
 
     it('should generate unique streaming IDs', async () => {
       const ids = new Set();
-      
+
       for (let i = 0; i < 5; i++) {
         const onChunk = vi.fn();
         const promise = simulateStreaming('Test', { onChunk });
-        
+
         await vi.advanceTimersByTimeAsync(100);
-        
+
         if (onChunk.mock.calls.length > 0) {
           const metadata = onChunk.mock.calls[0]?.[1];
           if (metadata?.streamingId) {
             ids.add(metadata.streamingId);
           }
         }
-        
+
         await vi.advanceTimersByTimeAsync(5000);
         await promise;
       }
-      
+
       expect(ids.size).toBe(5);
     });
   });
@@ -508,7 +509,7 @@ describe('mockChat utilities', () => {
       });
 
       const fullConversation = [...conversation, userMessage, assistantMessage];
-      
+
       expect(fullConversation.length).toBeGreaterThan(3);
       expect(fullConversation[fullConversation.length - 1].content).toContain('```');
     });
@@ -520,7 +521,7 @@ describe('mockChat utilities', () => {
       });
 
       const response = generateMockResponse('text', userMessage.content);
-      
+
       const chunks: string[] = [];
       const onChunk = (chunk: string) => chunks.push(chunk);
 

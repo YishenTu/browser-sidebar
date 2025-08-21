@@ -34,11 +34,15 @@ export interface ChatInputProps extends Omit<TextAreaProps, 'onKeyDown' | 'value
 // Icon components (simple SVGs for now)
 const SendIcon: React.FC = () => (
   <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-    <path d="M7 11L12 6L17 11M12 18V7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+    <path
+      d="M7 11L12 6L17 11M12 18V7"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
   </svg>
 );
-
-
 
 /**
  * ChatInput Component
@@ -131,7 +135,6 @@ export const ChatInput = React.forwardRef<HTMLTextAreaElement, ChatInputProps>(
       }
     }, [currentValue, onSend, clearOnSend, handleValueChange, isSending, loading]);
 
-
     // Handle keyboard shortcuts
     const handleKeyDown = useCallback(
       (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -209,14 +212,17 @@ export const ChatInput = React.forwardRef<HTMLTextAreaElement, ChatInputProps>(
     return (
       <div className={cn('chat-input', className)}>
         {/* Main input area with border */}
-        <div className="chat-input__main" style={{
-          border: '1px solid rgba(75, 85, 99, 0.3)',
-          borderRadius: '12px',
-          backgroundColor: 'transparent', // Same as main area
-          position: 'relative',
-          padding: '4px', // Reduced padding by half
-          margin: '4px' // Reduced margin by half
-        }}>
+        <div
+          className="chat-input__main"
+          style={{
+            border: '1px solid rgba(75, 85, 99, 0.3)',
+            borderRadius: '12px',
+            backgroundColor: 'transparent', // Same as main area
+            position: 'relative',
+            padding: '4px', // Reduced padding by half
+            margin: '4px', // Reduced margin by half
+          }}
+        >
           <div className="chat-input__textarea-container">
             <TextArea
               ref={textAreaRef}
@@ -239,18 +245,21 @@ export const ChatInput = React.forwardRef<HTMLTextAreaElement, ChatInputProps>(
                 outline: 'none',
                 boxShadow: 'none',
                 width: '100%',
-                resize: 'none'
+                resize: 'none',
               }}
               {...textAreaProps}
             />
           </div>
 
           {/* Action buttons row */}
-          <div className="chat-input__actions" style={{ 
-            position: 'absolute', 
-            right: '4px', 
-            bottom: '4px' // Back to bottom right corner
-          }}>
+          <div
+            className="chat-input__actions"
+            style={{
+              position: 'absolute',
+              right: '4px',
+              bottom: '4px', // Back to bottom right corner
+            }}
+          >
             {/* Right side - send controls first in DOM for tab order */}
             <div className="chat-input__controls" style={{ display: 'flex', alignItems: 'center' }}>
               {showCounter && (
@@ -286,7 +295,6 @@ export const ChatInput = React.forwardRef<HTMLTextAreaElement, ChatInputProps>(
                 )}
               </button>
             </div>
-
           </div>
         </div>
       </div>

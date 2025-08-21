@@ -45,7 +45,7 @@ describe('Chat Components Import Integration', () => {
   it('should import all chat components from index file', async () => {
     // Test importing from barrel export
     const indexModule = await import('@/sidebar/components/index');
-    
+
     expect(indexModule.ChatInput).toBeDefined();
     expect(indexModule.MessageList).toBeDefined();
     expect(indexModule.MessageBubble).toBeDefined();

@@ -13,7 +13,7 @@ describe('Background-Content Script Interaction', () => {
     // Mock the sendMessage to simulate success
     global.chrome.tabs.sendMessage = vi.fn().mockResolvedValue({
       success: true,
-      status: 'sidebar-opened'
+      status: 'sidebar-opened',
     });
 
     // Create the message that would be sent
@@ -27,7 +27,7 @@ describe('Background-Content Script Interaction', () => {
       1,
       expect.objectContaining({
         type: 'TOGGLE_SIDEBAR',
-        source: 'background'
+        source: 'background',
       })
     );
   });
@@ -38,7 +38,7 @@ describe('Background-Content Script Interaction', () => {
     // Mock the sendMessage
     global.chrome.tabs.sendMessage = vi.fn().mockResolvedValue({
       success: true,
-      status: 'sidebar-closed'
+      status: 'sidebar-closed',
     });
 
     // Create close message
@@ -52,7 +52,7 @@ describe('Background-Content Script Interaction', () => {
       1,
       expect.objectContaining({
         type: 'CLOSE_SIDEBAR',
-        source: 'background'
+        source: 'background',
       })
     );
   });
@@ -60,12 +60,16 @@ describe('Background-Content Script Interaction', () => {
   it('should handle PING/PONG health check', async () => {
     // Create ping message
     const pingMessage = createMessage('PING', {}, 'content');
-    
+
     // Mock response
-    const pongMessage = createMessage('PONG', {
-      originalId: pingMessage.id,
-      source: 'background'
-    }, 'background');
+    const pongMessage = createMessage(
+      'PONG',
+      {
+        originalId: pingMessage.id,
+        source: 'background',
+      },
+      'background'
+    );
 
     // Mock runtime.sendMessage for ping
     global.chrome.runtime.sendMessage = vi.fn().mockResolvedValue(pongMessage);
@@ -80,7 +84,7 @@ describe('Background-Content Script Interaction', () => {
 
   it('should clean up state when tab is closed', () => {
     const tabId = 1;
-    
+
     // Mock onRemoved listener
     const onRemovedCallback = vi.fn();
     global.chrome.tabs.onRemoved.addListener(onRemovedCallback);
@@ -98,18 +102,19 @@ describe('Background-Content Script Interaction', () => {
       { id: 2, url: 'chrome://settings/' },
       { id: 3, url: 'chrome-extension://abc123/page.html' },
       { id: 4, url: 'about:blank' },
-      { id: 5, url: 'file:///local/file.html' }
+      { id: 5, url: 'file:///local/file.html' },
     ];
 
     global.chrome.tabs.sendMessage = vi.fn();
 
     for (const tab of restrictedTabs) {
       // Check if URL is restricted (simplified check)
-      const isRestricted = tab.url.startsWith('chrome://') || 
-                          tab.url.startsWith('chrome-extension://') ||
-                          tab.url.startsWith('about:') ||
-                          tab.url.startsWith('file://');
-      
+      const isRestricted =
+        tab.url.startsWith('chrome://') ||
+        tab.url.startsWith('chrome-extension://') ||
+        tab.url.startsWith('about:') ||
+        tab.url.startsWith('file://');
+
       expect(isRestricted).toBe(true);
     }
   });

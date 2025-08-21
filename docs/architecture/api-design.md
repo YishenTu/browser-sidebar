@@ -6,13 +6,13 @@
 
 ```typescript
 interface Message<T = any> {
-  id: string;                    // Unique message ID (UUID)
-  type: MessageType;              // Message type enum
-  payload: T;                     // Type-safe payload
-  timestamp: number;              // Unix timestamp
-  source: ComponentType;          // Origin component
-  target?: ComponentType;         // Target component (optional)
-  error?: ErrorInfo;             // Error information (if applicable)
+  id: string; // Unique message ID (UUID)
+  type: MessageType; // Message type enum
+  payload: T; // Type-safe payload
+  timestamp: number; // Unix timestamp
+  source: ComponentType; // Origin component
+  target?: ComponentType; // Target component (optional)
+  error?: ErrorInfo; // Error information (if applicable)
 }
 
 type ComponentType = 'popup' | 'content' | 'background' | 'sidepanel';
@@ -29,7 +29,9 @@ interface ErrorInfo {
 ### Content Extraction Messages
 
 #### EXTRACT_CONTENT
+
 Request content extraction from current tab.
+
 ```typescript
 // Request
 {
@@ -68,7 +70,9 @@ Request content extraction from current tab.
 ```
 
 #### GET_SELECTION
+
 Get currently selected text with context.
+
 ```typescript
 // Request
 {
@@ -93,7 +97,9 @@ Get currently selected text with context.
 ### AI Provider Messages
 
 #### SEND_TO_AI
+
 Send message to AI provider.
+
 ```typescript
 // Request
 {
@@ -146,7 +152,9 @@ Send message to AI provider.
 ### Storage Messages
 
 #### SAVE_CONVERSATION
+
 Save conversation to storage.
+
 ```typescript
 {
   type: 'SAVE_CONVERSATION',
@@ -164,7 +172,9 @@ Save conversation to storage.
 ```
 
 #### LOAD_CONVERSATION
+
 Load conversation from storage.
+
 ```typescript
 // Request
 {
@@ -190,7 +200,9 @@ Load conversation from storage.
 ### Tab Management Messages
 
 #### GET_TABS
+
 Get list of open tabs.
+
 ```typescript
 // Request
 {
@@ -221,7 +233,9 @@ Get list of open tabs.
 ```
 
 #### EXTRACT_MULTI_TAB
+
 Extract content from multiple tabs.
+
 ```typescript
 // Request
 {
@@ -250,20 +264,21 @@ Extract content from multiple tabs.
 ## Provider API Interfaces
 
 ### Base Provider Interface
+
 ```typescript
 interface Provider {
   id: string;
   name: string;
-  
+
   // Configuration
   configure(config: ProviderConfig): Promise<void>;
   validateConfig(): Promise<boolean>;
   getModels(): ModelInfo[];
-  
+
   // Chat Operations
   chat(request: ChatRequest): Promise<ChatResponse>;
   streamChat(request: ChatRequest, callback: StreamCallback): Promise<void>;
-  
+
   // Utilities
   countTokens(text: string, model?: string): number;
   getUsage(): Promise<UsageInfo>;
@@ -273,6 +288,7 @@ interface Provider {
 ### Provider Configurations
 
 #### OpenAI Configuration
+
 ```typescript
 interface OpenAIConfig {
   apiKey: string;
@@ -284,6 +300,7 @@ interface OpenAIConfig {
 ```
 
 #### Gemini Configuration
+
 ```typescript
 interface GeminiConfig {
   apiKey: string;
@@ -293,10 +310,11 @@ interface GeminiConfig {
 ```
 
 #### Anthropic Configuration
+
 ```typescript
 interface AnthropicConfig {
   apiKey: string;
-  baseURL?: string;  // For OpenRouter
+  baseURL?: string; // For OpenRouter
   defaultModel: 'claude-3-opus' | 'claude-3-sonnet' | 'claude-3-haiku';
   maxTokens?: number;
 }
@@ -305,6 +323,7 @@ interface AnthropicConfig {
 ## Storage API
 
 ### Chrome Storage API Wrapper
+
 ```typescript
 interface StorageAPI {
   // Basic Operations
@@ -312,11 +331,11 @@ interface StorageAPI {
   set(key: string, value: any): Promise<void>;
   remove(key: string): Promise<void>;
   clear(): Promise<void>;
-  
+
   // Batch Operations
   getMultiple(keys: string[]): Promise<Record<string, any>>;
   setMultiple(items: Record<string, any>): Promise<void>;
-  
+
   // Utilities
   getUsage(): Promise<StorageUsage>;
   onChange(callback: (changes: StorageChanges) => void): () => void;
@@ -324,24 +343,29 @@ interface StorageAPI {
 ```
 
 ### IndexedDB API
+
 ```typescript
 interface DatabaseAPI {
   // Connection
   open(): Promise<void>;
   close(): Promise<void>;
-  
+
   // CRUD Operations
   add<T>(storeName: string, item: T): Promise<void>;
   get<T>(storeName: string, key: IDBValidKey): Promise<T | undefined>;
   update<T>(storeName: string, item: T): Promise<void>;
   delete(storeName: string, key: IDBValidKey): Promise<void>;
-  
+
   // Queries
   getAll<T>(storeName: string): Promise<T[]>;
   getAllByIndex<T>(storeName: string, indexName: string, value: IDBValidKey): Promise<T[]>;
-  
+
   // Transactions
-  transaction<T>(storeNames: string[], mode: IDBTransactionMode, callback: TransactionCallback<T>): Promise<T>;
+  transaction<T>(
+    storeNames: string[],
+    mode: IDBTransactionMode,
+    callback: TransactionCallback<T>
+  ): Promise<T>;
 }
 ```
 
@@ -352,21 +376,21 @@ enum ErrorCode {
   // Network Errors
   NETWORK_ERROR = 'NETWORK_ERROR',
   TIMEOUT = 'TIMEOUT',
-  
+
   // API Errors
   INVALID_API_KEY = 'INVALID_API_KEY',
   RATE_LIMIT = 'RATE_LIMIT',
   QUOTA_EXCEEDED = 'QUOTA_EXCEEDED',
-  
+
   // Provider Errors
   MODEL_NOT_FOUND = 'MODEL_NOT_FOUND',
   CONTEXT_LENGTH_EXCEEDED = 'CONTEXT_LENGTH_EXCEEDED',
   INVALID_REQUEST = 'INVALID_REQUEST',
-  
+
   // Storage Errors
   STORAGE_QUOTA_EXCEEDED = 'STORAGE_QUOTA_EXCEEDED',
   ENCRYPTION_FAILED = 'ENCRYPTION_FAILED',
-  
+
   // Extension Errors
   TAB_NOT_FOUND = 'TAB_NOT_FOUND',
   PERMISSION_DENIED = 'PERMISSION_DENIED',
@@ -380,13 +404,13 @@ enum ErrorCode {
 interface RateLimiter {
   // Check if request can proceed
   canProceed(): boolean;
-  
+
   // Wait until request can proceed
   wait(): Promise<void>;
-  
+
   // Record a request
   recordRequest(): void;
-  
+
   // Get current status
   getStatus(): {
     remaining: number;
@@ -402,15 +426,15 @@ interface RateLimiter {
 interface StreamManager {
   // Open stream connection
   connect(url: string, options?: StreamOptions): Promise<void>;
-  
+
   // Send message
   send(data: any): void;
-  
+
   // Event handlers
   onMessage(callback: (data: any) => void): void;
   onError(callback: (error: Error) => void): void;
   onClose(callback: () => void): void;
-  
+
   // Close connection
   close(): void;
 }
@@ -418,5 +442,5 @@ interface StreamManager {
 
 ---
 
-*API Design Version: 1.0*  
-*Last Updated: 2025-08-19*
+_API Design Version: 1.0_  
+_Last Updated: 2025-08-19_

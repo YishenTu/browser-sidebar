@@ -6,7 +6,7 @@
  * and Shadow DOM isolation.
  */
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { unmountSidebar } from './index';
 import { useSettingsStore } from '@/store/settings';
 import { setTheme } from '@/utils/theme';
@@ -20,7 +20,10 @@ import { useMockChat } from '@/sidebar/hooks/useMockChat';
 const MIN_WIDTH = 300;
 const MAX_WIDTH = 800;
 const DEFAULT_WIDTH = 400;
+const MIN_HEIGHT = 200;
+const MAX_HEIGHT = typeof window !== 'undefined' ? Math.round(window.innerHeight) : 1000;
 const SIDEBAR_HEIGHT_RATIO = 0.85;
+const RIGHT_PADDING = 30; // default space from the right edge
 
 export interface ChatPanelProps {
   /** Custom CSS class name */
@@ -49,17 +52,20 @@ export interface ChatPanelProps {
  * <ChatPanel onClose={() => unmountSidebar()} />
  * ```
  */
-export const ChatPanel: React.FC<ChatPanelProps> = ({
-  className,
-  onClose
-}) => {
+export const ChatPanel: React.FC<ChatPanelProps> = ({ className, onClose }) => {
   // Positioning and sizing state
   const [width, setWidth] = useState(DEFAULT_WIDTH);
+  const [height, setHeight] = useState(Math.round(window.innerHeight * SIDEBAR_HEIGHT_RATIO));
   const [isResizing, setIsResizing] = useState(false);
-  const sidebarHeight = Math.round(window.innerHeight * SIDEBAR_HEIGHT_RATIO);
+  const resizeDirRef = useRef<null | 'n' | 's' | 'e' | 'w' | 'ne' | 'nw' | 'se' | 'sw'>(null);
+  const startRef = useRef<{ x: number; y: number } | null>(null);
+  const initialRectRef = useRef<{ x: number; y: number; width: number; height: number } | null>(
+    null
+  );
+  const sidebarHeight = height;
   const initialY = Math.round(window.innerHeight * ((1 - SIDEBAR_HEIGHT_RATIO) / 2));
   const [position, setPosition] = useState({
-    x: window.innerWidth - DEFAULT_WIDTH,
+    x: window.innerWidth - DEFAULT_WIDTH - RIGHT_PADDING,
     y: initialY,
   });
   const [isDragging, setIsDragging] = useState(false);
@@ -105,10 +111,50 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
       if (isResizing) {
-        const newWidth = window.innerWidth - e.clientX;
-        const constrainedWidth = Math.min(MAX_WIDTH, Math.max(MIN_WIDTH, newWidth));
-        setWidth(constrainedWidth);
-        setPosition(prev => ({ ...prev, x: window.innerWidth - constrainedWidth }));
+        const dir = resizeDirRef.current;
+        const start = startRef.current;
+        const initial = initialRectRef.current;
+        if (!dir || !start || !initial) return;
+
+        const initialRight = initial.x + initial.width;
+        const initialBottom = initial.y + initial.height;
+
+        let nextX = initial.x;
+        let nextY = initial.y;
+        let nextW = initial.width;
+        let nextH = initial.height;
+
+        // Horizontal edges (absolute mouse coordinates relative to opposite edge)
+        if (dir.includes('w')) {
+          const rawW = initialRight - e.clientX;
+          const clampedW = Math.min(MAX_WIDTH, Math.max(MIN_WIDTH, rawW));
+          nextW = clampedW;
+          nextX = initialRight - clampedW;
+        }
+        if (dir.includes('e')) {
+          const rawW = e.clientX - initial.x;
+          const clampedW = Math.min(MAX_WIDTH, Math.max(MIN_WIDTH, rawW));
+          nextW = clampedW;
+          nextX = initial.x;
+        }
+
+        // Vertical edges
+        if (dir.includes('n')) {
+          const rawH = initialBottom - e.clientY;
+          const clampedH = Math.min(MAX_HEIGHT, Math.max(MIN_HEIGHT, rawH));
+          nextH = clampedH;
+          nextY = initialBottom - clampedH;
+        }
+        if (dir.includes('s')) {
+          const rawH = e.clientY - initial.y;
+          const clampedH = Math.min(MAX_HEIGHT, Math.max(MIN_HEIGHT, rawH));
+          nextH = clampedH;
+          nextY = initial.y;
+        }
+
+        setPosition({ x: nextX, y: nextY });
+        setWidth(nextW);
+        setHeight(nextH);
       }
       if (isDragging) {
         setPosition({
@@ -121,6 +167,9 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
     const handleMouseUp = () => {
       setIsResizing(false);
       setIsDragging(false);
+      resizeDirRef.current = null;
+      startRef.current = null;
+      initialRectRef.current = null;
     };
 
     if (isResizing || isDragging) {
@@ -169,9 +218,11 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
     (e: React.MouseEvent) => {
       // Only start dragging if not clicking on close button or clear button
       const target = e.target as HTMLElement;
-      if (target.classList.contains('ai-sidebar-close') || 
-          target.closest('.ai-sidebar-clear') ||
-          target.closest('button')) {
+      if (
+        target.classList.contains('ai-sidebar-close') ||
+        target.closest('.ai-sidebar-clear') ||
+        target.closest('button')
+      ) {
         return;
       }
 
@@ -184,13 +235,19 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
     [position]
   );
 
-  // Handle resize mouse down
-  const handleResizeMouseDown = useCallback(() => {
-    // Only start resize if not already dragging
-    if (!isDragging) {
+  // Generic resize mouse down handler for any edge/corner
+  const handleResizeMouseDown = useCallback(
+    (e: React.MouseEvent, dir: 'n' | 's' | 'e' | 'w' | 'ne' | 'nw' | 'se' | 'sw') => {
+      if (isDragging) return;
+      resizeDirRef.current = dir;
+      startRef.current = { x: e.clientX, y: e.clientY };
+      initialRectRef.current = { x: position.x, y: position.y, width, height };
       setIsResizing(true);
-    }
-  }, [isDragging]);
+      e.preventDefault();
+      e.stopPropagation();
+    },
+    [height, width, position, isDragging]
+  );
 
   return (
     <div
@@ -206,14 +263,6 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
       }}
       data-testid="chat-panel"
     >
-      {/* Resize handle */}
-      <div 
-        className="ai-sidebar-resize-handle" 
-        onMouseDown={handleResizeMouseDown}
-        data-testid="resize-handle"
-        style={{ cursor: 'ew-resize' }}
-      />
-
       <div className="ai-sidebar-container" data-testid="sidebar-container">
         <div
           className="ai-sidebar-header"
@@ -277,6 +326,59 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
           </div>
         </ThemeProvider>
       </div>
+
+      {/* Resize handles placed AFTER the container so they are not covered */}
+      {/* West (left) - keep existing test id for compatibility */}
+      <div
+        className="ai-sidebar-resize-handle ai-sidebar-resize-handle--w"
+        onMouseDown={e => handleResizeMouseDown(e, 'w')}
+        data-testid="resize-handle"
+        style={{ cursor: 'ew-resize' }}
+        aria-label="Resize left"
+      />
+      {/* East (right) */}
+      <div
+        className="ai-sidebar-resize-handle ai-sidebar-resize-handle--e"
+        onMouseDown={e => handleResizeMouseDown(e, 'e')}
+        aria-label="Resize right"
+      />
+      {/* North (top) */}
+      <div
+        className="ai-sidebar-resize-handle ai-sidebar-resize-handle--n"
+        onMouseDown={e => handleResizeMouseDown(e, 'n')}
+        aria-label="Resize top"
+      />
+      {/* South (bottom) */}
+      <div
+        className="ai-sidebar-resize-handle ai-sidebar-resize-handle--s"
+        onMouseDown={e => handleResizeMouseDown(e, 's')}
+        aria-label="Resize bottom"
+      />
+      {/* Corners for diagonal resize */}
+      <div
+        className="ai-sidebar-resize-handle ai-sidebar-resize-handle--nw"
+        onMouseDown={e => handleResizeMouseDown(e, 'nw')}
+        aria-label="Resize top-left"
+        style={{ cursor: 'nwse-resize' }}
+      />
+      <div
+        className="ai-sidebar-resize-handle ai-sidebar-resize-handle--ne"
+        onMouseDown={e => handleResizeMouseDown(e, 'ne')}
+        aria-label="Resize top-right"
+        style={{ cursor: 'nesw-resize' }}
+      />
+      <div
+        className="ai-sidebar-resize-handle ai-sidebar-resize-handle--sw"
+        onMouseDown={e => handleResizeMouseDown(e, 'sw')}
+        aria-label="Resize bottom-left"
+        style={{ cursor: 'nesw-resize' }}
+      />
+      <div
+        className="ai-sidebar-resize-handle ai-sidebar-resize-handle--se"
+        onMouseDown={e => handleResizeMouseDown(e, 'se')}
+        aria-label="Resize bottom-right"
+        style={{ cursor: 'nwse-resize' }}
+      />
     </div>
   );
 };

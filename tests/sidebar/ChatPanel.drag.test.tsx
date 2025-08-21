@@ -1,6 +1,6 @@
 /**
  * @file ChatPanel Drag Functionality Tests
- * 
+ *
  * Tests for the drag functionality, position updates, and
  * drag interaction behavior of the ChatPanel component.
  */
@@ -34,7 +34,7 @@ describe('ChatPanel - Drag Functionality', () => {
   describe('Drag Handle (Header)', () => {
     it('renders draggable header', () => {
       render(<ChatPanel onClose={mockOnClose} />);
-      
+
       const header = screen.getByTestId('sidebar-header');
       expect(header).toBeInTheDocument();
       expect(header).toHaveClass('ai-sidebar-header');
@@ -42,25 +42,25 @@ describe('ChatPanel - Drag Functionality', () => {
 
     it('has grab cursor by default', () => {
       render(<ChatPanel onClose={mockOnClose} />);
-      
+
       const header = screen.getByTestId('sidebar-header');
       expect(header).toHaveStyle({ cursor: 'grab' });
     });
 
     it('changes to grabbing cursor during drag', () => {
       render(<ChatPanel onClose={mockOnClose} />);
-      
+
       const header = screen.getByTestId('sidebar-header');
-      
+
       // Start drag
       fireEvent.mouseDown(header, { clientX: 100, clientY: 100 });
-      
+
       // Should change to grabbing cursor
       expect(header).toHaveStyle({ cursor: 'grabbing' });
-      
+
       // End drag
       fireEvent.mouseUp(document);
-      
+
       // Should return to grab cursor
       expect(header).toHaveStyle({ cursor: 'grab' });
     });
@@ -68,53 +68,53 @@ describe('ChatPanel - Drag Functionality', () => {
     it('does not start drag when clicking close button', async () => {
       const user = userEvent.setup();
       render(<ChatPanel onClose={mockOnClose} />);
-      
+
       const closeButton = screen.getByLabelText('Close sidebar');
       const overlay = screen.getByRole('dialog');
-      
+
       const initialLeft = '800px';
       const initialTop = '60px';
-      
+
       expect(overlay).toHaveStyle({ left: initialLeft, top: initialTop });
-      
+
       // Click close button
       await user.click(closeButton);
-      
+
       // Position should not change (drag should not start)
       expect(overlay).toHaveStyle({ left: initialLeft, top: initialTop });
-      
+
       // But close should be called
       expect(mockOnClose).toHaveBeenCalled();
     });
 
     it('does not start drag when clicking clear button', async () => {
       render(<ChatPanel onClose={mockOnClose} />);
-      
+
       // First, send a message to make clear button appear
       const input = screen.getByPlaceholderText('Ask about this webpage...');
       const sendButton = screen.getByLabelText('Send message');
-      
+
       await userEvent.type(input, 'Test message');
       await userEvent.click(sendButton);
-      
+
       // Wait for clear button to appear
       await vi.waitFor(() => {
         const clearButton = screen.getByLabelText('Clear conversation');
         expect(clearButton).toBeInTheDocument();
       });
-      
+
       const clearButton = screen.getByLabelText('Clear conversation');
       const overlay = screen.getByRole('dialog');
-      
+
       const initialLeft = '800px';
       const initialTop = '60px';
-      
+
       expect(overlay).toHaveStyle({ left: initialLeft, top: initialTop });
-      
+
       // Click clear button
       fireEvent.mouseDown(clearButton, { clientX: 100, clientY: 100 });
       fireEvent.mouseMove(document, { clientX: 200, clientY: 200 });
-      
+
       // Position should not change (drag should not start)
       expect(overlay).toHaveStyle({ left: initialLeft, top: initialTop });
     });
@@ -123,97 +123,97 @@ describe('ChatPanel - Drag Functionality', () => {
   describe('Drag Position Updates', () => {
     it('updates position during drag operation', () => {
       render(<ChatPanel onClose={mockOnClose} />);
-      
+
       const header = screen.getByTestId('sidebar-header');
       const overlay = screen.getByRole('dialog');
-      
+
       // Initial position: left: 800px, top: 60px
       expect(overlay).toHaveStyle({ left: '800px', top: '60px' });
-      
+
       // Start drag at specific coordinates
       fireEvent.mouseDown(header, { clientX: 850, clientY: 100 });
-      
+
       // Move mouse to new position
       fireEvent.mouseMove(document, { clientX: 900, clientY: 150 });
-      
+
       // Position should update based on mouse movement
       // New position = mouse position - initial offset
       // Offset x = 850 - 800 = 50, Offset y = 100 - 60 = 40
       // New position: x = 900 - 50 = 850, y = 150 - 40 = 110
-      expect(overlay).toHaveStyle({ 
+      expect(overlay).toHaveStyle({
         left: '850px',
-        top: '110px'
+        top: '110px',
       });
     });
 
     it('moves sidebar to different screen positions', () => {
       render(<ChatPanel onClose={mockOnClose} />);
-      
+
       const header = screen.getByTestId('sidebar-header');
       const overlay = screen.getByRole('dialog');
-      
+
       // Start drag from header center
       fireEvent.mouseDown(header, { clientX: 1000, clientY: 100 });
-      
+
       // Move to top-left area
       fireEvent.mouseMove(document, { clientX: 200, clientY: 50 });
-      
+
       // Calculate expected position (accounting for offset)
       // Offset: x = 1000 - 800 = 200, y = 100 - 60 = 40
       // New position: x = 200 - 200 = 0, y = 50 - 40 = 10
       expect(overlay).toHaveStyle({
         left: '0px',
-        top: '10px'
+        top: '10px',
       });
     });
 
     it('allows sidebar to be positioned anywhere on screen', () => {
       render(<ChatPanel onClose={mockOnClose} />);
-      
+
       const header = screen.getByTestId('sidebar-header');
       const overlay = screen.getByRole('dialog');
-      
+
       // Start drag
       fireEvent.mouseDown(header, { clientX: 900, clientY: 200 });
-      
+
       // Move to bottom-center
       fireEvent.mouseMove(document, { clientX: 600, clientY: 700 });
-      
+
       // Calculate expected position
       // Offset: x = 900 - 800 = 100, y = 200 - 60 = 140
       // New position: x = 600 - 100 = 500, y = 700 - 140 = 560
       expect(overlay).toHaveStyle({
         left: '500px',
-        top: '560px'
+        top: '560px',
       });
     });
 
     it('stops position updates when drag ends', () => {
       render(<ChatPanel onClose={mockOnClose} />);
-      
+
       const header = screen.getByTestId('sidebar-header');
       const overlay = screen.getByRole('dialog');
-      
+
       // Start and complete a drag operation
       fireEvent.mouseDown(header, { clientX: 850, clientY: 100 });
       fireEvent.mouseMove(document, { clientX: 400, clientY: 300 });
       fireEvent.mouseUp(document);
-      
+
       // Get current position
       const currentLeft = '350px'; // 400 - (850 - 800) = 400 - 50 = 350
-      const currentTop = '260px';  // 300 - (100 - 60) = 300 - 40 = 260
-      
-      expect(overlay).toHaveStyle({ 
+      const currentTop = '260px'; // 300 - (100 - 60) = 300 - 40 = 260
+
+      expect(overlay).toHaveStyle({
         left: currentLeft,
-        top: currentTop
+        top: currentTop,
       });
-      
+
       // Further mouse movements should not affect position
       fireEvent.mouseMove(document, { clientX: 100, clientY: 100 });
-      
-      expect(overlay).toHaveStyle({ 
+
+      expect(overlay).toHaveStyle({
         left: currentLeft,
-        top: currentTop
+        top: currentTop,
       });
     });
   });
@@ -221,16 +221,16 @@ describe('ChatPanel - Drag Functionality', () => {
   describe('Drag Offset Calculation', () => {
     it('calculates correct drag offset from mousedown position', () => {
       render(<ChatPanel onClose={mockOnClose} />);
-      
+
       const header = screen.getByTestId('sidebar-header');
       const overlay = screen.getByRole('dialog');
-      
+
       // Start drag from specific position on header
       fireEvent.mouseDown(header, { clientX: 950, clientY: 120 });
-      
+
       // Move to a known position
       fireEvent.mouseMove(document, { clientX: 300, clientY: 400 });
-      
+
       // Calculate expected position with offset
       // Initial position: 800, 60
       // Mouse down at: 950, 120
@@ -239,32 +239,32 @@ describe('ChatPanel - Drag Functionality', () => {
       // Final position: 300-150=150, 400-60=340
       expect(overlay).toHaveStyle({
         left: '150px',
-        top: '340px'
+        top: '340px',
       });
     });
 
     it('maintains consistent offset throughout drag operation', () => {
       render(<ChatPanel onClose={mockOnClose} />);
-      
+
       const header = screen.getByTestId('sidebar-header');
       const overlay = screen.getByRole('dialog');
-      
+
       // Start drag with specific offset
       fireEvent.mouseDown(header, { clientX: 1000, clientY: 200 });
-      
+
       // Multiple moves should maintain consistent offset
       const moves = [
         { x: 500, y: 300, expectedLeft: '300px', expectedTop: '160px' },
         { x: 700, y: 100, expectedLeft: '500px', expectedTop: '-40px' },
-        { x: 1100, y: 500, expectedLeft: '900px', expectedTop: '360px' }
+        { x: 1100, y: 500, expectedLeft: '900px', expectedTop: '360px' },
       ];
-      
+
       moves.forEach(({ x, y, expectedLeft, expectedTop }) => {
         fireEvent.mouseMove(document, { clientX: x, clientY: y });
-        
+
         expect(overlay).toHaveStyle({
           left: expectedLeft,
-          top: expectedTop
+          top: expectedTop,
         });
       });
     });
@@ -273,41 +273,41 @@ describe('ChatPanel - Drag Functionality', () => {
   describe('Drag Visual Feedback', () => {
     it('disables text selection during drag', () => {
       render(<ChatPanel onClose={mockOnClose} />);
-      
+
       const header = screen.getByTestId('sidebar-header');
-      
+
       // Before drag
       expect(document.body.style.userSelect).not.toBe('none');
-      
+
       // Start drag
       fireEvent.mouseDown(header, { clientX: 900, clientY: 100 });
-      
+
       // During drag, text selection should be disabled
       expect(document.body.style.userSelect).toBe('none');
-      
+
       // End drag
       fireEvent.mouseUp(document);
-      
+
       // After drag, text selection should be restored
       expect(document.body.style.userSelect).toBe('');
     });
 
     it('maintains visual state during drag operation', () => {
       render(<ChatPanel onClose={mockOnClose} />);
-      
+
       const header = screen.getByTestId('sidebar-header');
       const overlay = screen.getByRole('dialog');
-      
+
       // Start drag
       fireEvent.mouseDown(header, { clientX: 900, clientY: 100 });
-      
+
       // Overlay should still be visible and maintain its classes
       expect(overlay).toBeInTheDocument();
       expect(overlay).toHaveClass('ai-sidebar-overlay');
-      
+
       // Move during drag
       fireEvent.mouseMove(document, { clientX: 500, clientY: 300 });
-      
+
       // Should still maintain visual integrity
       expect(overlay).toBeInTheDocument();
       expect(overlay).toHaveClass('ai-sidebar-overlay');
@@ -318,60 +318,60 @@ describe('ChatPanel - Drag Functionality', () => {
   describe('Edge Cases and Error Handling', () => {
     it('handles drag outside viewport bounds', () => {
       render(<ChatPanel onClose={mockOnClose} />);
-      
+
       const header = screen.getByTestId('sidebar-header');
       const overlay = screen.getByRole('dialog');
-      
+
       // Start drag
       fireEvent.mouseDown(header, { clientX: 900, clientY: 100 });
-      
+
       // Move to negative coordinates
       fireEvent.mouseMove(document, { clientX: -100, clientY: -50 });
-      
+
       // Should allow positioning outside viewport
       expect(overlay).toHaveStyle({
         left: '-200px', // -100 - (900 - 800)
-        top: '-90px'    // -50 - (100 - 60)
+        top: '-90px', // -50 - (100 - 60)
       });
     });
 
     it('handles drag beyond viewport dimensions', () => {
       render(<ChatPanel onClose={mockOnClose} />);
-      
+
       const header = screen.getByTestId('sidebar-header');
       const overlay = screen.getByRole('dialog');
-      
+
       // Start drag
       fireEvent.mouseDown(header, { clientX: 900, clientY: 100 });
-      
+
       // Move beyond viewport bounds
       fireEvent.mouseMove(document, { clientX: 2000, clientY: 1000 });
-      
+
       // Should allow positioning beyond viewport
       expect(overlay).toHaveStyle({
         left: '1900px', // 2000 - (900 - 800)
-        top: '960px'    // 1000 - (100 - 60)
+        top: '960px', // 1000 - (100 - 60)
       });
     });
 
     it('handles multiple drag operations in sequence', () => {
       render(<ChatPanel onClose={mockOnClose} />);
-      
+
       const header = screen.getByTestId('sidebar-header');
       const overlay = screen.getByRole('dialog');
-      
+
       // First drag operation
       fireEvent.mouseDown(header, { clientX: 900, clientY: 100 });
       fireEvent.mouseMove(document, { clientX: 500, clientY: 200 });
       fireEvent.mouseUp(document);
-      
+
       // Second drag operation from new position
       const newPosition = { left: '400px', top: '160px' };
       expect(overlay).toHaveStyle(newPosition);
-      
+
       fireEvent.mouseDown(header, { clientX: 600, clientY: 250 });
       fireEvent.mouseMove(document, { clientX: 300, clientY: 350 });
-      
+
       // Calculate offset for second drag
       // Previous position: 400, 160
       // Mouse down at: 600, 250
@@ -380,63 +380,63 @@ describe('ChatPanel - Drag Functionality', () => {
       // Final position: 300-200=100, 350-90=260
       expect(overlay).toHaveStyle({
         left: '100px',
-        top: '260px'
+        top: '260px',
       });
     });
 
     it('handles rapid drag start/stop operations', () => {
       render(<ChatPanel onClose={mockOnClose} />);
-      
+
       const header = screen.getByTestId('sidebar-header');
       const overlay = screen.getByRole('dialog');
-      
+
       // Rapid sequence
       fireEvent.mouseDown(header, { clientX: 900, clientY: 100 });
       fireEvent.mouseUp(document);
-      
+
       fireEvent.mouseDown(header, { clientX: 850, clientY: 80 });
       fireEvent.mouseMove(document, { clientX: 400, clientY: 300 });
       fireEvent.mouseUp(document);
-      
+
       // Should end up at final position
       // Initial position: 800, 60
-      // Mouse down at: 850, 80  
+      // Mouse down at: 850, 80
       // Offset: 850-800=50, 80-60=20
       // Mouse move to: 400, 300
       // Final position: 400-50=350, 300-20=280
       expect(overlay).toHaveStyle({
         left: '350px', // 400 - (850 - 800) = 350
-        top: '280px'   // 300 - (80 - 60) = 280
+        top: '280px', // 300 - (80 - 60) = 280
       });
     });
 
     it('handles mousemove without mousedown', () => {
       render(<ChatPanel onClose={mockOnClose} />);
-      
+
       const overlay = screen.getByRole('dialog');
-      
+
       // Mouse move without starting drag
       fireEvent.mouseMove(document, { clientX: 500, clientY: 300 });
-      
+
       // Should not affect position
       expect(overlay).toHaveStyle({
         left: '800px',
-        top: '60px'
+        top: '60px',
       });
     });
 
     it('handles mouseup without mousedown', () => {
       render(<ChatPanel onClose={mockOnClose} />);
-      
+
       const overlay = screen.getByRole('dialog');
-      
+
       // Mouse up without starting drag
       fireEvent.mouseUp(document);
-      
+
       // Should not affect position
       expect(overlay).toHaveStyle({
         left: '800px',
-        top: '60px'
+        top: '60px',
       });
     });
   });
@@ -444,39 +444,39 @@ describe('ChatPanel - Drag Functionality', () => {
   describe('Interaction with Other Features', () => {
     it('does not interfere with resize during drag', () => {
       render(<ChatPanel onClose={mockOnClose} />);
-      
+
       const header = screen.getByTestId('sidebar-header');
       const resizeHandle = screen.getByTestId('resize-handle');
       const overlay = screen.getByRole('dialog');
-      
+
       // Start drag
       fireEvent.mouseDown(header, { clientX: 900, clientY: 100 });
-      
+
       // Try to start resize during drag (should not work)
       fireEvent.mouseDown(resizeHandle);
-      
+
       // Move mouse
       fireEvent.mouseMove(document, { clientX: 500, clientY: 200 });
-      
+
       // Should move (drag) not resize
       expect(overlay).toHaveStyle({
         left: '400px', // 500 - (900 - 800)
-        top: '160px',  // 200 - (100 - 60)
-        width: '400px' // Width should not change
+        top: '160px', // 200 - (100 - 60)
+        width: '400px', // Width should not change
       });
     });
 
     it('allows keyboard shortcuts during drag', () => {
       render(<ChatPanel onClose={mockOnClose} />);
-      
+
       const header = screen.getByTestId('sidebar-header');
-      
+
       // Start drag
       fireEvent.mouseDown(header, { clientX: 900, clientY: 100 });
-      
+
       // Escape key should still work
       fireEvent.keyDown(document, { key: 'Escape' });
-      
+
       expect(mockOnClose).toHaveBeenCalled();
     });
   });

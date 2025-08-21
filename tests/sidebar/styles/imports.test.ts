@@ -1,6 +1,6 @@
 /**
  * Style Import Tests for Task 1.4: Consolidate Styles with Testing
- * 
+ *
  * These tests verify that style consolidation preserves functionality and appearance.
  * They establish a baseline for style behavior before and after moving files.
  */
@@ -13,10 +13,10 @@ describe('Sidebar Style Imports', () => {
       // Verify the file exists and loads at the new path
       const fs = await import('fs/promises');
       const path = await import('path');
-      
+
       const chatInputPath = path.resolve(__dirname, '../../../src/sidebar/styles/chat-input.css');
       const content = await fs.readFile(chatInputPath, 'utf-8');
-      
+
       expect(content).toBeTruthy();
       expect(content).toContain('.chat-input');
       expect(content).toContain('.chat-input__main');
@@ -27,10 +27,10 @@ describe('Sidebar Style Imports', () => {
     it('should successfully load chat-panel styles from new location', async () => {
       const fs = await import('fs/promises');
       const path = await import('path');
-      
+
       const chatPanelPath = path.resolve(__dirname, '../../../src/sidebar/styles/chat-panel.css');
       const content = await fs.readFile(chatPanelPath, 'utf-8');
-      
+
       expect(content).toBeTruthy();
       expect(content).toContain('.chat-panel');
       expect(content).toContain('.chat-panel__header');
@@ -41,10 +41,10 @@ describe('Sidebar Style Imports', () => {
     it('should successfully load icon-button styles from new location', async () => {
       const fs = await import('fs/promises');
       const path = await import('path');
-      
+
       const iconButtonPath = path.resolve(__dirname, '../../../src/sidebar/styles/icon-button.css');
       const content = await fs.readFile(iconButtonPath, 'utf-8');
-      
+
       expect(content).toBeTruthy();
       expect(content).toContain('.icon-button');
       expect(content).toContain('.icon-button--primary');
@@ -55,11 +55,11 @@ describe('Sidebar Style Imports', () => {
     it('should verify files no longer exist at old location', async () => {
       const fs = await import('fs/promises');
       const path = await import('path');
-      
+
       const oldChatInputPath = path.resolve(__dirname, '../../../src/styles/chat-input.css');
       const oldChatPanelPath = path.resolve(__dirname, '../../../src/styles/chat-panel.css');
       const oldIconButtonPath = path.resolve(__dirname, '../../../src/styles/icon-button.css');
-      
+
       // These should not exist anymore
       try {
         await fs.access(oldChatInputPath);
@@ -67,14 +67,14 @@ describe('Sidebar Style Imports', () => {
       } catch (error: any) {
         expect(error.code).toBe('ENOENT');
       }
-      
+
       try {
         await fs.access(oldChatPanelPath);
         throw new Error('chat-panel.css still exists at old location');
       } catch (error: any) {
         expect(error.code).toBe('ENOENT');
       }
-      
+
       try {
         await fs.access(oldIconButtonPath);
         throw new Error('icon-button.css still exists at old location');
@@ -86,10 +86,10 @@ describe('Sidebar Style Imports', () => {
     it('should verify all consolidated files exist in new location', async () => {
       const fs = await import('fs/promises');
       const path = await import('path');
-      
+
       const stylesDir = path.resolve(__dirname, '../../../src/sidebar/styles');
       const files = await fs.readdir(stylesDir);
-      
+
       expect(files).toContain('chat-input.css');
       expect(files).toContain('chat-panel.css');
       expect(files).toContain('icon-button.css');
@@ -102,9 +102,9 @@ describe('Sidebar Style Imports', () => {
       // Verify the new import paths are correctly structured
       const expectedImportPaths = [
         './styles/chat-input.css?inline',
-        './styles/chat-panel.css?inline', 
+        './styles/chat-panel.css?inline',
         './styles/icon-button.css?inline',
-        './styles/sidebar.css?inline'
+        './styles/sidebar.css?inline',
       ];
 
       expectedImportPaths.forEach(path => {
@@ -128,7 +128,7 @@ describe('Sidebar Style Imports', () => {
         '.chat-input__send-button',
         '.dark .chat-input',
         '.chat-input--loading',
-        
+
         // Chat Panel selectors
         '.chat-panel',
         '.chat-panel__header',
@@ -147,7 +147,7 @@ describe('Sidebar Style Imports', () => {
         '.dark .chat-panel__message-count',
         '.dark .chat-panel__error',
         '.dark .chat-panel__footer',
-        
+
         // Icon Button selectors
         '.icon-button',
         '.icon-button--sm',
@@ -164,7 +164,7 @@ describe('Sidebar Style Imports', () => {
         '.icon-button__tooltip-container',
         '.icon-button__tooltip',
         '.dark .icon-button--secondary',
-        '.dark .icon-button--ghost'
+        '.dark .icon-button--ghost',
       ];
 
       // Verify each selector is a valid string (placeholder for CSS content verification)
@@ -196,14 +196,14 @@ describe('Sidebar Style Imports', () => {
     it('should inject consolidated styles into Shadow DOM correctly', () => {
       // Create style element like the sidebar does
       const style = document.createElement('style');
-      
+
       // Mock style content that would come from consolidated imports
       const mockConsolidatedStyles = `
         .chat-input { background: transparent; }
         .chat-panel { display: flex; }
         .icon-button { display: inline-flex; }
       `;
-      
+
       style.textContent = mockConsolidatedStyles;
       shadowRoot.appendChild(style);
 
@@ -222,7 +222,7 @@ describe('Sidebar Style Imports', () => {
         .dark .chat-panel { background: transparent; }
         .dark .icon-button--ghost { color: #9ca3af; }
       `;
-      
+
       style.textContent = mockDarkModeStyles;
       shadowRoot.appendChild(style);
 
@@ -240,7 +240,7 @@ describe('Sidebar Style Imports', () => {
           .chat-panel__title { font-size: 1rem; }
         }
       `;
-      
+
       style.textContent = mockResponsiveStyles;
       shadowRoot.appendChild(style);
 
@@ -258,7 +258,7 @@ describe('Sidebar Style Imports', () => {
       const expectedRelativePaths = [
         '../styles/chat-input.css',
         '../styles/chat-panel.css',
-        '../styles/icon-button.css'
+        '../styles/icon-button.css',
       ];
 
       expectedRelativePaths.forEach(path => {
@@ -274,7 +274,7 @@ describe('Sidebar Style Imports', () => {
       const expectedAbsolutePaths = [
         './styles/chat-input.css',
         './styles/chat-panel.css',
-        './styles/icon-button.css'
+        './styles/icon-button.css',
       ];
 
       expectedAbsolutePaths.forEach(path => {
@@ -291,7 +291,7 @@ describe('Sidebar Style Imports', () => {
       const expectedViteImports = [
         './styles/chat-input.css?inline',
         './styles/chat-panel.css?inline',
-        './styles/icon-button.css?inline'
+        './styles/icon-button.css?inline',
       ];
 
       expectedViteImports.forEach(importPath => {
@@ -309,7 +309,7 @@ describe('Sidebar Style Imports', () => {
         '--color-background',
         '--radius-md',
         '--size-8',
-        '--text-sm'
+        '--text-sm',
       ];
 
       expectedCssVariables.forEach(variable => {
@@ -326,7 +326,7 @@ describe('Sidebar Style Imports', () => {
         '.ai-sidebar-container .chat-input',
         '.dark .chat-panel__header',
         '.icon-button--primary:hover',
-        '.chat-panel:focus-within .chat-panel__header'
+        '.chat-panel:focus-within .chat-panel__header',
       ];
 
       specificityExamples.forEach(selector => {
@@ -341,7 +341,7 @@ describe('Sidebar Style Imports', () => {
         'background: transparent !important',
         'color: #ffffff !important',
         'border: none !important',
-        'outline: none !important'
+        'outline: none !important',
       ];
 
       importantDeclarations.forEach(declaration => {
@@ -356,7 +356,7 @@ describe('Sidebar Style Imports', () => {
         '@keyframes slideDown',
         '@keyframes spin',
         'animation: slideDown 0.2s ease-out',
-        'animation: spin 1s linear infinite'
+        'animation: spin 1s linear infinite',
       ];
 
       expectedAnimations.forEach(animation => {

@@ -354,7 +354,6 @@ export const MessageList: React.FC<MessageListProps> = ({
     </div>
   );
 
-
   /**
    * Render scroll to bottom button
    */
@@ -456,7 +455,6 @@ export const MessageList: React.FC<MessageListProps> = ({
       {/* Virtualized message list */}
       {isVirtualized ? (
         <div className="h-full" style={{ height }}>
-
           {/* Virtualized messages */}
           {renderVirtualizedMessages()}
         </div>
@@ -469,7 +467,6 @@ export const MessageList: React.FC<MessageListProps> = ({
           onScroll={handleScroll}
           data-testid="message-list-container"
         >
-
           {/* Empty state */}
           {isEmpty && renderEmptyState()}
 

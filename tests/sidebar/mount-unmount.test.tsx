@@ -25,7 +25,7 @@ describe('ChatPanel Mount/Unmount', () => {
 
     // Check that Shadow DOM is attached
     expect(hostContainer?.shadowRoot).toBeTruthy();
-    
+
     // Check that container element exists inside Shadow DOM
     const shadowRoot = hostContainer?.shadowRoot;
     const root = shadowRoot?.getElementById('ai-browser-sidebar-root');
@@ -39,7 +39,7 @@ describe('ChatPanel Mount/Unmount', () => {
     // Check that ChatPanel is rendered (should find the overlay element)
     const chatPanel = shadowRoot?.querySelector('.ai-sidebar-overlay');
     expect(chatPanel).toBeTruthy();
-    
+
     // Check for ChatPanel specific elements
     const chatPanelTestId = shadowRoot?.querySelector('[data-testid="chat-panel"]');
     expect(chatPanelTestId).toBeTruthy();
@@ -50,12 +50,12 @@ describe('ChatPanel Mount/Unmount', () => {
 
     const hostContainer = document.getElementById('ai-browser-sidebar-host');
     const shadowRoot = hostContainer?.shadowRoot;
-    
+
     // Check that styles are present in Shadow DOM
     const styleElement = shadowRoot?.querySelector('style');
     expect(styleElement).toBeTruthy();
     expect(styleElement?.textContent).toBeTruthy();
-    
+
     // Verify key styles are included
     const styles = styleElement?.textContent || '';
     expect(styles).toContain('textarea');
@@ -81,14 +81,14 @@ describe('ChatPanel Mount/Unmount', () => {
 
     const hostContainer = document.getElementById('ai-browser-sidebar-host');
     const shadowRoot = hostContainer?.shadowRoot;
-    
+
     // Check that Shadow DOM is in closed mode for isolation
     expect(shadowRoot).toBeTruthy();
-    
+
     // Check that styles in Shadow DOM don't affect main document
     const mainDocStyle = document.querySelector('style');
     expect(mainDocStyle).toBeFalsy(); // No styles should be in main document
-    
+
     // Check that Shadow DOM has its own styles
     const shadowStyle = shadowRoot?.querySelector('style');
     expect(shadowStyle).toBeTruthy();
@@ -165,18 +165,18 @@ describe('ChatPanel Mount/Unmount', () => {
 
     const hostContainer = document.getElementById('ai-browser-sidebar-host');
     const shadowRoot = hostContainer?.shadowRoot;
-    
+
     // Check that ChatPanel is mounted with expected structure
     const chatPanel = shadowRoot?.querySelector('[data-testid="chat-panel"]');
     expect(chatPanel).toBeTruthy();
-    
+
     // Check for key ChatPanel elements
     const sidebarContainer = shadowRoot?.querySelector('[data-testid="sidebar-container"]');
     const sidebarHeader = shadowRoot?.querySelector('[data-testid="sidebar-header"]');
     const sidebarBody = shadowRoot?.querySelector('[data-testid="sidebar-body"]');
     const sidebarFooter = shadowRoot?.querySelector('[data-testid="sidebar-footer"]');
     const resizeHandle = shadowRoot?.querySelector('[data-testid="resize-handle"]');
-    
+
     expect(sidebarContainer).toBeTruthy();
     expect(sidebarHeader).toBeTruthy();
     expect(sidebarBody).toBeTruthy();
@@ -186,16 +186,16 @@ describe('ChatPanel Mount/Unmount', () => {
 
   it('should handle component unmounting and cleanup properly', () => {
     mountSidebar();
-    
+
     // Verify ChatPanel is mounted
     const hostContainer = document.getElementById('ai-browser-sidebar-host');
     const shadowRoot = hostContainer?.shadowRoot;
     const chatPanel = shadowRoot?.querySelector('[data-testid="chat-panel"]');
     expect(chatPanel).toBeTruthy();
-    
+
     // Unmount and verify cleanup
     unmountSidebar();
-    
+
     // Host container should be completely removed
     const hostAfterUnmount = document.getElementById('ai-browser-sidebar-host');
     expect(hostAfterUnmount).toBeFalsy();

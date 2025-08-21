@@ -1,9 +1,6 @@
 /** @type {import('tailwindcss').Config} */
 export default {
-  content: [
-    "./src/**/*.{ts,tsx}",
-    "./src/sidebar/**/*.{ts,tsx}",
-  ],
+  content: ['./src/**/*.{ts,tsx}', './src/sidebar/**/*.{ts,tsx}'],
   darkMode: 'class',
   theme: {
     extend: {
@@ -83,11 +80,11 @@ export default {
         },
       },
       fontSize: {
-        'xs': ['0.75rem', { lineHeight: '1rem' }],
-        'sm': ['0.875rem', { lineHeight: '1.25rem' }],
-        'base': ['1rem', { lineHeight: '1.5rem' }],
-        'lg': ['1.125rem', { lineHeight: '1.75rem' }],
-        'xl': ['1.25rem', { lineHeight: '1.75rem' }],
+        xs: ['0.75rem', { lineHeight: '1rem' }],
+        sm: ['0.875rem', { lineHeight: '1.25rem' }],
+        base: ['1rem', { lineHeight: '1.5rem' }],
+        lg: ['1.125rem', { lineHeight: '1.75rem' }],
+        xl: ['1.25rem', { lineHeight: '1.75rem' }],
         '2xl': ['1.5rem', { lineHeight: '2rem' }],
         '3xl': ['1.875rem', { lineHeight: '2.25rem' }],
         '4xl': ['2.25rem', { lineHeight: '2.5rem' }],
@@ -136,18 +133,18 @@ export default {
         full: '9999px',
       },
       spacing: {
-        '18': '4.5rem',
-        '88': '22rem',
-        '128': '32rem',
-        '144': '36rem',
+        18: '4.5rem',
+        88: '22rem',
+        128: '32rem',
+        144: '36rem',
       },
       zIndex: {
-        '60': '60',
-        '70': '70',
-        '80': '80',
-        '90': '90',
-        '100': '100',
-        'sidebar': '2147483647',
+        60: '60',
+        70: '70',
+        80: '80',
+        90: '90',
+        100: '100',
+        sidebar: '2147483647',
       },
       animation: {
         'pulse-soft': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
@@ -159,7 +156,7 @@ export default {
         'fade-out': 'fadeOut 0.2s ease-out',
         'bounce-soft': 'bounce 1s ease-in-out',
         'spin-slow': 'spin 3s linear infinite',
-        'typing': 'typing 1.5s steps(40) infinite',
+        typing: 'typing 1.5s steps(40) infinite',
       },
       keyframes: {
         slideUp: {
@@ -196,19 +193,19 @@ export default {
         xs: '2px',
       },
       screens: {
-        'xs': '475px',
+        xs: '475px',
       },
       maxWidth: {
-        'sidebar': '800px',
+        sidebar: '800px',
       },
       minWidth: {
-        'sidebar': '300px',
+        sidebar: '300px',
       },
       transitionProperty: {
-        'width': 'width',
-        'spacing': 'margin, padding',
+        width: 'width',
+        spacing: 'margin, padding',
       },
     },
   },
   plugins: [],
-}
+};

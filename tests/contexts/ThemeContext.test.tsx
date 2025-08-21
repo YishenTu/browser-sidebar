@@ -31,9 +31,13 @@ import * as themeUtils from '../../src/utils/theme';
 import type { Theme } from '../../src/types/settings';
 
 // Test component to use the theme context
-const TestComponent = ({ onThemeChange }: { onThemeChange?: (theme: Theme, effectiveTheme: 'light' | 'dark') => void }) => {
+const TestComponent = ({
+  onThemeChange,
+}: {
+  onThemeChange?: (theme: Theme, effectiveTheme: 'light' | 'dark') => void;
+}) => {
   const { theme, effectiveTheme, setTheme, isSystemTheme } = useTheme();
-  
+
   React.useEffect(() => {
     if (onThemeChange) {
       onThemeChange(theme, effectiveTheme);
@@ -45,22 +49,13 @@ const TestComponent = ({ onThemeChange }: { onThemeChange?: (theme: Theme, effec
       <div data-testid="current-theme">{theme}</div>
       <div data-testid="effective-theme">{effectiveTheme}</div>
       <div data-testid="is-system-theme">{isSystemTheme.toString()}</div>
-      <button 
-        data-testid="set-light" 
-        onClick={() => setTheme('light')}
-      >
+      <button data-testid="set-light" onClick={() => setTheme('light')}>
         Set Light
       </button>
-      <button 
-        data-testid="set-dark" 
-        onClick={() => setTheme('dark')}
-      >
+      <button data-testid="set-dark" onClick={() => setTheme('dark')}>
         Set Dark
       </button>
-      <button 
-        data-testid="set-auto" 
-        onClick={() => setTheme('auto')}
-      >
+      <button data-testid="set-auto" onClick={() => setTheme('auto')}>
         Set Auto
       </button>
     </div>
@@ -115,7 +110,9 @@ describe('ThemeContext', () => {
     vi.mocked(themeUtils.getCurrentTheme).mockImplementation(mockGetCurrentTheme);
     vi.mocked(themeUtils.setTheme).mockImplementation(mockSetTheme);
     vi.mocked(themeUtils.getEffectiveTheme).mockImplementation(mockGetEffectiveTheme);
-    vi.mocked(themeUtils.createThemeMediaQueryListener).mockImplementation(mockCreateThemeMediaQueryListener);
+    vi.mocked(themeUtils.createThemeMediaQueryListener).mockImplementation(
+      mockCreateThemeMediaQueryListener
+    );
     vi.mocked(themeUtils.getSidebarContainer).mockImplementation(mockGetSidebarContainer);
 
     // Setup settings store mock
@@ -300,7 +297,7 @@ describe('ThemeContext', () => {
 
     it('should update effective theme when theme changes', async () => {
       mockUpdateTheme.mockResolvedValue(undefined);
-      
+
       // First render with light theme
       const { rerender } = render(
         <ThemeProvider>
@@ -364,7 +361,7 @@ describe('ThemeContext', () => {
 
     it('should respond to system theme changes when in auto mode', () => {
       let mediaQueryCallback: (isDark: boolean) => void;
-      mockCreateThemeMediaQueryListener.mockImplementation((callback) => {
+      mockCreateThemeMediaQueryListener.mockImplementation(callback => {
         mediaQueryCallback = callback;
         return () => {};
       });
@@ -397,7 +394,7 @@ describe('ThemeContext', () => {
 
     it('should not respond to system theme changes when not in auto mode', () => {
       let mediaQueryCallback: (isDark: boolean) => void;
-      mockCreateThemeMediaQueryListener.mockImplementation((callback) => {
+      mockCreateThemeMediaQueryListener.mockImplementation(callback => {
         mediaQueryCallback = callback;
         return () => {};
       });
@@ -490,7 +487,7 @@ describe('ThemeContext', () => {
 
     it('should sync with settings store changes', () => {
       const mockStore = vi.mocked(useSettingsStore).getMockImplementation()!;
-      
+
       const { rerender } = render(
         <ThemeProvider>
           <TestComponent />
@@ -524,7 +521,7 @@ describe('ThemeContext', () => {
   describe('Theme Context State', () => {
     it('should correctly identify system theme mode', () => {
       const mockStore = vi.mocked(useSettingsStore).getMockImplementation()!;
-      
+
       // Test auto mode
       vi.mocked(useSettingsStore).mockReturnValue({
         ...mockStore(),

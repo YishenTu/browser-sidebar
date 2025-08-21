@@ -1,6 +1,6 @@
 /**
  * @file Example usage of Chrome manifest types
- * 
+ *
  * This file demonstrates how to use the manifest types in practice
  * for type checking and validation in extension development.
  */
@@ -10,7 +10,7 @@ import {
   validateManifest,
   createSidebarManifestTemplate,
   isChromeManifest,
-  Permission
+  Permission,
 } from './manifest';
 
 /**
@@ -23,13 +23,13 @@ export function createExtensionManifest(config: {
   permissions?: Permission[];
 }): ChromeManifest {
   const template = createSidebarManifestTemplate();
-  
+
   return {
     ...template,
     name: config.name,
     version: config.version,
     description: config.description,
-    permissions: config.permissions || template.permissions
+    permissions: config.permissions || template.permissions,
   };
 }
 
@@ -45,24 +45,24 @@ export function validateExtensionManifest(manifest: unknown): {
   if (!isChromeManifest(manifest)) {
     return {
       success: false,
-      issues: ['Invalid manifest structure']
+      issues: ['Invalid manifest structure'],
     };
   }
-  
+
   // Detailed validation
   const validation = validateManifest(manifest);
-  
+
   if (!validation.isValid) {
     return {
       success: false,
-      issues: validation.errors
+      issues: validation.errors,
     };
   }
-  
+
   return {
     success: true,
     manifest,
-    issues: validation.warnings
+    issues: validation.warnings,
   };
 }
 
@@ -75,27 +75,27 @@ export function updateManifestPermissions(
 ): ChromeManifest {
   return {
     ...manifest,
-    permissions: [...(manifest.permissions || []), ...newPermissions]
+    permissions: [...(manifest.permissions || []), ...newPermissions],
   };
 }
 
 /**
  * Example usage in extension development:
- * 
+ *
  * ```typescript
  * import { createExtensionManifest, validateExtensionManifest } from './manifest-example';
- * 
+ *
  * // Create a new manifest
  * const manifest = createExtensionManifest({
  *   name: 'My AI Sidebar',
  *   version: '1.0.0',
  *   description: 'Custom AI sidebar extension'
  * });
- * 
+ *
  * // Validate manifest from external source
  * const loadedManifest = JSON.parse(manifestJson);
  * const result = validateExtensionManifest(loadedManifest);
- * 
+ *
  * if (result.success) {
  *   console.log('Manifest is valid!');
  *   if (result.issues.length > 0) {

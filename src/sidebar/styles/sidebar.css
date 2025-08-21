@@ -15,10 +15,12 @@
 .ai-sidebar-container {
   width: 100%;
   height: 100%;
-  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5), 0 10px 10px -5px rgba(0, 0, 0, 0.4);
+  box-shadow:
+    0 20px 25px -5px rgba(0, 0, 0, 0.5),
+    0 10px 10px -5px rgba(0, 0, 0, 0.4);
   border-radius: 12px;
   overflow: hidden;
-  background: #1a1a1a; /* Very dark background to match reference */
+  background: rgba(26, 26, 26, 0.8); /* 20% transparent (80% opacity) */
   color: #e5e7eb;
   display: flex;
   flex-direction: column;
@@ -31,7 +33,7 @@
   align-items: center;
   justify-content: space-between;
   padding: 8px 16px; /* Reduced padding */
-  background: #1a1a1a; /* Same as main area */
+  background: rgba(26, 26, 26, 0.8); /* 20% transparent (80% opacity) */
   border-bottom: none; /* Remove separator */
   user-select: none;
   cursor: grab;
@@ -52,13 +54,7 @@
   color: var(--text-primary);
 }
 
-.ai-sidebar-message-count {
-  font-size: var(--font-size-xs);
-  color: var(--text-secondary);
-  background: var(--background-secondary);
-  padding: 2px 8px;
-  border-radius: var(--radius-sm);
-}
+/* .ai-sidebar-message-count not used */
 
 .ai-sidebar-header-actions {
   display: flex;
@@ -97,7 +93,7 @@
   flex: 1;
   overflow-y: auto; /* Allow vertical scrolling */
   overflow-x: hidden; /* Prevent horizontal scroll */
-  background: #1a1a1a; /* Match container background */
+  background: rgba(26, 26, 26, 0.8); /* 20% transparent (80% opacity) */
   display: flex;
   flex-direction: column;
   min-height: 0; /* Important for flex children to scroll properly */
@@ -105,30 +101,85 @@
 
 .ai-sidebar-footer {
   padding: 8px;
-  background: #1a1a1a; /* Same as main area */
+  background: rgba(26, 26, 26, 0.8); /* 20% transparent (80% opacity) */
   border-top: none; /* Remove separator */
   width: 100%;
   box-sizing: border-box;
 }
 
 /* Remove old content styles */
-.ai-sidebar-content {
-  display: none;
-}
+/* .ai-sidebar-content removed (unused) */
 
 .ai-sidebar-resize-handle {
   position: absolute;
-  left: -4px; /* left edge */
+  background: transparent;
+}
+
+/* West (left) */
+.ai-sidebar-resize-handle--w {
+  left: -4px;
   top: 0;
   width: 8px;
   height: 100%;
   cursor: ew-resize;
-  background: transparent;
+}
+
+/* East (right) */
+.ai-sidebar-resize-handle--e {
+  right: -4px;
+  top: 0;
+  width: 8px;
+  height: 100%;
+  cursor: ew-resize;
+}
+
+/* North (top) */
+.ai-sidebar-resize-handle--n {
+  top: -4px;
+  left: 0;
+  width: 100%;
+  height: 8px;
+  cursor: ns-resize;
+}
+
+/* South (bottom) */
+.ai-sidebar-resize-handle--s {
+  bottom: -4px;
+  left: 0;
+  width: 100%;
+  height: 8px;
+  cursor: ns-resize;
 }
 
 .ai-sidebar-resize-handle:hover {
   background: var(--primary-500);
   opacity: 0.3;
+}
+
+/* Corner handles */
+.ai-sidebar-resize-handle--nw {
+  top: -6px;
+  left: -6px;
+  width: 12px;
+  height: 12px;
+}
+.ai-sidebar-resize-handle--ne {
+  top: -6px;
+  right: -6px;
+  width: 12px;
+  height: 12px;
+}
+.ai-sidebar-resize-handle--sw {
+  bottom: -6px;
+  left: -6px;
+  width: 12px;
+  height: 12px;
+}
+.ai-sidebar-resize-handle--se {
+  bottom: -6px;
+  right: -6px;
+  width: 12px;
+  height: 12px;
 }
 
 /* ==================== CHAT INPUT STYLES ==================== */
@@ -314,97 +365,10 @@
 
 /* ==================== CHAT PANEL STYLES ==================== */
 
-.chat-panel {
-  display: flex;
-  flex-direction: column;
-  height: 100%;
-  max-height: 100vh;
-  background: #1a1a1a; /* Dark background matching reference */
-  border-radius: 0;
-  overflow: hidden;
-}
-
-.chat-panel__header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 16px;
-  border-bottom: 1px solid rgba(75, 85, 99, 0.2);
-  background: #212121; /* Slightly lighter header */
-  flex-shrink: 0;
-}
-
-.chat-panel__header-content {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-}
-
-.chat-panel__title {
-  font-size: var(--font-size-lg);
-  font-weight: var(--font-weight-semibold);
-  color: var(--text-primary);
-  margin: 0;
-}
-
-.chat-panel__message-count {
-  font-size: 12px;
-  color: #9ca3af;
-  background: rgba(75, 85, 99, 0.2);
-  padding: 4px 8px;
-  border-radius: 6px;
-}
-
-.chat-panel__controls {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-.chat-panel__error {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0.75rem 1rem;
-  background: rgba(239, 68, 68, 0.1);
-  border-bottom: 1px solid rgba(239, 68, 68, 0.2);
-  color: #ef4444;
-  font-size: 0.875rem;
-  flex-shrink: 0;
-}
-
-.chat-panel__error-message {
-  flex: 1;
-  margin-right: 0.5rem;
-}
-
-.chat-panel__error-dismiss {
-  flex-shrink: 0;
-}
-
-.chat-panel__body {
-  flex: 1;
-  min-height: 0;
-  overflow: hidden;
-}
-
-.chat-panel__footer {
-  padding: 16px;
-  border-top: none; /* Remove separator */
-  background: #1a1a1a; /* Same as main area */
-  flex-shrink: 0;
-}
+/* Removed unused .chat-panel* selectors (refactor) */
 
 /* Message list container styles */
-.message-list {
-  flex: 1;
-  overflow-y: auto;
-  overflow-x: hidden;
-  padding: 16px 8px; /* Reduced horizontal padding since messages have their own */
-  background: #1a1a1a;
-  min-height: 0; /* Important for proper scrolling in flex containers */
-  height: 100%;
-}
+/* Removed .message-list block (unused) */
 
 /* Message bubble styles */
 .message-bubble--user {
@@ -468,94 +432,9 @@
 }
 
 /* Custom scrollbar for dark theme */
-.message-list::-webkit-scrollbar {
-  width: 8px;
-}
+/* Removed .message-list scrollbar styling (unused) */
 
-.message-list::-webkit-scrollbar-track {
-  background: rgba(75, 85, 99, 0.1);
-}
-
-.message-list::-webkit-scrollbar-thumb {
-  background: rgba(75, 85, 99, 0.3);
-  border-radius: 4px;
-}
-
-.message-list::-webkit-scrollbar-thumb:hover {
-  background: rgba(75, 85, 99, 0.5);
-}
-
-/* Responsive design */
-@media (max-width: 640px) {
-  .chat-panel__header {
-    padding: 0.75rem;
-  }
-
-  .chat-panel__title {
-    font-size: 1rem;
-  }
-
-  .chat-panel__message-count {
-    font-size: 0.75rem;
-    padding: 0.125rem 0.375rem;
-  }
-
-  .chat-panel__footer {
-    padding: 0.75rem;
-  }
-
-  .chat-panel__error {
-    padding: 0.5rem 0.75rem;
-    font-size: 0.75rem;
-  }
-}
-
-/* Focus management for accessibility */
-.chat-panel:focus-within .chat-panel__header {
-  border-bottom-color: #3b82f6;
-}
-
-.chat-panel:focus-within .chat-panel__footer {
-  border-top-color: #3b82f6;
-}
-
-/* Animation support */
-.chat-panel__error {
-  animation: slideDown 0.2s ease-out;
-}
-
-@keyframes slideDown {
-  from {
-    opacity: 0;
-    transform: translateY(-8px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-/* High contrast mode support */
-@media (prefers-contrast: high) {
-  .chat-panel__header {
-    border-bottom-width: 2px;
-  }
-
-  .chat-panel__footer {
-    border-top-width: 2px;
-  }
-
-  .chat-panel__error {
-    border-bottom-width: 2px;
-  }
-}
-
-/* Reduced motion support */
-@media (prefers-reduced-motion: reduce) {
-  .chat-panel__error {
-    animation: none;
-  }
-}
+/* Removed responsive/animation blocks for unused .chat-panel* selectors */
 
 /* ==================== ICON BUTTON STYLES ==================== */
 
@@ -720,32 +599,10 @@
 }
 
 /* Additional modern styling for the chat interface */
-.chat-message-list {
-  padding: var(--spacing-md);
-  gap: var(--spacing-md);
-}
-
-.chat-message {
-  margin-bottom: var(--spacing-md);
-}
+/* Removed .chat-message* (unused) */
 
 /* Scroll styling for webkit browsers */
-.chat-panel__body::-webkit-scrollbar {
-  width: 6px;
-}
-
-.chat-panel__body::-webkit-scrollbar-track {
-  background: var(--background-primary);
-}
-
-.chat-panel__body::-webkit-scrollbar-thumb {
-  background: var(--border-primary);
-  border-radius: var(--radius-full);
-}
-
-.chat-panel__body::-webkit-scrollbar-thumb:hover {
-  background: var(--border-secondary);
-}
+/* Removed .chat-panel__body scrollbar styling (unused) */
 
 /* Ensure icons are centered */
 .icon-button svg {
