@@ -23,6 +23,8 @@ export const OBJECT_STORES = {
   CONVERSATIONS: 'conversations',
   SETTINGS: 'settings',
   API_KEYS: 'apiKeys',
+  API_KEY_USAGE: 'api_key_usage',
+  API_KEY_AUDIT: 'api_key_audit',
   CACHE: 'cache',
   TAB_CONTENT: 'tabContent',
 } as const;
@@ -120,6 +122,8 @@ const REQUIRED_STORES = [
   OBJECT_STORES.CONVERSATIONS,
   OBJECT_STORES.SETTINGS,
   OBJECT_STORES.API_KEYS,
+  OBJECT_STORES.API_KEY_USAGE,
+  OBJECT_STORES.API_KEY_AUDIT,
   OBJECT_STORES.CACHE,
   OBJECT_STORES.TAB_CONTENT,
 ] as const;
@@ -141,9 +145,29 @@ const SCHEMA_DEFINITION: DatabaseSchema = {
       indexes: [],
     },
     [OBJECT_STORES.API_KEYS]: {
-      keyPath: 'provider',
+      keyPath: 'id',
       autoIncrement: false,
-      indexes: [],
+      indexes: [
+        { name: 'provider', keyPath: 'provider', options: { unique: false } },
+        { name: 'status', keyPath: 'status', options: { unique: false } },
+        { name: 'createdAt', keyPath: 'createdAt', options: { unique: false } },
+      ],
+    },
+    [OBJECT_STORES.API_KEY_USAGE]: {
+      keyPath: 'keyId',
+      autoIncrement: false,
+      indexes: [
+        { name: 'timestamp', keyPath: 'timestamp', options: { unique: false } },
+      ],
+    },
+    [OBJECT_STORES.API_KEY_AUDIT]: {
+      keyPath: 'id',
+      autoIncrement: false,
+      indexes: [
+        { name: 'event', keyPath: 'event', options: { unique: false } },
+        { name: 'keyId', keyPath: 'keyId', options: { unique: false } },
+        { name: 'timestamp', keyPath: 'timestamp', options: { unique: false } },
+      ],
     },
     [OBJECT_STORES.CACHE]: {
       keyPath: 'key',

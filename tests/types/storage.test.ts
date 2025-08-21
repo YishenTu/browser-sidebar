@@ -308,37 +308,98 @@ describe('Storage Types - Core Interfaces', () => {
     it('should define correct API key storage structure', () => {
       const storage: APIKeyStorage = {
         id: 'api_key_1',
-        provider: 'openai',
-        encryptedKey: 'encrypted_data_here',
-        keyHash: 'hash_for_verification',
-        createdAt: Date.now(),
-        lastUsed: Date.now(),
-        expiresAt: Date.now() + 86400000, // 24 hours
         metadata: {
+          id: 'api_key_1',
+          provider: 'openai',
           keyType: 'standard',
+          status: 'active',
+          name: 'Test OpenAI Key',
+          createdAt: Date.now(),
+          lastUsed: Date.now(),
+          maskedKey: 'sk-...abc123',
+          expiresAt: Date.now() + 86400000, // 24 hours
           permissions: ['read', 'write'],
-          rateLimit: 1000,
+          tags: ['production']
         },
+        encryptedData: {
+          algorithm: 'AES-GCM',
+          iv: new Uint8Array(12),
+          data: new Uint8Array(32),
+          version: 1
+        },
+        keyHash: 'hash_for_verification',
+        checksum: 'integrity_checksum',
         storageVersion: 1,
+        configuration: {
+          rateLimit: {
+            requestsPerMinute: 1000,
+            enforceLimit: true
+          }
+        },
+        usageStats: {
+          totalRequests: 100,
+          successfulRequests: 95,
+          failedRequests: 5,
+          totalTokens: 10000,
+          inputTokens: 6000,
+          outputTokens: 4000,
+          totalCost: 2.50,
+          avgRequestTime: 500,
+          lastResetAt: Date.now()
+        },
+        rotationStatus: {
+          status: 'none',
+          rotationHistory: []
+        }
       };
 
       expect(typeof storage.id).toBe('string');
-      expect(typeof storage.provider).toBe('string');
-      expect(typeof storage.encryptedKey).toBe('string');
+      expect(storage.metadata.provider).toBe('openai');
       expect(typeof storage.keyHash).toBe('string');
-      expect(typeof storage.createdAt).toBe('number');
+      expect(typeof storage.metadata.createdAt).toBe('number');
       expect(typeof storage.storageVersion).toBe('number');
+      expect(typeof storage.usageStats.totalRequests).toBe('number');
+      expect(storage.rotationStatus.status).toBe('none');
     });
 
     it('should validate API key storage with type guard', () => {
       const validStorage: APIKeyStorage = {
         id: 'key_1',
-        provider: 'openai',
-        encryptedKey: 'encrypted',
+        metadata: {
+          id: 'key_1',
+          provider: 'openai',
+          keyType: 'standard',
+          status: 'active',
+          name: 'Test Key',
+          createdAt: Date.now(),
+          lastUsed: Date.now(),
+          maskedKey: 'sk-...test'
+        },
+        encryptedData: {
+          algorithm: 'AES-GCM',
+          iv: new Uint8Array(12),
+          data: new Uint8Array(32),
+          version: 1
+        },
         keyHash: 'hash',
-        createdAt: Date.now(),
-        lastUsed: Date.now(),
+        checksum: 'checksum',
         storageVersion: 1,
+        configuration: {},
+        usageStats: {
+          totalRequests: 0,
+          successfulRequests: 0,
+          failedRequests: 0,
+          totalTokens: 0,
+          inputTokens: 0,
+          outputTokens: 0,
+          totalCost: 0,
+          avgRequestTime: 0,
+          lastResetAt: Date.now()
+        },
+        rotationStatus: {
+          status: 'none',
+          rotationHistory: []
+        }
       };
 
       expect(isAPIKeyStorage(validStorage)).toBe(true);

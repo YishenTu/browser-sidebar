@@ -12,6 +12,8 @@
 
 import type { ChatMessage, ConversationMetadata } from './chat';
 import type { Settings } from './settings';
+import type { APIKeyStorage as APIKeyStorageType } from './apiKeys';
+import { isAPIKeyStorage as isAPIKeyStorageFn } from './apiKeys';
 
 // =============================================================================
 // Storage Version Management
@@ -128,33 +130,9 @@ export interface SettingsStorage extends Settings {
 }
 
 /**
- * Encrypted API key storage with metadata
+ * Re-export APIKeyStorage from apiKeys module for backward compatibility
  */
-export interface APIKeyStorage {
-  /** Unique key identifier */
-  id: string;
-  /** AI provider name */
-  provider: string;
-  /** Encrypted API key data */
-  encryptedKey: string;
-  /** Hash for verification without decryption */
-  keyHash: string;
-  /** Creation timestamp */
-  createdAt: number;
-  /** Last usage timestamp */
-  lastUsed: number;
-  /** Optional expiration timestamp */
-  expiresAt?: number;
-  /** Additional metadata */
-  metadata?: {
-    keyType?: 'standard' | 'pro' | 'enterprise';
-    permissions?: string[];
-    rateLimit?: number;
-    [key: string]: unknown;
-  };
-  /** Storage schema version */
-  storageVersion: StorageVersion;
-}
+export type APIKeyStorage = APIKeyStorageType;
 
 /**
  * Cache entry metadata
@@ -331,21 +309,9 @@ export function isSettingsStorage(value: unknown): value is SettingsStorage {
 }
 
 /**
- * Type guard for APIKeyStorage
+ * Type guard for APIKeyStorage (re-exported from apiKeys module)
  */
-export function isAPIKeyStorage(value: unknown): value is APIKeyStorage {
-  return (
-    typeof value === 'object' &&
-    value !== null &&
-    typeof (value as any).id === 'string' &&
-    typeof (value as any).provider === 'string' &&
-    typeof (value as any).encryptedKey === 'string' &&
-    typeof (value as any).keyHash === 'string' &&
-    typeof (value as any).createdAt === 'number' &&
-    typeof (value as any).lastUsed === 'number' &&
-    typeof (value as any).storageVersion === 'number'
-  );
-}
+export const isAPIKeyStorage = isAPIKeyStorageFn;
 
 /**
  * Type guard for CacheEntry

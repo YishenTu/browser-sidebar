@@ -30,11 +30,11 @@ Architecture: The extension uses ONLY a custom injected React sidebar (no popup,
 
 - [x] Stage 1: Extension Infrastructure (15/15 tasks) ✅ COMPLETED
 - [x] Stage 2: Chat Panel UI (24/24 tasks) ✅ COMPLETED
-- [ ] Stage 3: Storage & Security (6/18 tasks)
+- [ ] Stage 3: Storage & Security (12/18 tasks)
 - [ ] Stage 4: AI Provider System (0/22 tasks)
 - [ ] Stage 5: Tab Content Extraction (0/21 tasks)
 
-**Total Progress: 45/100 tasks**
+**Total Progress: 51/100 tasks**
 
 ---
 
@@ -123,7 +123,7 @@ Deliverable highlight: Secure storage layer with encrypted API key storage, conv
 
 ⚡ **Sequential Tasks:**
 
-- [ ] **Task 3.2.1a** - Crypto Utilities 🧪
+- [x] **Task 3.2.1a** - Crypto Utilities 🧪 ✅
   - Prerequisites: Task 3.1.1b
   - Tests First:
     - Test key generation
@@ -135,7 +135,7 @@ Deliverable highlight: Secure storage layer with encrypted API key storage, conv
     - `tests/security/crypto.test.ts`
   - Acceptance: Encryption works correctly
 
-- [ ] **Task 3.2.1b** - Key Derivation 🧪
+- [x] **Task 3.2.1b** - Key Derivation 🧪 ✅
   - Prerequisites: Task 3.2.1a
   - Tests First:
     - Test PBKDF2 derivation
@@ -147,7 +147,7 @@ Deliverable highlight: Secure storage layer with encrypted API key storage, conv
     - `tests/security/keyDerivation.test.ts`
   - Acceptance: Keys derive consistently
 
-- [ ] **Task 3.2.1c** - Encryption Service 🧪
+- [x] **Task 3.2.1c** - Encryption Service 🧪 ✅
   - Prerequisites: Task 3.2.1b
   - Tests First:
     - Test service initialization
@@ -159,7 +159,7 @@ Deliverable highlight: Secure storage layer with encrypted API key storage, conv
     - `tests/security/encryptionService.test.ts`
   - Acceptance: Service encrypts data
 
-- [ ] **Task 3.2.2a** - API Key Types 🧪
+- [x] **Task 3.2.2a** - API Key Types 🧪 ✅
   - Prerequisites: Task 3.2.1c
   - Tests First:
     - Test type definitions
@@ -170,7 +170,7 @@ Deliverable highlight: Secure storage layer with encrypted API key storage, conv
     - Validation schemas
   - Acceptance: Types are complete
 
-- [ ] **Task 3.2.2b** - API Key Storage 🧪
+- [x] **Task 3.2.2b** - API Key Storage 🧪 ✅
   - Prerequisites: Task 3.2.2a
   - Tests First:
     - Test encrypted storage
@@ -182,7 +182,7 @@ Deliverable highlight: Secure storage layer with encrypted API key storage, conv
     - `tests/storage/apiKeys.test.ts`
   - Acceptance: Keys stored securely
 
-- [ ] **Task 3.2.2c** - API Key Validation 🧪
+- [x] **Task 3.2.2c** - API Key Validation 🧪 ✅
   - Prerequisites: Task 3.2.2b
   - Tests First:
     - Test format validation

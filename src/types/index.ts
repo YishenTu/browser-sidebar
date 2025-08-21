@@ -17,8 +17,54 @@ export * from './settings';
 // Chat types and interfaces
 export * from './chat';
 
-// Storage types and utilities
-export * from './storage';
+// API key types and management
+export * from './apiKeys';
+
+// Storage types and utilities (excluding conflicting exports)
+export type {
+  StorageVersion,
+  StorageArea,
+  StorageKey,
+  SerializableValue,
+  SerializableContainer,
+  StorageContainer,
+  ConversationStorage,
+  SettingsStorage,
+  CacheMetadata,
+  CacheEntry,
+  CacheStorage,
+  StorageSchema,
+  MigrationScript,
+  LegacySettings
+} from './storage';
+
+export {
+  CURRENT_STORAGE_VERSION,
+  isSerializableValue,
+  isStorageContainer,
+  isConversationStorage,
+  isSettingsStorage,
+  isCacheEntry,
+  isCacheStorage,
+  isStorageSchema,
+  serialize,
+  deserialize,
+  serializeDate,
+  deserializeDate,
+  serializeMap,
+  deserializeMap,
+  serializeSet,
+  deserializeSet,
+  createStorageKey,
+  validateStorageKey,
+  getStorageArea,
+  createCacheEntry,
+  isCacheExpired,
+  cleanExpiredCache,
+  getCurrentVersion,
+  needsMigration,
+  applyMigrations
+} from './storage';
 
 // Note: CSS module declarations are in css.d.ts as ambient declarations
 // and don't need to be re-exported here
