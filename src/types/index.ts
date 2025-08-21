@@ -17,5 +17,8 @@ export * from './settings';
 // Chat types and interfaces
 export * from './chat';
 
+// Storage types and utilities
+export * from './storage';
+
 // Note: CSS module declarations are in css.d.ts as ambient declarations
 // and don't need to be re-exported here
