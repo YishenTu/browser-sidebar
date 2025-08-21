@@ -38,6 +38,10 @@ npm run typecheck    # TypeScript type checking only
 
 After `npm run build`, load the `dist` folder as an unpacked extension in Chrome/Arc/Edge at `chrome://extensions/`
 
+### Post-implementation note
+
+After you finish an implementation or fix, run `npx vite build` to regenerate the production `dist/` output before loading or reloading the extension.
+
 ## Architecture
 
 ### Core Design: Custom Sidebar Approach

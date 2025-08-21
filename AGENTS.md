@@ -20,6 +20,8 @@
 - `npm run lint` | `npm run format` | `npm run typecheck`: Quality checks
 - Load in Chrome: `chrome://extensions` → Developer mode → Load unpacked → select `dist/`
 
+Note: After finishing an implementation or fix, run `npx vite build` to regenerate the `dist/` folder before loading the extension.
+
 ## Coding Style & Naming Conventions
 
 - TypeScript (strict), React function components with hooks

@@ -118,12 +118,12 @@ export const ChatInput = React.forwardRef<HTMLTextAreaElement, ChatInputProps>(
       setIsSending(true);
 
       try {
-        await onSend(trimmedMessage);
-
-        // Clear input if configured to do so
+        // Clear input immediately after initiating send (before awaiting response)
         if (clearOnSend) {
           handleValueChange('');
         }
+
+        await onSend(trimmedMessage);
       } finally {
         setIsSending(false);
       }
