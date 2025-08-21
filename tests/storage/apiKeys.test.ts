@@ -3,13 +3,13 @@
  *
  * Comprehensive test suite for secure API key storage implementation.
  * Tests cover encryption, storage, retrieval, deletion, validation, and security features.
- * 
+ *
  * This test file follows TDD methodology - tests are written first to define the
  * expected behavior of the API key storage system.
  */
 
 import { describe, it, expect, beforeEach, afterEach, vi, beforeAll, afterAll } from 'vitest';
-import { 
+import {
   APIKeyStorage,
   addAPIKey,
   getAPIKey,
@@ -26,7 +26,7 @@ import {
   testKeyConnection,
   getHealthStatus,
   initializeStorage,
-  shutdown
+  shutdown,
 } from '../../src/storage/apiKeys';
 
 import type {
@@ -41,18 +41,20 @@ import type {
   ConnectionTestResult,
   HealthCheckResult,
   ImportResult,
-  EncryptedAPIKey
+  EncryptedAPIKey,
 } from '../../src/types/apiKeys';
 
 import { EncryptionService } from '../../src/security/encryptionService';
 import { dbInstance } from '../../src/storage/indexedDB';
 import * as chromeStorage from '../../src/storage/chromeStorage';
+import { OBJECT_STORES } from '../../src/storage/schema';
+import { hashData } from '../../src/security/crypto';
 
 // Mock external dependencies
 vi.mock('../../src/security/encryptionService', () => ({
   EncryptionService: {
-    getInstance: vi.fn()
-  }
+    getInstance: vi.fn(),
+  },
 }));
 
 vi.mock('../../src/storage/indexedDB', () => ({
@@ -65,8 +67,8 @@ vi.mock('../../src/storage/indexedDB', () => ({
     getAll: vi.fn(),
     query: vi.fn(),
     batchAdd: vi.fn(),
-    batchDelete: vi.fn()
-  }
+    batchDelete: vi.fn(),
+  },
 }));
 
 vi.mock('../../src/storage/chromeStorage', () => ({
@@ -74,7 +76,7 @@ vi.mock('../../src/storage/chromeStorage', () => ({
   set: vi.fn(),
   remove: vi.fn(),
   getBatch: vi.fn(),
-  setBatch: vi.fn()
+  setBatch: vi.fn(),
 }));
 
 // Mock Chrome APIs
@@ -87,36 +89,36 @@ global.chrome = {
       clear: vi.fn(),
       onChanged: {
         addListener: vi.fn(),
-        removeListener: vi.fn()
-      }
+        removeListener: vi.fn(),
+      },
     },
     sync: {
       get: vi.fn(),
       set: vi.fn(),
       remove: vi.fn(),
-      clear: vi.fn()
-    }
+      clear: vi.fn(),
+    },
   },
   runtime: {
     sendMessage: vi.fn(),
     onMessage: {
       addListener: vi.fn(),
-      removeListener: vi.fn()
-    }
-  }
+      removeListener: vi.fn(),
+    },
+  },
 } as any;
 
 describe('API Key Storage', () => {
   // Test data
   const mockPassword = 'test-password-123';
-  const mockOpenAIKey = 'sk-1234567890abcdefghijklmnopqrstuvwxyzABCDEFGH';
-  const mockAnthropicKey = 'sk-ant-1234567890abcdefghijklmnopqrstuvwxyzABCDEF';
-  
+  const mockOpenAIKey = 'sk-1234567890abcdefghijklmnopqrstuvwxyzABCDEFGHIJKL';
+  const mockAnthropicKey = 'sk-ant-1234567890abcdefghijklmnopqrstuvwxyzABCDEFGHIJKL';
+
   const mockEncryptedData = {
     data: new Uint8Array([1, 2, 3, 4]),
     iv: new Uint8Array([5, 6, 7, 8]),
     algorithm: 'AES-GCM' as const,
-    version: 1
+    version: 1,
   };
 
   const mockAPIKey: CreateAPIKeyInput = {
@@ -125,7 +127,7 @@ describe('API Key Storage', () => {
     name: 'Test OpenAI Key',
     description: 'Test key for unit tests',
     tags: ['test', 'openai'],
-    permissions: ['read', 'write']
+    permissions: ['read', 'write'],
   };
 
   // Mock instances
@@ -143,7 +145,7 @@ describe('API Key Storage', () => {
       decryptData: vi.fn().mockResolvedValue(mockOpenAIKey),
       createIntegrityChecksum: vi.fn().mockResolvedValue('mock-checksum'),
       validateIntegrityChecksum: vi.fn().mockResolvedValue(true),
-      shutdown: vi.fn()
+      shutdown: vi.fn(),
     };
 
     mockDBInstance = {
@@ -155,7 +157,7 @@ describe('API Key Storage', () => {
       getAll: vi.fn().mockResolvedValue([]),
       query: vi.fn().mockResolvedValue([]),
       batchAdd: vi.fn().mockResolvedValue(undefined),
-      batchDelete: vi.fn().mockResolvedValue(undefined)
+      batchDelete: vi.fn().mockResolvedValue(undefined),
     };
 
     mockChromeStorage = {
@@ -163,23 +165,23 @@ describe('API Key Storage', () => {
       set: vi.fn().mockResolvedValue(undefined),
       remove: vi.fn().mockResolvedValue(undefined),
       getBatch: vi.fn().mockResolvedValue({}),
-      setBatch: vi.fn().mockResolvedValue(undefined)
+      setBatch: vi.fn().mockResolvedValue(undefined),
     };
   });
 
   beforeEach(async () => {
     // Reset mocks
     vi.clearAllMocks();
-    
+
     // Reset mock return values
     mockEncryptionService.isInitialized.mockReturnValue(true);
     mockEncryptionService.isSessionActive.mockReturnValue(true);
     mockDBInstance.get.mockResolvedValue(null);
     mockChromeStorage.get.mockResolvedValue(null);
-    
+
     // Apply mocks to the imported modules
     vi.mocked(EncryptionService.getInstance).mockReturnValue(mockEncryptionService);
-    
+
     // Mock the dbInstance methods
     vi.mocked(dbInstance.openDatabase).mockResolvedValue({} as any);
     vi.mocked(dbInstance.add).mockResolvedValue('key-id-123');
@@ -190,14 +192,14 @@ describe('API Key Storage', () => {
     vi.mocked(dbInstance.query).mockResolvedValue([]);
     vi.mocked(dbInstance.batchAdd).mockResolvedValue(undefined);
     vi.mocked(dbInstance.batchDelete).mockResolvedValue(undefined);
-    
+
     // Mock the chromeStorage methods
     vi.mocked(chromeStorage.get).mockResolvedValue(null);
     vi.mocked(chromeStorage.set).mockResolvedValue(undefined);
     vi.mocked(chromeStorage.remove).mockResolvedValue(undefined);
     vi.mocked(chromeStorage.getBatch).mockResolvedValue({});
     vi.mocked(chromeStorage.setBatch).mockResolvedValue(undefined);
-    
+
     // Initialize storage
     await initializeStorage(mockPassword);
   });
@@ -205,6 +207,33 @@ describe('API Key Storage', () => {
   afterEach(async () => {
     await shutdown();
   });
+
+  // Helper functions for consistent mock setup
+  const mockStoredKey = async (key: EncryptedAPIKey) => {
+    // Mock both IndexedDB and Chrome storage for a stored key
+    mockDBInstance.get.mockResolvedValueOnce(key.metadata);
+    mockChromeStorage.get.mockResolvedValueOnce(key);
+    return key;
+  };
+
+  const mockKeyList = (keys: EncryptedAPIKey[]) => {
+    // Mock IndexedDB to return metadata list
+    const metadataList = keys.map(k => k.metadata);
+    mockDBInstance.getAll.mockResolvedValueOnce(metadataList);
+    mockDBInstance.query.mockResolvedValueOnce(metadataList);
+
+    // Mock Chrome storage for each key
+    keys.forEach(key => {
+      mockChromeStorage.get.mockResolvedValueOnce(key);
+    });
+  };
+
+  const computeKeyHash = async (keyValue: string): Promise<string> => {
+    const hashBuffer = await hashData(keyValue);
+    return Array.from(new Uint8Array(hashBuffer))
+      .map(b => b.toString(16).padStart(2, '0'))
+      .join('');
+  };
 
   describe('Storage Initialization', () => {
     it('should initialize storage with password', async () => {
@@ -222,13 +251,13 @@ describe('API Key Storage', () => {
 
     it('should check service initialization before operations', async () => {
       mockEncryptionService.isInitialized.mockReturnValue(false);
-      
+
       await expect(addAPIKey(mockAPIKey)).rejects.toThrow('not initialized');
     });
 
     it('should check active session before operations', async () => {
       mockEncryptionService.isSessionActive.mockReturnValue(false);
-      
+
       await expect(addAPIKey(mockAPIKey)).rejects.toThrow('Session expired');
     });
   });
@@ -243,10 +272,10 @@ describe('API Key Storage', () => {
       expect(result.metadata.name).toBe('Test OpenAI Key');
       expect(result.metadata.status).toBe('active');
       expect(result.encryptedData).toEqual(mockEncryptedData);
-      
+
       // Verify encryption was called
       expect(mockEncryptionService.encryptData).toHaveBeenCalledWith(mockOpenAIKey, 'text');
-      
+
       // Verify storage calls
       expect(vi.mocked(dbInstance.add)).toHaveBeenCalledWith('apiKeys', expect.any(Object));
       expect(vi.mocked(chromeStorage.set)).toHaveBeenCalled();
@@ -254,46 +283,54 @@ describe('API Key Storage', () => {
 
     it('should validate API key format', async () => {
       const invalidKey = { ...mockAPIKey, key: 'invalid-key' };
-      
+
       await expect(addAPIKey(invalidKey)).rejects.toThrow('Invalid API key format');
     });
 
     it('should prevent duplicate keys', async () => {
       // First addition succeeds
-      await addAPIKey(mockAPIKey);
-      
-      // Mock existing key
-      mockChromeStorage.get.mockResolvedValueOnce({ id: 'existing-id' });
-      
+      const firstKey = await addAPIKey(mockAPIKey);
+
+      // Compute the real keyHash for duplicate detection
+      const keyHashBuffer = await hashData(mockOpenAIKey);
+      const keyHash = Array.from(new Uint8Array(keyHashBuffer))
+        .map(b => b.toString(16).padStart(2, '0'))
+        .join('');
+
+      // Mock getBatch to return the first key with matching keyHash
+      mockChromeStorage.getBatch.mockResolvedValueOnce({
+        [`api_key_${firstKey.id}`]: { ...firstKey, keyHash },
+      });
+
       // Second addition should fail
       await expect(addAPIKey(mockAPIKey)).rejects.toThrow('API key already exists');
     });
 
     it('should auto-detect provider from key format', async () => {
       const keyWithoutProvider = { ...mockAPIKey, provider: undefined as any };
-      
+
       const result = await addAPIKey(keyWithoutProvider);
-      
+
       expect(result.metadata.provider).toBe('openai');
     });
 
     it('should create masked version of key', async () => {
       const result = await addAPIKey(mockAPIKey);
-      
+
       expect(result.metadata.maskedKey).toMatch(/^sk-....*...$/);
       expect(result.metadata.maskedKey).not.toContain(mockOpenAIKey.slice(10, -10));
     });
 
     it('should set default configuration', async () => {
       const result = await addAPIKey(mockAPIKey);
-      
+
       expect(result.configuration).toBeDefined();
       expect(result.configuration.security?.encryptionLevel).toBe('standard');
     });
 
     it('should initialize usage stats', async () => {
       const result = await addAPIKey(mockAPIKey);
-      
+
       expect(result.usageStats).toBeDefined();
       expect(result.usageStats.totalRequests).toBe(0);
       expect(result.usageStats.totalTokens).toBe(0);
@@ -302,7 +339,7 @@ describe('API Key Storage', () => {
 
     it('should initialize rotation status', async () => {
       const result = await addAPIKey(mockAPIKey);
-      
+
       expect(result.rotationStatus).toBeDefined();
       expect(result.rotationStatus.status).toBe('none');
       expect(result.rotationStatus.rotationHistory).toEqual([]);
@@ -325,18 +362,20 @@ describe('API Key Storage', () => {
 
       expect(result).toBeDefined();
       expect(result!.id).toBe(storedKey.id);
-      expect(mockEncryptionService.decryptData).toHaveBeenCalledWith(mockEncryptedData, 'text');
+      expect(mockEncryptionService.decryptData).toHaveBeenCalledWith(
+        storedKey.encryptedData,
+        'text'
+      );
     });
 
     it('should return null for non-existent key', async () => {
       const result = await getAPIKey('non-existent-id');
-      
+
       expect(result).toBeNull();
     });
 
     it('should verify data integrity', async () => {
-      mockDBInstance.get.mockResolvedValueOnce(storedKey.metadata);
-      mockChromeStorage.get.mockResolvedValueOnce(storedKey);
+      await mockStoredKey(storedKey);
 
       await getAPIKey(storedKey.id);
 
@@ -344,24 +383,22 @@ describe('API Key Storage', () => {
     });
 
     it('should handle corrupted data', async () => {
-      mockDBInstance.get.mockResolvedValueOnce(storedKey.metadata);
-      mockChromeStorage.get.mockResolvedValueOnce(storedKey);
+      await mockStoredKey(storedKey);
       mockEncryptionService.validateIntegrityChecksum.mockResolvedValueOnce(false);
 
       await expect(getAPIKey(storedKey.id)).rejects.toThrow('Data integrity check failed');
     });
 
     it('should update last used timestamp', async () => {
-      mockDBInstance.get.mockResolvedValueOnce(storedKey.metadata);
-      mockChromeStorage.get.mockResolvedValueOnce(storedKey);
+      await mockStoredKey(storedKey);
 
       await getAPIKey(storedKey.id);
 
       expect(mockDBInstance.update).toHaveBeenCalledWith(
-        'api_key_metadata',
+        OBJECT_STORES.API_KEYS,
         storedKey.id,
         expect.objectContaining({
-          lastUsed: expect.any(Number)
+          lastUsed: expect.any(Number),
         })
       );
     });
@@ -381,7 +418,7 @@ describe('API Key Storage', () => {
         name: 'Updated Key Name',
         description: 'Updated description',
         tags: ['updated', 'test'],
-        status: 'inactive'
+        status: 'inactive',
       };
 
       const result = await updateAPIKey(storedKey.id, updates);
@@ -397,9 +434,9 @@ describe('API Key Storage', () => {
         configuration: {
           security: {
             encryptionLevel: 'high',
-            requireHTTPS: true
-          }
-        }
+            requireHTTPS: true,
+          },
+        },
       };
 
       const result = await updateAPIKey(storedKey.id, updates);
@@ -410,7 +447,7 @@ describe('API Key Storage', () => {
 
     it('should preserve existing data when updating', async () => {
       const updates: UpdateAPIKeyInput = {
-        name: 'New Name'
+        name: 'New Name',
       };
 
       const result = await updateAPIKey(storedKey.id, updates);
@@ -440,7 +477,7 @@ describe('API Key Storage', () => {
       const result = await deleteAPIKey(storedKey.id);
 
       expect(result).toBe(true);
-      expect(mockDBInstance.delete).toHaveBeenCalledWith('api_key_metadata', storedKey.id);
+      expect(mockDBInstance.delete).toHaveBeenCalledWith(OBJECT_STORES.API_KEYS, storedKey.id);
       expect(mockChromeStorage.remove).toHaveBeenCalledWith(`api_key_${storedKey.id}`);
     });
 
@@ -474,13 +511,13 @@ describe('API Key Storage', () => {
         ...mockAPIKey,
         key: mockAnthropicKey,
         provider: 'anthropic',
-        name: 'Test Anthropic Key'
+        name: 'Test Anthropic Key',
       });
 
       // Mock database return
       mockDBInstance.getAll.mockResolvedValueOnce([
         { id: 'key1', provider: 'openai', name: 'Test OpenAI Key' },
-        { id: 'key2', provider: 'anthropic', name: 'Test Anthropic Key' }
+        { id: 'key2', provider: 'anthropic', name: 'Test Anthropic Key' },
       ]);
     });
 
@@ -490,7 +527,7 @@ describe('API Key Storage', () => {
       expect(result.keys).toHaveLength(2);
       expect(result.total).toBe(2);
       expect(result.hasMore).toBe(false);
-      
+
       // Should not include encrypted data
       expect(result.keys[0]).not.toHaveProperty('encryptedData');
       expect(result.keys[0]).toHaveProperty('metadata');
@@ -498,11 +535,11 @@ describe('API Key Storage', () => {
 
     it('should filter by provider', async () => {
       mockDBInstance.query.mockResolvedValueOnce([
-        { id: 'key1', provider: 'openai', name: 'Test OpenAI Key' }
+        { id: 'key1', provider: 'openai', name: 'Test OpenAI Key' },
       ]);
 
       const options: APIKeyQueryOptions = {
-        provider: 'openai'
+        provider: 'openai',
       };
 
       const result = await listAPIKeys(options);
@@ -510,7 +547,7 @@ describe('API Key Storage', () => {
       expect(result.keys).toHaveLength(1);
       expect(result.keys[0].metadata.provider).toBe('openai');
       expect(mockDBInstance.query).toHaveBeenCalledWith(
-        'api_key_metadata',
+        OBJECT_STORES.API_KEYS,
         'provider',
         'openai',
         expect.any(Object)
@@ -519,13 +556,13 @@ describe('API Key Storage', () => {
 
     it('should filter by status', async () => {
       const options: APIKeyQueryOptions = {
-        status: 'active'
+        status: 'active',
       };
 
       await listAPIKeys(options);
 
       expect(mockDBInstance.query).toHaveBeenCalledWith(
-        'api_key_metadata',
+        OBJECT_STORES.API_KEYS,
         'status',
         'active',
         expect.any(Object)
@@ -535,18 +572,18 @@ describe('API Key Storage', () => {
     it('should apply pagination', async () => {
       const options: APIKeyQueryOptions = {
         limit: 10,
-        offset: 20
+        offset: 20,
       };
 
       await listAPIKeys(options);
 
-      expect(mockDBInstance.getAll).toHaveBeenCalledWith('api_key_metadata');
+      expect(mockDBInstance.getAll).toHaveBeenCalledWith(OBJECT_STORES.API_KEYS);
       // Pagination should be applied to results
     });
 
     it('should search by name and description', async () => {
       const options: APIKeyQueryOptions = {
-        search: 'test'
+        search: 'test',
       };
 
       await listAPIKeys(options);
@@ -557,7 +594,7 @@ describe('API Key Storage', () => {
     it('should sort results', async () => {
       const options: APIKeyQueryOptions = {
         sortBy: 'name',
-        sortOrder: 'desc'
+        sortOrder: 'desc',
       };
 
       const result = await listAPIKeys(options);
@@ -571,7 +608,7 @@ describe('API Key Storage', () => {
     beforeEach(async () => {
       mockDBInstance.query.mockResolvedValueOnce([
         { id: 'key1', provider: 'openai', name: 'Test OpenAI Key 1' },
-        { id: 'key2', provider: 'openai', name: 'Test OpenAI Key 2' }
+        { id: 'key2', provider: 'openai', name: 'Test OpenAI Key 2' },
       ]);
     });
 
@@ -581,7 +618,7 @@ describe('API Key Storage', () => {
       expect(result).toHaveLength(2);
       expect(result[0].metadata.provider).toBe('openai');
       expect(mockDBInstance.query).toHaveBeenCalledWith(
-        'api_key_metadata',
+        OBJECT_STORES.API_KEYS,
         'provider',
         'openai'
       );
@@ -612,7 +649,7 @@ describe('API Key Storage', () => {
       expect(result.success).toBe(true);
       expect(result.newKeyId).toBeTruthy();
       expect(result.rollbackAvailable).toBe(true);
-      
+
       // Verify new key was encrypted and stored
       expect(mockEncryptionService.encryptData).toHaveBeenCalledWith(newKey, 'text');
     });
@@ -621,13 +658,13 @@ describe('API Key Storage', () => {
       await rotateAPIKey(storedKey.id, newKey);
 
       expect(mockDBInstance.update).toHaveBeenCalledWith(
-        'api_key_metadata',
+        OBJECT_STORES.API_KEYS,
         expect.any(String),
         expect.objectContaining({
           rotationStatus: expect.objectContaining({
             status: 'completed',
-            lastRotation: expect.any(Number)
-          })
+            lastRotation: expect.any(Number),
+          }),
         })
       );
     });
@@ -636,7 +673,7 @@ describe('API Key Storage', () => {
       await rotateAPIKey(storedKey.id, newKey);
 
       expect(mockDBInstance.update).toHaveBeenCalledWith(
-        'api_key_metadata',
+        OBJECT_STORES.API_KEYS,
         expect.any(String),
         expect.objectContaining({
           rotationStatus: expect.objectContaining({
@@ -644,16 +681,18 @@ describe('API Key Storage', () => {
               expect.objectContaining({
                 timestamp: expect.any(Number),
                 success: true,
-                oldKeyId: storedKey.id
-              })
-            ])
-          })
+                oldKeyId: storedKey.id,
+              }),
+            ]),
+          }),
         })
       );
     });
 
     it('should validate new key format', async () => {
-      await expect(rotateAPIKey(storedKey.id, 'invalid-key')).rejects.toThrow('Invalid API key format');
+      await expect(rotateAPIKey(storedKey.id, 'invalid-key')).rejects.toThrow(
+        'Invalid API key format'
+      );
     });
 
     it('should handle rotation failure', async () => {
@@ -680,21 +719,21 @@ describe('API Key Storage', () => {
         requests: 5,
         tokens: 1000,
         cost: 0.02,
-        responseTime: 150
+        responseTime: 150,
       };
 
       await recordUsage(storedKey.id, usage);
 
       expect(mockDBInstance.update).toHaveBeenCalledWith(
-        'api_key_metadata',
+        OBJECT_STORES.API_KEYS,
         storedKey.id,
         expect.objectContaining({
           usageStats: expect.objectContaining({
             totalRequests: 5,
             totalTokens: 1000,
             totalCost: 0.02,
-            avgRequestTime: 150
-          })
+            avgRequestTime: 150,
+          }),
         })
       );
     });
@@ -702,7 +741,7 @@ describe('API Key Storage', () => {
     it('should accumulate usage statistics', async () => {
       // First usage
       await recordUsage(storedKey.id, { requests: 3, tokens: 500, cost: 0.01, responseTime: 100 });
-      
+
       // Update mock to reflect accumulated stats
       const updatedKey = {
         ...storedKey,
@@ -710,8 +749,8 @@ describe('API Key Storage', () => {
           ...storedKey.usageStats,
           totalRequests: 3,
           totalTokens: 500,
-          totalCost: 0.01
-        }
+          totalCost: 0.01,
+        },
       };
       mockChromeStorage.get.mockResolvedValueOnce(updatedKey);
 
@@ -719,14 +758,14 @@ describe('API Key Storage', () => {
       await recordUsage(storedKey.id, { requests: 2, tokens: 300, cost: 0.005, responseTime: 200 });
 
       expect(mockDBInstance.update).toHaveBeenLastCalledWith(
-        'api_key_metadata',
+        OBJECT_STORES.API_KEYS,
         storedKey.id,
         expect.objectContaining({
           usageStats: expect.objectContaining({
             totalRequests: 5,
             totalTokens: 800,
-            totalCost: 0.015
-          })
+            totalCost: 0.015,
+          }),
         })
       );
     });
@@ -743,22 +782,22 @@ describe('API Key Storage', () => {
     it('should calculate average response time correctly', async () => {
       // Record multiple usages with different response times
       await recordUsage(storedKey.id, { requests: 1, tokens: 100, cost: 0.001, responseTime: 100 });
-      
+
       const updatedKey = {
         ...storedKey,
-        usageStats: { ...storedKey.usageStats, totalRequests: 1, avgRequestTime: 100 }
+        usageStats: { ...storedKey.usageStats, totalRequests: 1, avgRequestTime: 100 },
       };
       mockChromeStorage.get.mockResolvedValueOnce(updatedKey);
 
       await recordUsage(storedKey.id, { requests: 1, tokens: 100, cost: 0.001, responseTime: 200 });
 
       expect(mockDBInstance.update).toHaveBeenLastCalledWith(
-        'api_key_metadata',
+        OBJECT_STORES.API_KEYS,
         storedKey.id,
         expect.objectContaining({
           usageStats: expect.objectContaining({
-            avgRequestTime: 150 // (100 + 200) / 2
-          })
+            avgRequestTime: 150, // (100 + 200) / 2
+          }),
         })
       );
     });
@@ -777,7 +816,7 @@ describe('API Key Storage', () => {
 
       // First access
       await getAPIKey(storedKey.id);
-      
+
       // Second access should use cache
       await getAPIKey(storedKey.id);
 
@@ -837,9 +876,9 @@ describe('API Key Storage', () => {
             encryptedData: mockEncryptedData,
             keyHash: 'mock-hash',
             checksum: 'mock-checksum',
-            storageVersion: 1
-          }
-        ]
+            storageVersion: 1,
+          },
+        ],
       };
 
       const result: ImportResult = await importKeys(importData);
@@ -856,9 +895,9 @@ describe('API Key Storage', () => {
         keys: [
           {
             metadata: { ...storedKey.metadata, id: 'bad-key' },
-            encryptedData: mockEncryptedData
-          }
-        ]
+            encryptedData: mockEncryptedData,
+          },
+        ],
       };
 
       const result = await importKeys(importData);
@@ -882,7 +921,7 @@ describe('API Key Storage', () => {
       // Mock successful API response
       global.fetch = vi.fn().mockResolvedValueOnce({
         ok: true,
-        json: async () => ({ success: true })
+        json: async () => ({ success: true }),
       });
 
       const result: ConnectionTestResult = await testKeyConnection(storedKey.id);
@@ -893,8 +932,8 @@ describe('API Key Storage', () => {
         expect.stringContaining('api.openai.com'),
         expect.objectContaining({
           headers: expect.objectContaining({
-            'Authorization': `Bearer ${mockOpenAIKey}`
-          })
+            Authorization: `Bearer ${mockOpenAIKey}`,
+          }),
         })
       );
     });
@@ -912,7 +951,7 @@ describe('API Key Storage', () => {
       global.fetch = vi.fn().mockResolvedValueOnce({
         ok: false,
         status: 401,
-        statusText: 'Unauthorized'
+        statusText: 'Unauthorized',
       });
 
       const result = await testKeyConnection(storedKey.id);
@@ -940,7 +979,7 @@ describe('API Key Storage', () => {
       expect(result.checks).toContainEqual(
         expect.objectContaining({
           name: 'encryption_service',
-          status: 'fail'
+          status: 'fail',
         })
       );
     });
@@ -956,7 +995,7 @@ describe('API Key Storage', () => {
   describe('Security Features', () => {
     it('should never log unencrypted keys', async () => {
       const consoleSpy = vi.spyOn(console, 'log');
-      
+
       await addAPIKey(mockAPIKey);
 
       expect(consoleSpy).not.toHaveBeenCalledWith(expect.stringContaining(mockOpenAIKey));
@@ -1023,7 +1062,7 @@ describe('API Key Storage', () => {
       const keys = Array.from({ length: 100 }, (_, i) => ({
         ...mockAPIKey,
         key: `${mockOpenAIKey.slice(0, -2)}${i.toString().padStart(2, '0')}`,
-        name: `Batch Key ${i}`
+        name: `Batch Key ${i}`,
       }));
 
       // Should use batch operations for multiple keys
@@ -1038,7 +1077,7 @@ describe('API Key Storage', () => {
       const largeResults = Array.from({ length: 1000 }, (_, i) => ({
         id: `key-${i}`,
         provider: 'openai',
-        name: `Key ${i}`
+        name: `Key ${i}`,
       }));
 
       mockDBInstance.getAll.mockResolvedValueOnce(largeResults);
@@ -1056,7 +1095,7 @@ describe('API Key Storage', () => {
       mockChromeStorage.get.mockResolvedValueOnce({
         version: 0,
         key: mockOpenAIKey, // Unencrypted
-        provider: 'openai'
+        provider: 'openai',
       });
 
       await initializeStorage(mockPassword);
@@ -1068,8 +1107,8 @@ describe('API Key Storage', () => {
     it('should preserve data during storage version upgrades', async () => {
       // Mock data with older storage version
       const oldVersionKey = {
-        ...await addAPIKey(mockAPIKey),
-        storageVersion: 1
+        ...(await addAPIKey(mockAPIKey)),
+        storageVersion: 1,
       };
 
       mockDBInstance.get.mockResolvedValueOnce(oldVersionKey.metadata);
@@ -1080,10 +1119,10 @@ describe('API Key Storage', () => {
       expect(result).toBeDefined();
       // Should upgrade storage version
       expect(mockDBInstance.update).toHaveBeenCalledWith(
-        'api_key_metadata',
+        OBJECT_STORES.API_KEYS,
         oldVersionKey.id,
         expect.objectContaining({
-          storageVersion: expect.any(Number)
+          storageVersion: expect.any(Number),
         })
       );
     });
