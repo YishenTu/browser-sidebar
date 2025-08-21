@@ -470,7 +470,7 @@ export function createSidebarManifestTemplate(): ChromeManifest {
     host_permissions: ['<all_urls>'],
 
     background: {
-      service_worker: 'src/background/index.ts',
+      service_worker: 'src/backend/index.ts',
       type: 'module',
     },
 
@@ -481,7 +481,7 @@ export function createSidebarManifestTemplate(): ChromeManifest {
     content_scripts: [
       {
         matches: ['<all_urls>'],
-        js: ['src/content/index.ts'],
+        js: ['src/tabext/index.ts'],
         run_at: 'document_idle',
         all_frames: false,
       },

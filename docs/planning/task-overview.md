@@ -200,7 +200,7 @@ Deliverable highlight: Complete custom sidebar infrastructure with resizable (30
   - Description: Define message passing protocol
   - Deliverables:
     - `src/types/messages.ts` - Message types
-    - `src/utils/messageValidation.ts` - Validators
+    - `src/core/messaging.ts` - Messaging utilities and basic validation
     - Message factory functions
   - Acceptance: Type-safe message definitions
 
@@ -212,11 +212,11 @@ Deliverable highlight: Complete custom sidebar infrastructure with resizable (30
     - Test sidebar state management
   - Description: Implement background service worker with tab-specific sidebar state
   - Deliverables:
-    - `src/background/index.ts` - Worker entry with action listener
-    - `src/background/messageHandler.ts` - Message routing
-    - `src/background/sidebarManager.ts` - Tab-specific state management
-    - `src/background/keepAlive.ts` - Service worker persistence
-    - `tests/background/messageHandler.test.ts`
+    - `src/backend/index.ts` - Worker entry with action listener
+    - `src/backend/messageHandler.ts` - Message routing
+    - `src/backend/sidebarManager.ts` - Tab-specific state management
+    - `src/backend/keepAlive.ts` - Service worker persistence
+    - `tests/backend/messageHandler.test.ts`
   - Acceptance: Service worker manages sidebar state per tab
 
 - [x] **Task 1.3.3** - Sidebar Integration and Content Script 🧪
@@ -227,10 +227,10 @@ Deliverable highlight: Complete custom sidebar infrastructure with resizable (30
     - Test toggle behavior via custom events
   - Description: Implement content script that injects and manages the custom sidebar
   - Deliverables:
-    - `src/content/index.ts` - Content script with sidebar injection
+    - `src/tabext/index.ts` - Content script with sidebar injection and content capture entry
     - `src/sidebar/index.tsx` - React app mount/unmount logic
     - `src/sidebar/Sidebar.tsx` - Resizable, draggable sidebar container
-    - `src/utils/messaging.ts` - Message utilities
+    - `src/core/messaging.ts` - Message utilities
     - `tests/integration/background-content.test.ts`
   - Acceptance: Custom sidebar injects, resizes, drags, and toggles correctly
 
@@ -812,8 +812,8 @@ Building the React-based chat interface within the custom sidebar container. The
     - Test shared functionality
   - Description: Create base provider class
   - Deliverables:
-    - `src/providers/BaseProvider.ts`
-    - `tests/providers/BaseProvider.test.ts`
+    - `src/provider/BaseProvider.ts`
+    - `tests/provider/BaseProvider.test.ts`
   - Acceptance: Base class works
 
 - [ ] **Task 4.1.2a** - Stream Parser 🧪
@@ -824,8 +824,8 @@ Building the React-based chat interface within the custom sidebar container. The
     - Test error detection
   - Description: Create SSE stream parser
   - Deliverables:
-    - `src/providers/streamParser.ts`
-    - `tests/providers/streamParser.test.ts`
+    - `src/provider/streamParser.ts`
+    - `tests/provider/streamParser.test.ts`
   - Acceptance: Parses SSE correctly
 
 - [ ] **Task 4.1.2b** - Token Buffer 🧪
@@ -835,8 +835,8 @@ Building the React-based chat interface within the custom sidebar container. The
     - Test flush behavior
   - Description: Implement token buffering
   - Deliverables:
-    - `src/providers/tokenBuffer.ts`
-    - `tests/providers/tokenBuffer.test.ts`
+    - `src/provider/tokenBuffer.ts`
+    - `tests/provider/tokenBuffer.test.ts`
   - Acceptance: Buffers tokens correctly
 
 ### Phase 4.2: Provider Implementations
@@ -864,8 +864,8 @@ Building the React-based chat interface within the custom sidebar container. The
     - Test error handling
   - Description: Implement OpenAI chat
   - Deliverables:
-    - `src/providers/openai/OpenAIProvider.ts`
-    - `tests/providers/openai/OpenAIProvider.test.ts`
+    - `src/provider/openai/OpenAIProvider.ts`
+    - `tests/provider/openai/OpenAIProvider.test.ts`
   - Acceptance: OpenAI chat works
 
 - [ ] **Task 4.2.1c** - OpenAI Models Configuration 🧪
@@ -897,8 +897,8 @@ Building the React-based chat interface within the custom sidebar container. The
     - Test multimodal
   - Description: Implement Gemini chat
   - Deliverables:
-    - `src/providers/gemini/GeminiProvider.ts`
-    - `tests/providers/gemini/GeminiProvider.test.ts`
+    - `src/provider/gemini/GeminiProvider.ts`
+    - `tests/provider/gemini/GeminiProvider.test.ts`
   - Acceptance: Gemini chat works
 
 - [ ] **Task 4.2.2c** - Gemini Models Configuration 🧪
@@ -928,8 +928,8 @@ Building the React-based chat interface within the custom sidebar container. The
     - Test streaming
   - Description: Implement Anthropic via OpenRouter
   - Deliverables:
-    - `src/providers/anthropic/AnthropicProvider.ts`
-    - `tests/providers/anthropic/AnthropicProvider.test.ts`
+    - `src/provider/anthropic/AnthropicProvider.ts`
+    - `tests/provider/anthropic/AnthropicProvider.test.ts`
   - Acceptance: Claude chat works
 
 ### Phase 4.3: Provider Management
@@ -946,8 +946,8 @@ Building the React-based chat interface within the custom sidebar container. The
     - Test switching
   - Description: Create provider registry
   - Deliverables:
-    - `src/providers/ProviderRegistry.ts`
-    - `tests/providers/ProviderRegistry.test.ts`
+    - `src/provider/ProviderRegistry.ts`
+    - `tests/provider/ProviderRegistry.test.ts`
   - Acceptance: Registry manages providers
 
 - [ ] **Task 4.3.1b** - Provider Factory 🧪
@@ -957,8 +957,8 @@ Building the React-based chat interface within the custom sidebar container. The
     - Test configuration
   - Description: Create provider factory
   - Deliverables:
-    - `src/providers/ProviderFactory.ts`
-    - `tests/providers/ProviderFactory.test.ts`
+    - `src/provider/ProviderFactory.ts`
+    - `tests/provider/ProviderFactory.test.ts`
   - Acceptance: Factory creates providers
 
 - [ ] **Task 4.3.2** - API Key Validation Service 🧪
@@ -968,8 +968,8 @@ Building the React-based chat interface within the custom sidebar container. The
     - Test error messages
   - Description: Validate keys with providers
   - Deliverables:
-    - `src/providers/validation.ts`
-    - `tests/providers/validation.test.ts`
+    - `src/provider/validation.ts`
+    - `tests/provider/validation.test.ts`
   - Acceptance: Keys validated
 
 - [ ] **Task 4.3.3a** - Rate Limiter 🧪
@@ -980,8 +980,8 @@ Building the React-based chat interface within the custom sidebar container. The
     - Test reset
   - Description: Implement rate limiting
   - Deliverables:
-    - `src/providers/RateLimiter.ts`
-    - `tests/providers/RateLimiter.test.ts`
+    - `src/provider/RateLimiter.ts`
+    - `tests/provider/RateLimiter.test.ts`
   - Acceptance: Rate limits enforced
 
 - [ ] **Task 4.3.3b** - Request Queue 🧪
@@ -992,8 +992,8 @@ Building the React-based chat interface within the custom sidebar container. The
     - Test cancellation
   - Description: Create request queue
   - Deliverables:
-    - `src/providers/RequestQueue.ts`
-    - `tests/providers/RequestQueue.test.ts`
+    - `src/provider/RequestQueue.ts`
+    - `tests/provider/RequestQueue.test.ts`
   - Acceptance: Queue manages requests
 
 - [ ] **Task 4.3.4a** - Provider Settings UI 🧪
@@ -1050,8 +1050,8 @@ Building the React-based chat interface within the custom sidebar container. The
     - Test message handling
   - Description: Create content script entry
   - Deliverables:
-    - `src/content/index.ts`
-    - `tests/content/index.test.ts`
+    - `src/tabext/index.ts`
+    - `tests/tabext/index.test.ts`
   - Acceptance: Script loads on pages
 
 - [ ] **Task 5.1.1b** - DOM Access Utilities 🧪
@@ -1062,8 +1062,8 @@ Building the React-based chat interface within the custom sidebar container. The
     - Test safety checks
   - Description: Create DOM utilities
   - Deliverables:
-    - `src/content/domUtils.ts`
-    - `tests/content/domUtils.test.ts`
+    - `src/tabext/domUtils.ts`
+    - `tests/tabext/domUtils.test.ts`
   - Acceptance: DOM access works
 
 - [ ] **Task 5.1.1c** - Content Script Messaging 🧪
@@ -1073,8 +1073,8 @@ Building the React-based chat interface within the custom sidebar container. The
     - Test response handling
   - Description: Setup content script messaging
   - Deliverables:
-    - `src/content/messaging.ts`
-    - `tests/content/messaging.test.ts`
+    - `src/tabext/messaging.ts`
+    - `tests/tabext/messaging.test.ts`
   - Acceptance: Messages pass correctly
 
 - [ ] **Task 5.1.2a** - Readability Setup 🧪
@@ -1124,8 +1124,8 @@ Building the React-based chat interface within the custom sidebar container. The
     - Test range calculation
   - Description: Detect text selection
   - Deliverables:
-    - `src/content/selectionDetector.ts`
-    - `tests/content/selectionDetector.test.ts`
+    - `src/tabext/selectionDetector.ts`
+    - `tests/tabext/selectionDetector.test.ts`
   - Acceptance: Selection detected
 
 - [ ] **Task 5.2.1b** - Context Markers 🧪
@@ -1136,8 +1136,8 @@ Building the React-based chat interface within the custom sidebar container. The
     - Test preservation
   - Description: Add context markers
   - Deliverables:
-    - `src/content/contextMarkers.ts`
-    - `tests/content/contextMarkers.test.ts`
+    - `src/tabext/contextMarkers.ts`
+    - `tests/tabext/contextMarkers.test.ts`
   - Acceptance: Markers work correctly
 
 - [ ] **Task 5.2.2a** - Mutation Observer 🧪
@@ -1148,8 +1148,8 @@ Building the React-based chat interface within the custom sidebar container. The
     - Test debouncing
   - Description: Setup MutationObserver
   - Deliverables:
-    - `src/content/mutationObserver.ts`
-    - `tests/content/mutationObserver.test.ts`
+    - `src/tabext/mutationObserver.ts`
+    - `tests/tabext/mutationObserver.test.ts`
   - Acceptance: Changes detected
 
 - [ ] **Task 5.2.2b** - Dynamic Content Handler 🧪
@@ -1160,8 +1160,8 @@ Building the React-based chat interface within the custom sidebar container. The
     - Test lazy loading
   - Description: Handle dynamic content
   - Deliverables:
-    - `src/content/dynamicContent.ts`
-    - `tests/content/dynamicContent.test.ts`
+    - `src/tabext/dynamicContent.ts`
+    - `tests/tabext/dynamicContent.test.ts`
   - Acceptance: Dynamic content handled
 
 - [ ] **Task 5.2.3a** - HTML to Markdown 🧪

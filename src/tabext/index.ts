@@ -2,7 +2,7 @@
 // Content script - handles sidebar injection and communication with background
 
 import { createMessage, isValidMessage, Message } from '@/types/messages';
-import { subscribeWithResponse } from '@/utils/messaging';
+import { subscribeWithResponse } from '@core/messaging';
 
 let sidebarModule: { mountSidebar: () => void; unmountSidebar: () => void } | null = null;
 let sidebarOpen = false;

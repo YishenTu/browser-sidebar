@@ -269,8 +269,8 @@ Also supports:
 ```mermaid
 sequenceDiagram
     User->>Popup: Open extension
-    Popup->>Content Script: Request extraction
-    Content Script->>Background: Send content
+    Popup->>Content Script (tabext): Request extraction
+    Content Script (tabext)->>Background: Send content
     Background->>Storage: Cache content
     User->>Popup: Enter query
     Popup->>Background: Process query

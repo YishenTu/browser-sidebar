@@ -55,8 +55,8 @@ Deliverable highlight: Complete tab content extraction system with multi-tab sup
     - Test message handling
   - Description: Create content script entry
   - Deliverables:
-    - `src/content/index.ts`
-    - `tests/content/index.test.ts`
+    - `src/tabext/index.ts`
+    - `tests/tabext/index.test.ts`
   - Acceptance: Script loads on pages
 
 - [ ] **Task 5.1.1b** - DOM Access Utilities 🧪
@@ -67,8 +67,8 @@ Deliverable highlight: Complete tab content extraction system with multi-tab sup
     - Test safety checks
   - Description: Create DOM utilities
   - Deliverables:
-    - `src/content/domUtils.ts`
-    - `tests/content/domUtils.test.ts`
+    - `src/tabext/domUtils.ts`
+    - `tests/tabext/domUtils.test.ts`
   - Acceptance: DOM access works
 
 - [ ] **Task 5.1.1c** - Content Script Messaging 🧪
@@ -78,8 +78,8 @@ Deliverable highlight: Complete tab content extraction system with multi-tab sup
     - Test response handling
   - Description: Setup content script messaging
   - Deliverables:
-    - `src/content/messaging.ts`
-    - `tests/content/messaging.test.ts`
+    - `src/tabext/messaging.ts`
+    - `tests/tabext/messaging.test.ts`
   - Acceptance: Messages pass correctly
 
 - [ ] **Task 5.1.2a** - Readability Setup 🧪
@@ -129,8 +129,8 @@ Deliverable highlight: Complete tab content extraction system with multi-tab sup
     - Test range calculation
   - Description: Detect text selection
   - Deliverables:
-    - `src/content/selectionDetector.ts`
-    - `tests/content/selectionDetector.test.ts`
+    - `src/tabext/selectionDetector.ts`
+    - `tests/tabext/selectionDetector.test.ts`
   - Acceptance: Selection detected
 
 - [ ] **Task 5.2.1b** - Context Markers 🧪
@@ -141,8 +141,8 @@ Deliverable highlight: Complete tab content extraction system with multi-tab sup
     - Test preservation
   - Description: Add context markers
   - Deliverables:
-    - `src/content/contextMarkers.ts`
-    - `tests/content/contextMarkers.test.ts`
+    - `src/tabext/contextMarkers.ts`
+    - `tests/tabext/contextMarkers.test.ts`
   - Acceptance: Markers work correctly
 
 - [ ] **Task 5.2.2a** - Mutation Observer 🧪
@@ -153,8 +153,8 @@ Deliverable highlight: Complete tab content extraction system with multi-tab sup
     - Test debouncing
   - Description: Setup MutationObserver
   - Deliverables:
-    - `src/content/mutationObserver.ts`
-    - `tests/content/mutationObserver.test.ts`
+    - `src/tabext/mutationObserver.ts`
+    - `tests/tabext/mutationObserver.test.ts`
   - Acceptance: Changes detected
 
 - [ ] **Task 5.2.2b** - Dynamic Content Handler 🧪
@@ -165,8 +165,8 @@ Deliverable highlight: Complete tab content extraction system with multi-tab sup
     - Test lazy loading
   - Description: Handle dynamic content
   - Deliverables:
-    - `src/content/dynamicContent.ts`
-    - `tests/content/dynamicContent.test.ts`
+    - `src/tabext/dynamicContent.ts`
+    - `tests/tabext/dynamicContent.test.ts`
   - Acceptance: Dynamic content handled
 
 - [ ] **Task 5.2.3a** - HTML to Markdown 🧪

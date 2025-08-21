@@ -3,9 +3,11 @@
 ## Project Structure & Module Organization
 
 - `src/`: Extension source
-  - `background/` (service worker), `content/` (content script)
-  - `sidebar/` (UI entry: `index.tsx`, `Sidebar.tsx`, styles)
-  - Optional: `components/`, `providers/`, `storage/`, `utils/`, `hooks/`, `types/`
+  - `backend/` (service worker)
+  - `tabext/` (content script for tab content capture + sidebar injection)
+  - `sidebar/` (UI entry: `index.tsx`, Chat UI, styles, contexts)
+  - `core/` (shared messaging and infra)
+  - Optional: `provider/` (BYOK + provider clients), `storage/`, `utils/`, `hooks/`, `types/`
 - `public/icons/`: Extension icons (`icon16/32/48/128.png`)
 - `tests/`: Vitest + RTL (`setup/`, `unit/`, `integration/`, `e2e/`)
 - `docs/`: Planning, stages, and architecture
@@ -27,7 +29,7 @@ Note: After finishing an implementation or fix, run `npx vite build` to regenera
 - TypeScript (strict), React function components with hooks
 - 2-space indentation, single quotes, semicolons; Prettier enforced
 - File names: `PascalCase.tsx` (components), `camelCase.ts` (utils/hooks)
-- Use path aliases from `tsconfig.json` (e.g., `@/…`, `@components/…`)
+- Use path aliases from `tsconfig.json` (e.g., `@/…`, `@sidebar/…`, `@backend/…`, `@tabext/…`, `@core/…`)
 
 ## Testing Guidelines
 

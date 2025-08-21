@@ -21,6 +21,20 @@ export type FontSize = 'small' | 'medium' | 'large';
 export type AIProvider = 'openai' | 'anthropic' | 'google' | null;
 
 /**
+ * AI model definition with provider and availability information
+ */
+export interface Model {
+  /** Unique identifier for the model */
+  id: string;
+  /** Display name for the model */
+  name: string;
+  /** Provider that offers this model */
+  provider: string;
+  /** Whether the model is currently available */
+  available: boolean;
+}
+
+/**
  * UI preferences and customization options
  */
 export interface UIPreferences {
@@ -90,6 +104,10 @@ export interface Settings {
   privacy: PrivacySettings;
   /** API key references */
   apiKeys: APIKeyReferences;
+  /** Currently selected AI model */
+  selectedModel: string;
+  /** Available AI models list */
+  availableModels: Model[];
 }
 
 /**
@@ -120,6 +138,10 @@ export interface SettingsState {
   resetToDefaults: () => Promise<void>;
   /** Set error message */
   setError: (error: string | null) => void;
+  /** Update selected model */
+  updateSelectedModel: (modelId: string) => Promise<void>;
+  /** Get available models (optionally filter by availability) */
+  getAvailableModels: (availableOnly?: boolean) => Model[];
 }
 
 /**

@@ -102,12 +102,12 @@
 
 ### Task 1.3.2 - Background Service Worker ✅
 
-**Deliverables:** `src/background/index.ts`, message handler  
+**Deliverables:** `src/backend/index.ts`, message handler  
 **Acceptance:** Service worker routes messages
 
 ### Task 1.3.3 - Message Passing Utilities ✅
 
-**Deliverables:** `src/utils/messaging.ts`  
+**Deliverables:** `src/core/messaging.ts`  
 **Acceptance:** Reliable message bus with retry
 
 ---
@@ -123,12 +123,12 @@
 
 ```
 src/
-├── background/
+├── backend/
 │   ├── index.ts           # Service worker entry
 │   ├── messageHandler.ts  # Message routing
 │   ├── sidebarManager.ts  # Tab state management
 │   └── keepAlive.ts       # Worker persistence
-├── content/
+├── tabext/
 │   └── index.ts          # Sidebar injection
 ├── sidebar/
 │   ├── index.tsx         # React app mount

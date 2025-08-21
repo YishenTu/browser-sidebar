@@ -58,11 +58,11 @@ The extension uses a **custom injected sidebar** instead of Chrome's native APIs
 ```
 Extension Icon Click
     ↓
-Background Service Worker (src/background/)
+Background Service Worker (src/backend/)
     ├─ Tracks sidebar state per tab
     └─ Sends message to content script
         ↓
-Content Script (src/content/)
+Content Script (src/tabext/)
     ├─ Injects sidebar on first click
     └─ Dispatches custom events for toggle
         ↓
@@ -74,9 +74,9 @@ Sidebar React App (src/sidebar/)
 ### Message Passing Protocol
 
 - **Icon → Background**: Chrome action API
-- **Background → Content**: `chrome.tabs.sendMessage` with types:
-  - `toggle-sidebar`: Open sidebar
-  - `close-sidebar`: Close sidebar
+- **Background → Content**: `chrome.tabs.sendMessage` with types (typed messages):
+  - `TOGGLE_SIDEBAR`
+  - `CLOSE_SIDEBAR`
 - **Content → Sidebar**: Custom DOM events via `window.dispatchEvent`
 - **Sidebar → Background**: `chrome.runtime.sendMessage` for state updates
 
@@ -90,17 +90,13 @@ Sidebar React App (src/sidebar/)
 
 ```
 src/
-├── background/     # Service worker, tab state management
-├── content/        # Lightweight injection bridge
-├── sidebar/        # Main React application
-│   ├── Sidebar.tsx # Container with resize/drag logic
-│   ├── index.tsx   # Mount/unmount handling
-│   ├── components/ # UI components (Stage 2)
-│   ├── hooks/      # Custom React hooks
-│   └── styles/     # CSS modules
-├── providers/      # AI integrations (Stage 4)
-├── storage/        # Persistence layer (Stage 3)
-├── services/       # Business logic (Stage 5)
+├── backend/        # Service worker, routing, tab state
+├── tabext/         # Content script: sidebar injection + tab content capture
+├── sidebar/        # React UI (Chat Panel, components, hooks, styles, contexts)
+├── core/           # Messaging and shared infra
+├── provider/       # BYOK + provider clients (future)
+├── storage/        # Persistence layer (future)
+├── services/       # Backend services (future)
 ├── types/          # TypeScript definitions
 └── utils/          # Shared utilities
 ```

@@ -34,7 +34,7 @@
     "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true,
     "allowSyntheticDefaultImports": true,
-    "types": ["vite/client", "vitest/globals", "chrome"],
+    "types": ["vite/client", "chrome"],
 
     /* Path Aliases */
     "baseUrl": ".",
@@ -43,12 +43,14 @@
       "@sidebar/*": ["src/sidebar/*"],
       "@components/*": ["src/sidebar/components/*"],
       "@hooks/*": ["src/sidebar/hooks/*"],
-      "@providers/*": ["src/providers/*"],
+      "@provider/*": ["src/provider/*"],
+      "@backend/*": ["src/backend/*"],
+      "@tabext/*": ["src/tabext/*"],
+      "@core/*": ["src/core/*"],
       "@storage/*": ["src/storage/*"],
       "@services/*": ["src/services/*"],
       "@types/*": ["src/types/*"],
-      "@utils/*": ["src/utils/*"],
-      "@tests/*": ["tests/*"]
+      "@utils/*": ["src/utils/*"]
     }
   },
   "include": ["src"],

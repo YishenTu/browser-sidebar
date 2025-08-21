@@ -5,18 +5,142 @@
  * components with timeout, retry, and error handling support.
  */
 
-import { Message, MessageType, MessageSource, createMessage } from '../types/messages';
-import { validateMessage } from './messageValidation';
-import {
-  ExtensionError,
-  ErrorCode,
-  handleChromeError,
-  StandardResponse,
-  createErrorResponse,
-  createSuccessResponse,
-  logError,
-  isRetriableError,
-} from './errorHandling';
+import { Message, MessageType, MessageSource, createMessage, isValidMessage } from '../types/messages';
+
+/**
+ * Inlined error/response helpers to simplify dependencies
+ */
+export enum ErrorCode {
+  MESSAGE_TIMEOUT = 'MESSAGE_TIMEOUT',
+  MESSAGE_VALIDATION_FAILED = 'MESSAGE_VALIDATION_FAILED',
+  MESSAGE_SEND_FAILED = 'MESSAGE_SEND_FAILED',
+  INVALID_MESSAGE_TARGET = 'INVALID_MESSAGE_TARGET',
+  CHROME_RUNTIME_ERROR = 'CHROME_RUNTIME_ERROR',
+  UNKNOWN_ERROR = 'UNKNOWN_ERROR',
+  CONFIGURATION_ERROR = 'CONFIGURATION_ERROR',
+}
+
+export class ExtensionError extends Error {
+  public readonly code: ErrorCode;
+  public readonly details?: Record<string, unknown>;
+  public readonly timestamp: number;
+  public readonly source?: string;
+
+  constructor(
+    message: string,
+    code: ErrorCode = ErrorCode.UNKNOWN_ERROR,
+    details?: Record<string, unknown>,
+    source?: string
+  ) {
+    super(message);
+    this.name = 'ExtensionError';
+    this.code = code;
+    this.details = details;
+    this.timestamp = Date.now();
+    this.source = source;
+    if (Error.captureStackTrace) {
+      Error.captureStackTrace(this, ExtensionError);
+    }
+  }
+
+  toJSON(): Record<string, unknown> {
+    return {
+      name: this.name,
+      message: this.message,
+      code: this.code,
+      details: this.details,
+      timestamp: this.timestamp,
+      source: this.source,
+      stack: this.stack,
+    };
+  }
+}
+
+export interface ErrorResponse {
+  success: false;
+  error: {
+    message: string;
+    code: ErrorCode;
+    details?: Record<string, unknown>;
+    timestamp: number;
+  };
+}
+
+export interface SuccessResponse<T = unknown> {
+  success: true;
+  data?: T;
+  timestamp: number;
+}
+
+export type StandardResponse<T = unknown> = SuccessResponse<T> | ErrorResponse;
+
+export function createErrorResponse(
+  error: ExtensionError | Error | string,
+  details?: Record<string, unknown>
+): ErrorResponse {
+  let extensionError: ExtensionError;
+  if (typeof error === 'string') {
+    extensionError = new ExtensionError(error, ErrorCode.UNKNOWN_ERROR, details);
+  } else if (error instanceof ExtensionError) {
+    extensionError = error;
+  } else {
+    extensionError = new ExtensionError(error.message, ErrorCode.UNKNOWN_ERROR, {
+      ...details,
+      originalStack: error.stack,
+    });
+  }
+  return {
+    success: false,
+    error: {
+      message: extensionError.message,
+      code: extensionError.code,
+      details: extensionError.details,
+      timestamp: extensionError.timestamp,
+    },
+  };
+}
+
+export function createSuccessResponse<T = unknown>(data?: T): SuccessResponse<T> {
+  return { success: true, data, timestamp: Date.now() };
+}
+
+function handleChromeError(operation: string, source?: string): ExtensionError | null {
+  const chromeError = chrome.runtime.lastError;
+  if (!chromeError) return null;
+  const msg = chromeError.message ?? '';
+  return new ExtensionError(`Chrome API error during ${operation}: ${msg}`,
+    ErrorCode.CHROME_RUNTIME_ERROR,
+    { operation, originalError: msg },
+    source);
+}
+
+function logError(error: ExtensionError | Error, context?: string): void {
+  const prefix = context ? `[${context}]` : '[Extension]';
+  if (error instanceof ExtensionError) {
+    console.error(`${prefix} ExtensionError [${error.code}]:`, {
+      message: error.message,
+      details: error.details,
+      source: error.source,
+      timestamp: new Date(error.timestamp).toISOString(),
+      stack: error.stack,
+    });
+  } else {
+    console.error(`${prefix} Unexpected Error:`, { message: error.message, stack: error.stack });
+  }
+}
+
+function isRetriableError(error: ExtensionError | Error): boolean {
+  return error instanceof ExtensionError &&
+    [ErrorCode.MESSAGE_TIMEOUT, ErrorCode.MESSAGE_SEND_FAILED, ErrorCode.CHROME_RUNTIME_ERROR].includes(error.code);
+}
+
+// Minimal validation: ensure basic message structure via type guard
+function validateMessage(message: unknown): { isValid: boolean; error?: string } {
+  if (!isValidMessage(message)) {
+    return { isValid: false, error: 'Invalid message structure' };
+  }
+  return { isValid: true };
+}
 
 /**
  * Options for sending messages

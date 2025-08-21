@@ -206,11 +206,11 @@ A privacy-focused browser extension that enables users to interact with web cont
 ```
 browser-sidebar/
 ├── src/
-│   ├── background/
+│   ├── backend/
 │   │   ├── index.ts           # Service worker entry
 │   │   ├── messageHandler.ts  # Message routing
 │   │   └── contextMenus.ts    # Context menu setup
-│   ├── content/
+│   ├── tabext/
 │   │   ├── index.ts           # Content script entry
 │   │   ├── extractor.ts       # DOM extraction logic
 │   │   ├── monitor.ts         # Dynamic content monitoring
@@ -229,7 +229,7 @@ browser-sidebar/
 │   │       ├── ApiKeyInput.tsx
 │   │       ├── ProviderSelect.tsx
 │   │       └── ThemeToggle.tsx
-│   ├── providers/
+│   ├── provider/
 │   │   ├── base.ts            # Provider interface
 │   │   ├── openai.ts          # OpenAI implementation
 │   │   ├── gemini.ts          # Gemini implementation

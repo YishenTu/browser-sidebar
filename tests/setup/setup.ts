@@ -1,46 +1,67 @@
+/**
+ * @file Test Setup Configuration
+ * 
+ * Global test setup for Vitest including Chrome API mocks and other utilities.
+ */
+
+import { beforeAll, afterEach, vi } from 'vitest';
 import '@testing-library/jest-dom';
-import { cleanup } from '@testing-library/react';
-import { afterEach, vi } from 'vitest';
 
-// Import comprehensive Chrome API mocks
-import './chrome-mock';
+// Mock Chrome APIs globally
+const mockChromeStorage = {
+  sync: {
+    get: vi.fn(),
+    set: vi.fn(),
+    remove: vi.fn(),
+    clear: vi.fn(),
+  },
+  local: {
+    get: vi.fn(),
+    set: vi.fn(),
+    remove: vi.fn(),
+    clear: vi.fn(),
+  },
+};
 
-// Mock IntersectionObserver for MessageList component
-global.IntersectionObserver = vi.fn().mockImplementation(_callback => ({
-  observe: vi.fn(),
-  unobserve: vi.fn(),
-  disconnect: vi.fn(),
-  root: null,
-  rootMargin: '',
-  thresholds: [],
-}));
+const mockChromeRuntime = {
+  sendMessage: vi.fn(),
+  onMessage: {
+    addListener: vi.fn(),
+    removeListener: vi.fn(),
+  },
+  id: 'test-extension-id',
+};
 
-// Mock scrollTo method for DOM elements
-Element.prototype.scrollTo = vi.fn();
-window.scrollTo = vi.fn();
+const mockChromeTabs = {
+  query: vi.fn(),
+  sendMessage: vi.fn(),
+  onActivated: {
+    addListener: vi.fn(),
+    removeListener: vi.fn(),
+  },
+  onUpdated: {
+    addListener: vi.fn(),
+    removeListener: vi.fn(),
+  },
+};
 
-// Mock confirm dialog
-Object.defineProperty(window, 'confirm', {
-  writable: true,
-  value: vi.fn(() => true),
+// Setup global Chrome API mock
+beforeAll(() => {
+  // @ts-ignore
+  global.chrome = {
+    storage: mockChromeStorage,
+    runtime: mockChromeRuntime,
+    tabs: mockChromeTabs,
+    action: {
+      onClicked: {
+        addListener: vi.fn(),
+        removeListener: vi.fn(),
+      },
+    },
+  };
 });
 
-// Mock matchMedia for theme detection
-Object.defineProperty(window, 'matchMedia', {
-  writable: true,
-  value: vi.fn().mockImplementation(query => ({
-    matches: false,
-    media: query,
-    onchange: null,
-    addListener: vi.fn(), // deprecated
-    removeListener: vi.fn(), // deprecated
-    addEventListener: vi.fn(),
-    removeEventListener: vi.fn(),
-    dispatchEvent: vi.fn(),
-  })),
-});
-
+// Clean up after each test
 afterEach(() => {
-  cleanup();
   vi.clearAllMocks();
 });

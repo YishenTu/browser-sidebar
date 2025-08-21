@@ -1,113 +1,85 @@
 # Source Code Structure
 
-## Core Modules
+This layout groups code by the three major functions: sidebar (frontend UI), provider (AI provider config), and tabext (tab extraction). Shared infra lives in core; backend logic runs in the service worker.
 
-### `/background`
-
-Service worker that handles:
-
-- Extension icon clicks
-- Tab state management
-- Message routing between components
-
-### `/content`
-
-Content script injected into web pages:
-
-- Handles sidebar injection
-- Manages communication with background script
-- Lightweight bridge between page and extension
+## Modules
 
 ### `/sidebar`
+React UI for the sidebar.
+- `components/` – Reusable UI components
+- `hooks/` – Sidebar-specific hooks
+- `styles/` – Sidebar CSS and theme variables
+- `contexts/` – UI contexts (e.g., theme)
+- `index.tsx` – Mount/unmount logic for the sidebar
 
-Main application UI (React):
+### `/tabext`
+Content script injected into pages. This module owns the Tab Content Capture System described in the PRD — collecting content from the current tab (and later multiple tabs) and sending it into the chat context so the user can ask AI questions about it.
+- `index.ts` – Sidebar injection and message handling
+- Future (planned):
+  - `services/extraction/` – Readability-based main content, code blocks, tables, selection markers, images
+  - `services/aggregation/` – Multi-tab selection, parallel extraction, deduplication, relevance ranking
+  - `format/` – Markdown/structured output with links and image handling
+  - `bridge/` – Packaging content into typed messages for backend/provider
 
-- **`/components`** - Reusable UI components
-- **`/hooks`** - Custom React hooks
-- **`/styles`** - CSS modules and styles
-- **`Sidebar.tsx`** - Main sidebar container component
-- **`index.tsx`** - Sidebar mounting/unmounting logic
+### `/provider`
+AI provider configuration and clients (BYOK).
+- Provider abstraction, per-provider clients (OpenAI/Gemini/Anthropic), settings schema (future)
 
-## Future Modules (Stage 2+)
+### `/backend`
+Background/service worker and backend services.
+- `index.ts` – Service worker entry
+- `keepAlive.ts`, `messageHandler.ts`, `sidebarManager.ts`
+- Storage and backend services (future: `storage/`, `services/`)
 
-### `/providers`
+### `/core`
+Shared protocol/infra used across modules.
+- `messaging.ts` – High-level message bus and helpers
+- `types/` (in `src/types`) – Message and configuration types used by all modules
+- Shared constants/utilities (future)
 
-AI provider integrations:
-
-- OpenAI client
-- Google Gemini client
-- Anthropic client
-- Provider abstraction layer
-
-### `/storage`
-
-Data persistence layer:
-
-- Chrome storage API wrapper
-- Encryption utilities
-- Settings management
-- Chat history storage
-
-### `/services`
-
-Business logic services:
-
-- Content extraction
-- Message formatting
-- Rate limiting
-- Error handling
-
-### `/types`
-
-TypeScript type definitions:
-
-- API interfaces
-- Message types
-- Configuration types
-- Component props
-
-### `/utils`
-
-Utility functions:
-
-- DOM helpers
-- String formatting
-- Validation
-- Common helpers
+### Other
+- `/types` – TypeScript definitions (messages, settings, manifest, etc.)
+- `/utils` – Cross-cutting utilities (e.g., theme utils)
+- `/styles` – Global theme tokens (CSS variables) consumed by sidebar
+- `/store` – Zustand stores for UI state (sidebar-only):
+  - `index.ts` app store (loading/error)
+  - `chat.ts` conversation state (messages, statuses)
+  - `settings.ts` UI/AI settings with chrome.storage persistence
 
 ## Module Dependencies
 
 ```
-background
-    ↓
-content ←→ sidebar
-           ├── components
-           ├── hooks
-           └── styles
+backend (service worker)
+    ↑                ↑
+    │                │
+tabext (content capture) ←→ sidebar (UI)
+    │          │            └── components / hooks / styles / contexts
+    │          └── uses core messaging / types
+    └── sends structured tab content → backend/provider
 
-(Future):
-sidebar → providers
-        → storage
-        → services
-        → utils
+sidebar → provider (BYOK)
+backend → storage/services (future)
 ```
 
 ## Development Guidelines
 
-1. **Separation of Concerns**: Each module has a single responsibility
-2. **Type Safety**: All modules use TypeScript with strict mode
-3. **Testing**: Each module has corresponding tests in `/tests`
-4. **Isolation**: Modules communicate via well-defined interfaces
+1. Single responsibility per module; keep UI and backend separate
+2. Strict TypeScript; shared types under `types/`
+3. Tests live under `/tests` mirroring module structure
+4. Communicate via typed messages in `core`/`types`
 
 ## Import Aliases
 
-Available import aliases (configured in `vite.config.ts`):
-
-- `@/` - src directory
-- `@components` - src/sidebar/components
-- `@hooks` - src/sidebar/hooks
-- `@providers` - src/providers
-- `@storage` - src/storage
-- `@services` - src/services
-- `@types` - src/types
-- `@utils` - src/utils
+Configured in `vite.config.ts` and `tsconfig.json`:
+- `@/` – `src/`
+- `@sidebar` – `src/sidebar`
+- `@components` – `src/sidebar/components`
+- `@hooks` – `src/sidebar/hooks`
+- `@provider` – `src/provider`
+- `@backend` – `src/backend`
+- `@tabext` – `src/tabext`
+- `@core` – `src/core`
+- `@storage` – `src/storage`
+- `@services` – `src/services`
+- `@types` – `src/types`
+- `@utils` – `src/utils`

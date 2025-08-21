@@ -15,6 +15,7 @@ import type {
   PrivacySettings,
   APIKeyReferences,
   LegacySettings,
+  Model,
 } from '../types/settings';
 
 /**
@@ -26,6 +27,48 @@ const SETTINGS_VERSION = 1;
  * Storage key for settings in chrome.storage
  */
 const STORAGE_KEY = 'settings';
+
+/**
+ * Available AI models with their metadata
+ */
+const DEFAULT_AVAILABLE_MODELS: Model[] = [
+  {
+    id: 'gpt-4',
+    name: 'GPT-4',
+    provider: 'OpenAI',
+    available: true,
+  },
+  {
+    id: 'gpt-3.5-turbo',
+    name: 'GPT-3.5 Turbo',
+    provider: 'OpenAI',
+    available: true,
+  },
+  {
+    id: 'claude-3',
+    name: 'Claude 3',
+    provider: 'Anthropic',
+    available: true,
+  },
+  {
+    id: 'claude-2',
+    name: 'Claude 2',
+    provider: 'Anthropic',
+    available: true,
+  },
+  {
+    id: 'gemini-pro',
+    name: 'Gemini Pro',
+    provider: 'Google',
+    available: true,
+  },
+  {
+    id: 'llama-2',
+    name: 'Llama 2',
+    provider: 'Meta',
+    available: false,
+  },
+];
 
 /**
  * Default settings configuration
@@ -56,6 +99,8 @@ const DEFAULT_SETTINGS: Settings = {
     anthropic: null,
     google: null,
   },
+  selectedModel: 'gpt-4',
+  availableModels: [...DEFAULT_AVAILABLE_MODELS],
 };
 
 /**
@@ -96,6 +141,48 @@ const isValidTemperature = (temp: unknown): boolean => {
  */
 const isValidMaxTokens = (tokens: unknown): boolean => {
   return typeof tokens === 'number' && tokens >= 1 && tokens <= 8192;
+};
+
+/**
+ * Validate selected model against available models
+ */
+const isValidSelectedModel = (modelId: unknown, availableModels: Model[]): boolean => {
+  if (typeof modelId !== 'string' || modelId.length === 0) {
+    return false;
+  }
+  return availableModels.some(model => model.id === modelId);
+};
+
+/**
+ * Type guard to check if an object is a valid Model
+ */
+const isValidModel = (obj: unknown): obj is Model => {
+  return (
+    obj !== null &&
+    typeof obj === 'object' &&
+    typeof (obj as Record<string, unknown>)['id'] === 'string' &&
+    typeof (obj as Record<string, unknown>)['name'] === 'string' &&
+    typeof (obj as Record<string, unknown>)['provider'] === 'string' &&
+    typeof (obj as Record<string, unknown>)['available'] === 'boolean'
+  );
+};
+
+/**
+ * Validate model array structure
+ */
+const validateAvailableModels = (models: unknown): Model[] => {
+  if (!Array.isArray(models)) {
+    return [...DEFAULT_AVAILABLE_MODELS];
+  }
+
+  try {
+    const validatedModels = models.filter(isValidModel);
+    
+    // If no valid models, return default
+    return validatedModels.length > 0 ? validatedModels : [...DEFAULT_AVAILABLE_MODELS];
+  } catch {
+    return [...DEFAULT_AVAILABLE_MODELS];
+  }
 };
 
 /**
@@ -188,6 +275,11 @@ const migrateSettings = (rawSettings: unknown): Settings => {
   // If already current version, validate and return
   const rs = rawSettings as Partial<Settings> & Record<string, unknown>;
   if (rs.version === SETTINGS_VERSION) {
+    const availableModels = validateAvailableModels(rs.availableModels);
+    const selectedModel = isValidSelectedModel(rs.selectedModel, availableModels) 
+      ? rs.selectedModel as string 
+      : DEFAULT_SETTINGS.selectedModel;
+
     return {
       version: SETTINGS_VERSION,
       theme: isValidTheme(rs.theme) ? (rs.theme as Theme) : DEFAULT_SETTINGS.theme,
@@ -195,6 +287,8 @@ const migrateSettings = (rawSettings: unknown): Settings => {
       ai: validateAISettings(rs.ai),
       privacy: validatePrivacySettings(rs.privacy),
       apiKeys: validateAPIKeyReferences(rs.apiKeys),
+      selectedModel,
+      availableModels,
     };
   }
 
@@ -219,6 +313,8 @@ const migrateSettings = (rawSettings: unknown): Settings => {
       ai: { ...DEFAULT_SETTINGS.ai },
       privacy: { ...DEFAULT_SETTINGS.privacy },
       apiKeys: { ...DEFAULT_SETTINGS.apiKeys },
+      selectedModel: DEFAULT_SETTINGS.selectedModel,
+      availableModels: [...DEFAULT_SETTINGS.availableModels],
     };
   }
 
@@ -288,6 +384,8 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
       currentSettings.ai = settings.ai;
       currentSettings.privacy = settings.privacy;
       currentSettings.apiKeys = settings.apiKeys;
+      currentSettings.selectedModel = settings.selectedModel;
+      currentSettings.availableModels = settings.availableModels;
 
       // Check if migration occurred (different from defaults)
       const needsMigration = migrated;
@@ -384,6 +482,8 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
       currentSettings.ai = defaultSettings.ai;
       currentSettings.privacy = defaultSettings.privacy;
       currentSettings.apiKeys = defaultSettings.apiKeys;
+      currentSettings.selectedModel = defaultSettings.selectedModel;
+      currentSettings.availableModels = [...defaultSettings.availableModels];
       await saveToStorage(currentSettings);
       set({ isLoading: false, error: null });
     } catch (error) {
@@ -394,5 +494,38 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
 
   setError: (error: string | null) => {
     set({ error });
+  },
+
+  updateSelectedModel: async (modelId: string) => {
+    set({ error: null });
+    try {
+      const currentSettings = get().settings;
+      
+      // Validate that the model exists in available models
+      if (!isValidSelectedModel(modelId, currentSettings.availableModels)) {
+        throw new Error(`Invalid model: ${modelId}. Model not found in available models.`);
+      }
+      
+      // Update settings without triggering loading state
+      const updatedSettings = { ...currentSettings, selectedModel: modelId };
+      set({ settings: updatedSettings });
+      
+      // Save to storage in background
+      await saveToStorage(updatedSettings);
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to save settings';
+      set({ error: errorMessage });
+      throw error; // Re-throw for test assertion
+    }
+  },
+
+  getAvailableModels: (availableOnly = true) => {
+    const { availableModels } = get().settings;
+    
+    if (availableOnly) {
+      return availableModels.filter(model => model.available);
+    }
+    
+    return [...availableModels];
   },
 }));

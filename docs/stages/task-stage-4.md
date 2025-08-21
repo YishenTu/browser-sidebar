@@ -67,8 +67,8 @@ Deliverable highlight: Unified AI provider system supporting OpenAI, Gemini, and
     - Test shared functionality
   - Description: Create base provider class
   - Deliverables:
-    - `src/providers/BaseProvider.ts`
-    - `tests/providers/BaseProvider.test.ts`
+    - `src/provider/BaseProvider.ts`
+    - `tests/provider/BaseProvider.test.ts`
   - Acceptance: Base class works
 
 - [ ] **Task 4.1.2a** - Stream Parser 🧪
@@ -79,8 +79,8 @@ Deliverable highlight: Unified AI provider system supporting OpenAI, Gemini, and
     - Test error detection
   - Description: Create SSE stream parser
   - Deliverables:
-    - `src/providers/streamParser.ts`
-    - `tests/providers/streamParser.test.ts`
+    - `src/provider/streamParser.ts`
+    - `tests/provider/streamParser.test.ts`
   - Acceptance: Parses SSE correctly
 
 - [ ] **Task 4.1.2b** - Token Buffer 🧪
@@ -90,8 +90,8 @@ Deliverable highlight: Unified AI provider system supporting OpenAI, Gemini, and
     - Test flush behavior
   - Description: Implement token buffering
   - Deliverables:
-    - `src/providers/tokenBuffer.ts`
-    - `tests/providers/tokenBuffer.test.ts`
+    - `src/provider/tokenBuffer.ts`
+    - `tests/provider/tokenBuffer.test.ts`
   - Acceptance: Buffers tokens correctly
 
 ### Phase 4.2: Provider Implementations
@@ -119,8 +119,8 @@ Deliverable highlight: Unified AI provider system supporting OpenAI, Gemini, and
     - Test error handling
   - Description: Implement OpenAI chat
   - Deliverables:
-    - `src/providers/openai/OpenAIProvider.ts`
-    - `tests/providers/openai/OpenAIProvider.test.ts`
+    - `src/provider/openai/OpenAIProvider.ts`
+    - `tests/provider/openai/OpenAIProvider.test.ts`
   - Acceptance: OpenAI chat works
 
 - [ ] **Task 4.2.1c** - OpenAI Models Configuration 🧪
@@ -152,8 +152,8 @@ Deliverable highlight: Unified AI provider system supporting OpenAI, Gemini, and
     - Test multimodal
   - Description: Implement Gemini chat
   - Deliverables:
-    - `src/providers/gemini/GeminiProvider.ts`
-    - `tests/providers/gemini/GeminiProvider.test.ts`
+    - `src/provider/gemini/GeminiProvider.ts`
+    - `tests/provider/gemini/GeminiProvider.test.ts`
   - Acceptance: Gemini chat works
 
 - [ ] **Task 4.2.2c** - Gemini Models Configuration 🧪
@@ -183,8 +183,8 @@ Deliverable highlight: Unified AI provider system supporting OpenAI, Gemini, and
     - Test streaming
   - Description: Implement Anthropic via OpenRouter
   - Deliverables:
-    - `src/providers/anthropic/AnthropicProvider.ts`
-    - `tests/providers/anthropic/AnthropicProvider.test.ts`
+    - `src/provider/anthropic/AnthropicProvider.ts`
+    - `tests/provider/anthropic/AnthropicProvider.test.ts`
   - Acceptance: Claude chat works
 
 ### Phase 4.3: Provider Management
@@ -201,8 +201,8 @@ Deliverable highlight: Unified AI provider system supporting OpenAI, Gemini, and
     - Test switching
   - Description: Create provider registry
   - Deliverables:
-    - `src/providers/ProviderRegistry.ts`
-    - `tests/providers/ProviderRegistry.test.ts`
+    - `src/provider/ProviderRegistry.ts`
+    - `tests/provider/ProviderRegistry.test.ts`
   - Acceptance: Registry manages providers
 
 - [ ] **Task 4.3.1b** - Provider Factory 🧪
@@ -212,8 +212,8 @@ Deliverable highlight: Unified AI provider system supporting OpenAI, Gemini, and
     - Test configuration
   - Description: Create provider factory
   - Deliverables:
-    - `src/providers/ProviderFactory.ts`
-    - `tests/providers/ProviderFactory.test.ts`
+    - `src/provider/ProviderFactory.ts`
+    - `tests/provider/ProviderFactory.test.ts`
   - Acceptance: Factory creates providers
 
 - [ ] **Task 4.3.2** - API Key Validation Service 🧪
@@ -223,8 +223,8 @@ Deliverable highlight: Unified AI provider system supporting OpenAI, Gemini, and
     - Test error messages
   - Description: Validate keys with providers
   - Deliverables:
-    - `src/providers/validation.ts`
-    - `tests/providers/validation.test.ts`
+    - `src/provider/validation.ts`
+    - `tests/provider/validation.test.ts`
   - Acceptance: Keys validated
 
 - [ ] **Task 4.3.3a** - Rate Limiter 🧪
@@ -235,8 +235,8 @@ Deliverable highlight: Unified AI provider system supporting OpenAI, Gemini, and
     - Test reset
   - Description: Implement rate limiting
   - Deliverables:
-    - `src/providers/RateLimiter.ts`
-    - `tests/providers/RateLimiter.test.ts`
+    - `src/provider/RateLimiter.ts`
+    - `tests/provider/RateLimiter.test.ts`
   - Acceptance: Rate limits enforced
 
 - [ ] **Task 4.3.3b** - Request Queue 🧪
@@ -247,8 +247,8 @@ Deliverable highlight: Unified AI provider system supporting OpenAI, Gemini, and
     - Test cancellation
   - Description: Create request queue
   - Deliverables:
-    - `src/providers/RequestQueue.ts`
-    - `tests/providers/RequestQueue.test.ts`
+    - `src/provider/RequestQueue.ts`
+    - `tests/provider/RequestQueue.test.ts`
   - Acceptance: Queue manages requests
 
 - [ ] **Task 4.3.4a** - Provider Settings UI 🧪

@@ -5,4 +5,4 @@
  */
 
 export { ThemeProvider, useTheme, withTheme } from './ThemeContext';
-export type { Theme } from '../types/settings';
+export type { Theme } from '@/types/settings';

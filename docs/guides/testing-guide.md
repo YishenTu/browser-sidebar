@@ -247,7 +247,7 @@ export const mockOpenAI = {
 // tests/utils/test-utils.tsx
 import { ReactElement } from 'react';
 import { render, RenderOptions } from '@testing-library/react';
-import { ThemeProvider } from '@/contexts/ThemeContext';
+import { ThemeProvider } from '@sidebar/contexts/ThemeContext';
 import { StoreProvider } from '@/contexts/StoreContext';
 
 const AllTheProviders: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -435,7 +435,7 @@ beforeEach(() => {
 const spy = vi.spyOn(console, 'log');
 
 // Mock modules
-vi.mock('@/utils/api', () => ({
+vi.mock('@utils/api', () => ({
   fetchData: vi.fn(),
 }));
 

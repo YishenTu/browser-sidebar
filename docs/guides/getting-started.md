@@ -80,15 +80,15 @@ npm run typecheck    # Run TypeScript compiler checks
 ```
 browser-sidebar/
 ├── src/
-│   ├── background/      # Service worker for extension logic
-│   ├── content/         # Content script for page injection
+│   ├── backend/         # Service worker: routing, tab state
+│   ├── tabext/          # Content script: sidebar injection + tab content capture
 │   ├── sidebar/         # Main sidebar application (React)
 │   │   ├── components/  # Reusable UI components
 │   │   ├── hooks/       # Custom React hooks
 │   │   ├── styles/      # CSS modules and styles
 │   │   ├── Sidebar.tsx  # Main sidebar container
 │   │   └── index.tsx    # Sidebar mounting logic
-│   ├── providers/       # AI provider integrations (Stage 4)
+│   ├── provider/        # AI provider integrations (Stage 4)
 │   ├── storage/         # Data persistence layer (Stage 3)
 │   ├── services/        # Business logic services (Stage 5)
 │   ├── types/           # TypeScript definitions

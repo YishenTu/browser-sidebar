@@ -10,11 +10,12 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { unmountSidebar } from './index';
 import { useSettingsStore } from '@/store/settings';
 import { setTheme } from '@/utils/theme';
-import { ThemeProvider } from '@/contexts/ThemeContext';
+import { ThemeProvider } from '@sidebar/contexts/ThemeContext';
 import { MessageList } from '@/sidebar/components/MessageList';
 import { ChatInput } from '@/sidebar/components/ChatInput';
 import { useChatStore } from '@/store/chat';
 import { useMockChat } from '@/sidebar/hooks/useMockChat';
+// import { ModelSelector } from '@components/ModelSelector'; // Commented out - using simple select instead
 
 // Constants for sizing and positioning
 const MIN_WIDTH = 300;
@@ -71,7 +72,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ className, onClose }) => {
   const [isDragging, setIsDragging] = useState(false);
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
 
-  // Theme integration
+  // Settings store integration
   const theme = useSettingsStore(state => state.settings.theme);
 
   // Apply theme when it changes
@@ -216,11 +217,12 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ className, onClose }) => {
   // Handle header mouse down for dragging
   const handleHeaderMouseDown = useCallback(
     (e: React.MouseEvent) => {
-      // Only start dragging if not clicking on close button or clear button
+      // Only start dragging if not clicking on close button, clear button, or ModelSelector
       const target = e.target as HTMLElement;
       if (
         target.classList.contains('ai-sidebar-close') ||
         target.closest('.ai-sidebar-clear') ||
+        target.closest('.model-selector') ||
         target.closest('button')
       ) {
         return;
@@ -271,12 +273,47 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ className, onClose }) => {
           data-testid="sidebar-header"
         >
           <div className="ai-sidebar-header-title">
+            {/* Simple model selector - static for now to avoid infinite loops */}
+            <select 
+              className="model-selector--header"
+              style={{
+                padding: '4px 8px',
+                borderRadius: '4px',
+                border: '1px solid var(--border-color)',
+                background: 'var(--bg-secondary)',
+                color: 'var(--text-primary)',
+                fontSize: '12px',
+                cursor: 'pointer',
+                outline: 'none'
+              }}
+              disabled={isLoading}
+              defaultValue="gpt-4"
+              onChange={(e) => {
+                // console.log('Model selected:', e.target.value);
+                // For now, just log - don't update store to avoid loops
+                // eslint-disable-next-line no-console
+                console.log('Model selected:', e.target.value);
+              }}
+            >
+              <option value="gpt-4">GPT-4</option>
+              <option value="gpt-3.5-turbo">GPT-3.5</option>
+              <option value="claude-3">Claude 3</option>
+              <option value="claude-2">Claude 2</option>
+              <option value="gemini-pro">Gemini Pro</option>
+              <option value="llama-2">Llama 2</option>
+            </select>
+            <h2></h2>
+          </div>
+          <div className="ai-sidebar-header-actions">
             {hasMessages() && (
               <button
                 onClick={handleClearConversation}
                 className="ai-sidebar-clear"
                 aria-label="New session"
                 title="Start new session"
+                style={{
+                  marginRight: '8px'
+                }}
               >
                 <svg
                   width="16"
@@ -293,9 +330,6 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ className, onClose }) => {
                 </svg>
               </button>
             )}
-            <h2></h2>
-          </div>
-          <div className="ai-sidebar-header-actions">
             <button
               onClick={handleClose}
               className="ai-sidebar-close"

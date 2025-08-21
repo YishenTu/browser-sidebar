@@ -1,4 +1,4 @@
-import { useTheme } from '../../contexts/ThemeContext';
+import { useTheme } from '../contexts/ThemeContext';
 import type { Theme } from '../../types/settings';
 
 export interface ThemeToggleProps {

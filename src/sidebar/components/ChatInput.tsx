@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react';
-import { TextArea, TextAreaProps } from '@/components/ui/TextArea';
+import { TextArea, TextAreaProps } from '@components/ui/TextArea';
 import { cn } from '@/utils/cn';
 
 export interface ChatInputProps extends Omit<TextAreaProps, 'onKeyDown' | 'value' | 'onChange'> {

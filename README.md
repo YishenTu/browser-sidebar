@@ -84,15 +84,13 @@ npm run test:ui
 ```
 browser-sidebar/
 ├── src/
-│   ├── background/    # Service worker for extension logic
-│   ├── content/       # Content script for page injection
-│   ├── sidebar/       # Main sidebar application (React)
-│   │   ├── components/  # Reusable UI components
-│   │   ├── hooks/       # Custom React hooks
-│   │   └── styles/      # CSS modules and styles
-│   ├── providers/     # AI provider integrations (Stage 4)
+│   ├── backend/       # Service worker, routing, tab state
+│   ├── tabext/        # Content script: sidebar injection + tab content capture
+│   ├── sidebar/       # Sidebar React app (components, hooks, styles, contexts)
+│   ├── core/          # Messaging and shared infra
+│   ├── provider/      # AI provider integrations (BYOK, Stage 4)
 │   ├── storage/       # Data persistence layer (Stage 3)
-│   ├── services/      # Business logic services (Stage 5)
+│   ├── services/      # Backend services (Stage 5)
 │   ├── types/         # TypeScript definitions
 │   └── utils/         # Utility functions
 ├── tests/             # Test files
