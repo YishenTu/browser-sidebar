@@ -10,6 +10,7 @@ import React, { useCallback } from 'react';
 import { MessageList } from './MessageList';
 import { ChatInput } from './ChatInput';
 import { useChatStore } from '@/store/chat';
+import { useMockChat } from '@/hooks/useMockChat';
 import { IconButton } from '@/components/ui/IconButton';
 import { cn } from '@/utils/cn';
 
@@ -74,7 +75,7 @@ const DismissIcon: React.FC = () => (
  *
  * @example
  * ```tsx
- * <ChatPanel 
+ * <ChatPanel
  *   title="Chat Assistant"
  *   emptyMessage="Start a conversation"
  *   showMessageCount={true}
@@ -101,15 +102,30 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
     getMessageCount,
   } = useChatStore();
 
+  // Use mock chat for demo purposes
+  const { generateResponse } = useMockChat({
+    enabled: true,
+    responseType: 'text',
+    streamingSpeed: 'normal',
+    thinkingDelay: 800,
+  });
+
   /**
    * Handle sending a new message
    */
-  const handleSendMessage = useCallback((content: string) => {
-    addMessage({
-      role: 'user',
-      content,
-    });
-  }, [addMessage]);
+  const handleSendMessage = useCallback(
+    async (content: string) => {
+      // Add user message
+      addMessage({
+        role: 'user',
+        content,
+      });
+
+      // Generate mock response
+      await generateResponse(content);
+    },
+    [addMessage, generateResponse]
+  );
 
   /**
    * Handle clearing the conversation with confirmation
@@ -145,24 +161,16 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
       aria-label="Chat conversation"
     >
       {/* Header Section */}
-      <header
-        className="chat-panel__header"
-        data-testid="chat-panel-header"
-      >
+      <header className="chat-panel__header" data-testid="chat-panel-header">
         <div className="chat-panel__header-content">
           <h2 className="chat-panel__title">{title}</h2>
-          
+
           {showMessageCount && messageCount > 0 && (
-            <span className="chat-panel__message-count">
-              {messageCountText}
-            </span>
+            <span className="chat-panel__message-count">{messageCountText}</span>
           )}
         </div>
-        
-        <div
-          className="chat-panel__controls"
-          data-testid="chat-panel-controls"
-        >
+
+        <div className="chat-panel__controls" data-testid="chat-panel-controls">
           <IconButton
             icon={<ClearIcon />}
             size="sm"
@@ -197,10 +205,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
       )}
 
       {/* Body Section */}
-      <div
-        className="chat-panel__body"
-        data-testid="chat-panel-body"
-      >
+      <div className="chat-panel__body" data-testid="chat-panel-body">
         <MessageList
           messages={messages}
           isLoading={isLoading}
@@ -211,10 +216,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
       </div>
 
       {/* Footer Section */}
-      <footer
-        className="chat-panel__footer"
-        data-testid="chat-panel-footer"
-      >
+      <footer className="chat-panel__footer" data-testid="chat-panel-footer">
         <ChatInput
           onSend={handleSendMessage}
           loading={isLoading}
@@ -227,200 +229,3 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
 };
 
 export default ChatPanel;
-
-// CSS Styles
-const chatPanelStyles = `
-.chat-panel {
-  display: flex;
-  flex-direction: column;
-  height: 100%;
-  max-height: 100vh;
-  background: white;
-  border-radius: 0.5rem;
-  overflow: hidden;
-}
-
-.chat-panel__header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 1rem;
-  border-bottom: 1px solid #e5e7eb;
-  background: #f9fafb;
-  flex-shrink: 0;
-}
-
-.chat-panel__header-content {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-}
-
-.chat-panel__title {
-  font-size: 1.125rem;
-  font-weight: 600;
-  color: #111827;
-  margin: 0;
-}
-
-.chat-panel__message-count {
-  font-size: 0.875rem;
-  color: #6b7280;
-  background: #e5e7eb;
-  padding: 0.25rem 0.5rem;
-  border-radius: 0.375rem;
-}
-
-.chat-panel__controls {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-.chat-panel__error {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0.75rem 1rem;
-  background: #fef2f2;
-  border-bottom: 1px solid #fecaca;
-  color: #dc2626;
-  font-size: 0.875rem;
-  flex-shrink: 0;
-}
-
-.chat-panel__error-message {
-  flex: 1;
-  margin-right: 0.5rem;
-}
-
-.chat-panel__error-dismiss {
-  flex-shrink: 0;
-}
-
-.chat-panel__body {
-  flex: 1;
-  min-height: 0;
-  overflow: hidden;
-}
-
-.chat-panel__footer {
-  padding: 1rem;
-  border-top: 1px solid #e5e7eb;
-  background: #f9fafb;
-  flex-shrink: 0;
-}
-
-/* Dark mode support */
-.dark .chat-panel {
-  background: #1f2937;
-}
-
-.dark .chat-panel__header {
-  background: #111827;
-  border-bottom-color: #374151;
-}
-
-.dark .chat-panel__title {
-  color: #f9fafb;
-}
-
-.dark .chat-panel__message-count {
-  color: #9ca3af;
-  background: #374151;
-}
-
-.dark .chat-panel__error {
-  background: #fee2e2;
-  border-bottom-color: #fca5a5;
-  color: #dc2626;
-}
-
-.dark .chat-panel__footer {
-  background: #111827;
-  border-top-color: #374151;
-}
-
-/* Responsive design */
-@media (max-width: 640px) {
-  .chat-panel__header {
-    padding: 0.75rem;
-  }
-  
-  .chat-panel__title {
-    font-size: 1rem;
-  }
-  
-  .chat-panel__message-count {
-    font-size: 0.75rem;
-    padding: 0.125rem 0.375rem;
-  }
-  
-  .chat-panel__footer {
-    padding: 0.75rem;
-  }
-  
-  .chat-panel__error {
-    padding: 0.5rem 0.75rem;
-    font-size: 0.75rem;
-  }
-}
-
-/* Focus management for accessibility */
-.chat-panel:focus-within .chat-panel__header {
-  border-bottom-color: #3b82f6;
-}
-
-.chat-panel:focus-within .chat-panel__footer {
-  border-top-color: #3b82f6;
-}
-
-/* Animation support */
-.chat-panel__error {
-  animation: slideDown 0.2s ease-out;
-}
-
-@keyframes slideDown {
-  from {
-    opacity: 0;
-    transform: translateY(-8px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-/* High contrast mode support */
-@media (prefers-contrast: high) {
-  .chat-panel__header {
-    border-bottom-width: 2px;
-  }
-  
-  .chat-panel__footer {
-    border-top-width: 2px;
-  }
-  
-  .chat-panel__error {
-    border-bottom-width: 2px;
-  }
-}
-
-/* Reduced motion support */
-@media (prefers-reduced-motion: reduce) {
-  .chat-panel__error {
-    animation: none;
-  }
-}
-`;
-
-// Inject styles when component is first imported
-if (typeof document !== 'undefined') {
-  const styleId = 'chat-panel-styles';
-  if (!document.getElementById(styleId)) {
-    const style = document.createElement('style');
-    style.id = styleId;
-    style.textContent = chatPanelStyles;
-    document.head.appendChild(style);
-  }
-}

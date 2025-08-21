@@ -208,8 +208,14 @@ export const TextArea = forwardRef<HTMLTextAreaElement, TextAreaProps>(
           onChange={handleChange}
           onInput={handleInput}
           style={{
-            resize: 'none', // Disable manual resize since we auto-resize
+            resize: 'none', // Disable manual resize
             minHeight: `${minRows * getLineHeight()}px`,
+            background: 'transparent',
+            backgroundColor: 'transparent',
+            outline: 'none',
+            boxShadow: 'none',
+            width: '100%',
+            boxSizing: 'border-box',
           }}
           {...props}
         />

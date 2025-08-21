@@ -94,7 +94,7 @@ export interface ChatState {
 
   // Actions for message management
   /** Add a new message to the conversation */
-  addMessage: (options: CreateMessageOptions) => void;
+  addMessage: (options: CreateMessageOptions) => ChatMessage;
   /** Update an existing message */
   updateMessage: (id: string, updates: UpdateMessageOptions) => void;
   /** Append content to an existing message (for streaming) */
@@ -192,6 +192,8 @@ export const useChatStore = create<ChatState>((set, get) => ({
       ...state,
       messages: [...state.messages, newMessage],
     }));
+
+    return newMessage;
   },
 
   updateMessage: (id: string, updates: UpdateMessageOptions) => {

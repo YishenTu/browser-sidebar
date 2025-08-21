@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { Card } from '@/components/ui/Card';
 import { cn } from '@/utils/cn';
 import { ChatMessage, MessageRole, MessageStatus } from '@/store/chat';
 
@@ -88,13 +87,13 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
   const getBubbleClasses = (role: MessageRole) => {
     switch (role) {
       case 'user':
-        return 'bg-blue-500 text-white max-w-[80%]';
+        return 'bg-blue-500 dark:bg-blue-600 text-white max-w-[80%]';
       case 'assistant':
-        return 'bg-gray-100 text-gray-900 max-w-[80%]';
+        return 'bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-gray-100 max-w-[80%]';
       case 'system':
-        return 'bg-yellow-100 text-yellow-800 max-w-[90%]';
+        return 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-200 max-w-[90%]';
       default:
-        return 'bg-gray-100 text-gray-900 max-w-[80%]';
+        return 'bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-gray-100 max-w-[80%]';
     }
   };
 
@@ -204,18 +203,14 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
       {/* Avatar - only for left-aligned messages */}
       {message.role !== 'user' && getAvatar(message.role)}
 
-      <Card
+      <div
         className={cn(
           'relative p-3 rounded-lg shadow-sm',
           getBubbleClasses(message.role),
-          message.status === 'error' && 'border-red-200'
+          message.status === 'error' && 'border border-red-500'
         )}
-        padding="none"
       >
-        <div
-          data-testid="message-content"
-          className={cn('whitespace-pre-wrap break-words', getBubbleClasses(message.role))}
-        >
+        <div data-testid="message-content" className="whitespace-pre-wrap break-words">
           {message.content}
         </div>
 
@@ -276,7 +271,7 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
             {formatTimestamp(message.timestamp)}
           </time>
         )}
-      </Card>
+      </div>
 
       {/* Avatar - only for right-aligned messages (user) */}
       {message.role === 'user' && <div className="ml-3">{getAvatar(message.role)}</div>}

@@ -340,21 +340,33 @@ export class SidebarManager {
     }
 
     try {
-      // Try built JS first, then TS path as a fallback (dev)
-      try {
-        await chrome.scripting.executeScript({
-          target: { tabId },
-          files: ['content/index.js'],
-        });
-      } catch (e) {
-        // Fallback to TS path for dev environments with CRXJS
-        await chrome.scripting.executeScript({
-          target: { tabId },
-          files: ['src/content/index.ts'],
+      // The content script should already be injected via manifest.json
+      // But if we need to manually inject, we should use chrome.scripting.registerContentScripts
+      // or rely on the manifest declaration. For now, just retry sending the message.
+
+      // Check if tab is ready
+      const tab = await chrome.tabs.get(tabId);
+      if (tab.status !== 'complete') {
+        // Wait for tab to be ready
+        await new Promise<void>(resolve => {
+          const listener = (updatedTabId: number, changeInfo: chrome.tabs.TabChangeInfo) => {
+            if (updatedTabId === tabId && changeInfo.status === 'complete') {
+              chrome.tabs.onUpdated.removeListener(listener);
+              resolve();
+            }
+          };
+          chrome.tabs.onUpdated.addListener(listener);
+
+          // Timeout after 5 seconds
+          setTimeout(() => {
+            chrome.tabs.onUpdated.removeListener(listener);
+            resolve();
+          }, 5000);
         });
       }
 
-      // Wait briefly for the content script to initialize
+      // The content script should be auto-injected by manifest.json
+      // Just wait a bit and retry the message
       await new Promise(resolve => setTimeout(resolve, 150));
 
       // Send the original message

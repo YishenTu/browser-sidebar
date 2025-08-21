@@ -3,6 +3,7 @@ import { TextArea, TextAreaProps } from '@/components/ui/TextArea';
 import { Button } from '@/components/ui/Button';
 import { IconButton } from '@/components/ui/IconButton';
 import { cn } from '@/utils/cn';
+import { useSettingsStore } from '@/store/settings';
 
 export interface ChatInputProps extends Omit<TextAreaProps, 'onKeyDown' | 'value' | 'onChange'> {
   /** Callback fired when message is sent */
@@ -99,6 +100,7 @@ export const ChatInput = React.forwardRef<HTMLTextAreaElement, ChatInputProps>(
   ) => {
     // Internal state for uncontrolled mode
     const [internalValue, setInternalValue] = useState(defaultValue || '');
+    const { theme } = useSettingsStore();
 
     // Determine if we're in controlled mode
     const isControlled = value !== undefined;
@@ -259,6 +261,16 @@ export const ChatInput = React.forwardRef<HTMLTextAreaElement, ChatInputProps>(
               minRows={1}
               maxRows={8}
               tabIndex={0}
+              style={{
+                background: 'transparent',
+                backgroundColor: 'transparent',
+                border: theme === 'dark' ? '1px solid #4b5563' : '1px solid #e5e7eb',
+                borderRadius: '0.5rem',
+                padding: '0.75rem',
+                color: theme === 'dark' ? '#ffffff' : '#4b5563', // White in dark mode, gray in light mode
+                outline: 'none',
+                boxShadow: 'none',
+              }}
               {...textAreaProps}
             />
           </div>
@@ -333,108 +345,3 @@ export const ChatInput = React.forwardRef<HTMLTextAreaElement, ChatInputProps>(
 );
 
 ChatInput.displayName = 'ChatInput';
-
-// CSS Styles
-const chatInputStyles = `
-.chat-input {
-  border: 1px solid #e5e7eb;
-  border-radius: 0.5rem;
-  background: white;
-  padding: 0.75rem;
-}
-
-.chat-input__main {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-}
-
-.chat-input__textarea-container {
-  flex: 1;
-}
-
-.chat-input__actions {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.5rem;
-}
-
-/* Reverse the visual order to match the expected layout */
-.chat-input__controls {
-  order: 2;
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-.chat-input__utilities {
-  order: 1;
-  display: flex;
-  align-items: center;
-  gap: 0.25rem;
-}
-
-.chat-input__counter {
-  display: flex;
-  align-items: center;
-  font-family: monospace;
-}
-
-.chat-input__send-button {
-  display: flex;
-  align-items: center;
-  gap: 0.25rem;
-}
-
-/* Dark mode support */
-.dark .chat-input {
-  background: #1f2937;
-  border-color: #374151;
-}
-
-/* Focus styles */
-.chat-input:focus-within {
-  border-color: #3b82f6;
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
-}
-
-/* Loading state */
-.chat-input--loading {
-  opacity: 0.7;
-  pointer-events: none;
-}
-
-/* Screen reader only text */
-.sr-only {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  padding: 0;
-  margin: -1px;
-  overflow: hidden;
-  clip: rect(0, 0, 0, 0);
-  white-space: nowrap;
-  border: 0;
-}
-
-/* Counter color classes */
-.chat-input__counter .warning {
-  color: #d97706;
-}
-
-.chat-input__counter .error {
-  color: #dc2626;
-}
-`;
-
-// Inject styles when component is first imported
-if (typeof document !== 'undefined') {
-  const styleId = 'chat-input-styles';
-  if (!document.getElementById(styleId)) {
-    const style = document.createElement('style');
-    style.id = styleId;
-    style.textContent = chatInputStyles;
-    document.head.appendChild(style);
-  }
-}

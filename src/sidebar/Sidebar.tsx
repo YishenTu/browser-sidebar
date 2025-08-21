@@ -2,6 +2,11 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { unmountSidebar } from './index';
 import { useSettingsStore } from '@/store/settings';
 import { setTheme } from '@/utils/theme';
+import { ThemeProvider } from '@/contexts/ThemeContext';
+import { MessageList } from '@/components/Chat/MessageList';
+import { ChatInput } from '@/components/Chat/ChatInput';
+import { useChatStore } from '@/store/chat';
+import { useMockChat } from '@/hooks/useMockChat';
 
 const MIN_WIDTH = 300;
 const MAX_WIDTH = 800;
@@ -27,6 +32,34 @@ export const Sidebar: React.FC = () => {
   useEffect(() => {
     setTheme(theme);
   }, [theme]);
+
+  // Chat store and mock chat
+  const { messages, isLoading, addMessage, clearConversation, hasMessages } = useChatStore();
+  const { generateResponse } = useMockChat({
+    enabled: true,
+    responseType: 'text',
+    streamingSpeed: 'normal',
+    thinkingDelay: 800,
+  });
+
+  // Handle sending messages
+  const handleSendMessage = useCallback(
+    async (content: string) => {
+      addMessage({
+        role: 'user',
+        content,
+      });
+      await generateResponse(content);
+    },
+    [addMessage, generateResponse]
+  );
+
+  // Handle clear conversation
+  const handleClearConversation = useCallback(() => {
+    if (hasMessages() && window.confirm('Clear conversation? This cannot be undone.')) {
+      clearConversation();
+    }
+  }, [hasMessages, clearConversation]);
 
   // Handle resize and drag
   useEffect(() => {
@@ -130,77 +163,61 @@ export const Sidebar: React.FC = () => {
           onMouseDown={handleHeaderMouseDown}
           style={{ cursor: isDragging ? 'grabbing' : 'grab' }}
         >
-          <h2>AI Browser Sidebar</h2>
-          <button
-            onClick={handleClose}
-            className="ai-sidebar-close"
-            aria-label="Close sidebar"
-            title="Close (Esc)"
-          >
-            ×
-          </button>
-        </div>
-
-        <div className="ai-sidebar-content">
-          <div className="space-y-4">
-            <div className="text-center">
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-                Chat with any webpage using AI
-              </h3>
-              <p className="text-sm text-gray-600 dark:text-gray-400 mt-2">
-                Drag header to move • Drag left edge to resize
-              </p>
-            </div>
-
-            {/* Demo chat interface preview */}
-            <div className="space-y-3">
-              <div className="chat-message user animate-slide-up">
-                <p className="text-sm">Hello! Can you help me understand this webpage?</p>
-              </div>
-
-              <div className="chat-message ai animate-slide-up" style={{ animationDelay: '0.2s' }}>
-                <p className="text-sm">
-                  I&apos;d be happy to help you understand the content on this webpage. What
-                  specific aspect would you like me to explain?
-                </p>
-              </div>
-            </div>
-
-            {/* Chat input area */}
-            <div className="mt-6 space-y-3">
-              <div className="relative">
-                <input
-                  type="text"
-                  placeholder="Ask about this webpage..."
-                  className="chat-input"
-                  disabled
-                />
-                <div className="absolute inset-y-0 right-0 pr-3 flex items-center">
-                  <div className="w-2 h-2 bg-primary-500 rounded-full animate-pulse-soft"></div>
-                </div>
-              </div>
-
-              <div className="flex gap-2">
-                <button className="chat-button flex-1" disabled>
-                  Send
-                </button>
-                <button className="chat-button secondary" disabled>
-                  Clear
-                </button>
-              </div>
-            </div>
-
-            {/* Status indicator */}
-            <div className="mt-4 p-3 bg-amber-50 dark:bg-amber-900/20 rounded-lg border border-amber-200 dark:border-amber-800">
-              <div className="flex items-center space-x-2">
-                <div className="w-2 h-2 bg-warning-500 rounded-full"></div>
-                <span className="text-xs text-amber-700 dark:text-amber-300">
-                  Stage 2: Chat interface coming soon
-                </span>
-              </div>
-            </div>
+          <div className="ai-sidebar-header-title">
+            <h2>AI Assistant</h2>
+          </div>
+          <div className="ai-sidebar-header-actions">
+            {hasMessages() && (
+              <button
+                onClick={handleClearConversation}
+                className="ai-sidebar-clear"
+                aria-label="Clear conversation"
+                title="Clear conversation"
+              >
+                <svg
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                >
+                  <path d="M3 6h18" />
+                  <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
+                  <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
+                </svg>
+              </button>
+            )}
+            <button
+              onClick={handleClose}
+              className="ai-sidebar-close"
+              aria-label="Close sidebar"
+              title="Close (Esc)"
+            >
+              ×
+            </button>
           </div>
         </div>
+
+        <ThemeProvider>
+          <div className="ai-sidebar-body">
+            <MessageList
+              messages={messages}
+              isLoading={isLoading}
+              emptyMessage="Start a conversation about this webpage"
+              autoScroll={true}
+              height="100%"
+            />
+          </div>
+
+          <div className="ai-sidebar-footer">
+            <ChatInput
+              onSend={handleSendMessage}
+              loading={isLoading}
+              placeholder="Ask about this webpage..."
+            />
+          </div>
+        </ThemeProvider>
       </div>
     </div>
   );

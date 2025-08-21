@@ -151,12 +151,26 @@
 }
 
 /* Textarea Specific */
-.ai-sidebar-container .textarea {
+.ai-sidebar-container .textarea,
+.ai-sidebar-container textarea {
   @apply resize-y min-h-[80px];
+  background: transparent !important;
+  background-color: transparent !important;
+  border: 1px solid #d1d5db !important;
+  color: #111827 !important;
 }
 
 .ai-sidebar-container .textarea.no-resize {
   @apply resize-none;
+}
+
+/* Dark mode textarea override */
+.dark .ai-sidebar-container .textarea,
+.dark .ai-sidebar-container textarea {
+  background: transparent !important;
+  background-color: transparent !important;
+  border-color: #374151 !important;
+  color: #ffffff !important;
 }
 
 /* ===== CARD STYLES ===== */
