@@ -5,7 +5,7 @@
  */
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { 
+import {
   initializeStorage,
   addAPIKey,
   getAPIKey,
@@ -21,35 +21,42 @@ import {
   importKeys,
   testKeyConnection,
   getHealthStatus,
-  shutdown
+  shutdown,
 } from '../../src/storage/apiKeys';
 
-import type { 
-  CreateAPIKeyInput, 
+import type {
+  CreateAPIKeyInput,
   UpdateAPIKeyInput,
-  APIKeyQueryOptions
+  APIKeyQueryOptions,
 } from '../../src/types/apiKeys';
 
-// Mock external dependencies using factory functions to avoid hoisting issues
-vi.mock('../../src/security/encryptionService', () => ({
-  EncryptionService: {
-    getInstance: vi.fn(() => ({
-      initialize: vi.fn(),
-      isInitialized: vi.fn(() => true),
-      isSessionActive: vi.fn(() => true),
-      encryptData: vi.fn(() => Promise.resolve({
+// Mock EncryptionService to always return the same instance
+vi.mock('../../src/security/encryptionService', () => {
+  const instance = {
+    initialize: vi.fn(),
+    isInitialized: vi.fn(() => true),
+    isSessionActive: vi.fn(() => true),
+    encryptData: vi.fn(() =>
+      Promise.resolve({
         data: new Uint8Array([1, 2, 3, 4]),
         iv: new Uint8Array([5, 6, 7, 8]),
         algorithm: 'AES-GCM' as const,
-        version: 1
-      })),
-      decryptData: vi.fn(() => Promise.resolve('sk-123456789012345678901234567890123456789012345678')),
-      createIntegrityChecksum: vi.fn(() => Promise.resolve('mock-checksum')),
-      validateIntegrityChecksum: vi.fn(() => Promise.resolve(true)),
-      shutdown: vi.fn()
-    }))
-  }
-}));
+        version: 1,
+      })
+    ),
+    decryptData: vi.fn(() =>
+      Promise.resolve('sk-123456789012345678901234567890123456789012345678')
+    ),
+    createIntegrityChecksum: vi.fn(() => Promise.resolve('mock-checksum')),
+    validateIntegrityChecksum: vi.fn(() => Promise.resolve(true)),
+    shutdown: vi.fn(),
+  } as any;
+  return {
+    EncryptionService: {
+      getInstance: vi.fn(() => instance),
+    },
+  };
+});
 
 vi.mock('../../src/storage/indexedDB', () => ({
   dbInstance: {
@@ -61,8 +68,8 @@ vi.mock('../../src/storage/indexedDB', () => ({
     getAll: vi.fn(() => Promise.resolve([])),
     query: vi.fn(() => Promise.resolve([])),
     batchAdd: vi.fn(() => Promise.resolve()),
-    batchDelete: vi.fn(() => Promise.resolve())
-  }
+    batchDelete: vi.fn(() => Promise.resolve()),
+  },
 }));
 
 vi.mock('../../src/storage/chromeStorage', () => ({
@@ -70,12 +77,12 @@ vi.mock('../../src/storage/chromeStorage', () => ({
   set: vi.fn(() => Promise.resolve()),
   remove: vi.fn(() => Promise.resolve()),
   getBatch: vi.fn(() => Promise.resolve({})),
-  setBatch: vi.fn(() => Promise.resolve())
+  setBatch: vi.fn(() => Promise.resolve()),
 }));
 
 // Mock Chrome APIs
 global.chrome = {
-  storage: { local: { get: vi.fn(), set: vi.fn(), remove: vi.fn(), clear: vi.fn() } }
+  storage: { local: { get: vi.fn(), set: vi.fn(), remove: vi.fn(), clear: vi.fn() } },
 } as any;
 
 // Mock fetch for connection testing
@@ -86,13 +93,13 @@ describe('API Key Storage - Comprehensive Tests', () => {
     key: 'sk-123456789012345678901234567890123456789012345678',
     provider: 'openai',
     name: 'Test OpenAI Key',
-    description: 'Test key for unit tests'
+    description: 'Test key for unit tests',
   };
 
   const mockAnthropicKey: CreateAPIKeyInput = {
     key: 'sk-ant-1234567890abcdefghijklmnopqrstuvwxyzABCDEFGHIJKL',
     provider: 'anthropic',
-    name: 'Test Anthropic Key'
+    name: 'Test Anthropic Key',
   };
 
   // Get references to the mocked modules
@@ -102,22 +109,22 @@ describe('API Key Storage - Comprehensive Tests', () => {
 
   beforeEach(async () => {
     vi.clearAllMocks();
-    
+
     // Get fresh references to mocked modules
     const { EncryptionService } = await import('../../src/security/encryptionService');
     const { dbInstance } = await import('../../src/storage/indexedDB');
     const chromeStorage = await import('../../src/storage/chromeStorage');
-    
+
     mockEncryptionService = vi.mocked(EncryptionService.getInstance)();
     mockDBInstance = vi.mocked(dbInstance);
     mockChromeStorage = vi.mocked(chromeStorage);
-    
+
     // Reset mock return values
     mockEncryptionService.isInitialized.mockReturnValue(true);
     mockEncryptionService.isSessionActive.mockReturnValue(true);
     mockDBInstance.get.mockResolvedValue(null);
     mockChromeStorage.get.mockResolvedValue(null);
-    
+
     await initializeStorage('test-password-123');
   });
 
@@ -172,12 +179,16 @@ describe('API Key Storage - Comprehensive Tests', () => {
 
     it('should prevent duplicate keys', async () => {
       await addAPIKey(mockAPIKey);
-      
-      // Mock existing key found
-      mockChromeStorage.getBatch.mockResolvedValueOnce({
-        'api_key_test': { keyHash: 'mock-hash' }
+      // Compute real keyHash and mock hash mapping
+      const { hashData } = await import('../../src/security/crypto');
+      const hashBytes = await hashData(mockAPIKey.key);
+      const keyHash = Array.from(hashBytes)
+        .map(b => b.toString(16).padStart(2, '0'))
+        .join('');
+      mockChromeStorage.get.mockImplementation(async (key: string) => {
+        if (key === `api_key_hash_${keyHash}`) return { id: 'existing-id' } as any;
+        return null as any;
       });
-
       await expect(addAPIKey(mockAPIKey)).rejects.toThrow('API key already exists');
     });
 
@@ -188,7 +199,7 @@ describe('API Key Storage - Comprehensive Tests', () => {
 
     it('should update API key metadata', async () => {
       const storedKey = await addAPIKey(mockAPIKey);
-      
+
       // Mock get operations
       mockDBInstance.get.mockResolvedValueOnce(storedKey.metadata);
       mockChromeStorage.get.mockResolvedValueOnce(storedKey);
@@ -196,7 +207,7 @@ describe('API Key Storage - Comprehensive Tests', () => {
       const updates: UpdateAPIKeyInput = {
         name: 'Updated Key Name',
         description: 'Updated description',
-        status: 'inactive'
+        status: 'inactive',
       };
 
       const result = await updateAPIKey(storedKey.id, updates);
@@ -208,7 +219,7 @@ describe('API Key Storage - Comprehensive Tests', () => {
 
     it('should delete API key completely', async () => {
       const storedKey = await addAPIKey(mockAPIKey);
-      
+
       // Mock get operation
       mockDBInstance.get.mockResolvedValueOnce(storedKey.metadata);
       mockChromeStorage.get.mockResolvedValueOnce(storedKey);
@@ -230,7 +241,7 @@ describe('API Key Storage - Comprehensive Tests', () => {
     it('should list all API keys', async () => {
       const mockMetadata = [
         { id: 'key1', provider: 'openai', name: 'Key 1' },
-        { id: 'key2', provider: 'anthropic', name: 'Key 2' }
+        { id: 'key2', provider: 'anthropic', name: 'Key 2' },
       ];
 
       mockDBInstance.getAll.mockResolvedValueOnce(mockMetadata);
@@ -250,7 +261,12 @@ describe('API Key Storage - Comprehensive Tests', () => {
       const result = await listAPIKeys(options);
 
       expect(result.keys).toHaveLength(1);
-      expect(mockDBInstance.query).toHaveBeenCalledWith('apiKeys', 'provider', 'openai', expect.any(Object));
+      expect(mockDBInstance.query).toHaveBeenCalledWith(
+        'apiKeys',
+        'provider',
+        'openai',
+        expect.any(Object)
+      );
     });
 
     it('should filter keys by status', async () => {
@@ -260,13 +276,18 @@ describe('API Key Storage - Comprehensive Tests', () => {
       const options: APIKeyQueryOptions = { status: 'active' };
       await listAPIKeys(options);
 
-      expect(mockDBInstance.query).toHaveBeenCalledWith('apiKeys', 'status', 'active', expect.any(Object));
+      expect(mockDBInstance.query).toHaveBeenCalledWith(
+        'apiKeys',
+        'status',
+        'active',
+        expect.any(Object)
+      );
     });
 
     it('should search keys by name and description', async () => {
       const allKeys = [
         { id: 'key1', provider: 'openai', name: 'Test Key', description: 'Test description' },
-        { id: 'key2', provider: 'anthropic', name: 'Production Key', description: 'Prod env' }
+        { id: 'key2', provider: 'anthropic', name: 'Production Key', description: 'Prod env' },
       ];
       mockDBInstance.getAll.mockResolvedValueOnce(allKeys);
 
@@ -292,7 +313,7 @@ describe('API Key Storage - Comprehensive Tests', () => {
     it('should rotate API key successfully', async () => {
       const storedKey = await addAPIKey(mockAPIKey);
       const newKey = 'sk-987654321098765432109876543210987654321098765432';
-      
+
       // Mock get operations
       mockDBInstance.get.mockResolvedValueOnce(storedKey.metadata);
       mockChromeStorage.get.mockResolvedValueOnce(storedKey);
@@ -306,17 +327,19 @@ describe('API Key Storage - Comprehensive Tests', () => {
 
     it('should validate new key format during rotation', async () => {
       const storedKey = await addAPIKey(mockAPIKey);
-      
+
       mockDBInstance.get.mockResolvedValueOnce(storedKey.metadata);
       mockChromeStorage.get.mockResolvedValueOnce(storedKey);
 
-      await expect(rotateAPIKey(storedKey.id, 'invalid-key')).rejects.toThrow('Invalid API key format');
+      await expect(rotateAPIKey(storedKey.id, 'invalid-key')).rejects.toThrow(
+        'Invalid API key format'
+      );
     });
 
     it('should handle rotation failure gracefully', async () => {
       const storedKey = await addAPIKey(mockAPIKey);
       const newKey = 'sk-987654321098765432109876543210987654321098765432';
-      
+
       mockDBInstance.get.mockResolvedValueOnce(storedKey.metadata);
       mockChromeStorage.get.mockResolvedValueOnce(storedKey);
       mockEncryptionService.encryptData.mockRejectedValueOnce(new Error('Encryption failed'));
@@ -331,7 +354,7 @@ describe('API Key Storage - Comprehensive Tests', () => {
   describe('Usage Statistics', () => {
     it('should record usage statistics', async () => {
       const storedKey = await addAPIKey(mockAPIKey);
-      
+
       mockDBInstance.get.mockResolvedValueOnce(storedKey.metadata);
       mockChromeStorage.get.mockResolvedValueOnce(storedKey);
 
@@ -339,7 +362,7 @@ describe('API Key Storage - Comprehensive Tests', () => {
         requests: 5,
         tokens: 1000,
         cost: 0.02,
-        responseTime: 150
+        responseTime: 150,
       };
 
       await recordUsage(storedKey.id, usage);
@@ -350,7 +373,7 @@ describe('API Key Storage - Comprehensive Tests', () => {
 
     it('should get usage statistics', async () => {
       const storedKey = await addAPIKey(mockAPIKey);
-      
+
       mockDBInstance.get.mockResolvedValueOnce(storedKey.metadata);
       mockChromeStorage.get.mockResolvedValueOnce(storedKey);
 
@@ -376,8 +399,8 @@ describe('API Key Storage - Comprehensive Tests', () => {
 
     it('should export keys with secrets', async () => {
       const mockMetadata = [{ id: 'key1', provider: 'openai', name: 'Key 1' }];
-      const mockEncryptedKeys = { 'api_key_key1': { metadata: mockMetadata[0], encryptedData: {} } };
-      
+      const mockEncryptedKeys = { api_key_key1: { metadata: mockMetadata[0], encryptedData: {} } };
+
       mockDBInstance.getAll.mockResolvedValueOnce(mockMetadata);
       mockChromeStorage.getBatch.mockResolvedValueOnce(mockEncryptedKeys);
 
@@ -393,9 +416,9 @@ describe('API Key Storage - Comprehensive Tests', () => {
         keys: [
           {
             metadata: { id: 'imported-key', provider: 'openai', name: 'Imported Key' },
-            encryptedData: { data: new Uint8Array([1, 2, 3]) }
-          }
-        ]
+            encryptedData: { data: new Uint8Array([1, 2, 3]) },
+          },
+        ],
       };
 
       const result = await importKeys(importData);
@@ -409,9 +432,7 @@ describe('API Key Storage - Comprehensive Tests', () => {
       mockDBInstance.add.mockRejectedValueOnce(new Error('Import failed'));
 
       const importData = {
-        keys: [
-          { metadata: { id: 'bad-key', provider: 'openai' } }
-        ]
+        keys: [{ metadata: { id: 'bad-key', provider: 'openai' } }],
       };
 
       const result = await importKeys(importData);
@@ -425,14 +446,14 @@ describe('API Key Storage - Comprehensive Tests', () => {
   describe('Connection Testing', () => {
     it('should test key connection successfully', async () => {
       const storedKey = await addAPIKey(mockAPIKey);
-      
+
       mockDBInstance.get.mockResolvedValueOnce(storedKey.metadata);
       mockChromeStorage.get.mockResolvedValueOnce(storedKey);
-      
+
       vi.mocked(global.fetch).mockResolvedValueOnce({
         ok: true,
         status: 200,
-        statusText: 'OK'
+        statusText: 'OK',
       } as Response);
 
       const result = await testKeyConnection(storedKey.id);
@@ -443,10 +464,10 @@ describe('API Key Storage - Comprehensive Tests', () => {
 
     it('should handle connection failure', async () => {
       const storedKey = await addAPIKey(mockAPIKey);
-      
+
       mockDBInstance.get.mockResolvedValueOnce(storedKey.metadata);
       mockChromeStorage.get.mockResolvedValueOnce(storedKey);
-      
+
       vi.mocked(global.fetch).mockRejectedValueOnce(new Error('Network error'));
 
       const result = await testKeyConnection(storedKey.id);
@@ -457,14 +478,14 @@ describe('API Key Storage - Comprehensive Tests', () => {
 
     it('should handle unauthorized response', async () => {
       const storedKey = await addAPIKey(mockAPIKey);
-      
+
       mockDBInstance.get.mockResolvedValueOnce(storedKey.metadata);
       mockChromeStorage.get.mockResolvedValueOnce(storedKey);
-      
+
       vi.mocked(global.fetch).mockResolvedValueOnce({
         ok: false,
         status: 401,
-        statusText: 'Unauthorized'
+        statusText: 'Unauthorized',
       } as Response);
 
       const result = await testKeyConnection(storedKey.id);
@@ -489,7 +510,9 @@ describe('API Key Storage - Comprehensive Tests', () => {
       const result = await getHealthStatus();
 
       expect(result.healthy).toBe(false);
-      expect(result.checks.some(check => check.name === 'encryption_service' && check.status === 'fail')).toBe(true);
+      expect(
+        result.checks.some(check => check.name === 'encryption_service' && check.status === 'fail')
+      ).toBe(true);
     });
   });
 
@@ -523,7 +546,7 @@ describe('API Key Storage - Comprehensive Tests', () => {
   describe('Data Integrity', () => {
     it('should verify data integrity on retrieval', async () => {
       const storedKey = await addAPIKey(mockAPIKey);
-      
+
       mockDBInstance.get.mockResolvedValueOnce(storedKey.metadata);
       mockChromeStorage.get.mockResolvedValueOnce(storedKey);
 
@@ -534,7 +557,7 @@ describe('API Key Storage - Comprehensive Tests', () => {
 
     it('should handle corrupted data', async () => {
       const storedKey = await addAPIKey(mockAPIKey);
-      
+
       mockDBInstance.get.mockResolvedValueOnce(storedKey.metadata);
       mockChromeStorage.get.mockResolvedValueOnce(storedKey);
       mockEncryptionService.validateIntegrityChecksum.mockResolvedValueOnce(false);

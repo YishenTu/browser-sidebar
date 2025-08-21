@@ -124,8 +124,25 @@ MIT — see `package.json` for the license field (LICENSE file TBD)
 
 ### Current Focus
 
-- Stage 3: Storage & Security (planned)
+- Stage 3: Storage & Security (in progress)
 - Stage 4: AI Provider System (planned)
+
+### Future Work
+
+- Phase 3.2 hardening (API Key Storage):
+  - Align remaining test expectations with updated storage behavior:
+    - Use singleton EncryptionService instance in tests (already applied in main/comprehensive suites)
+    - Duplicate detection via `api_key_hash_<sha256>` mapping in Chrome storage
+    - Connection tests should not assert real wall-clock delays (mock small timeout in fetch)
+    - Prefer integrity check over decryption in `getAPIKey` tests
+  - Optional: unify add-failure messages to a single “Failed to add API key” if preferred over specific errors
+- Phase 3.3 parallelizable tasks to start now:
+  - 3.3.1a Conversation Types
+  - 3.3.2 Cache Implementation
+  - 3.3.4a/b Sensitive Pattern Detection + Data Masking
+- Defer until 3.2 fully green:
+  - 3.3.1b Conversation Storage
+  - 3.3.3 Data Cleanup
 
 ---
 

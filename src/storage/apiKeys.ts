@@ -50,6 +50,7 @@ const STORAGE_KEYS = {
   API_KEY_CACHE: 'api_key_cache_',
   API_KEY_INDEX: 'api_key_index',
   MIGRATION_STATUS: 'api_key_migration_status',
+  API_KEY_HASH_PREFIX: 'api_key_hash_',
 } as const;
 
 /** Database store names */
@@ -125,6 +126,11 @@ const serviceState: ServiceState = {
   },
 };
 
+// Helper to always fetch current EncryptionService instance (supports test mocks)
+function enc(): EncryptionService {
+  return (serviceState.encryptionService as EncryptionService) || EncryptionService.getInstance();
+}
+
 // =============================================================================
 // Service Management
 // =============================================================================
@@ -143,11 +149,9 @@ export async function initializeStorage(password: string): Promise<void> {
   }
 
   try {
-    // Get encryption service instance
-    serviceState.encryptionService = EncryptionService.getInstance();
-
-    // Initialize encryption service
-    await serviceState.encryptionService.initialize(password);
+    // Initialize encryption service via singleton
+    serviceState.encryptionService = enc();
+    await enc().initialize(password);
 
     // Perform data migration if needed
     await performMigrations();
@@ -186,7 +190,7 @@ export async function shutdown(): Promise<void> {
   serviceState.cache.clear();
 
   // Shutdown encryption service
-  await serviceState.encryptionService.shutdown();
+  await enc().shutdown();
 
   serviceState.isInitialized = false;
 
@@ -219,16 +223,15 @@ export async function addAPIKey(input: CreateAPIKeyInput): Promise<EncryptedAPIK
     // Check for duplicates using multiple strategies
     const keyHash = await createKeyHash(input.key);
 
-    // Strategy 1: Check by hash (real implementation)
-    const existingKeyByHash = await findKeyByHash(keyHash);
-    if (existingKeyByHash) {
+    // Fast path: check hash → id mapping in Chrome storage
+    const existingByHash = await chromeStorage.get(`${STORAGE_KEYS.API_KEY_HASH_PREFIX}${keyHash}`);
+    if (existingByHash && typeof existingByHash === 'object') {
       throw new Error('API key already exists');
     }
 
-    // Strategy 2: Quick check for any existing key (for test compatibility)
-    // This helps with test mocks that stub chromeStorage.get
-    const quickCheck = await chromeStorage.get(`${STORAGE_KEYS.API_KEY}${keyHash.substring(0, 8)}`);
-    if (quickCheck && quickCheck.id) {
+    // Fallback: scan stored keys for matching hash (migration/back-compat)
+    const existingKeyByHash = await findKeyByHash(keyHash);
+    if (existingKeyByHash) {
       throw new Error('API key already exists');
     }
 
@@ -253,10 +256,10 @@ export async function addAPIKey(input: CreateAPIKeyInput): Promise<EncryptedAPIK
     };
 
     // Encrypt the API key
-    const encryptedData = await serviceState.encryptionService.encryptData(input.key, 'text');
+    const encryptedData = await enc().encryptData(input.key, 'text');
 
     // Create integrity checksum
-    const checksum = await serviceState.encryptionService.createIntegrityChecksum(encryptedData);
+    const checksum = await enc().createIntegrityChecksum(encryptedData);
 
     // Initialize usage stats
     const usageStats: APIKeyUsageStats = {
@@ -300,6 +303,9 @@ export async function addAPIKey(input: CreateAPIKeyInput): Promise<EncryptedAPIK
 
     // Store encrypted data in Chrome storage
     await chromeStorage.set(`${STORAGE_KEYS.API_KEY}${keyId}`, encryptedAPIKey);
+
+    // Store hash → id mapping for fast duplicate detection
+    await chromeStorage.set(`${STORAGE_KEYS.API_KEY_HASH_PREFIX}${keyHash}`, { id: keyId });
 
     // Update metrics
     serviceState.metrics.totalKeys++;
@@ -373,7 +379,7 @@ export async function getAPIKey(id: string): Promise<EncryptedAPIKey | null> {
     }
 
     // Verify data integrity
-    const isValid = await serviceState.encryptionService.validateIntegrityChecksum(
+    const isValid = await enc().validateIntegrityChecksum(
       encryptedKey.encryptedData,
       encryptedKey.checksum
     );
@@ -483,6 +489,11 @@ export async function deleteAPIKey(id: string): Promise<boolean> {
 
     // Delete from Chrome storage
     await chromeStorage.remove(`${STORAGE_KEYS.API_KEY}${id}`);
+
+    // Remove hash → id mapping
+    if (existingKey.keyHash) {
+      await chromeStorage.remove(`${STORAGE_KEYS.API_KEY_HASH_PREFIX}${existingKey.keyHash}`);
+    }
 
     // Clear cache
     invalidateCachedKey(id);
@@ -661,6 +672,23 @@ export async function rotateAPIKey(id: string, newKey: string): Promise<KeyRotat
   requireInitialized();
   incrementOperationCount('rotate');
 
+  // Validate new key format before try/catch so tests see thrown error
+  // Fetch provider first to validate against correct rules
+  // If key not found, we will throw inside try as before
+  let providerForValidation: APIProvider | null = null;
+  try {
+    const existingForProvider = await getAPIKey(id);
+    providerForValidation = existingForProvider?.metadata.provider ?? null;
+  } catch {
+    // ignore; will be handled in main try
+  }
+  if (providerForValidation) {
+    const validationPre = validateKeyFormat(newKey, providerForValidation);
+    if (!validationPre.isValid) {
+      throw new Error(`Invalid API key format: ${validationPre.errors.join(', ')}`);
+    }
+  }
+
   try {
     // Get existing key
     const existingKey = await getAPIKey(id);
@@ -668,21 +696,13 @@ export async function rotateAPIKey(id: string, newKey: string): Promise<KeyRotat
       throw new Error('API key not found');
     }
 
-    // Validate new key format - throw directly for invalid format
-    const validation = validateKeyFormat(newKey, existingKey.metadata.provider);
-    if (!validation.isValid) {
-      // Throw directly instead of returning structured error for test compatibility
-      throw new Error(`Invalid API key format: ${validation.errors.join(', ')}`);
-    }
-
     // Generate new key ID and hash
     const newKeyId = generateKeyId(existingKey.metadata.provider);
     const newKeyHash = await createKeyHash(newKey);
 
     // Encrypt new key
-    const newEncryptedData = await serviceState.encryptionService.encryptData(newKey, 'text');
-    const newChecksum =
-      await serviceState.encryptionService.createIntegrityChecksum(newEncryptedData);
+    const newEncryptedData = await enc().encryptData(newKey, 'text');
+    const newChecksum = await enc().createIntegrityChecksum(newEncryptedData);
 
     // Create new key metadata
     const newMetadata: APIKeyMetadata = {
@@ -723,6 +743,9 @@ export async function rotateAPIKey(id: string, newKey: string): Promise<KeyRotat
     // Store new key
     await dbInstance.add(DB_STORES.METADATA, newMetadata);
     await chromeStorage.set(`${STORAGE_KEYS.API_KEY}${newKeyId}`, newAPIKey);
+
+    // Store new hash mapping
+    await chromeStorage.set(`${STORAGE_KEYS.API_KEY_HASH_PREFIX}${newKeyHash}`, { id: newKeyId });
 
     // Invalidate old key cache
     invalidateCachedKey(id);
@@ -947,6 +970,12 @@ export async function importKeys(data: Record<string, any>): Promise<ImportResul
           // Add encrypted data to Chrome storage if present
           if (keyData.encryptedData) {
             await chromeStorage.set(`${STORAGE_KEYS.API_KEY}${keyData.metadata.id}`, keyData);
+            // Maintain hash → id mapping if keyHash present
+            if (keyData.keyHash && typeof keyData.keyHash === 'string') {
+              await chromeStorage.set(`${STORAGE_KEYS.API_KEY_HASH_PREFIX}${keyData.keyHash}`, {
+                id: keyData.metadata.id,
+              });
+            }
           }
 
           result.success++;
@@ -991,10 +1020,7 @@ export async function testKeyConnection(id: string): Promise<ConnectionTestResul
     }
 
     // Decrypt the key for testing
-    const decryptedKey = await serviceState.encryptionService.decryptData(
-      key.encryptedData,
-      'text'
-    );
+    const decryptedKey = await enc().decryptData(key.encryptedData, 'text');
 
     const endpoint = PROVIDER_ENDPOINTS[key.metadata.provider];
     if (!endpoint) {
@@ -1065,8 +1091,8 @@ export async function getHealthStatus(): Promise<HealthCheckResult> {
   // Check encryption service
   checks.push({
     name: 'encryption_service',
-    status: serviceState.encryptionService.isInitialized() ? 'pass' : 'fail',
-    message: serviceState.encryptionService.isInitialized()
+    status: enc().isInitialized() ? 'pass' : 'fail',
+    message: enc().isInitialized()
       ? 'Encryption service operational'
       : 'Encryption service not initialized',
   });
@@ -1074,10 +1100,8 @@ export async function getHealthStatus(): Promise<HealthCheckResult> {
   // Check session status
   checks.push({
     name: 'session_status',
-    status: serviceState.encryptionService.isSessionActive() ? 'pass' : 'fail',
-    message: serviceState.encryptionService.isSessionActive()
-      ? 'Session active'
-      : 'Session expired',
+    status: enc().isSessionActive() ? 'pass' : 'fail',
+    message: enc().isSessionActive() ? 'Session active' : 'Session expired',
   });
 
   // Check database connectivity
@@ -1129,7 +1153,7 @@ export async function getHealthStatus(): Promise<HealthCheckResult> {
  */
 function requireInitialized(): void {
   // Check if encryption service is initialized
-  if (!serviceState.encryptionService.isInitialized()) {
+  if (!enc().isInitialized()) {
     throw new Error('API key storage not initialized. Call initializeStorage() first.');
   }
 
@@ -1139,7 +1163,7 @@ function requireInitialized(): void {
   }
 
   // Check if session is active
-  if (!serviceState.encryptionService.isSessionActive()) {
+  if (!enc().isSessionActive()) {
     throw new Error('Session expired. Please reinitialize the service.');
   }
 }
@@ -1339,17 +1363,14 @@ async function performMigrations(): Promise<void> {
 
           try {
             // Encrypt the key
-            const encryptedData = await serviceState.encryptionService.encryptData(
-              legacyKey.key,
-              'text'
-            );
+            const encryptedData = await enc().encryptData(legacyKey.key, 'text');
 
             // Create new format
             const migratedKey = {
               ...legacyKey,
               encryptedData,
               keyHash: await createKeyHash(legacyKey.key),
-              checksum: await serviceState.encryptionService.createIntegrityChecksum(encryptedData),
+              checksum: await enc().createIntegrityChecksum(encryptedData),
               storageVersion: 1,
             };
 
@@ -1358,6 +1379,12 @@ async function performMigrations(): Promise<void> {
 
             // Update storage
             await chromeStorage.set(key, migratedKey);
+            // Maintain hash → id mapping if id present on legacy entry
+            if (migratedKey.keyHash && legacyKey.id) {
+              await chromeStorage.set(`${STORAGE_KEYS.API_KEY_HASH_PREFIX}${migratedKey.keyHash}`, {
+                id: legacyKey.id,
+              });
+            }
           } catch (error) {
             console.warn(`Failed to migrate key ${key}:`, error);
           }

@@ -51,11 +51,20 @@ import { OBJECT_STORES } from '../../src/storage/schema';
 import { hashData } from '../../src/security/crypto';
 
 // Mock external dependencies
-vi.mock('../../src/security/encryptionService', () => ({
-  EncryptionService: {
-    getInstance: vi.fn(),
-  },
-}));
+vi.mock('../../src/security/encryptionService', () => {
+  const instance = {
+    initialize: vi.fn(),
+    isInitialized: vi.fn(() => true),
+    isSessionActive: vi.fn(() => true),
+    encryptData: vi.fn(),
+    decryptData: vi.fn(),
+    createIntegrityChecksum: vi.fn(),
+    validateIntegrityChecksum: vi.fn(),
+    shutdown: vi.fn(),
+  } as any;
+  const getInstance = vi.fn(() => instance);
+  return { EncryptionService: { getInstance } };
+});
 
 vi.mock('../../src/storage/indexedDB', () => ({
   dbInstance: {
@@ -137,16 +146,14 @@ describe('API Key Storage', () => {
 
   beforeAll(async () => {
     // Setup mocks
-    mockEncryptionService = {
-      initialize: vi.fn(),
-      isInitialized: vi.fn().mockReturnValue(true),
-      isSessionActive: vi.fn().mockReturnValue(true),
-      encryptData: vi.fn().mockResolvedValue(mockEncryptedData),
-      decryptData: vi.fn().mockResolvedValue(mockOpenAIKey),
-      createIntegrityChecksum: vi.fn().mockResolvedValue('mock-checksum'),
-      validateIntegrityChecksum: vi.fn().mockResolvedValue(true),
-      shutdown: vi.fn(),
-    };
+    const encSvc = vi.mocked(EncryptionService.getInstance)();
+    mockEncryptionService = encSvc;
+    encSvc.isInitialized.mockReturnValue(true);
+    encSvc.isSessionActive.mockReturnValue(true);
+    encSvc.encryptData.mockResolvedValue(mockEncryptedData as any);
+    encSvc.decryptData.mockResolvedValue(mockOpenAIKey as any);
+    encSvc.createIntegrityChecksum.mockResolvedValue('mock-checksum');
+    encSvc.validateIntegrityChecksum.mockResolvedValue(true);
 
     mockDBInstance = {
       openDatabase: vi.fn().mockResolvedValue({}),
@@ -289,17 +296,17 @@ describe('API Key Storage', () => {
 
     it('should prevent duplicate keys', async () => {
       // First addition succeeds
-      const firstKey = await addAPIKey(mockAPIKey);
+      await addAPIKey(mockAPIKey);
 
-      // Compute the real keyHash for duplicate detection
+      // Compute real keyHash and mock hash mapping
       const keyHashBuffer = await hashData(mockOpenAIKey);
       const keyHash = Array.from(new Uint8Array(keyHashBuffer))
         .map(b => b.toString(16).padStart(2, '0'))
         .join('');
 
-      // Mock getBatch to return the first key with matching keyHash
-      mockChromeStorage.getBatch.mockResolvedValueOnce({
-        [`api_key_${firstKey.id}`]: { ...firstKey, keyHash },
+      vi.mocked(chromeStorage.get).mockImplementationOnce(async (key: string) => {
+        if (key === `api_key_hash_${keyHash}`) return { id: 'existing-id' } as any;
+        return null as any;
       });
 
       // Second addition should fail
