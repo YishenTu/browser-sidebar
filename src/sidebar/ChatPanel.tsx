@@ -13,9 +13,9 @@ import { setTheme } from '@utils/theme';
 import { ThemeProvider } from '@contexts/ThemeContext';
 import { MessageList } from '@components/MessageList';
 import { ChatInput } from '@components/ChatInput';
+import { ModelSelector } from '@components/ModelSelector';
 import { useChatStore } from '@store/chat';
 import { useMockChat } from '@hooks/useMockChat';
-// import { ModelSelector } from '@components/ModelSelector'; // Commented out - using simple select instead
 
 // Constants for sizing and positioning
 const MIN_WIDTH = 300;
@@ -74,6 +74,9 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ className, onClose }) => {
 
   // Settings store integration
   const theme = useSettingsStore(state => state.settings.theme);
+  const selectedModel = useSettingsStore(state => state.settings.selectedModel);
+  const availableModels = useSettingsStore(state => state.settings.availableModels);
+  const updateSelectedModel = useSettingsStore(state => state.updateSelectedModel);
 
   // Apply theme when it changes
   useEffect(() => {
@@ -273,35 +276,20 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ className, onClose }) => {
           data-testid="sidebar-header"
         >
           <div className="ai-sidebar-header-title">
-            {/* Simple model selector - static for now to avoid infinite loops */}
-            <select
+            <ModelSelector
               className="model-selector--header"
-              style={{
-                padding: '4px 8px',
-                borderRadius: '4px',
-                border: '1px solid var(--border-color)',
-                background: 'var(--bg-secondary)',
-                color: 'var(--text-primary)',
-                fontSize: '12px',
-                cursor: 'pointer',
-                outline: 'none',
+              value={availableModels.find(m => m.id === selectedModel)?.name || 'GPT-4'}
+              onChange={modelName => {
+                // Map display name back to model ID
+                const model = availableModels.find(m => m.name === modelName);
+                if (model) {
+                  updateSelectedModel(model.id);
+                }
               }}
+              models={availableModels.filter(m => m.available).map(m => m.name)}
               disabled={isLoading}
-              defaultValue="gpt-4"
-              onChange={e => {
-                // console.log('Model selected:', e.target.value);
-                // For now, just log - don't update store to avoid loops
-                // eslint-disable-next-line no-console
-                console.log('Model selected:', e.target.value);
-              }}
-            >
-              <option value="gpt-4">GPT-4</option>
-              <option value="gpt-3.5-turbo">GPT-3.5</option>
-              <option value="claude-3">Claude 3</option>
-              <option value="claude-2">Claude 2</option>
-              <option value="gemini-pro">Gemini Pro</option>
-              <option value="llama-2">Llama 2</option>
-            </select>
+              aria-label="Select AI model"
+            />
             <h2></h2>
           </div>
           <div className="ai-sidebar-header-actions">

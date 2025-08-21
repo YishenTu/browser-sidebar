@@ -177,7 +177,7 @@ const validateAvailableModels = (models: unknown): Model[] => {
 
   try {
     const validatedModels = models.filter(isValidModel);
-    
+
     // If no valid models, return default
     return validatedModels.length > 0 ? validatedModels : [...DEFAULT_AVAILABLE_MODELS];
   } catch {
@@ -276,8 +276,8 @@ const migrateSettings = (rawSettings: unknown): Settings => {
   const rs = rawSettings as Partial<Settings> & Record<string, unknown>;
   if (rs.version === SETTINGS_VERSION) {
     const availableModels = validateAvailableModels(rs.availableModels);
-    const selectedModel = isValidSelectedModel(rs.selectedModel, availableModels) 
-      ? rs.selectedModel as string 
+    const selectedModel = isValidSelectedModel(rs.selectedModel, availableModels)
+      ? (rs.selectedModel as string)
       : DEFAULT_SETTINGS.selectedModel;
 
     return {
@@ -497,35 +497,38 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
   },
 
   updateSelectedModel: async (modelId: string) => {
-    set({ error: null });
+    set({ isLoading: true, error: null });
     try {
       const currentSettings = get().settings;
-      
+
       // Validate that the model exists in available models
       if (!isValidSelectedModel(modelId, currentSettings.availableModels)) {
         throw new Error(`Invalid model: ${modelId}. Model not found in available models.`);
       }
-      
-      // Update settings without triggering loading state
+
+      // Update settings
       const updatedSettings = { ...currentSettings, selectedModel: modelId };
       set({ settings: updatedSettings });
-      
-      // Save to storage in background
+
+      // Save to storage
       await saveToStorage(updatedSettings);
+
+      // Clear loading state after successful save
+      set({ isLoading: false });
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Failed to save settings';
-      set({ error: errorMessage });
+      set({ isLoading: false, error: errorMessage });
       throw error; // Re-throw for test assertion
     }
   },
 
   getAvailableModels: (availableOnly = true) => {
     const { availableModels } = get().settings;
-    
+
     if (availableOnly) {
       return availableModels.filter(model => model.available);
     }
-    
+
     return [...availableModels];
   },
 }));

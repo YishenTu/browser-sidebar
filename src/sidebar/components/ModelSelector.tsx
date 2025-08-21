@@ -72,38 +72,49 @@ export function ModelSelector({
 
   // Close dropdown when clicking outside
   useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+    if (!isOpen) return undefined;
+
+    function handleClickOutside(event: Event) {
+      const mouseEvent = event as MouseEvent;
+      if (containerRef.current && !containerRef.current.contains(mouseEvent.target as Node)) {
         setIsOpen(false);
         setHighlightedIndex(-1);
       }
     }
 
-    if (isOpen) {
-      document.addEventListener('mousedown', handleClickOutside);
-      return () => document.removeEventListener('mousedown', handleClickOutside);
-    }
-    return undefined;
+    // Get the root node (shadow root or document) where this component is mounted
+    const rootNode = (containerRef.current?.getRootNode() || document) as Document | ShadowRoot;
+
+    // Use a small timeout to prevent the dropdown from closing immediately when opened
+    const timeoutId = setTimeout(() => {
+      rootNode.addEventListener('mousedown', handleClickOutside);
+    }, 0);
+
+    return () => {
+      clearTimeout(timeoutId);
+      rootNode.removeEventListener('mousedown', handleClickOutside);
+    };
   }, [isOpen]);
 
   // Handle keyboard navigation
   useEffect(() => {
-    function handleKeyDown(event: KeyboardEvent) {
+    function handleKeyDown(event: Event) {
+      const keyboardEvent = event as KeyboardEvent;
       if (!isOpen || disabled) return;
 
-      switch (event.key) {
+      switch (keyboardEvent.key) {
         case 'ArrowDown':
-          event.preventDefault();
+          keyboardEvent.preventDefault();
           setHighlightedIndex(prev => (prev < models.length - 1 ? prev + 1 : 0));
           break;
 
         case 'ArrowUp':
-          event.preventDefault();
+          keyboardEvent.preventDefault();
           setHighlightedIndex(prev => (prev > 0 ? prev - 1 : models.length - 1));
           break;
 
         case 'Enter':
-          event.preventDefault();
+          keyboardEvent.preventDefault();
           if (highlightedIndex >= 0 && highlightedIndex < models.length) {
             const selectedModel = models[highlightedIndex];
             if (selectedModel) {
@@ -113,7 +124,7 @@ export function ModelSelector({
           break;
 
         case 'Escape':
-          event.preventDefault();
+          keyboardEvent.preventDefault();
           setIsOpen(false);
           setHighlightedIndex(-1);
           comboboxRef.current?.focus();
@@ -131,8 +142,10 @@ export function ModelSelector({
     }
 
     if (isOpen) {
-      document.addEventListener('keydown', handleKeyDown);
-      return () => document.removeEventListener('keydown', handleKeyDown);
+      // Get the root node (shadow root or document) where this component is mounted
+      const rootNode = (containerRef.current?.getRootNode() || document) as Document | ShadowRoot;
+      rootNode.addEventListener('keydown', handleKeyDown);
+      return () => rootNode.removeEventListener('keydown', handleKeyDown);
     }
     return undefined;
   }, [isOpen, highlightedIndex, models, disabled, handleSelectModel]);
@@ -154,8 +167,11 @@ export function ModelSelector({
     }
   }, [highlightedIndex, isOpen]);
 
-  const handleToggleDropdown = () => {
+  const handleToggleDropdown = (e: React.MouseEvent) => {
     if (disabled) return;
+
+    e.preventDefault();
+    e.stopPropagation();
 
     setIsOpen(prev => !prev);
     if (!isOpen) {
@@ -181,7 +197,9 @@ export function ModelSelector({
     }
   };
 
-  const handleOptionClick = (model: string, index: number) => {
+  const handleOptionClick = (model: string, index: number, e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
     setHighlightedIndex(index);
     handleSelectModel(model);
   };
@@ -209,19 +227,13 @@ export function ModelSelector({
           'model-selector__trigger--disabled': disabled,
           'model-selector__trigger--focused': isFocused,
         })}
-        onClick={handleToggleDropdown}
+        onClick={e => handleToggleDropdown(e)}
         onKeyDown={handleComboboxKeyDown}
         onFocus={() => setIsFocused(true)}
         onBlur={() => setIsFocused(false)}
         value={value}
       >
         <span className="model-selector__value">{value || 'Select model...'}</span>
-        <span
-          className={cn('model-selector__icon', isOpen && 'model-selector__icon--rotated')}
-          aria-hidden="true"
-        >
-          ▼
-        </span>
       </button>
 
       {isOpen && (
@@ -243,7 +255,7 @@ export function ModelSelector({
                 'model-selector__option--selected': model === value,
                 'model-selector__option--highlighted': index === highlightedIndex,
               })}
-              onClick={() => handleOptionClick(model, index)}
+              onClick={e => handleOptionClick(model, index, e)}
               onMouseEnter={() => handleOptionMouseEnter(index)}
             >
               {model}
@@ -255,127 +267,5 @@ export function ModelSelector({
   );
 }
 
-// CSS-in-JS styles using CSS variables
-const modelSelectorStyles = `
-.model-selector {
-  position: relative;
-  width: 100%;
-  font-family: inherit;
-}
-
-.model-selector--header {
-  width: 140px;
-  margin-right: 8px;
-  flex-shrink: 0;
-}
-
-.model-selector__trigger {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  width: 100%;
-  padding: var(--spacing-sm) var(--spacing-md);
-  background: var(--background-primary);
-  border: 1px solid var(--border-primary);
-  border-radius: var(--radius-md);
-  color: var(--text-primary);
-  font-size: var(--font-size-sm);
-  cursor: pointer;
-  transition: var(--transition-fast);
-  min-height: 40px;
-}
-
-.model-selector__trigger:hover:not(:disabled) {
-  border-color: var(--border-hover);
-  background: var(--background-hover);
-}
-
-.model-selector__trigger:focus {
-  outline: none;
-  border-color: var(--primary-500);
-  box-shadow: 0 0 0 2px var(--primary-100);
-}
-
-.model-selector__trigger--open {
-  border-color: var(--primary-500);
-  border-bottom-left-radius: 0;
-  border-bottom-right-radius: 0;
-}
-
-.model-selector__trigger--disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-  background: var(--background-disabled);
-}
-
-.model-selector__value {
-  flex: 1;
-  text-align: left;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.model-selector__icon {
-  margin-left: var(--spacing-sm);
-  transition: var(--transition-fast);
-  font-size: 10px;
-  color: var(--text-muted);
-}
-
-.model-selector__icon--rotated {
-  transform: rotate(180deg);
-}
-
-.model-selector__dropdown {
-  position: absolute;
-  top: 100%;
-  left: 0;
-  right: 0;
-  background: var(--background-primary);
-  border: 1px solid var(--primary-500);
-  border-top: none;
-  border-radius: 0 0 var(--radius-md) var(--radius-md);
-  box-shadow: var(--shadow-lg);
-  z-index: 1000;
-  max-height: 200px;
-  overflow-y: auto;
-  list-style: none;
-  margin: 0;
-  padding: 0;
-}
-
-.model-selector__option {
-  padding: var(--spacing-sm) var(--spacing-md);
-  cursor: pointer;
-  transition: var(--transition-fast);
-  color: var(--text-primary);
-  font-size: var(--font-size-sm);
-}
-
-.model-selector__option:hover,
-.model-selector__option--highlighted {
-  background: var(--background-hover);
-}
-
-.model-selector__option--selected {
-  background: var(--primary-50);
-  color: var(--primary-700);
-  font-weight: var(--font-weight-medium);
-}
-
-.model-selector__option--selected.model-selector__option--highlighted {
-  background: var(--primary-100);
-}
-`;
-
-// Inject styles when component is first imported
-if (typeof document !== 'undefined') {
-  const styleId = 'model-selector-styles';
-  if (!document.getElementById(styleId)) {
-    const style = document.createElement('style');
-    style.id = styleId;
-    style.textContent = modelSelectorStyles;
-    document.head.appendChild(style);
-  }
-}
+// Note: Styles for ModelSelector are now in src/sidebar/styles/sidebar.css
+// This ensures they work properly within the Shadow DOM

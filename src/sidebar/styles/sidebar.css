@@ -624,3 +624,105 @@
   width: 24px;
   height: 24px;
 }
+
+/* Model Selector Styles */
+.model-selector {
+  position: relative;
+  width: 100%;
+  font-family: inherit;
+  z-index: 1000; /* Ensure selector is above other elements */
+}
+
+.model-selector--header {
+  width: 140px;
+  margin-right: 8px;
+  flex-shrink: 0;
+}
+
+.model-selector__trigger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: var(--spacing-sm) var(--spacing-md);
+  background: rgba(26, 26, 26, 0.8); /* Match sidebar background - 20% transparent */
+  border: none; /* Remove border */
+  border-radius: var(--radius-md);
+  color: #e5e7eb; /* Match sidebar text color */
+  font-size: var(--font-size-sm);
+  cursor: pointer;
+  transition: var(--transition-fast);
+  min-height: 40px;
+  pointer-events: auto !important; /* Ensure button is clickable */
+  position: relative; /* For proper z-index stacking */
+}
+
+.model-selector__trigger:hover:not(:disabled) {
+  background: rgba(26, 26, 26, 0.9); /* Slightly less transparent on hover */
+}
+
+.model-selector__trigger:focus {
+  outline: none;
+  background: rgba(26, 26, 26, 0.9);
+}
+
+.model-selector__trigger--open {
+  border-bottom-left-radius: 0;
+  border-bottom-right-radius: 0;
+}
+
+.model-selector__trigger--disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  background: var(--background-disabled);
+}
+
+.model-selector__value {
+  flex: 1;
+  text-align: left;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.model-selector__dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background: rgba(26, 26, 26, 0.8); /* Match sidebar background - 20% transparent */
+  border: none; /* Remove border */
+  border-radius: 0 0 var(--radius-md) var(--radius-md);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3); /* Subtle shadow */
+  z-index: 2147483647; /* Match overlay z-index to ensure dropdown is on top */
+  max-height: 200px;
+  overflow-y: auto;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  pointer-events: auto !important; /* Ensure clicks work */
+}
+
+.model-selector__option {
+  padding: var(--spacing-sm) var(--spacing-md);
+  cursor: pointer;
+  transition: var(--transition-fast);
+  color: #e5e7eb; /* Match sidebar text color */
+  font-size: var(--font-size-sm);
+  pointer-events: auto !important; /* Ensure clicks work */
+}
+
+.model-selector__option:hover,
+.model-selector__option--highlighted {
+  background: rgba(75, 85, 99, 0.3); /* Subtle hover background */
+}
+
+.model-selector__option--selected {
+  background: rgba(75, 85, 99, 0.5); /* Slightly more prominent for selected */
+  color: #ffffff; /* Brighter text for selected */
+  font-weight: var(--font-weight-medium);
+}
+
+.model-selector__option--selected.model-selector__option--highlighted {
+  background: rgba(75, 85, 99, 0.6); /* Combined selected + hover */
+}
