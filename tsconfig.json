@@ -43,6 +43,8 @@
       "@sidebar/*": ["src/sidebar/*"],
       "@components/*": ["src/sidebar/components/*"],
       "@hooks/*": ["src/sidebar/hooks/*"],
+      "@contexts/*": ["src/sidebar/contexts/*"],
+      "@ui/*": ["src/sidebar/components/ui/*"],
       "@provider/*": ["src/provider/*"],
       "@backend/*": ["src/backend/*"],
       "@tabext/*": ["src/tabext/*"],
@@ -50,7 +52,8 @@
       "@storage/*": ["src/storage/*"],
       "@services/*": ["src/services/*"],
       "@types/*": ["src/types/*"],
-      "@utils/*": ["src/utils/*"]
+      "@utils/*": ["src/utils/*"],
+      "@store/*": ["src/store/*"]
     }
   },
   "include": ["src"],

@@ -6,7 +6,7 @@
  * and sample conversations.
  */
 
-import type { ChatMessage, MessageRole, MessageStatus } from '@/store/chat';
+import type { ChatMessage, MessageRole, MessageStatus } from '@store/chat';
 
 // =============================================================================
 // Types and Interfaces

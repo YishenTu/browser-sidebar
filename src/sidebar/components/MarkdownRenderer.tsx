@@ -19,7 +19,7 @@ import React, { useMemo, useCallback } from 'react';
 import ReactMarkdown, { Options } from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import DOMPurify from 'dompurify';
-import { cn } from '@/utils/cn';
+import { cn } from '@utils/cn';
 import { CodeBlock } from './CodeBlock';
 
 // =============================================================================

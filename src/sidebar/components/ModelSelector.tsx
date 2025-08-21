@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useId } from 'react';
-import { cn } from '@/utils/cn';
+import { cn } from '@utils/cn';
 
 export interface ModelSelectorProps {
   /** Current selected model value */
@@ -16,21 +16,14 @@ export interface ModelSelectorProps {
   'aria-label'?: string;
 }
 
-const DEFAULT_MODELS = [
-  'GPT-4',
-  'GPT-3.5',
-  'Claude 3',
-  'Claude 2', 
-  'Gemini Pro',
-  'Llama 2'
-];
+const DEFAULT_MODELS = ['GPT-4', 'GPT-3.5', 'Claude 3', 'Claude 2', 'Gemini Pro', 'Llama 2'];
 
 /**
  * ModelSelector Component
- * 
+ *
  * A dropdown component for selecting AI models with full keyboard navigation
  * and accessibility support.
- * 
+ *
  * @example
  * ```tsx
  * <ModelSelector
@@ -52,27 +45,30 @@ export function ModelSelector({
   const [isOpen, setIsOpen] = useState(false);
   const [highlightedIndex, setHighlightedIndex] = useState(-1);
   const [isFocused, setIsFocused] = useState(false);
-  
+
   const containerRef = useRef<HTMLDivElement>(null);
   const comboboxRef = useRef<HTMLButtonElement>(null);
   const listboxRef = useRef<HTMLUListElement>(null);
   const optionRefs = useRef<(HTMLLIElement | null)[]>([]);
-  
+
   const comboboxId = useId();
   const listboxId = useId();
-  
+
   // Find current value index
   const selectedIndex = models.findIndex(model => model === value);
 
-  const handleSelectModel = React.useCallback((model: string) => {
-    // Only trigger onChange if the value actually changed
-    if (model !== value) {
-      onChange(model);
-    }
-    setIsOpen(false);
-    setHighlightedIndex(-1);
-    comboboxRef.current?.focus();
-  }, [onChange, value]);
+  const handleSelectModel = React.useCallback(
+    (model: string) => {
+      // Only trigger onChange if the value actually changed
+      if (model !== value) {
+        onChange(model);
+      }
+      setIsOpen(false);
+      setHighlightedIndex(-1);
+      comboboxRef.current?.focus();
+    },
+    [onChange, value]
+  );
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -98,18 +94,14 @@ export function ModelSelector({
       switch (event.key) {
         case 'ArrowDown':
           event.preventDefault();
-          setHighlightedIndex(prev => 
-            prev < models.length - 1 ? prev + 1 : 0
-          );
+          setHighlightedIndex(prev => (prev < models.length - 1 ? prev + 1 : 0));
           break;
-          
+
         case 'ArrowUp':
           event.preventDefault();
-          setHighlightedIndex(prev => 
-            prev > 0 ? prev - 1 : models.length - 1
-          );
+          setHighlightedIndex(prev => (prev > 0 ? prev - 1 : models.length - 1));
           break;
-          
+
         case 'Enter':
           event.preventDefault();
           if (highlightedIndex >= 0 && highlightedIndex < models.length) {
@@ -119,19 +111,19 @@ export function ModelSelector({
             }
           }
           break;
-          
+
         case 'Escape':
           event.preventDefault();
           setIsOpen(false);
           setHighlightedIndex(-1);
           comboboxRef.current?.focus();
           break;
-          
+
         case 'Tab':
           setIsOpen(false);
           setHighlightedIndex(-1);
           break;
-        
+
         default:
           // No action for other keys
           break;
@@ -152,7 +144,7 @@ export function ModelSelector({
       if (option && listboxRef.current) {
         const optionRect = option.getBoundingClientRect();
         const listRect = listboxRef.current.getBoundingClientRect();
-        
+
         if (optionRect.bottom > listRect.bottom) {
           option.scrollIntoView({ block: 'end', behavior: 'smooth' });
         } else if (optionRect.top < listRect.top) {
@@ -164,7 +156,7 @@ export function ModelSelector({
 
   const handleToggleDropdown = () => {
     if (disabled) return;
-    
+
     setIsOpen(prev => !prev);
     if (!isOpen) {
       // When opening, highlight current selection
@@ -199,10 +191,7 @@ export function ModelSelector({
   };
 
   return (
-    <div 
-      ref={containerRef}
-      className={cn('model-selector', className)}
-    >
+    <div ref={containerRef} className={cn('model-selector', className)}>
       <button
         ref={comboboxRef}
         id={comboboxId}
@@ -212,33 +201,23 @@ export function ModelSelector({
         aria-controls={listboxId}
         aria-label={ariaLabel}
         aria-activedescendant={
-          isOpen && highlightedIndex >= 0 
-            ? `${listboxId}-option-${highlightedIndex}`
-            : undefined
+          isOpen && highlightedIndex >= 0 ? `${listboxId}-option-${highlightedIndex}` : undefined
         }
         disabled={disabled}
-        className={cn(
-          'model-selector__trigger',
-          {
-            'model-selector__trigger--open': isOpen,
-            'model-selector__trigger--disabled': disabled,
-            'model-selector__trigger--focused': isFocused,
-          }
-        )}
+        className={cn('model-selector__trigger', {
+          'model-selector__trigger--open': isOpen,
+          'model-selector__trigger--disabled': disabled,
+          'model-selector__trigger--focused': isFocused,
+        })}
         onClick={handleToggleDropdown}
         onKeyDown={handleComboboxKeyDown}
         onFocus={() => setIsFocused(true)}
         onBlur={() => setIsFocused(false)}
         value={value}
       >
-        <span className="model-selector__value">
-          {value || 'Select model...'}
-        </span>
-        <span 
-          className={cn(
-            'model-selector__icon',
-            isOpen && 'model-selector__icon--rotated'
-          )}
+        <span className="model-selector__value">{value || 'Select model...'}</span>
+        <span
+          className={cn('model-selector__icon', isOpen && 'model-selector__icon--rotated')}
           aria-hidden="true"
         >
           ▼
@@ -256,17 +235,14 @@ export function ModelSelector({
           {models.map((model, index) => (
             <li
               key={model}
-              ref={el => optionRefs.current[index] = el}
+              ref={el => (optionRefs.current[index] = el)}
               id={`${listboxId}-option-${index}`}
               role="option"
               aria-selected={model === value}
-              className={cn(
-                'model-selector__option',
-                {
-                  'model-selector__option--selected': model === value,
-                  'model-selector__option--highlighted': index === highlightedIndex,
-                }
-              )}
+              className={cn('model-selector__option', {
+                'model-selector__option--selected': model === value,
+                'model-selector__option--highlighted': index === highlightedIndex,
+              })}
               onClick={() => handleOptionClick(model, index)}
               onMouseEnter={() => handleOptionMouseEnter(index)}
             >

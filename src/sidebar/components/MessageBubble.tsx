@@ -1,6 +1,6 @@
 import React from 'react';
-import { cn } from '@/utils/cn';
-import { ChatMessage, MessageRole, MessageStatus } from '@/store/chat';
+import { cn } from '@utils/cn';
+import { ChatMessage, MessageRole, MessageStatus } from '@store/chat';
 
 /**
  * MessageBubble Props Interface
@@ -134,42 +134,45 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
         </div>
 
         {/* Timestamp and model name (for assistant) - same row under bubble */}
-        {(showTimestamp && (message.role !== 'assistant' || message.status === 'sent' || message.status === 'received')) && (
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'baseline',
-              gap: '6px',
-              marginTop: '4px',
-              paddingLeft: message.role === 'assistant' ? '12px' : '0',
-              paddingRight: message.role === 'user' ? '4px' : '0',
-            }}
-          >
-            {message.role === 'assistant' && (
-              <span
+        {showTimestamp &&
+          (message.role !== 'assistant' ||
+            message.status === 'sent' ||
+            message.status === 'received') && (
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'baseline',
+                gap: '6px',
+                marginTop: '4px',
+                paddingLeft: message.role === 'assistant' ? '12px' : '0',
+                paddingRight: message.role === 'user' ? '4px' : '0',
+              }}
+            >
+              {message.role === 'assistant' && (
+                <span
+                  style={{
+                    fontSize: '10px',
+                    color: '#6b7280',
+                    fontWeight: 500,
+                  }}
+                  aria-label="model-name"
+                >
+                  AI Assistant
+                </span>
+              )}
+              <time
+                data-testid="message-timestamp"
+                dateTime={message.timestamp.toISOString()}
+                className="text-xs text-gray-500"
                 style={{
                   fontSize: '10px',
                   color: '#6b7280',
-                  fontWeight: 500,
                 }}
-                aria-label="model-name"
               >
-                AI Assistant
-              </span>
-            )}
-            <time
-              data-testid="message-timestamp"
-              dateTime={message.timestamp.toISOString()}
-              className="text-xs text-gray-500"
-              style={{
-                fontSize: '10px',
-                color: '#6b7280',
-              }}
-            >
-              {formatTimestamp(message.timestamp)}
-            </time>
-          </div>
-        )}
+                {formatTimestamp(message.timestamp)}
+              </time>
+            </div>
+          )}
 
         {/* Status indicator */}
         {message.status !== 'sent' && (

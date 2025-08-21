@@ -7,8 +7,12 @@
  */
 
 import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
-import { useSettingsStore } from '@/store/settings';
-import { setTheme as setDOMTheme, getEffectiveTheme, createThemeMediaQueryListener } from '@/utils/theme';
+import { useSettingsStore } from '@store/settings';
+import {
+  setTheme as setDOMTheme,
+  getEffectiveTheme,
+  createThemeMediaQueryListener,
+} from '@utils/theme';
 import type { Theme } from '@/types/settings';
 
 /**

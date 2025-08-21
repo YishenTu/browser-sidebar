@@ -13,6 +13,8 @@ export default defineConfig({
       '@sidebar': resolve(__dirname, './src/sidebar'),
       '@components': resolve(__dirname, './src/sidebar/components'),
       '@hooks': resolve(__dirname, './src/sidebar/hooks'),
+      '@contexts': resolve(__dirname, './src/sidebar/contexts'),
+      '@ui': resolve(__dirname, './src/sidebar/components/ui'),
       '@provider': resolve(__dirname, './src/provider'),
       '@backend': resolve(__dirname, './src/backend'),
       '@tabext': resolve(__dirname, './src/tabext'),
@@ -21,6 +23,7 @@ export default defineConfig({
       '@services': resolve(__dirname, './src/services'),
       '@types': resolve(__dirname, './src/types'),
       '@utils': resolve(__dirname, './src/utils'),
+      '@store': resolve(__dirname, './src/store'),
     },
   },
   build: {

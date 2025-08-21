@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { cn } from '@/utils/cn';
+import { cn } from '@utils/cn';
 
 // Lazy load Prism.js to avoid SSR issues
 const loadPrism = async () => {

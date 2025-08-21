@@ -8,13 +8,13 @@
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { unmountSidebar } from './index';
-import { useSettingsStore } from '@/store/settings';
-import { setTheme } from '@/utils/theme';
-import { ThemeProvider } from '@sidebar/contexts/ThemeContext';
-import { MessageList } from '@/sidebar/components/MessageList';
-import { ChatInput } from '@/sidebar/components/ChatInput';
-import { useChatStore } from '@/store/chat';
-import { useMockChat } from '@/sidebar/hooks/useMockChat';
+import { useSettingsStore } from '@store/settings';
+import { setTheme } from '@utils/theme';
+import { ThemeProvider } from '@contexts/ThemeContext';
+import { MessageList } from '@components/MessageList';
+import { ChatInput } from '@components/ChatInput';
+import { useChatStore } from '@store/chat';
+import { useMockChat } from '@hooks/useMockChat';
 // import { ModelSelector } from '@components/ModelSelector'; // Commented out - using simple select instead
 
 // Constants for sizing and positioning
@@ -274,7 +274,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ className, onClose }) => {
         >
           <div className="ai-sidebar-header-title">
             {/* Simple model selector - static for now to avoid infinite loops */}
-            <select 
+            <select
               className="model-selector--header"
               style={{
                 padding: '4px 8px',
@@ -284,11 +284,11 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ className, onClose }) => {
                 color: 'var(--text-primary)',
                 fontSize: '12px',
                 cursor: 'pointer',
-                outline: 'none'
+                outline: 'none',
               }}
               disabled={isLoading}
               defaultValue="gpt-4"
-              onChange={(e) => {
+              onChange={e => {
                 // console.log('Model selected:', e.target.value);
                 // For now, just log - don't update store to avoid loops
                 // eslint-disable-next-line no-console
@@ -312,7 +312,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ className, onClose }) => {
                 aria-label="New session"
                 title="Start new session"
                 style={{
-                  marginRight: '8px'
+                  marginRight: '8px',
                 }}
               >
                 <svg

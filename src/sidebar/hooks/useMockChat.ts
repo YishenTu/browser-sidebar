@@ -6,9 +6,9 @@
  */
 
 import { useCallback, useRef } from 'react';
-import { useChatStore } from '@/store/chat';
-import { generateMockResponse, simulateStreaming } from '@/utils/mockChat';
-import type { StreamingOptions, MockResponseType } from '@/utils/mockChat';
+import { useChatStore } from '@store/chat';
+import { generateMockResponse, simulateStreaming } from '@utils/mockChat';
+import type { StreamingOptions, MockResponseType } from '@utils/mockChat';
 
 /**
  * Hook options

@@ -1,8 +1,8 @@
 import React, { useRef, useEffect, useState, useCallback, useMemo } from 'react';
 import { VariableSizeList as List, ListOnScrollProps } from 'react-window';
-import { ChatMessage } from '@/store/chat';
+import { ChatMessage } from '@store/chat';
 import { MessageBubble } from './MessageBubble';
-import { cn } from '@/utils/cn';
+import { cn } from '@utils/cn';
 
 /**
  * Props for the MessageList component

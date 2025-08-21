@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef, memo } from 'react';
-import { cn } from '@/utils/cn';
+import { cn } from '@utils/cn';
 
 /**
  * Props for the StreamingText component
