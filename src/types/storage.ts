@@ -240,6 +240,8 @@ export interface MigrationScript {
   down: (data: any) => any;
   /** Optional validation function */
   validation?: (data: any) => boolean;
+  /** Optional dependencies (version numbers that must run first) */
+  dependencies?: StorageVersion[];
 }
 
 // =============================================================================
