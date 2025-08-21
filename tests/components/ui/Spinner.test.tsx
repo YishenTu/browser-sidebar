@@ -1,6 +1,6 @@
 import { render, screen } from '@testing-library/react';
 import { describe, it, expect } from 'vitest';
-import { Spinner } from '../../../src/components/ui/Spinner';
+import { Spinner } from '@/sidebar/components/ui/Spinner';
 
 describe('Spinner', () => {
   it('renders spinner with correct role and default aria-label', () => {

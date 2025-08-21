@@ -1,6 +1,6 @@
 import { render, screen, cleanup } from '@testing-library/react';
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { Button } from '@/components/ui/Button';
+import { Button } from '@/sidebar/components/ui/Button';
 
 /**
  * Integration tests for Button component with CSS styles.

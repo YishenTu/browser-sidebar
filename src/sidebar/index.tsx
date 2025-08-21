@@ -1,11 +1,8 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { flushSync } from 'react-dom';
-import { Sidebar } from './Sidebar';
-import globalStyles from '../styles/globals.css?inline';
-import sidebarStyles from './styles/sidebar.css?inline';
-import chatInputStyles from '../styles/chat-input.css?inline';
-import iconButtonStyles from '../styles/icon-button.css?inline';
+import { ChatPanel } from './ChatPanel';
+import unifiedStyles from './styles/sidebar.css?inline';
 // Theme is applied inside Sidebar.tsx via settings store effect
 
 let root: ReactDOM.Root | null = null;
@@ -37,10 +34,7 @@ export function mountSidebar() {
   // Inject styles into Shadow DOM
   const style = document.createElement('style');
   style.textContent = `
-    ${globalStyles}
-    ${sidebarStyles}
-    ${chatInputStyles}
-    ${iconButtonStyles}
+    ${unifiedStyles}
     /* Ensure the React root container doesn't interfere */
     #ai-browser-sidebar-root {
       position: fixed;
@@ -113,7 +107,7 @@ export function mountSidebar() {
   flushSync(() => {
     root!.render(
       <React.StrictMode>
-        <Sidebar />
+        <ChatPanel onClose={() => {}} />
       </React.StrictMode>
     );
   });

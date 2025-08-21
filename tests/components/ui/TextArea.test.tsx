@@ -1,7 +1,7 @@
 import React from 'react';
 import { render, screen, userEvent } from '@tests/utils/test-utils';
 import { describe, it, expect, vi } from 'vitest';
-import { TextArea } from '@/components/ui/TextArea';
+import { TextArea } from '@/sidebar/components/ui/TextArea';
 
 describe('TextArea Component', () => {
   describe('Basic Rendering', () => {

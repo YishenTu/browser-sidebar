@@ -1,7 +1,7 @@
 import { render, screen, waitFor } from '@tests/utils/test-utils';
 import userEvent from '@testing-library/user-event';
 import { vi, describe, beforeAll, beforeEach, test, expect } from 'vitest';
-import { CodeBlock } from '@/components/Chat/CodeBlock';
+import { CodeBlock } from '@/sidebar/components/CodeBlock';
 
 // Mock clipboard API
 const mockWriteText = vi.fn();

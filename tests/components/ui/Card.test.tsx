@@ -1,6 +1,6 @@
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { Card } from '../../../src/components/ui/Card';
+import { Card } from '@/sidebar/components/ui/Card';
 
 describe('Card Component', () => {
   let mockContainer: HTMLElement;

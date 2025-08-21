@@ -12,7 +12,7 @@
 
 import { render, screen, fireEvent, within } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { MarkdownRenderer } from '@/components/Chat/MarkdownRenderer';
+import { MarkdownRenderer } from '@/sidebar/components/MarkdownRenderer';
 
 // Mock window.open for link testing
 const mockWindowOpen = vi.fn();

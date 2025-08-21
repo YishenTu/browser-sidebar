@@ -109,7 +109,7 @@ const VirtualListItem: React.FC<VirtualListItemProps> = ({ index, style, data })
 export const MessageList: React.FC<MessageListProps> = ({
   messages = [],
   isLoading = false,
-  loadingMessage = 'Loading messages...',
+  // loadingMessage = 'Loading messages...', // Not used after removing loading indicator
   emptyMessage = 'No messages yet',
   autoScroll = true,
   preserveScrollPosition = false,
@@ -354,21 +354,6 @@ export const MessageList: React.FC<MessageListProps> = ({
     </div>
   );
 
-  /**
-   * Render loading state
-   */
-  const renderLoadingState = () => (
-    <div
-      className="flex items-center justify-center p-4 text-gray-500"
-      data-testid="message-list-loading"
-      aria-label="Loading messages"
-    >
-      <div className="flex items-center space-x-2">
-        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-500"></div>
-        <span>{loadingMessage}</span>
-      </div>
-    </div>
-  );
 
   /**
    * Render scroll to bottom button
@@ -471,8 +456,6 @@ export const MessageList: React.FC<MessageListProps> = ({
       {/* Virtualized message list */}
       {isVirtualized ? (
         <div className="h-full" style={{ height }}>
-          {/* Loading indicator for older messages */}
-          {isLoading && renderLoadingState()}
 
           {/* Virtualized messages */}
           {renderVirtualizedMessages()}
@@ -486,8 +469,6 @@ export const MessageList: React.FC<MessageListProps> = ({
           onScroll={handleScroll}
           data-testid="message-list-container"
         >
-          {/* Loading indicator for older messages */}
-          {isLoading && renderLoadingState()}
 
           {/* Empty state */}
           {isEmpty && renderEmptyState()}

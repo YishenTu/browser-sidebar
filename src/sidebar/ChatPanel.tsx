@@ -1,3 +1,11 @@
+/**
+ * @file Unified ChatPanel Component
+ *
+ * Unified component that merges Sidebar.tsx and the existing ChatPanel.tsx functionality.
+ * Provides a complete chat interface with overlay positioning, resize/drag capabilities,
+ * and Shadow DOM isolation.
+ */
+
 import React, { useState, useEffect, useCallback } from 'react';
 import { unmountSidebar } from './index';
 import { useSettingsStore } from '@/store/settings';
@@ -8,16 +16,48 @@ import { ChatInput } from '@/sidebar/components/ChatInput';
 import { useChatStore } from '@/store/chat';
 import { useMockChat } from '@/sidebar/hooks/useMockChat';
 
+// Constants for sizing and positioning
 const MIN_WIDTH = 300;
 const MAX_WIDTH = 800;
 const DEFAULT_WIDTH = 400;
 const SIDEBAR_HEIGHT_RATIO = 0.85;
 
-export const Sidebar: React.FC = () => {
+export interface ChatPanelProps {
+  /** Custom CSS class name */
+  className?: string;
+  /** Callback when sidebar is closed */
+  onClose: () => void;
+}
+
+/**
+ * Unified ChatPanel Component
+ *
+ * A complete chat interface that combines overlay positioning, resize/drag functionality,
+ * and chat components into a single unified component. Features:
+ *
+ * - Fixed overlay positioning with high z-index
+ * - Resizable width (300-800px) with left edge drag handle
+ * - Draggable positioning by header
+ * - 85% viewport height, vertically centered
+ * - Shadow DOM isolation
+ * - Theme support
+ * - Keyboard accessibility (Escape to close)
+ * - Chat functionality with message history and AI responses
+ *
+ * @example
+ * ```tsx
+ * <ChatPanel onClose={() => unmountSidebar()} />
+ * ```
+ */
+export const ChatPanel: React.FC<ChatPanelProps> = ({
+  className,
+  onClose
+}) => {
+  // Positioning and sizing state
   const [width, setWidth] = useState(DEFAULT_WIDTH);
   const [isResizing, setIsResizing] = useState(false);
-  const sidebarHeight = window.innerHeight * SIDEBAR_HEIGHT_RATIO;
-  const initialY = window.innerHeight * ((1 - SIDEBAR_HEIGHT_RATIO) / 2);
+  const sidebarHeight = Math.round(window.innerHeight * SIDEBAR_HEIGHT_RATIO);
+  const initialY = Math.round(window.innerHeight * ((1 - SIDEBAR_HEIGHT_RATIO) / 2));
   const [position, setPosition] = useState({
     x: window.innerWidth - DEFAULT_WIDTH,
     y: initialY,
@@ -25,7 +65,7 @@ export const Sidebar: React.FC = () => {
   const [isDragging, setIsDragging] = useState(false);
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
 
-  // Subscribe to theme changes
+  // Theme integration
   const theme = useSettingsStore(state => state.settings.theme);
 
   // Apply theme when it changes
@@ -33,7 +73,7 @@ export const Sidebar: React.FC = () => {
     setTheme(theme);
   }, [theme]);
 
-  // Chat store and mock chat
+  // Chat store and mock chat integration
   const { messages, isLoading, addMessage, clearConversation, hasMessages } = useChatStore();
   const { generateResponse } = useMockChat({
     enabled: true,
@@ -61,13 +101,14 @@ export const Sidebar: React.FC = () => {
     }
   }, [hasMessages, clearConversation]);
 
-  // Handle resize and drag
+  // Handle resize and drag mouse events
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
       if (isResizing) {
         const newWidth = window.innerWidth - e.clientX;
-        setWidth(Math.min(MAX_WIDTH, Math.max(MIN_WIDTH, newWidth)));
-        setPosition(prev => ({ ...prev, x: e.clientX }));
+        const constrainedWidth = Math.min(MAX_WIDTH, Math.max(MIN_WIDTH, newWidth));
+        setWidth(constrainedWidth);
+        setPosition(prev => ({ ...prev, x: window.innerWidth - constrainedWidth }));
       }
       if (isDragging) {
         setPosition({
@@ -95,12 +136,12 @@ export const Sidebar: React.FC = () => {
     };
   }, [isResizing, isDragging, dragOffset]);
 
-  // Component is mounted/unmounted directly, no need for toggle events
-
+  // Handle close functionality
   const handleClose = useCallback(() => {
     unmountSidebar();
     chrome.runtime.sendMessage({ type: 'sidebar-closed' });
-  }, []);
+    onClose();
+  }, [onClose]);
 
   // Handle Escape key to close sidebar
   useEffect(() => {
@@ -123,10 +164,16 @@ export const Sidebar: React.FC = () => {
     }
   }, []);
 
+  // Handle header mouse down for dragging
   const handleHeaderMouseDown = useCallback(
     (e: React.MouseEvent) => {
-      // Only start dragging if not clicking on close button
-      if ((e.target as HTMLElement).classList.contains('ai-sidebar-close')) return;
+      // Only start dragging if not clicking on close button or clear button
+      const target = e.target as HTMLElement;
+      if (target.classList.contains('ai-sidebar-close') || 
+          target.closest('.ai-sidebar-clear') ||
+          target.closest('button')) {
+        return;
+      }
 
       setIsDragging(true);
       setDragOffset({
@@ -137,13 +184,17 @@ export const Sidebar: React.FC = () => {
     [position]
   );
 
+  // Handle resize mouse down
   const handleResizeMouseDown = useCallback(() => {
-    setIsResizing(true);
-  }, []);
+    // Only start resize if not already dragging
+    if (!isDragging) {
+      setIsResizing(true);
+    }
+  }, [isDragging]);
 
   return (
     <div
-      className="ai-sidebar-overlay"
+      className={`ai-sidebar-overlay ${className || ''}`}
       role="dialog"
       aria-label="AI Browser Sidebar"
       aria-modal="false"
@@ -153,18 +204,25 @@ export const Sidebar: React.FC = () => {
         width: `${width}px`,
         height: `${sidebarHeight}px`,
       }}
+      data-testid="chat-panel"
     >
       {/* Resize handle */}
-      <div className="ai-sidebar-resize-handle" onMouseDown={handleResizeMouseDown} />
+      <div 
+        className="ai-sidebar-resize-handle" 
+        onMouseDown={handleResizeMouseDown}
+        data-testid="resize-handle"
+        style={{ cursor: 'ew-resize' }}
+      />
 
-      <div className="ai-sidebar-container">
+      <div className="ai-sidebar-container" data-testid="sidebar-container">
         <div
           className="ai-sidebar-header"
           onMouseDown={handleHeaderMouseDown}
           style={{ cursor: isDragging ? 'grabbing' : 'grab' }}
+          data-testid="sidebar-header"
         >
           <div className="ai-sidebar-header-title">
-            <h2>AI Assistant</h2>
+            <h2></h2>
           </div>
           <div className="ai-sidebar-header-actions">
             {hasMessages() && (
@@ -200,17 +258,17 @@ export const Sidebar: React.FC = () => {
         </div>
 
         <ThemeProvider>
-          <div className="ai-sidebar-body">
+          <div className="ai-sidebar-body" data-testid="sidebar-body">
             <MessageList
               messages={messages}
               isLoading={isLoading}
-              emptyMessage="Start a conversation about this webpage"
+              emptyMessage=""
               autoScroll={true}
               height="100%"
             />
           </div>
 
-          <div className="ai-sidebar-footer">
+          <div className="ai-sidebar-footer" data-testid="sidebar-footer">
             <ChatInput
               onSend={handleSendMessage}
               loading={isLoading}
@@ -222,3 +280,5 @@ export const Sidebar: React.FC = () => {
     </div>
   );
 };
+
+export default ChatPanel;

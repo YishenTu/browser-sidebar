@@ -1,7 +1,7 @@
 import { render, screen, waitFor, act } from '@tests/utils/test-utils';
 import userEvent from '@testing-library/user-event';
 import { vi } from 'vitest';
-import { MessageBubble } from '@/components/Chat/MessageBubble';
+import { MessageBubble } from '@/sidebar/components/MessageBubble';
 import { ChatMessage, MessageRole, MessageStatus } from '@/store/chat';
 
 // Mock utilities

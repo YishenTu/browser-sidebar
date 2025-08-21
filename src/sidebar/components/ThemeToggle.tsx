@@ -1,7 +1,7 @@
 import { useTheme } from '../../contexts/ThemeContext';
 import type { Theme } from '../../types/settings';
 
-interface ThemeToggleProps {
+export interface ThemeToggleProps {
   className?: string;
 }
 

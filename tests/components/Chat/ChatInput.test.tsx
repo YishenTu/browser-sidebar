@@ -1,6 +1,6 @@
 import { render, screen, userEvent } from '@tests/utils/test-utils';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { ChatInput } from '@/components/Chat/ChatInput';
+import { ChatInput } from '@/sidebar/components/ChatInput';
 
 describe('ChatInput Component', () => {
   const mockOnSend = vi.fn();
@@ -37,20 +37,19 @@ describe('ChatInput Component', () => {
       expect(textarea.value).toBe(initialValue);
     });
 
-    it('renders all action buttons', () => {
+    it('renders essential action buttons only', () => {
       render(<ChatInput onSend={mockOnSend} onClear={mockOnClear} />);
 
       const sendButton = screen.getByRole('button', { name: /send/i });
       const clearButton = screen.getByRole('button', { name: /clear/i });
-      const attachButton = screen.getByRole('button', { name: /attach/i });
-      const voiceButton = screen.getByRole('button', { name: /voice/i });
-      const settingsButton = screen.getByRole('button', { name: /settings/i });
 
       expect(sendButton).toBeInTheDocument();
       expect(clearButton).toBeInTheDocument();
-      expect(attachButton).toBeInTheDocument();
-      expect(voiceButton).toBeInTheDocument();
-      expect(settingsButton).toBeInTheDocument();
+
+      // Utility buttons should not be present
+      expect(screen.queryByRole('button', { name: /attach/i })).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: /voice/i })).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: /settings/i })).not.toBeInTheDocument();
     });
   });
 
@@ -383,46 +382,6 @@ describe('ChatInput Component', () => {
     });
   });
 
-  describe('Placeholder Buttons', () => {
-    it('renders attach button as placeholder', async () => {
-      const user = userEvent.setup();
-
-      render(<ChatInput onSend={mockOnSend} />);
-
-      const attachButton = screen.getByRole('button', { name: /attach/i });
-      expect(attachButton).toBeInTheDocument();
-
-      // Should not do anything meaningful yet (placeholder)
-      await user.click(attachButton);
-      // No assertions needed as it's just a placeholder
-    });
-
-    it('renders voice button as placeholder', async () => {
-      const user = userEvent.setup();
-
-      render(<ChatInput onSend={mockOnSend} />);
-
-      const voiceButton = screen.getByRole('button', { name: /voice/i });
-      expect(voiceButton).toBeInTheDocument();
-
-      // Should not do anything meaningful yet (placeholder)
-      await user.click(voiceButton);
-      // No assertions needed as it's just a placeholder
-    });
-
-    it('renders settings button as placeholder', async () => {
-      const user = userEvent.setup();
-
-      render(<ChatInput onSend={mockOnSend} />);
-
-      const settingsButton = screen.getByRole('button', { name: /settings/i });
-      expect(settingsButton).toBeInTheDocument();
-
-      // Should not do anything meaningful yet (placeholder)
-      await user.click(settingsButton);
-      // No assertions needed as it's just a placeholder
-    });
-  });
 
   describe('Accessibility', () => {
     it('has proper ARIA labels', () => {
@@ -441,14 +400,23 @@ describe('ChatInput Component', () => {
       render(<ChatInput onSend={mockOnSend} onClear={mockOnClear} />);
 
       const textarea = screen.getByRole('textbox');
+      const sendButton = screen.getByRole('button', { name: /send/i });
 
       // Textarea should already have focus due to auto-focus
       expect(textarea).toHaveFocus();
 
-      // Tab to next element should move to the first button
+      // Add some content to enable clear button
+      await user.type(textarea, 'Test content');
+
+      const clearButton = screen.getByRole('button', { name: /clear/i });
+
+      // Tab to next element should move to the clear button (now enabled)
       await user.tab();
-      const nextButton = document.activeElement;
-      expect(nextButton?.tagName).toBe('BUTTON');
+      expect(clearButton).toHaveFocus();
+
+      // Tab to next element should move to the send button
+      await user.tab();
+      expect(sendButton).toHaveFocus();
     });
 
     it('supports aria-label for textarea', () => {

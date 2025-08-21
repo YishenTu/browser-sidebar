@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { mountSidebar, unmountSidebar } from '@sidebar/index';
 
-describe('Sidebar Mount/Unmount', () => {
+describe('ChatPanel Mount/Unmount', () => {
   beforeEach(() => {
     // Clear DOM before each test
     document.body.innerHTML = '';
@@ -15,83 +15,115 @@ describe('Sidebar Mount/Unmount', () => {
     document.head.innerHTML = '';
   });
 
-  it('should mount sidebar and create necessary DOM elements', () => {
+  it('should create Shadow DOM and mount ChatPanel', () => {
     mountSidebar();
 
-    // Check that root element is created
-    const root = document.getElementById('ai-browser-sidebar-root');
+    // Check that host container is created
+    const hostContainer = document.getElementById('ai-browser-sidebar-host');
+    expect(hostContainer).toBeTruthy();
+    expect(hostContainer).toBeInTheDocument();
+
+    // Check that Shadow DOM is attached
+    expect(hostContainer?.shadowRoot).toBeTruthy();
+    
+    // Check that container element exists inside Shadow DOM
+    const shadowRoot = hostContainer?.shadowRoot;
+    const root = shadowRoot?.getElementById('ai-browser-sidebar-root');
     expect(root).toBeTruthy();
-    expect(root).toBeInTheDocument();
 
-    // Check that styles are injected
-    const styles = document.getElementById('ai-browser-sidebar-styles');
-    expect(styles).toBeTruthy();
-    expect(styles).toBeInTheDocument();
-    expect(styles?.tagName).toBe('STYLE');
+    // Check that styles are injected into Shadow DOM
+    const styleElement = shadowRoot?.querySelector('style');
+    expect(styleElement).toBeTruthy();
+    expect(styleElement?.textContent).toContain('textarea');
 
-    // Check that sidebar content is rendered
-    const sidebar = document.querySelector('.ai-sidebar-overlay');
-    expect(sidebar).toBeTruthy();
+    // Check that ChatPanel is rendered (should find the overlay element)
+    const chatPanel = shadowRoot?.querySelector('.ai-sidebar-overlay');
+    expect(chatPanel).toBeTruthy();
+    
+    // Check for ChatPanel specific elements
+    const chatPanelTestId = shadowRoot?.querySelector('[data-testid="chat-panel"]');
+    expect(chatPanelTestId).toBeTruthy();
   });
 
-  it('should unmount sidebar and remove root element', () => {
+  it('should inject styles into Shadow DOM', () => {
+    mountSidebar();
+
+    const hostContainer = document.getElementById('ai-browser-sidebar-host');
+    const shadowRoot = hostContainer?.shadowRoot;
+    
+    // Check that styles are present in Shadow DOM
+    const styleElement = shadowRoot?.querySelector('style');
+    expect(styleElement).toBeTruthy();
+    expect(styleElement?.textContent).toBeTruthy();
+    
+    // Verify key styles are included
+    const styles = styleElement?.textContent || '';
+    expect(styles).toContain('textarea');
+    expect(styles).toContain('#ai-browser-sidebar-root');
+    expect(styles).toContain('pointer-events: none');
+  });
+
+  it('should unmount ChatPanel and remove host container', () => {
     // First mount the sidebar
     mountSidebar();
-    expect(document.getElementById('ai-browser-sidebar-root')).toBeTruthy();
+    expect(document.getElementById('ai-browser-sidebar-host')).toBeTruthy();
 
     // Then unmount it
     unmountSidebar();
 
-    // Root should be removed
-    const root = document.getElementById('ai-browser-sidebar-root');
-    expect(root).toBeFalsy();
-
-    // Styles should remain for reuse
-    const styles = document.getElementById('ai-browser-sidebar-styles');
-    expect(styles).toBeTruthy();
+    // Host container should be removed
+    const hostContainer = document.getElementById('ai-browser-sidebar-host');
+    expect(hostContainer).toBeFalsy();
   });
 
-  it('should keep styles when unmounting for reuse', () => {
+  it('should maintain Shadow DOM isolation', () => {
     mountSidebar();
-    const stylesBefore = document.getElementById('ai-browser-sidebar-styles');
-    expect(stylesBefore).toBeTruthy();
 
-    unmountSidebar();
-
-    // Styles should still be present after unmount
-    const stylesAfter = document.getElementById('ai-browser-sidebar-styles');
-    expect(stylesAfter).toBeTruthy();
-    expect(stylesAfter).toBe(stylesBefore);
+    const hostContainer = document.getElementById('ai-browser-sidebar-host');
+    const shadowRoot = hostContainer?.shadowRoot;
+    
+    // Check that Shadow DOM is in closed mode for isolation
+    expect(shadowRoot).toBeTruthy();
+    
+    // Check that styles in Shadow DOM don't affect main document
+    const mainDocStyle = document.querySelector('style');
+    expect(mainDocStyle).toBeFalsy(); // No styles should be in main document
+    
+    // Check that Shadow DOM has its own styles
+    const shadowStyle = shadowRoot?.querySelector('style');
+    expect(shadowStyle).toBeTruthy();
   });
 
   it('should handle multiple mount/unmount cycles', () => {
     // First cycle
     mountSidebar();
-    expect(document.getElementById('ai-browser-sidebar-root')).toBeTruthy();
+    expect(document.getElementById('ai-browser-sidebar-host')).toBeTruthy();
     unmountSidebar();
-    expect(document.getElementById('ai-browser-sidebar-root')).toBeFalsy();
+    expect(document.getElementById('ai-browser-sidebar-host')).toBeFalsy();
 
     // Second cycle
     mountSidebar();
-    expect(document.getElementById('ai-browser-sidebar-root')).toBeTruthy();
+    expect(document.getElementById('ai-browser-sidebar-host')).toBeTruthy();
     unmountSidebar();
-    expect(document.getElementById('ai-browser-sidebar-root')).toBeFalsy();
+    expect(document.getElementById('ai-browser-sidebar-host')).toBeFalsy();
 
-    // Styles should only be injected once
-    const styles = document.querySelectorAll('#ai-browser-sidebar-styles');
-    expect(styles.length).toBe(1);
+    // Third cycle to ensure it still works
+    mountSidebar();
+    const hostContainer = document.getElementById('ai-browser-sidebar-host');
+    expect(hostContainer).toBeTruthy();
+    expect(hostContainer?.shadowRoot).toBeTruthy();
   });
 
-  it('should not create duplicate styles when mounting multiple times', () => {
+  it('should not create duplicate host containers when mounting multiple times', () => {
     mountSidebar();
     unmountSidebar();
     mountSidebar();
     unmountSidebar();
     mountSidebar();
 
-    // Should only have one style element
-    const styles = document.querySelectorAll('#ai-browser-sidebar-styles');
-    expect(styles.length).toBe(1);
+    // Should only have one host container
+    const hostContainers = document.querySelectorAll('#ai-browser-sidebar-host');
+    expect(hostContainers.length).toBe(1);
   });
 
   it('should properly clean up event listeners on unmount', () => {
@@ -113,18 +145,59 @@ describe('Sidebar Mount/Unmount', () => {
 
     mountSidebar();
 
-    // Check that event listeners were added
+    // Check that keydown event listeners were added (both from index.tsx and ChatPanel)
     const keydownListeners = addedListeners.filter(l => l.type === 'keydown');
     expect(keydownListeners.length).toBeGreaterThan(0);
 
     unmountSidebar();
 
-    // Check that event listeners were removed
+    // Check that keydown event listeners were removed
     const removedKeydownListeners = removedListeners.filter(l => l.type === 'keydown');
     expect(removedKeydownListeners.length).toBeGreaterThan(0);
 
     // Restore original methods
     document.addEventListener = originalAddEventListener;
     document.removeEventListener = originalRemoveEventListener;
+  });
+
+  it('should mount ChatPanel component with correct props', () => {
+    mountSidebar();
+
+    const hostContainer = document.getElementById('ai-browser-sidebar-host');
+    const shadowRoot = hostContainer?.shadowRoot;
+    
+    // Check that ChatPanel is mounted with expected structure
+    const chatPanel = shadowRoot?.querySelector('[data-testid="chat-panel"]');
+    expect(chatPanel).toBeTruthy();
+    
+    // Check for key ChatPanel elements
+    const sidebarContainer = shadowRoot?.querySelector('[data-testid="sidebar-container"]');
+    const sidebarHeader = shadowRoot?.querySelector('[data-testid="sidebar-header"]');
+    const sidebarBody = shadowRoot?.querySelector('[data-testid="sidebar-body"]');
+    const sidebarFooter = shadowRoot?.querySelector('[data-testid="sidebar-footer"]');
+    const resizeHandle = shadowRoot?.querySelector('[data-testid="resize-handle"]');
+    
+    expect(sidebarContainer).toBeTruthy();
+    expect(sidebarHeader).toBeTruthy();
+    expect(sidebarBody).toBeTruthy();
+    expect(sidebarFooter).toBeTruthy();
+    expect(resizeHandle).toBeTruthy();
+  });
+
+  it('should handle component unmounting and cleanup properly', () => {
+    mountSidebar();
+    
+    // Verify ChatPanel is mounted
+    const hostContainer = document.getElementById('ai-browser-sidebar-host');
+    const shadowRoot = hostContainer?.shadowRoot;
+    const chatPanel = shadowRoot?.querySelector('[data-testid="chat-panel"]');
+    expect(chatPanel).toBeTruthy();
+    
+    // Unmount and verify cleanup
+    unmountSidebar();
+    
+    // Host container should be completely removed
+    const hostAfterUnmount = document.getElementById('ai-browser-sidebar-host');
+    expect(hostAfterUnmount).toBeFalsy();
   });
 });

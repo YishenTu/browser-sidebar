@@ -1,6 +1,6 @@
 import { render, screen, waitFor } from '@tests/utils/test-utils';
 import { vi, beforeEach, afterEach } from 'vitest';
-import { StreamingText } from '@/components/Chat/StreamingText';
+import { StreamingText } from '@/sidebar/components/StreamingText';
 
 // Mock requestAnimationFrame for testing
 const mockRequestAnimationFrame = vi.fn();

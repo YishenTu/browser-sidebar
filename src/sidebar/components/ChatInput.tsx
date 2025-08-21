@@ -1,9 +1,6 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { TextArea, TextAreaProps } from '@/components/ui/TextArea';
-import { Button } from '@/components/ui/Button';
-import { IconButton } from '@/components/ui/IconButton';
 import { cn } from '@/utils/cn';
-import { useSettingsStore } from '@/store/settings';
 
 export interface ChatInputProps extends Omit<TextAreaProps, 'onKeyDown' | 'value' | 'onChange'> {
   /** Callback fired when message is sent */
@@ -36,46 +33,18 @@ export interface ChatInputProps extends Omit<TextAreaProps, 'onKeyDown' | 'value
 
 // Icon components (simple SVGs for now)
 const SendIcon: React.FC = () => (
-  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-    <line x1="22" y1="2" x2="11" y2="13" />
-    <polygon points="22,2 15,22 11,13 2,9" />
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+    <path d="M7 11L12 6L17 11M12 18V7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
   </svg>
 );
 
-const ClearIcon: React.FC = () => (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-    <line x1="18" y1="6" x2="6" y2="18" />
-    <line x1="6" y1="6" x2="18" y2="18" />
-  </svg>
-);
 
-const AttachIcon: React.FC = () => (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-    <path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66L9.64 16.2a2 2 0 0 1-2.83-2.83l8.49-8.4" />
-  </svg>
-);
-
-const VoiceIcon: React.FC = () => (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-    <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z" />
-    <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
-    <line x1="12" y1="19" x2="12" y2="22" />
-  </svg>
-);
-
-const SettingsIcon: React.FC = () => (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-    <circle cx="12" cy="12" r="3" />
-    <path d="M12 1v6m0 6v6" />
-    <path d="M9 12H1m22-6h-6M9 12h6m6 0h-6M9 12H1" />
-  </svg>
-);
 
 /**
  * ChatInput Component
  *
- * A comprehensive chat input component with TextArea integration, send functionality,
- * keyboard shortcuts, character counter, and placeholder action buttons.
+ * A simplified chat input component with TextArea integration, send functionality,
+ * keyboard shortcuts, and character counter. Contains only essential controls.
  */
 export const ChatInput = React.forwardRef<HTMLTextAreaElement, ChatInputProps>(
   (
@@ -100,7 +69,7 @@ export const ChatInput = React.forwardRef<HTMLTextAreaElement, ChatInputProps>(
   ) => {
     // Internal state for uncontrolled mode
     const [internalValue, setInternalValue] = useState(defaultValue || '');
-    const { theme } = useSettingsStore();
+    // const theme = useSettingsStore(state => state.settings.theme); // Not used after simplification
 
     // Determine if we're in controlled mode
     const isControlled = value !== undefined;
@@ -162,14 +131,6 @@ export const ChatInput = React.forwardRef<HTMLTextAreaElement, ChatInputProps>(
       }
     }, [currentValue, onSend, clearOnSend, handleValueChange, isSending, loading]);
 
-    // Handle clear
-    const handleClear = useCallback(() => {
-      if (onClear) {
-        onClear();
-      } else {
-        handleValueChange('');
-      }
-    }, [onClear, handleValueChange]);
 
     // Handle keyboard shortcuts
     const handleKeyDown = useCallback(
@@ -216,7 +177,7 @@ export const ChatInput = React.forwardRef<HTMLTextAreaElement, ChatInputProps>(
     // Determine if buttons should be disabled
     const isDisabled = loading || isSending;
     const canSend = !isDisabled && currentValue.trim().length > 0;
-    const canClear = !isDisabled && currentValue.length > 0;
+    // const canClear = !isDisabled && currentValue.length > 0; // Not used after simplification
 
     // Character counter component
     const CharacterCounter: React.FC = () => {
@@ -247,8 +208,15 @@ export const ChatInput = React.forwardRef<HTMLTextAreaElement, ChatInputProps>(
 
     return (
       <div className={cn('chat-input', className)}>
-        {/* Main input area */}
-        <div className="chat-input__main">
+        {/* Main input area with border */}
+        <div className="chat-input__main" style={{
+          border: '1px solid rgba(75, 85, 99, 0.3)',
+          borderRadius: '12px',
+          backgroundColor: 'transparent', // Same as main area
+          position: 'relative',
+          padding: '4px', // Reduced padding by half
+          margin: '4px' // Reduced margin by half
+        }}>
           <div className="chat-input__textarea-container">
             <TextArea
               ref={textAreaRef}
@@ -264,79 +232,61 @@ export const ChatInput = React.forwardRef<HTMLTextAreaElement, ChatInputProps>(
               style={{
                 background: 'transparent',
                 backgroundColor: 'transparent',
-                border: theme === 'dark' ? '1px solid #4b5563' : '1px solid #e5e7eb',
-                borderRadius: '0.5rem',
-                padding: '0.75rem',
-                color: theme === 'dark' ? '#ffffff' : '#4b5563', // White in dark mode, gray in light mode
+                border: 'none',
+                borderRadius: '0',
+                padding: '0.5rem 44px 0.5rem 0.75rem', // Extra padding right for send button
+                color: '#e5e7eb',
                 outline: 'none',
                 boxShadow: 'none',
+                width: '100%',
+                resize: 'none'
               }}
               {...textAreaProps}
             />
           </div>
 
           {/* Action buttons row */}
-          <div className="chat-input__actions">
+          <div className="chat-input__actions" style={{ 
+            position: 'absolute', 
+            right: '4px', 
+            bottom: '4px' // Back to bottom right corner
+          }}>
             {/* Right side - send controls first in DOM for tab order */}
-            <div className="chat-input__controls">
+            <div className="chat-input__controls" style={{ display: 'flex', alignItems: 'center' }}>
               {showCounter && (
                 <div className="chat-input__counter">
                   <CharacterCounter />
                 </div>
               )}
 
-              <IconButton
-                icon={<ClearIcon />}
-                size="sm"
-                variant="ghost"
-                onClick={handleClear}
-                disabled={!canClear}
-                tooltip={clearButtonLabel}
-                aria-label={clearButtonLabel}
-              />
-
-              <Button
+              <button
                 onClick={handleSend}
                 disabled={!canSend}
-                loading={isSending || loading}
-                loadingText="Sending..."
-                size="sm"
-                variant="primary"
-                className={cn('chat-input__send-button', { loading: isSending || loading })}
+                className="chat-input__send-button"
                 aria-label={sendButtonLabel}
+                style={{
+                  background: canSend ? '#10b981' : '#374151',
+                  opacity: canSend ? 1 : 0.5,
+                  cursor: canSend ? 'pointer' : 'not-allowed',
+                  border: 'none',
+                  borderRadius: '50%',
+                  width: '32px',
+                  height: '32px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  transition: 'all 0.2s',
+                  color: 'white',
+                }}
               >
-                <SendIcon />
-                <span className="sr-only">{sendButtonLabel}</span>
-              </Button>
+                {isSending || loading ? (
+                  <span className="spinner" style={{ width: '16px', height: '16px' }} />
+                ) : (
+                  <SendIcon />
+                )}
+              </button>
             </div>
 
-            {/* Left side - utility buttons */}
-            <div className="chat-input__utilities">
-              <IconButton
-                icon={<AttachIcon />}
-                size="sm"
-                variant="ghost"
-                tooltip="Attach file (coming soon)"
-                disabled={isDisabled}
-                aria-label="Attach file"
-              />
-              <IconButton
-                icon={<VoiceIcon />}
-                size="sm"
-                variant="ghost"
-                tooltip="Voice input (coming soon)"
-                disabled={isDisabled}
-                aria-label="Voice input"
-              />
-              <IconButton
-                icon={<SettingsIcon />}
-                size="sm"
-                variant="ghost"
-                tooltip="Settings (coming soon)"
-                disabled={isDisabled}
-                aria-label="Settings"
-              />
-            </div>
           </div>
         </div>
       </div>

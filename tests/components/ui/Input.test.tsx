@@ -1,7 +1,7 @@
 import React from 'react';
 import { render, screen, userEvent } from '@tests/utils/test-utils';
 import { describe, it, expect, vi } from 'vitest';
-import { Input } from '@/components/ui/Input';
+import { Input } from '@/sidebar/components/ui/Input';
 
 describe('Input Component', () => {
   describe('Basic Rendering', () => {

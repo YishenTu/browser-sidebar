@@ -8,7 +8,7 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { vi } from 'vitest';
-import { ChatPanel } from '@/components/Chat/ChatPanel';
+import { ChatPanel } from '@/sidebar/ChatPanel';
 import { useChatStore } from '@/store/chat';
 import { useSettingsStore } from '@/store/settings';
 import type { ChatMessage } from '@/store/chat';

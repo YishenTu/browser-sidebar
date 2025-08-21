@@ -1,6 +1,6 @@
 import React from 'react';
 import { render, screen, fireEvent } from '@tests/utils/test-utils';
-import { Button } from '@/components/ui/Button';
+import { Button } from '@/sidebar/components/ui/Button';
 
 describe('Button Component', () => {
   describe('Basic Rendering', () => {

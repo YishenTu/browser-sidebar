@@ -1,5 +1,5 @@
 import { render, screen, fireEvent, waitFor } from '@tests/utils/test-utils';
-import { MessageList } from '@/components/Chat/MessageList';
+import { MessageList } from '@/sidebar/components/MessageList';
 import { ChatMessage, MessageRole, MessageStatus } from '@/store/chat';
 import { vi } from 'vitest';
 
@@ -78,7 +78,7 @@ vi.mock('react-window', () => {
 });
 
 // Mock the MessageBubble component
-vi.mock('@/components/Chat/MessageBubble', () => ({
+vi.mock('@/sidebar/components/MessageBubble', () => ({
   MessageBubble: ({ message, className }: any) => (
     <div
       data-testid={`message-${message.id}`}

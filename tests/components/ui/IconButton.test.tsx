@@ -1,7 +1,7 @@
 import React from 'react';
 import { screen, waitFor } from '@testing-library/react';
 import { render, userEvent } from '@tests/utils/test-utils';
-import { IconButton } from '../../../src/components/ui/IconButton';
+import { IconButton } from '@/sidebar/components/ui/IconButton';
 
 // Mock icons for testing
 const MockIcon: React.FC<{ size?: number; className?: string }> = ({ size = 16, className }) => (
