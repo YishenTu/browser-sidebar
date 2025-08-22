@@ -276,7 +276,11 @@ function validateKeyPurpose(purpose: string): void {
 /**
  * Get algorithm parameters for key generation
  */
-function getKeyAlgorithmParams(algorithm: KeyAlgorithm, keySize: number, hashAlgorithm?: HashAlgorithm) {
+function getKeyAlgorithmParams(
+  algorithm: KeyAlgorithm,
+  keySize: number,
+  hashAlgorithm?: HashAlgorithm
+) {
   switch (algorithm) {
     case 'AES-GCM':
     case 'AES-CBC':
@@ -309,7 +313,7 @@ export function generateSalt(size: number = DEFAULT_SALT_SIZE): SaltInfo {
 
   const salt = new Uint8Array(size);
   crypto.getRandomValues(salt);
-  
+
   return {
     salt,
     size,
@@ -365,7 +369,7 @@ export async function deriveMasterKey(
     const masterKey = await crypto.subtle.deriveKey(
       {
         name: 'PBKDF2',
-        salt,
+        salt: salt.buffer as ArrayBuffer,
         iterations,
         hash: hashAlgorithm,
       },
@@ -389,7 +393,9 @@ export async function deriveMasterKey(
       createdAt: new Date(),
     };
   } catch (error) {
-    throw new Error(`Failed to derive master key: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    throw new Error(
+      `Failed to derive master key: ${error instanceof Error ? error.message : 'Unknown error'}`
+    );
   }
 }
 
@@ -428,7 +434,7 @@ export async function deriveMultipleKeys(
     for (const purpose of purposes) {
       const purposeConfig = KEY_PURPOSE_CONFIGS[purpose];
       const customConfig = keyConfigs[purpose];
-      
+
       // Use custom config if provided, otherwise use default
       const algorithm = customConfig?.algorithm || purposeConfig.algorithm;
       const keySize = customConfig?.keySize || purposeConfig.keySize;
@@ -443,8 +449,9 @@ export async function deriveMultipleKeys(
         {
           name: 'HKDF',
           hash: hashAlgorithm,
-          salt: new Uint8Array(), // Empty salt for HKDF (using master key as IKM)
-          info,
+          // Use empty salt (HKDF allows empty salt; pass as ArrayBuffer for TS compatibility)
+          salt: new Uint8Array().buffer as ArrayBuffer,
+          info: info.buffer as ArrayBuffer,
         },
         masterKey,
         getKeyAlgorithmParams(algorithm, keySize, purposeHashAlgorithm),
@@ -468,7 +475,9 @@ export async function deriveMultipleKeys(
       derivedAt,
     };
   } catch (error) {
-    throw new Error(`Failed to derive keys: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    throw new Error(
+      `Failed to derive keys: ${error instanceof Error ? error.message : 'Unknown error'}`
+    );
   }
 }
 
@@ -579,15 +588,16 @@ export class KeyDerivationManager {
     }
 
     // Derive new key
-    const result = await deriveMultipleKeys(
-      this.masterKeyResult.masterKey,
-      [purpose],
-      { version: this.config.version, hashAlgorithm: this.config.hashAlgorithm }
-    );
+    const result = await deriveMultipleKeys(this.masterKeyResult.masterKey, [purpose], {
+      version: this.config.version,
+      hashAlgorithm: this.config.hashAlgorithm,
+    });
 
     const derivedKey = result.keys[0];
+    if (!derivedKey) {
+      throw new Error('Failed to derive key');
+    }
     this.derivedKeys.set(purpose, derivedKey);
-    
     return derivedKey;
   }
 
@@ -599,11 +609,10 @@ export class KeyDerivationManager {
       throw new Error('No master key available. Create or restore a master key first.');
     }
 
-    const result = await deriveMultipleKeys(
-      this.masterKeyResult.masterKey,
-      purposes,
-      { version: this.config.version, hashAlgorithm: this.config.hashAlgorithm }
-    );
+    const result = await deriveMultipleKeys(this.masterKeyResult.masterKey, purposes, {
+      version: this.config.version,
+      hashAlgorithm: this.config.hashAlgorithm,
+    });
 
     // Cache derived keys
     result.keys.forEach(key => {
@@ -637,7 +646,9 @@ export class KeyDerivationManager {
         wrappedAt: new Date(),
       };
     } catch (error) {
-      throw new Error(`Failed to wrap key: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      throw new Error(
+        `Failed to wrap key: ${error instanceof Error ? error.message : 'Unknown error'}`
+      );
     }
   }
 
@@ -651,10 +662,10 @@ export class KeyDerivationManager {
 
     try {
       const purposeConfig = KEY_PURPOSE_CONFIGS[wrappedKeyInfo.purpose];
-      
+
       const unwrappedKey = await crypto.subtle.unwrapKey(
         'raw',
-        wrappedKeyInfo.wrappedKey as Uint8Array,
+        wrappedKeyInfo.wrappedKey.buffer as ArrayBuffer,
         this.masterKeyResult.masterKey,
         wrappedKeyInfo.wrapAlgorithm,
         getKeyAlgorithmParams(
@@ -675,7 +686,9 @@ export class KeyDerivationManager {
         version: this.config.version,
       };
     } catch (error) {
-      throw new Error(`Failed to unwrap key: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      throw new Error(
+        `Failed to unwrap key: ${error instanceof Error ? error.message : 'Unknown error'}`
+      );
     }
   }
 
@@ -706,13 +719,13 @@ export class KeyDerivationManager {
 export default {
   // Salt generation
   generateSalt,
-  
+
   // Master key operations
   deriveMasterKey,
-  
+
   // Multiple key derivation
   deriveMultipleKeys,
-  
+
   // Manager class
   KeyDerivationManager,
 };

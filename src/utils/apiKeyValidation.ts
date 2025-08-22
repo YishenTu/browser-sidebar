@@ -1,10 +1,10 @@
 /**
  * @file API Key Validation Utilities
- * 
+ *
  * Comprehensive API key validation utilities providing format validation,
  * provider detection, live testing, batch processing, and security analysis
  * for multiple AI providers (OpenAI, Anthropic, Google, Custom).
- * 
+ *
  * Features:
  * - Format validation with provider-specific rules
  * - Live API testing with caching and rate limiting
@@ -19,14 +19,14 @@ import type {
   APIProvider,
   APIKeyType,
   ValidationResult,
-  ProviderValidationRule
+  ProviderValidationRule,
 } from '../types/apiKeys';
 
 import {
   DEFAULT_KEY_TYPE_DETECTION,
   validateKeyFormat as baseValidateKeyFormat,
   detectProvider,
-  maskAPIKey
+  maskAPIKey,
 } from '../types/apiKeys';
 
 // =============================================================================
@@ -193,27 +193,27 @@ const LIVE_VALIDATION_ENDPOINTS = {
   openai: 'https://api.openai.com/v1/models',
   anthropic: 'https://api.anthropic.com/v1/ping', // Hypothetical ping endpoint
   google: 'https://generativelanguage.googleapis.com/v1beta/models',
-  custom: null
+  custom: null,
 } as const;
 
 /** Rate limiting configuration */
 const RATE_LIMIT_CONFIG = {
   maxRequestsPerMinute: 30,
   maxRequestsPerHour: 100,
-  windowMs: 60 * 1000 // 1 minute
+  windowMs: 60 * 1000, // 1 minute
 } as const;
 
 /** Cache configuration */
 const CACHE_CONFIG = {
   formatValidationTTL: 5 * 60 * 1000, // 5 minutes
-  liveValidationTTL: 15 * 60 * 1000,  // 15 minutes
-  maxCacheSize: 1000
+  liveValidationTTL: 15 * 60 * 1000, // 15 minutes
+  maxCacheSize: 1000,
 } as const;
 
 /** Default validation timeouts */
 const DEFAULT_TIMEOUTS = {
   liveValidation: 10000, // 10 seconds
-  batchValidation: 30000 // 30 seconds
+  batchValidation: 30000, // 30 seconds
 } as const;
 
 /** Known weak or exposed key patterns */
@@ -223,7 +223,7 @@ const WEAK_KEY_PATTERNS = [
   /^sk-test/i,
   /^sk-demo/i,
   /^sk-example/i,
-  /^sk-1234567890abcdefghijklmnopqrstuvwxyzABCDEFGHIJKL$/
+  /^sk-1234567890abcdefghijklmnopqrstuvwxyzABCDEFGHIJKL$/,
 ] as const;
 
 // =============================================================================
@@ -234,29 +234,29 @@ const WEAK_KEY_PATTERNS = [
 const caches = {
   formatValidation: new Map<string, { result: ValidationResult; timestamp: number }>(),
   liveValidation: new Map<string, { result: LiveValidationResult; timestamp: number }>(),
-  keyInfo: new Map<string, { info: KeyInfo; timestamp: number }>()
+  keyInfo: new Map<string, { info: KeyInfo; timestamp: number }>(),
 };
 
 /** Rate limiting tracker */
 const rateLimiter = {
   requests: new Map<string, number[]>(),
-  
+
   isRateLimited(key: string): boolean {
     const now = Date.now();
     const requests = this.requests.get(key) || [];
-    
+
     // Remove expired entries
     const validRequests = requests.filter(time => now - time < RATE_LIMIT_CONFIG.windowMs);
     this.requests.set(key, validRequests);
-    
+
     return validRequests.length >= RATE_LIMIT_CONFIG.maxRequestsPerMinute;
   },
-  
+
   recordRequest(key: string): void {
     const requests = this.requests.get(key) || [];
     requests.push(Date.now());
     this.requests.set(key, requests);
-  }
+  },
 };
 
 // =============================================================================
@@ -272,12 +272,12 @@ export async function validateAPIKey(
   options: ValidationOptions = {}
 ): Promise<ExtendedValidationResult> {
   const startTime = performance.now();
-  
+
   // Input validation
   if (!key || typeof key !== 'string') {
     return createFailureResult('Invalid key input', startTime);
   }
-  
+
   if (!isValidProvider(provider)) {
     return createFailureResult('Invalid provider', startTime);
   }
@@ -315,8 +315,8 @@ export async function validateAPIKey(
       securityWarnings: [],
       performance: {
         formatValidationTime,
-        totalTime: 0 // Will be set at the end
-      }
+        totalTime: 0, // Will be set at the end
+      },
     };
 
     // Security analysis
@@ -335,14 +335,16 @@ export async function validateAPIKey(
       const liveValidationStart = performance.now();
       result.liveValidation = await validateKeyLive(sanitizedKey, provider, {
         timeout: options.timeout,
-        enableCache: options.enableCache
+        enableCache: options.enableCache,
       });
       result.performance!.liveValidationTime = performance.now() - liveValidationStart;
-      
+
       // Update overall validity based on live test
       if (!result.liveValidation.isValid) {
         result.isValid = false;
-        result.errors.push(`Live validation failed: ${result.liveValidation.error || 'Unknown error'}`);
+        result.errors.push(
+          `Live validation failed: ${result.liveValidation.error || 'Unknown error'}`
+        );
       }
     }
 
@@ -355,7 +357,6 @@ export async function validateAPIKey(
     result.performance!.totalTime = performance.now() - startTime;
 
     return result;
-
   } catch (error) {
     return createFailureResult(
       `Validation failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
@@ -371,18 +372,18 @@ export function validateKeyFormat(key: string, provider: APIProvider): Validatio
   // Check cache first
   const cacheKey = `${provider}:${key}`;
   const cached = caches.formatValidation.get(cacheKey);
-  
+
   if (cached && Date.now() - cached.timestamp < CACHE_CONFIG.formatValidationTTL) {
-    return { ...cached.result, fromCache: true };
+    return { ...cached.result };
   }
 
   // Perform validation
   const result = baseValidateKeyFormat(key, provider);
-  
+
   // Cache result (don't include fromCache in cached result)
   caches.formatValidation.set(cacheKey, {
     result: { ...result },
-    timestamp: Date.now()
+    timestamp: Date.now(),
   });
 
   // Clean cache if it gets too large
@@ -404,13 +405,13 @@ export async function validateKeyLive(
 ): Promise<LiveValidationResult> {
   const timeout = options.timeout || DEFAULT_TIMEOUTS.liveValidation;
   const endpoint = options.customEndpoint || LIVE_VALIDATION_ENDPOINTS[provider];
-  
+
   if (!endpoint) {
     return {
       isValid: false,
       responseTime: 0,
       error: `Live validation not supported for provider: ${provider}`,
-      endpoint: 'none'
+      endpoint: 'none',
     };
   }
 
@@ -418,14 +419,14 @@ export async function validateKeyLive(
   if (options.enableCache) {
     const cacheKey = `live:${provider}:${hashKey(key)}`;
     const cached = caches.liveValidation.get(cacheKey);
-    
+
     if (cached && Date.now() - cached.timestamp < CACHE_CONFIG.liveValidationTTL) {
-      return { ...cached.result, fromCache: true };
+      return { ...cached.result };
     }
   }
 
   const startTime = performance.now();
-  
+
   try {
     const headers = createAPIHeaders(key, provider, options.customHeaders);
     const controller = new AbortController();
@@ -434,7 +435,7 @@ export async function validateKeyLive(
     const response = await fetch(endpoint, {
       method: 'GET',
       headers,
-      signal: controller.signal
+      signal: controller.signal,
     });
 
     clearTimeout(timeoutId);
@@ -448,8 +449,8 @@ export async function validateKeyLive(
       error: response.ok ? undefined : `${response.status} ${response.statusText}`,
       metadata: {
         contentType: response.headers.get('content-type'),
-        server: response.headers.get('server')
-      }
+        server: response.headers.get('server'),
+      },
     };
 
     // Cache successful results
@@ -457,15 +458,14 @@ export async function validateKeyLive(
       const cacheKey = `live:${provider}:${hashKey(key)}`;
       caches.liveValidation.set(cacheKey, {
         result: { ...result },
-        timestamp: Date.now()
+        timestamp: Date.now(),
       });
     }
 
     return result;
-
   } catch (error) {
     const responseTime = performance.now() - startTime;
-    
+
     let errorMessage = 'Unknown error';
     if (error instanceof Error) {
       if (error.name === 'AbortError' || error.message.includes('aborted')) {
@@ -479,7 +479,7 @@ export async function validateKeyLive(
       isValid: false,
       responseTime,
       error: errorMessage,
-      endpoint
+      endpoint,
     };
   }
 }
@@ -496,20 +496,20 @@ export async function batchValidateKeys(
     batchSize = 10,
     includeLiveValidation = false,
     timeout = DEFAULT_TIMEOUTS.batchValidation,
-    failFast = false
+    failFast = false,
   } = options;
 
   const results: ExtendedValidationResult[] = [];
   const batches = chunkArray(keys, batchSize);
 
   for (const batch of batches) {
-    const batchPromises = batch.map(async (input) => {
+    const batchPromises = batch.map(async input => {
       try {
         const validationOptions: ValidationOptions = {
           testLive: includeLiveValidation,
           timeout,
           enableCache: true,
-          enableRateLimit: true
+          enableRateLimit: true,
         };
 
         return await validateAPIKey(input.key, input.provider, validationOptions);
@@ -523,7 +523,7 @@ export async function batchValidateKeys(
 
     // Process batch with concurrency limit
     const batchResults = await limitConcurrency(batchPromises, concurrency);
-    
+
     results.push(...batchResults);
 
     // Fail fast if requested and we have failures
@@ -563,12 +563,15 @@ export function sanitizeAPIKey(key: string): string {
  */
 export function normalizeAPIKey(key: string, provider: APIProvider): string {
   const sanitized = sanitizeAPIKey(key);
-  
+
   switch (provider) {
     case 'openai': {
       // Convert underscores to hyphens, ensure lowercase prefix
-      let normalized = sanitized.replace(/_/g, '-');
-      if (normalized.toUpperCase().startsWith('SK-') || normalized.toUpperCase().startsWith('SK_')) {
+      const normalized = sanitized.replace(/_/g, '-');
+      if (
+        normalized.toUpperCase().startsWith('SK-') ||
+        normalized.toUpperCase().startsWith('SK_')
+      ) {
         const separatorIndex = Math.max(normalized.indexOf('-'), normalized.indexOf('_'));
         if (separatorIndex > 0) {
           return 'sk-' + normalized.slice(separatorIndex + 1);
@@ -578,25 +581,25 @@ export function normalizeAPIKey(key: string, provider: APIProvider): string {
       }
       return normalized;
     }
-      
+
     case 'anthropic':
       // Ensure lowercase prefix
       if (sanitized.toUpperCase().startsWith('SK-ANT')) {
         return 'sk-ant-' + sanitized.slice(sanitized.indexOf('ant-') + 4);
       }
       return sanitized;
-      
+
     case 'google':
       // Google keys have specific case requirements
       if (sanitized.toLowerCase().startsWith('aiza')) {
         return 'AIza' + sanitized.slice(4);
       }
       return sanitized;
-      
+
     case 'custom':
       // No normalization for custom keys
       return sanitized;
-      
+
     default:
       return sanitized;
   }
@@ -605,10 +608,10 @@ export function normalizeAPIKey(key: string, provider: APIProvider): string {
 /**
  * Extract metadata and information from API key
  */
-export function extractKeyInfo(key: string): KeyInfo {
-  const sanitized = sanitizeAPIKey(key);
+export function extractKeyInfo(_key: string): KeyInfo {
+  const sanitized = sanitizeAPIKey(_key);
   const cacheKey = `info:${sanitized}`;
-  
+
   // Check cache
   const cached = caches.keyInfo.get(cacheKey);
   if (cached && Date.now() - cached.timestamp < CACHE_CONFIG.formatValidationTTL) {
@@ -618,18 +621,18 @@ export function extractKeyInfo(key: string): KeyInfo {
   const provider = detectProvider(sanitized) || 'custom';
   const keyType = DEFAULT_KEY_TYPE_DETECTION[provider](sanitized);
   const maskedKey = maskAPIKey(sanitized);
-  
+
   // Analyze character set
   const characterSet = {
     hasLowercase: /[a-z]/.test(sanitized),
     hasUppercase: /[A-Z]/.test(sanitized),
     hasNumbers: /[0-9]/.test(sanitized),
-    hasSpecialChars: /[^a-zA-Z0-9]/.test(sanitized)
+    hasSpecialChars: /[^a-zA-Z0-9]/.test(sanitized),
   };
 
   // Calculate entropy
   const entropy = calculateEntropy(sanitized);
-  const entropyLevel: 'low' | 'medium' | 'high' = 
+  const entropyLevel: 'low' | 'medium' | 'high' =
     entropy < 3 ? 'low' : entropy < 4 ? 'medium' : 'high';
 
   // Extract prefix
@@ -648,13 +651,13 @@ export function extractKeyInfo(key: string): KeyInfo {
     entropy,
     entropyLevel,
     length: sanitized.length,
-    characterSet
+    characterSet,
   };
 
   // Cache result
   caches.keyInfo.set(cacheKey, {
     info,
-    timestamp: Date.now()
+    timestamp: Date.now(),
   });
 
   return info;
@@ -663,13 +666,15 @@ export function extractKeyInfo(key: string): KeyInfo {
 /**
  * Create custom validation rules
  */
-export function createCustomValidationRules(config: CustomValidationConfig): ProviderValidationRule {
+export function createCustomValidationRules(
+  config: CustomValidationConfig
+): ProviderValidationRule {
   return {
     pattern: config.pattern,
     minLength: config.minLength,
     maxLength: config.maxLength,
     requiredPrefix: config.requiredPrefix,
-    description: config.description
+    description: config.description,
   };
 }
 
@@ -683,16 +688,16 @@ export function createCustomValidationRules(config: CustomValidationConfig): Pro
 function analyzeKeyEntropy(key: string): string[] {
   const warnings: string[] = [];
   const entropy = calculateEntropy(key);
-  
+
   if (entropy < 3) {
     warnings.push('Key has low entropy and may be weak or predictable');
   }
-  
+
   // Check for repeating patterns
   if (/(.{3,})\1{2,}/.test(key)) {
     warnings.push('Key contains repeating patterns which reduces security');
   }
-  
+
   // Check for sequential patterns
   if (/(?:abc|123|xyz|789){3,}/i.test(key)) {
     warnings.push('Key contains sequential patterns which reduces security');
@@ -706,14 +711,14 @@ function analyzeKeyEntropy(key: string): string[] {
  */
 function checkForExposedKeys(key: string): string[] {
   const warnings: string[] = [];
-  
+
   for (const pattern of WEAK_KEY_PATTERNS) {
     if (pattern.test(key)) {
       warnings.push('Key matches a known weak or test key pattern');
       break;
     }
   }
-  
+
   // Check for common test values
   const testPatterns = ['test', 'demo', 'example', 'sample'];
   for (const pattern of testPatterns) {
@@ -729,7 +734,7 @@ function checkForExposedKeys(key: string): string[] {
  * Generate security recommendations
  */
 function generateSecurityRecommendations(
-  key: string,
+  _key: string,
   provider: APIProvider,
   validation: ExtendedValidationResult
 ): string[] {
@@ -772,19 +777,19 @@ function generateSecurityRecommendations(
  */
 function calculateEntropy(str: string): number {
   const frequencies = new Map<string, number>();
-  
+
   for (const char of str) {
     frequencies.set(char, (frequencies.get(char) || 0) + 1);
   }
-  
+
   let entropy = 0;
   const length = str.length;
-  
+
   for (const freq of frequencies.values()) {
     const probability = freq / length;
     entropy -= probability * Math.log2(probability);
   }
-  
+
   return entropy;
 }
 
@@ -799,7 +804,7 @@ function createAPIHeaders(
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
     'User-Agent': 'API-Key-Validator/1.0',
-    ...customHeaders
+    ...customHeaders,
   };
 
   switch (provider) {
@@ -829,13 +834,13 @@ function createFailureResult(error: string, startTime: number): ExtendedValidati
     formatValidation: {
       isValid: false,
       errors: [error],
-      warnings: []
+      warnings: [],
     },
     securityWarnings: [],
     performance: {
       formatValidationTime: 0,
-      totalTime: performance.now() - startTime
-    }
+      totalTime: performance.now() - startTime,
+    },
   };
 }
 
@@ -853,7 +858,7 @@ function hashKey(key: string): string {
   let hash = 0;
   for (let i = 0; i < key.length; i++) {
     const char = key.charCodeAt(i);
-    hash = ((hash << 5) - hash) + char;
+    hash = (hash << 5) - hash + char;
     hash = hash & hash; // Convert to 32-bit integer
   }
   return hash.toString(36);
@@ -875,16 +880,16 @@ function chunkArray<T>(array: T[], chunkSize: number): T[][] {
  */
 async function limitConcurrency<T>(promises: Promise<T>[], limit: number): Promise<T[]> {
   const results: T[] = new Array(promises.length);
-  const executing = new Set<Promise<any>>();
+  const executing = new Set<Promise<unknown>>();
 
   for (let i = 0; i < promises.length; i++) {
-    const promise = promises[i].then((result) => {
+    const base = promises[i]!;
+    const wrappedPromise: Promise<T> = base.then(result => {
       results[i] = result;
       executing.delete(wrappedPromise);
       return result;
     });
 
-    const wrappedPromise = promise;
     executing.add(wrappedPromise);
 
     if (executing.size >= limit) {
@@ -909,11 +914,12 @@ function sleep(ms: number): Promise<void> {
 function cleanCache<T>(cache: Map<string, T>, targetSize: number): void {
   const entries = Array.from(cache.entries());
   const toDelete = entries.length - targetSize;
-  
+
   if (toDelete > 0) {
     // Remove oldest entries (simple FIFO, could be improved with LRU)
     for (let i = 0; i < toDelete; i++) {
-      cache.delete(entries[i][0]);
+      const entry = entries[i]!;
+      cache.delete(entry[0]);
     }
   }
 }
@@ -938,15 +944,15 @@ export function getCacheStats() {
   return {
     formatValidation: {
       size: caches.formatValidation.size,
-      maxSize: CACHE_CONFIG.maxCacheSize
+      maxSize: CACHE_CONFIG.maxCacheSize,
     },
     liveValidation: {
       size: caches.liveValidation.size,
-      maxSize: CACHE_CONFIG.maxCacheSize
+      maxSize: CACHE_CONFIG.maxCacheSize,
     },
     keyInfo: {
       size: caches.keyInfo.size,
-      maxSize: CACHE_CONFIG.maxCacheSize
-    }
+      maxSize: CACHE_CONFIG.maxCacheSize,
+    },
   };
 }

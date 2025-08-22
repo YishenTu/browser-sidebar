@@ -38,7 +38,6 @@ export type {
   CacheStorage,
   StorageSchema,
   MigrationScript,
-  LegacySettings
 } from './storage';
 
 export {
@@ -66,7 +65,7 @@ export {
   cleanExpiredCache,
   getCurrentVersion,
   needsMigration,
-  applyMigrations
+  applyMigrations,
 } from './storage';
 
 // Note: CSS module declarations are in css.d.ts as ambient declarations

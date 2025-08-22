@@ -13,7 +13,13 @@
 /**
  * Supported encryption algorithms
  */
-export type Algorithm = 'AES-256-GCM' | 'AES-192-GCM' | 'AES-128-GCM' | 'AES-256-CBC' | 'AES-GCM' | 'AES-CBC';
+export type Algorithm =
+  | 'AES-256-GCM'
+  | 'AES-192-GCM'
+  | 'AES-128-GCM'
+  | 'AES-256-CBC'
+  | 'AES-GCM'
+  | 'AES-CBC';
 
 /**
  * Supported hash algorithms
@@ -128,17 +134,19 @@ function checkCryptoSupport(): void {
  */
 function getAlgorithmParams(algorithm: string, iv?: Uint8Array): AesGcmParams | AesCbcParams {
   const name = algorithm.includes('GCM') ? 'AES-GCM' : 'AES-CBC';
-  
+
+  const actualIv = iv || secureRandom(name === 'AES-GCM' ? AES_GCM_IV_SIZE : AES_CBC_IV_SIZE);
+
   if (name === 'AES-GCM') {
     return {
       name,
-      iv: iv || secureRandom(AES_GCM_IV_SIZE),
-    };
+      iv: actualIv,
+    } as AesGcmParams;
   } else {
     return {
       name,
-      iv: iv || secureRandom(AES_CBC_IV_SIZE),
-    };
+      iv: actualIv,
+    } as AesCbcParams;
   }
 }
 
@@ -181,16 +189,20 @@ function validatePassword(password: string): void {
 /**
  * Robust Uint8Array check that works across different contexts
  */
-function isUint8Array(value: unknown): value is Uint8Array {
+function isUint8Array(value: unknown): boolean {
   return (
     value instanceof Uint8Array ||
-    (value && 
-     typeof value === 'object' && 
-     value.constructor === Uint8Array) ||
-    (value &&
-     typeof value === 'object' &&
-     value.constructor &&
-     value.constructor.name === 'Uint8Array')
+    (value !== null &&
+      value !== undefined &&
+      typeof value === 'object' &&
+      'constructor' in value &&
+      value.constructor === Uint8Array) ||
+    (value !== null &&
+      value !== undefined &&
+      typeof value === 'object' &&
+      'constructor' in value &&
+      value.constructor &&
+      value.constructor.name === 'Uint8Array')
   );
 }
 
@@ -203,25 +215,19 @@ function isUint8Array(value: unknown): value is Uint8Array {
  */
 export async function generateKey(options: KeyGenerationOptions = {}): Promise<CryptoKey> {
   checkCryptoSupport();
-  
-  const {
-    keySize = DEFAULT_KEY_SIZE,
-    extractable = false,
-    algorithm = 'AES-GCM',
-  } = options;
+
+  const { keySize = DEFAULT_KEY_SIZE, extractable = false, algorithm = 'AES-GCM' } = options;
 
   try {
     const keyGenParams = getKeyGenParams(algorithm, keySize);
-    
-    const key = await crypto.subtle.generateKey(
-      keyGenParams,
-      extractable,
-      ['encrypt', 'decrypt']
-    );
+
+    const key = await crypto.subtle.generateKey(keyGenParams, extractable, ['encrypt', 'decrypt']);
 
     return key;
   } catch (error) {
-    throw new Error(`Failed to generate encryption key: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    throw new Error(
+      `Failed to generate encryption key: ${error instanceof Error ? error.message : 'Unknown error'}`
+    );
   }
 }
 
@@ -258,7 +264,7 @@ export async function deriveKey(
     const derivedKey = await crypto.subtle.deriveKey(
       {
         name: 'PBKDF2',
-        salt: actualSalt,
+        salt: actualSalt.buffer as ArrayBuffer,
         iterations,
         hash: algorithm,
       },
@@ -276,7 +282,9 @@ export async function deriveKey(
       salt: actualSalt,
     };
   } catch (error) {
-    throw new Error(`Failed to derive key: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    throw new Error(
+      `Failed to derive key: ${error instanceof Error ? error.message : 'Unknown error'}`
+    );
   }
 }
 
@@ -296,17 +304,20 @@ export async function encrypt(
 
   try {
     const algorithmParams = getAlgorithmParams(algorithmName, iv);
-    
+
     const encryptedData = await crypto.subtle.encrypt(
       algorithmParams,
       key,
-      data
+      data.buffer as ArrayBuffer
     );
 
     // Format algorithm name for display (e.g., 'AES-256-GCM')
-    const displayAlgorithm = algorithmName === 'AES-GCM' ? 'AES-256-GCM' : 
-                            algorithmName === 'AES-CBC' ? 'AES-256-CBC' : 
-                            algorithmName + '-256';
+    const displayAlgorithm =
+      algorithmName === 'AES-GCM'
+        ? 'AES-256-GCM'
+        : algorithmName === 'AES-CBC'
+          ? 'AES-256-CBC'
+          : algorithmName + '-256';
 
     return {
       algorithm: displayAlgorithm as Algorithm,
@@ -315,17 +326,16 @@ export async function encrypt(
       version: CURRENT_VERSION,
     };
   } catch (error) {
-    throw new Error(`Failed to encrypt data: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    throw new Error(
+      `Failed to encrypt data: ${error instanceof Error ? error.message : 'Unknown error'}`
+    );
   }
 }
 
 /**
  * Decrypt data using AES-256-GCM
  */
-export async function decrypt(
-  encryptedData: EncryptedData,
-  key: CryptoKey
-): Promise<Uint8Array> {
+export async function decrypt(encryptedData: EncryptedData, key: CryptoKey): Promise<Uint8Array> {
   checkCryptoSupport();
 
   if (!isValidEncryptedData(encryptedData)) {
@@ -339,12 +349,14 @@ export async function decrypt(
     const decryptedData = await crypto.subtle.decrypt(
       algorithmParams,
       key,
-      encryptedData.data
+      encryptedData.data.buffer as ArrayBuffer
     );
 
     return new Uint8Array(decryptedData);
   } catch (error) {
-    throw new Error(`Failed to decrypt data: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    throw new Error(
+      `Failed to decrypt data: ${error instanceof Error ? error.message : 'Unknown error'}`
+    );
   }
 }
 
@@ -367,10 +379,7 @@ export async function encryptText(
 /**
  * Decrypt text data
  */
-export async function decryptText(
-  encryptedData: EncryptedData,
-  key: CryptoKey
-): Promise<string> {
+export async function decryptText(encryptedData: EncryptedData, key: CryptoKey): Promise<string> {
   const decryptedData = await decrypt(encryptedData, key);
   return new TextDecoder().decode(decryptedData);
 }
@@ -382,7 +391,7 @@ export async function decryptText(
 /**
  * Encrypt JSON-serializable objects
  */
-export async function encryptObject<T = any>(
+export async function encryptObject<T = unknown>(
   obj: T,
   key: CryptoKey,
   options: CryptoOptions = {}
@@ -391,23 +400,27 @@ export async function encryptObject<T = any>(
     const jsonString = JSON.stringify(obj);
     return encryptText(jsonString, key, options);
   } catch (error) {
-    throw new Error(`Failed to serialize object for encryption: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    throw new Error(
+      `Failed to serialize object for encryption: ${error instanceof Error ? error.message : 'Unknown error'}`
+    );
   }
 }
 
 /**
  * Decrypt and parse JSON objects
  */
-export async function decryptObject<T = any>(
+export async function decryptObject<T = unknown>(
   encryptedData: EncryptedData,
   key: CryptoKey
 ): Promise<T> {
   const jsonString = await decryptText(encryptedData, key);
-  
+
   try {
     return JSON.parse(jsonString) as T;
   } catch (error) {
-    throw new Error(`Failed to parse decrypted object: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    throw new Error(
+      `Failed to parse decrypted object: ${error instanceof Error ? error.message : 'Unknown error'}`
+    );
   }
 }
 
@@ -461,10 +474,12 @@ export async function hashData(
       inputData = new TextEncoder().encode(JSON.stringify(data));
     }
 
-    const hashBuffer = await crypto.subtle.digest(algorithm, inputData);
+    const hashBuffer = await crypto.subtle.digest(algorithm, inputData.buffer as ArrayBuffer);
     return new Uint8Array(hashBuffer);
   } catch (error) {
-    throw new Error(`Failed to hash data: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    throw new Error(
+      `Failed to hash data: ${error instanceof Error ? error.message : 'Unknown error'}`
+    );
   }
 }
 
@@ -477,7 +492,7 @@ export async function hashData(
  */
 export function secureRandom(size: number = 32): Uint8Array {
   checkCryptoSupport();
-  
+
   const randomBytes = new Uint8Array(size);
   return crypto.getRandomValues(randomBytes);
 }
@@ -494,29 +509,34 @@ export function isValidEncryptedData(data: unknown): data is EncryptedData {
     return false;
   }
 
-  const obj = data as any;
+  const obj = data as Record<string, unknown>;
 
   // Check required properties
+  const algorithm = obj['algorithm'];
+  const iv = obj['iv'];
+  const encData = obj['data'];
+  const version = obj['version'];
+
   if (
-    typeof obj.algorithm !== 'string' ||
-    !isUint8Array(obj.iv) ||
-    !isUint8Array(obj.data) ||
-    typeof obj.version !== 'number'
+    typeof algorithm !== 'string' ||
+    !isUint8Array(iv) ||
+    !isUint8Array(encData) ||
+    typeof version !== 'number'
   ) {
     return false;
   }
 
   // Validate algorithm format (should contain GCM or CBC)
-  if (!obj.algorithm.includes('GCM') && !obj.algorithm.includes('CBC')) {
+  if (!(algorithm as string).includes('GCM') && !(algorithm as string).includes('CBC')) {
     return false;
   }
 
-  // Validate IV length for known algorithms  
-  if (obj.algorithm.includes('GCM') && obj.iv.length !== AES_GCM_IV_SIZE) {
+  // Validate IV length for known algorithms
+  if ((algorithm as string).includes('GCM') && (iv as Uint8Array).length !== AES_GCM_IV_SIZE) {
     return false;
   }
-  
-  if (obj.algorithm.includes('CBC') && obj.iv.length !== AES_CBC_IV_SIZE) {
+
+  if ((algorithm as string).includes('CBC') && (iv as Uint8Array).length !== AES_CBC_IV_SIZE) {
     return false;
   }
 
@@ -531,29 +551,29 @@ export default {
   // Key management
   generateKey,
   deriveKey,
-  
+
   // Core encryption/decryption
   encrypt,
   decrypt,
-  
+
   // Text utilities
   encryptText,
   decryptText,
-  
+
   // Object utilities
   encryptObject,
   decryptObject,
-  
+
   // Binary utilities
   encryptBinary,
   decryptBinary,
-  
+
   // Hashing
   hashData,
-  
+
   // Random utilities
   secureRandom,
-  
+
   // Validation
   isValidEncryptedData,
 };

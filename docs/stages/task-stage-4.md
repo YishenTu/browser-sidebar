@@ -31,10 +31,10 @@ Architecture: The extension uses ONLY a custom injected React sidebar (no popup,
 - [x] Stage 1: Extension Infrastructure (15/15 tasks) ✅ COMPLETED
 - [x] Stage 2: Chat Panel UI (24/24 tasks) ✅ COMPLETED
 - [x] Stage 3: Storage & Security (18/18 tasks) ✅ COMPLETED
-- [ ] Stage 4: AI Provider System (0/22 tasks)
+- [ ] Stage 4: AI Provider System (0/23 tasks)
 - [ ] Stage 5: Tab Content Extraction (0/21 tasks)
 
-**Total Progress: 57/100 tasks**
+**Total Progress: 57/101 tasks**
 
 ---
 
@@ -53,12 +53,14 @@ Deliverable highlight: Unified AI provider system supporting OpenAI, Gemini, and
   - Tests First:
     - Test type definitions compile
     - Test type guards work
-  - Description: Define provider interfaces
+    - Test configuration types (temperature, reasoning_effort, thinking_mode, max_thinking_tokens)
+  - Description: Define provider interfaces with configuration options
   - Deliverables:
     - `src/types/providers.ts`
     - Response types
     - Error types
-  - Acceptance: Types are comprehensive
+    - Configuration types (temperature, reasoning_effort for OpenAI, thinking_mode for Gemini, max_thinking_tokens for OpenRouter/Claude)
+  - Acceptance: Types are comprehensive with full config support
 
 - [ ] **Task 4.1.1b** - Base Provider Class 🧪
   - Prerequisites: Task 4.1.1a
@@ -111,28 +113,34 @@ Deliverable highlight: Unified AI provider system supporting OpenAI, Gemini, and
     - Authentication setup
   - Acceptance: Client initializes
 
-- [ ] **Task 4.2.1b** - OpenAI Chat Implementation 🧪
+- [ ] **Task 4.2.1b** - OpenAI Response API Implementation 🧪
   - Prerequisites: Task 4.2.1a, Task 4.1.2b
   - Tests First:
-    - Test chat completion
-    - Test streaming
+    - Test response API (not chat completion)
+    - Test streaming responses
+    - Test temperature parameter (0.0-2.0)
+    - Test reasoning_effort parameter (low/medium/high)
     - Test error handling
-  - Description: Implement OpenAI chat
+  - Description: Implement OpenAI using Response API with temperature
   - Deliverables:
     - `src/provider/openai/OpenAIProvider.ts`
     - `tests/provider/openai/OpenAIProvider.test.ts`
-  - Acceptance: OpenAI chat works
+  - Acceptance: OpenAI Response API works with temperature and reasoning support
 
 - [ ] **Task 4.2.1c** - OpenAI Models Configuration 🧪
   - Prerequisites: Task 4.2.1b
   - Tests First:
-    - Test model listing
+    - Test model listing (o1, o1-mini, gpt-4, etc.)
     - Test model selection
-  - Description: Configure OpenAI models
+    - Test temperature support for GPT models
+    - Test reasoning_effort configuration per model
+    - Test parameter validation per model type
+  - Description: Configure OpenAI models with proper parameters
   - Deliverables:
-    - Model configurations
-    - Model capabilities
-  - Acceptance: Models configured
+    - Model configurations with parameter constraints
+    - Model capabilities and limitations
+    - Temperature and reasoning effort support matrix
+  - Acceptance: Models configured with correct parameter support
 
 - [ ] **Task 4.2.2a** - Gemini Client Setup 🧪
   - Prerequisites: Task 4.1.1b
@@ -149,43 +157,54 @@ Deliverable highlight: Unified AI provider system supporting OpenAI, Gemini, and
   - Tests First:
     - Test chat generation
     - Test streaming
-    - Test multimodal
-  - Description: Implement Gemini chat
+    - Test temperature parameter (0.0-2.0)
+    - Test thinking mode (THINKING_MODE_OFF, THINKING_MODE_DYNAMIC)
+    - Test thought visibility toggle
+    - Test multimodal support
+  - Description: Implement Gemini chat with temperature and thinking mode
   - Deliverables:
     - `src/provider/gemini/GeminiProvider.ts`
     - `tests/provider/gemini/GeminiProvider.test.ts`
-  - Acceptance: Gemini chat works
+  - Acceptance: Gemini chat works with temperature and thinking modes
 
 - [ ] **Task 4.2.2c** - Gemini Models Configuration 🧪
   - Prerequisites: Task 4.2.2b
   - Tests First:
-    - Test model configuration
+    - Test model configuration (gemini-2.0-flash-thinking-exp, gemini-2.0-flash-exp, etc.)
+    - Test thinking mode support per model
     - Test context limits
-  - Description: Configure Gemini models
+  - Description: Configure Gemini models with thinking capabilities
   - Deliverables:
-    - Model configurations
-  - Acceptance: Models configured
+    - Model configurations with thinking mode support matrix
+    - Thought visibility configuration
+  - Acceptance: Models configured with thinking mode support
 
 - [ ] **Task 4.2.3a** - OpenRouter Setup 🧪
   - Prerequisites: Task 4.1.1b
   - Tests First:
     - Test endpoint configuration
     - Test authentication
-  - Description: Setup OpenRouter client
+    - Test provider routing (especially Claude models)
+    - Test model detection for reasoning support
+  - Description: Setup OpenRouter client with Claude focus
   - Deliverables:
     - OpenRouter configuration
-  - Acceptance: Client connects
+    - Claude model detection and routing
+  - Acceptance: Client connects and detects Claude models
 
-- [ ] **Task 4.2.3b** - Anthropic Implementation 🧪
+- [ ] **Task 4.2.3b** - OpenRouter Implementation 🧪
   - Prerequisites: Task 4.2.3a, Task 4.1.2b
   - Tests First:
-    - Test Claude chat
-    - Test streaming
-  - Description: Implement Anthropic via OpenRouter
+    - Test unified API access
+    - Test temperature parameter (0.0-2.0) for all models
+    - Test max_thinking_tokens for Claude models (5000-100000)
+    - Test reasoning token usage tracking
+    - Test streaming responses with thinking tokens
+  - Description: Implement OpenRouter with temperature and Claude reasoning
   - Deliverables:
-    - `src/provider/anthropic/AnthropicProvider.ts`
-    - `tests/provider/anthropic/AnthropicProvider.test.ts`
-  - Acceptance: Claude chat works
+    - `src/provider/openrouter/OpenRouterProvider.ts`
+    - `tests/provider/openrouter/OpenRouterProvider.test.ts`
+  - Acceptance: OpenRouter works with temperature and Claude reasoning tokens
 
 ### Phase 4.3: Provider Management
 
@@ -256,12 +275,18 @@ Deliverable highlight: Unified AI provider system supporting OpenAI, Gemini, and
   - Tests First:
     - Test provider selection
     - Test model selection
+    - Test temperature slider (0-2.0)
+    - Test reasoning_effort dropdown for OpenAI (low/medium/high)
+    - Test thinking mode toggle for Gemini (off/dynamic)
+    - Test thought visibility checkbox for Gemini
+    - Test max_thinking_tokens slider for Claude via OpenRouter (5k-100k)
+    - Test parameter validation per model
     - Test configuration save
-  - Description: Create provider UI
+  - Description: Create provider UI with parameter controls
   - Deliverables:
     - `src/components/Settings/ProviderSettings.tsx`
     - `tests/sidebar/components/Settings/ProviderSettings.test.tsx`
-  - Acceptance: UI configures providers
+  - Acceptance: UI configures providers with all parameters
 
 - [ ] **Task 4.3.4b** - API Key Input UI 🧪
   - Prerequisites: Task 4.3.4a
@@ -335,7 +360,7 @@ Deliverable highlight: Unified AI provider system supporting OpenAI, Gemini, and
 
 ### Stage Completion:
 
-- [ ] All 22 tasks marked complete
+- [ ] All 23 tasks marked complete
 - [ ] Integration tests pass
 - [ ] Test coverage > 90%
 - [ ] All providers functional
@@ -345,9 +370,9 @@ Deliverable highlight: Unified AI provider system supporting OpenAI, Gemini, and
 
 ---
 
-_Task Blueprint Version: 2.0 (TDD Edition)_  
-_Stage 4 Tasks: 22_  
-_Test-First Tasks: 22 (100%)_  
-_Parallelizable: 8 (36%)_  
-_Sequential: 14 (64%)_  
+_Task Blueprint Version: 2.1 (TDD Edition with API Updates)_  
+_Stage 4 Tasks: 23_  
+_Test-First Tasks: 23 (100%)_  
+_Parallelizable: 9 (39%)_  
+_Sequential: 14 (61%)_  
 _Estimated Parallel Execution Paths: 3_

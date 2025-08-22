@@ -382,7 +382,12 @@ describe('API Key Storage', () => {
     });
 
     it('should verify data integrity', async () => {
-      await mockStoredKey(storedKey);
+      // Clear cache to force loading from storage
+      await clearCache();
+
+      // Mock storage to return the key
+      vi.mocked(chromeStorage.get).mockResolvedValueOnce(storedKey);
+      vi.mocked(dbInstance.get).mockResolvedValueOnce(storedKey.metadata);
 
       await getAPIKey(storedKey.id);
 
@@ -390,18 +395,28 @@ describe('API Key Storage', () => {
     });
 
     it('should handle corrupted data', async () => {
-      await mockStoredKey(storedKey);
+      // Clear cache to force loading from storage
+      await clearCache();
+
+      // Mock storage to return the key
+      vi.mocked(chromeStorage.get).mockResolvedValueOnce(storedKey);
+      vi.mocked(dbInstance.get).mockResolvedValueOnce(storedKey.metadata);
       mockEncryptionService.validateIntegrityChecksum.mockResolvedValueOnce(false);
 
       await expect(getAPIKey(storedKey.id)).rejects.toThrow('Data integrity check failed');
     });
 
     it('should update last used timestamp', async () => {
-      await mockStoredKey(storedKey);
+      // Clear cache to force loading from storage
+      await clearCache();
+
+      // Mock storage to return the key
+      vi.mocked(chromeStorage.get).mockResolvedValueOnce(storedKey);
+      vi.mocked(dbInstance.get).mockResolvedValueOnce(storedKey.metadata);
 
       await getAPIKey(storedKey.id);
 
-      expect(mockDBInstance.update).toHaveBeenCalledWith(
+      expect(vi.mocked(dbInstance.update)).toHaveBeenCalledWith(
         OBJECT_STORES.API_KEYS,
         storedKey.id,
         expect.objectContaining({
@@ -416,11 +431,14 @@ describe('API Key Storage', () => {
 
     beforeEach(async () => {
       storedKey = await addAPIKey(mockAPIKey);
-      mockDBInstance.get.mockResolvedValueOnce(storedKey.metadata);
-      mockChromeStorage.get.mockResolvedValueOnce(storedKey);
+      // Clear cache to ensure tests load from storage
+      await clearCache();
     });
 
     it('should update key metadata', async () => {
+      // Mock getAPIKey call inside updateAPIKey
+      vi.mocked(chromeStorage.get).mockResolvedValueOnce(storedKey);
+      vi.mocked(dbInstance.get).mockResolvedValueOnce(storedKey.metadata);
       const updates: UpdateAPIKeyInput = {
         name: 'Updated Key Name',
         description: 'Updated description',
@@ -437,6 +455,10 @@ describe('API Key Storage', () => {
     });
 
     it('should update configuration', async () => {
+      // Mock getAPIKey call inside updateAPIKey
+      vi.mocked(chromeStorage.get).mockResolvedValueOnce(storedKey);
+      vi.mocked(dbInstance.get).mockResolvedValueOnce(storedKey.metadata);
+
       const updates: UpdateAPIKeyInput = {
         configuration: {
           security: {
@@ -453,6 +475,10 @@ describe('API Key Storage', () => {
     });
 
     it('should preserve existing data when updating', async () => {
+      // Mock getAPIKey call inside updateAPIKey
+      vi.mocked(chromeStorage.get).mockResolvedValueOnce(storedKey);
+      vi.mocked(dbInstance.get).mockResolvedValueOnce(storedKey.metadata);
+
       const updates: UpdateAPIKeyInput = {
         name: 'New Name',
       };
@@ -465,7 +491,8 @@ describe('API Key Storage', () => {
     });
 
     it('should throw error for non-existent key', async () => {
-      mockDBInstance.get.mockResolvedValueOnce(null);
+      // Mock getAPIKey to return null (key not found)
+      vi.mocked(chromeStorage.get).mockResolvedValueOnce(null);
 
       await expect(updateAPIKey('non-existent', {})).rejects.toThrow('API key not found');
     });
@@ -476,11 +503,14 @@ describe('API Key Storage', () => {
 
     beforeEach(async () => {
       storedKey = await addAPIKey(mockAPIKey);
-      mockDBInstance.get.mockResolvedValueOnce(storedKey.metadata);
-      mockChromeStorage.get.mockResolvedValueOnce(storedKey);
+      // Clear cache to ensure tests load from storage
+      await clearCache();
     });
 
     it('should delete API key from both storage systems', async () => {
+      // Mock getAPIKey call inside deleteAPIKey
+      vi.mocked(chromeStorage.get).mockResolvedValueOnce(storedKey);
+      vi.mocked(dbInstance.get).mockResolvedValueOnce(storedKey.metadata);
       const result = await deleteAPIKey(storedKey.id);
 
       expect(result).toBe(true);
@@ -489,14 +519,19 @@ describe('API Key Storage', () => {
     });
 
     it('should clear cached data', async () => {
+      // Mock getAPIKey call inside deleteAPIKey
+      vi.mocked(chromeStorage.get).mockResolvedValueOnce(storedKey);
+      vi.mocked(dbInstance.get).mockResolvedValueOnce(storedKey.metadata);
+
       await deleteAPIKey(storedKey.id);
 
       // Should call cache clearing functionality
-      expect(mockChromeStorage.remove).toHaveBeenCalledWith(`api_key_cache_${storedKey.id}`);
+      expect(vi.mocked(chromeStorage.remove)).toHaveBeenCalledWith(`api_key_cache_${storedKey.id}`);
     });
 
     it('should return false for non-existent key', async () => {
-      mockDBInstance.get.mockResolvedValueOnce(null);
+      // Mock getAPIKey to return null (key not found)
+      vi.mocked(chromeStorage.get).mockResolvedValueOnce(null);
 
       const result = await deleteAPIKey('non-existent');
 
@@ -504,7 +539,12 @@ describe('API Key Storage', () => {
     });
 
     it('should handle storage errors gracefully', async () => {
-      mockDBInstance.delete.mockRejectedValueOnce(new Error('Storage error'));
+      // Mock getAPIKey call
+      vi.mocked(chromeStorage.get).mockResolvedValueOnce(storedKey);
+      vi.mocked(dbInstance.get).mockResolvedValueOnce(storedKey.metadata);
+
+      // Mock delete to fail
+      vi.mocked(dbInstance.delete).mockRejectedValueOnce(new Error('Storage error'));
 
       await expect(deleteAPIKey(storedKey.id)).rejects.toThrow('Failed to delete API key');
     });
@@ -646,11 +686,14 @@ describe('API Key Storage', () => {
 
     beforeEach(async () => {
       storedKey = await addAPIKey(mockAPIKey);
-      mockDBInstance.get.mockResolvedValueOnce(storedKey.metadata);
-      mockChromeStorage.get.mockResolvedValueOnce(storedKey);
+      // Clear cache to ensure tests load from storage
+      await clearCache();
     });
 
     it('should rotate API key', async () => {
+      // Mock getAPIKey call inside rotateAPIKey
+      vi.mocked(chromeStorage.get).mockResolvedValueOnce(storedKey);
+      vi.mocked(dbInstance.get).mockResolvedValueOnce(storedKey.metadata);
       const result: KeyRotationResult = await rotateAPIKey(storedKey.id, newKey);
 
       expect(result.success).toBe(true);
@@ -662,6 +705,10 @@ describe('API Key Storage', () => {
     });
 
     it('should update rotation status', async () => {
+      // Mock getAPIKey call inside rotateAPIKey
+      vi.mocked(chromeStorage.get).mockResolvedValueOnce(storedKey);
+      vi.mocked(dbInstance.get).mockResolvedValueOnce(storedKey.metadata);
+
       await rotateAPIKey(storedKey.id, newKey);
 
       expect(mockDBInstance.update).toHaveBeenCalledWith(
@@ -717,6 +764,8 @@ describe('API Key Storage', () => {
 
     beforeEach(async () => {
       storedKey = await addAPIKey(mockAPIKey);
+      // Clear cache to ensure tests load from storage
+      await clearCache();
       mockDBInstance.get.mockResolvedValueOnce(storedKey.metadata);
       mockChromeStorage.get.mockResolvedValueOnce(storedKey);
     });
@@ -920,6 +969,8 @@ describe('API Key Storage', () => {
 
     beforeEach(async () => {
       storedKey = await addAPIKey(mockAPIKey);
+      // Clear cache to ensure tests load from storage
+      await clearCache();
       mockDBInstance.get.mockResolvedValueOnce(storedKey.metadata);
       mockChromeStorage.get.mockResolvedValueOnce(storedKey);
     });

@@ -15,7 +15,7 @@
  */
 
 import type { ConversationData } from '../types/conversation';
-import type { StorageArea } from '../types/storage';
+// StorageArea type not used in this module
 import type { IndexedDBWrapper } from './indexedDB';
 import { ConversationStorage } from './conversations';
 import { Cache, createCache } from './cache';
@@ -162,9 +162,7 @@ export class DataCleanup {
         try {
           result.backupCreated = await this.createBackup();
         } catch (error) {
-          result.errors.push(
-            error instanceof Error ? error.message : 'Backup creation failed'
-          );
+          result.errors.push(error instanceof Error ? error.message : 'Backup creation failed');
         }
       }
 
@@ -400,7 +398,7 @@ export class DataCleanup {
       }
 
       const storageInfo = await chromeStorage.getStorageInfo('local');
-      
+
       if (storageInfo.used <= options.sizeThreshold) {
         // No cleanup needed
         result.duration = Math.max(1, Date.now() - startTime);
@@ -420,7 +418,7 @@ export class DataCleanup {
       const conversationsToClean: string[] = [];
       for (const conversation of sortedConversations) {
         if (bytesFreed >= targetBytesToFree) break;
-        
+
         const size = this.calculateConversationSize(conversation);
         conversationsToClean.push(conversation.id);
         bytesFreed += size;
@@ -462,17 +460,23 @@ export class DataCleanup {
 
       const backupData: BackupData = {
         timestamp,
-        conversations: conversations.reduce((acc, conv) => {
-          acc[conv.id] = conv;
-          return acc;
-        }, {} as Record<string, any>),
+        conversations: conversations.reduce(
+          (acc, conv) => {
+            acc[conv.id] = conv;
+            return acc;
+          },
+          {} as Record<string, any>
+        ),
         cache: localStorage,
         apiKeys: syncStorage,
         settings: localStorage['settings'] || {},
         metadata: {
           version: 1,
           source: 'data-cleanup',
-          itemCount: conversations.length + Object.keys(localStorage).length + Object.keys(syncStorage).length,
+          itemCount:
+            conversations.length +
+            Object.keys(localStorage).length +
+            Object.keys(syncStorage).length,
         },
       };
 
@@ -481,17 +485,22 @@ export class DataCleanup {
 
       return backupId;
     } catch (error) {
-      throw new Error(`Backup creation failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      throw new Error(
+        `Backup creation failed: ${error instanceof Error ? error.message : 'Unknown error'}`
+      );
     }
   }
 
   /**
    * Rollback from backup
    */
-  async rollback(backupId: string, backupData?: BackupData): Promise<{ restored: boolean; itemsRestored: number }> {
+  async rollback(
+    backupId: string,
+    backupData?: BackupData
+  ): Promise<{ restored: boolean; itemsRestored: number }> {
     try {
       let data = backupData;
-      
+
       if (!data) {
         const retrievedData = await chromeStorage.get<BackupData>(`backup:${backupId}`, 'local');
         if (!retrievedData) {
@@ -533,7 +542,9 @@ export class DataCleanup {
         itemsRestored,
       };
     } catch (error) {
-      throw new Error(`Rollback failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      throw new Error(
+        `Rollback failed: ${error instanceof Error ? error.message : 'Unknown error'}`
+      );
     }
   }
 
@@ -579,7 +590,7 @@ export class DataCleanup {
     if (this.scheduledCleanupTimer) {
       clearInterval(this.scheduledCleanupTimer);
       this.scheduledCleanupTimer = undefined;
-      this.currentSchedule = undefined;
+      // Reset schedule state
       return true;
     }
     return false;
@@ -590,7 +601,7 @@ export class DataCleanup {
    */
   private async executeScheduledCleanup(options: CleanupOptions): Promise<void> {
     const dataTypes = options.dataTypes || ['cache'];
-    
+
     for (const dataType of dataTypes) {
       switch (dataType) {
         case 'conversations':
@@ -638,11 +649,11 @@ export class DataCleanup {
 
     const conversations = await this.db.getAll<ConversationData>(OBJECT_STORES.CONVERSATIONS);
     const ids = conversations.map(conv => conv.id);
-    
+
     if (ids.length > 0) {
       await this.db.batchDelete(OBJECT_STORES.CONVERSATIONS, ids);
     }
-    
+
     return ids.length;
   }
 
@@ -666,9 +677,10 @@ export class DataCleanup {
   private async cleanAllApiKeys(options: CleanupOptions): Promise<number> {
     const localKeys = await chromeStorage.getBatch([], 'local');
     const syncKeys = await chromeStorage.getBatch([], 'sync');
-    
-    const apiKeys = Object.keys({ ...localKeys, ...syncKeys })
-      .filter(key => key.startsWith('apiKeys:'));
+
+    const apiKeys = Object.keys({ ...localKeys, ...syncKeys }).filter(key =>
+      key.startsWith('apiKeys:')
+    );
 
     if (!options.dryRun && apiKeys.length > 0) {
       for (const key of apiKeys) {
@@ -693,7 +705,7 @@ export class DataCleanup {
    */
   private async cleanAllChromeStorage(options: CleanupOptions): Promise<number> {
     let totalItems = 0;
-    
+
     try {
       const localKeys = await chromeStorage.getBatch([], 'local');
       const syncKeys = await chromeStorage.getBatch([], 'sync');
@@ -751,7 +763,10 @@ export class DataCleanup {
   /**
    * Check if conversation should be cleaned based on options
    */
-  private shouldCleanConversation(conversation: ConversationData, options: CleanupOptions): boolean {
+  private shouldCleanConversation(
+    conversation: ConversationData,
+    options: CleanupOptions
+  ): boolean {
     // Check date filter
     if (options.olderThan) {
       if ((conversation.metadata.lastActivity || 0) > options.olderThan) {
@@ -769,9 +784,7 @@ export class DataCleanup {
     // Check tags filter
     if (options.filters?.tags && options.filters.tags.length > 0) {
       const conversationTags = conversation.metadata.tags || [];
-      const hasMatchingTag = options.filters.tags.some(tag => 
-        conversationTags.includes(tag)
-      );
+      const hasMatchingTag = options.filters.tags.some(tag => conversationTags.includes(tag));
       if (!hasMatchingTag) {
         return false;
       }
@@ -816,37 +829,51 @@ export class DataCleanup {
   /**
    * Calculate total items to be cleaned
    */
-  private async calculateItemsToClean(dataTypes: string[], options: CleanupOptions): Promise<number> {
+  private async calculateItemsToClean(
+    dataTypes: string[],
+    options: CleanupOptions
+  ): Promise<number> {
     let totalItems = 0;
 
     for (const dataType of dataTypes) {
       try {
         switch (dataType) {
-          case 'conversations':
-            const conversations = await this.db.getAll<ConversationData>(OBJECT_STORES.CONVERSATIONS);
-            totalItems += conversations.filter(conv => this.shouldCleanConversation(conv, options)).length;
+          case 'conversations': {
+            const conversations = await this.db.getAll<ConversationData>(
+              OBJECT_STORES.CONVERSATIONS
+            );
+            totalItems += conversations.filter(conv =>
+              this.shouldCleanConversation(conv, options)
+            ).length;
             break;
-          case 'cache':
+          }
+          case 'cache': {
             const cacheStats = this.cache.getStatistics();
             totalItems += cacheStats.itemCount;
             break;
-          case 'apiKeys':
+          }
+          case 'apiKeys': {
             const localKeys = await chromeStorage.getBatch([], 'local');
             const syncKeys = await chromeStorage.getBatch([], 'sync');
-            const apiKeys = Object.keys({ ...localKeys, ...syncKeys }).filter(key => key.startsWith('apiKeys:'));
+            const apiKeys = Object.keys({ ...localKeys, ...syncKeys }).filter(key =>
+              key.startsWith('apiKeys:')
+            );
             totalItems += apiKeys.length;
             break;
-          case 'chromeStorage':
+          }
+          case 'chromeStorage': {
             const localItems = await chromeStorage.getBatch([], 'local');
             const syncItems = await chromeStorage.getBatch([], 'sync');
             totalItems += Object.keys(localItems).length + Object.keys(syncItems).length;
             break;
-          case 'indexedDB':
+          }
+          case 'indexedDB': {
             for (const storeName of Object.values(OBJECT_STORES)) {
               const items = await this.db.getAll(storeName);
               totalItems += items.length;
             }
             break;
+          }
         }
       } catch {
         // Ignore errors during calculation
@@ -859,29 +886,37 @@ export class DataCleanup {
   /**
    * Calculate total bytes to be freed
    */
-  private async calculateBytesToFree(dataTypes: string[], options: CleanupOptions): Promise<number> {
+  private async calculateBytesToFree(
+    dataTypes: string[],
+    options: CleanupOptions
+  ): Promise<number> {
     let totalBytes = 0;
 
     for (const dataType of dataTypes) {
       try {
         switch (dataType) {
-          case 'conversations':
-            const conversations = await this.db.getAll<ConversationData>(OBJECT_STORES.CONVERSATIONS);
+          case 'conversations': {
+            const conversations = await this.db.getAll<ConversationData>(
+              OBJECT_STORES.CONVERSATIONS
+            );
             totalBytes += conversations
               .filter(conv => this.shouldCleanConversation(conv, options))
               .reduce((sum, conv) => sum + this.calculateConversationSize(conv), 0);
             break;
-          case 'cache':
+          }
+          case 'cache': {
             const cacheStats = this.cache.getStatistics();
             totalBytes += cacheStats.currentSize;
             break;
+          }
           case 'apiKeys':
-          case 'chromeStorage':
+          case 'chromeStorage': {
             const storageInfo = await chromeStorage.getStorageInfo('local');
             const syncStorageInfo = await chromeStorage.getStorageInfo('sync');
             totalBytes += storageInfo.used + syncStorageInfo.used;
             break;
-          case 'indexedDB':
+          }
+          case 'indexedDB': {
             // Estimate IndexedDB size - this is approximate
             for (const storeName of Object.values(OBJECT_STORES)) {
               const items = await this.db.getAll(storeName);
@@ -890,6 +925,7 @@ export class DataCleanup {
               }, 0);
             }
             break;
+          }
         }
       } catch {
         // Ignore errors during calculation

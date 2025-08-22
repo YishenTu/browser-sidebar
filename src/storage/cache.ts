@@ -5,13 +5,8 @@
  * multiple eviction strategies. Supports both in-memory and Chrome storage backends.
  */
 
-import type {
-  CacheEntry,
-  CacheStorage,
-  CacheMetadata,
-  StorageArea,
-} from '../types/storage';
-import { getCurrentVersion, createCacheEntry, isCacheExpired } from '../types/storage';
+import type { CacheEntry, CacheMetadata, StorageArea } from '../types/storage';
+import { getCurrentVersion, isCacheExpired } from '../types/storage';
 import * as chromeStorage from './chromeStorage';
 
 // =============================================================================
@@ -521,7 +516,10 @@ export class Cache extends EventEmitter {
     }
 
     try {
-      const data = await chromeStorage.get<Record<string, CacheEntry>>('cache:entries', this.config.storageArea);
+      const data = await chromeStorage.get<Record<string, CacheEntry>>(
+        'cache:entries',
+        this.config.storageArea
+      );
       if (data) {
         for (const [key, entry] of Object.entries(data)) {
           // Skip expired entries
@@ -622,7 +620,7 @@ export class Cache extends EventEmitter {
         keyToEvict = this.findFIFOKey();
         break;
       default:
-        keyToEvict = this.entries.keys().next().value;
+        keyToEvict = this.entries.keys().next().value as string;
     }
 
     const entry = this.entries.get(keyToEvict);
@@ -661,8 +659,10 @@ export class Cache extends EventEmitter {
     let oldestTime = Infinity;
 
     for (const [key, entry] of this.entries) {
-      if (entry.frequency < lowestFrequency || 
-          (entry.frequency === lowestFrequency && entry.metadata.lastAccessed < oldestTime)) {
+      if (
+        entry.frequency < lowestFrequency ||
+        (entry.frequency === lowestFrequency && entry.metadata.lastAccessed < oldestTime)
+      ) {
         lowestFrequency = entry.frequency;
         oldestTime = entry.metadata.lastAccessed;
         lfuKey = key;

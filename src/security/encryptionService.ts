@@ -18,11 +18,7 @@ import {
   EncryptedData,
 } from './crypto';
 
-import {
-  KeyDerivationManager,
-  KeyPurpose,
-  DerivedKey,
-} from './keyDerivation';
+import { KeyDerivationManager, KeyPurpose, DerivedKey } from './keyDerivation';
 
 // =============================================================================
 // Types and Interfaces
@@ -152,7 +148,7 @@ const STORAGE_KEY_SALT = 'encryption_service_salt';
  */
 export class EncryptionService {
   private static instance: EncryptionService | null = null;
-  
+
   private config: Required<EncryptionServiceConfig>;
   private keyManager: KeyDerivationManager;
   private isServiceInitialized = false;
@@ -162,7 +158,7 @@ export class EncryptionService {
   constructor(config: EncryptionServiceConfig = {}) {
     // Validate configuration
     this.validateConfig(config);
-    
+
     // Set configuration with defaults
     this.config = {
       sessionTimeout: config.sessionTimeout ?? DEFAULT_SESSION_TIMEOUT,
@@ -173,7 +169,7 @@ export class EncryptionService {
 
     // Initialize key manager
     this.keyManager = new KeyDerivationManager();
-    
+
     // Initialize session state
     this.sessionState = {
       isActive: false,
@@ -207,22 +203,23 @@ export class EncryptionService {
     try {
       // Create master key
       const masterKeyResult = await this.keyManager.createMasterKey(password);
-      
+
       // Store salt in Chrome storage for future restoration
       await this.storeSalt(masterKeyResult.salt);
-      
+
       // Mark as initialized and start session
       this.isServiceInitialized = true;
       this.startSession();
-      
+
       // Start background tasks if enabled
       if (this.config.enableAutoRotation) {
         this.scheduleKeyRotation();
       }
       this.scheduleMemoryCleanup();
-      
     } catch (error) {
-      throw new Error(`Failed to initialize service: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      throw new Error(
+        `Failed to initialize service: ${error instanceof Error ? error.message : 'Unknown error'}`
+      );
     }
   }
 
@@ -239,19 +236,20 @@ export class EncryptionService {
     try {
       // Restore master key from salt
       await this.keyManager.restoreMasterKey(password, salt);
-      
+
       // Mark as initialized and start session
       this.isServiceInitialized = true;
       this.startSession();
-      
+
       // Start background tasks if enabled
       if (this.config.enableAutoRotation) {
         this.scheduleKeyRotation();
       }
       this.scheduleMemoryCleanup();
-      
     } catch (error) {
-      throw new Error(`Failed to restore service: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      throw new Error(
+        `Failed to restore service: ${error instanceof Error ? error.message : 'Unknown error'}`
+      );
     }
   }
 
@@ -288,14 +286,14 @@ export class EncryptionService {
    */
   updateConfig(updates: Partial<EncryptionServiceConfig>): void {
     this.validateConfig(updates);
-    
+
     Object.assign(this.config, updates);
-    
+
     // Restart timers if needed
     if (updates.sessionTimeout !== undefined) {
       this.resetSessionTimer();
     }
-    
+
     if (updates.enableAutoRotation !== undefined) {
       if (this.config.enableAutoRotation) {
         this.scheduleKeyRotation();
@@ -303,7 +301,7 @@ export class EncryptionService {
         this.clearRotationTimer();
       }
     }
-    
+
     if (updates.memoryCleanupInterval !== undefined) {
       this.scheduleMemoryCleanup();
     }
@@ -326,7 +324,7 @@ export class EncryptionService {
     // Derive new key
     const derivedKey = await this.keyManager.deriveKey(purpose);
     this.keyCache.set(purpose, derivedKey);
-    
+
     return derivedKey;
   }
 
@@ -341,13 +339,14 @@ export class EncryptionService {
     try {
       // Clear cached key
       this.keyCache.delete(purpose);
-      
+
       // Derive new key
       const newKey = await this.keyManager.deriveKey(purpose);
       this.keyCache.set(purpose, newKey);
-      
     } catch (error) {
-      throw new Error(`Failed to rotate key for ${purpose}: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      throw new Error(
+        `Failed to rotate key for ${purpose}: ${error instanceof Error ? error.message : 'Unknown error'}`
+      );
     }
   }
 
@@ -361,28 +360,30 @@ export class EncryptionService {
 
     try {
       const key = await this.getEncryptionKey('encryption');
-      
+
       switch (type) {
         case 'text':
           if (typeof data !== 'string') {
             throw new Error('Data must be a string for text encryption');
           }
           return await encryptText(data, key.key);
-          
+
         case 'object':
           return await encryptObject(data, key.key);
-          
+
         case 'binary':
           if (!(data instanceof Uint8Array)) {
             throw new Error('Data must be Uint8Array for binary encryption');
           }
           return await encryptBinary(data, key.key);
-          
+
         default:
           throw new Error(`Unsupported data type: ${type}`);
       }
     } catch (error) {
-      throw new Error(`Failed to encrypt data: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      throw new Error(
+        `Failed to encrypt data: ${error instanceof Error ? error.message : 'Unknown error'}`
+      );
     }
   }
 
@@ -400,68 +401,80 @@ export class EncryptionService {
 
     try {
       const key = await this.getEncryptionKey('encryption');
-      
+
       switch (type) {
         case 'text':
           return await decryptText(encryptedData, key.key);
-          
+
         case 'object':
           return await decryptObject(encryptedData, key.key);
-          
+
         case 'binary':
           return await decryptBinary(encryptedData, key.key);
-          
+
         default:
           throw new Error(`Unsupported data type: ${type}`);
       }
     } catch (error) {
-      throw new Error(`Failed to decrypt data: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      throw new Error(
+        `Failed to decrypt data: ${error instanceof Error ? error.message : 'Unknown error'}`
+      );
     }
   }
 
   /**
    * Encrypt specific fields of an object
    */
-  async encryptFields(data: Record<string, any>, fieldMap: FieldEncryptionMap): Promise<Record<string, any>> {
+  async encryptFields(
+    data: Record<string, any>,
+    fieldMap: FieldEncryptionMap
+  ): Promise<Record<string, any>> {
     this.requireInitialized();
     this.requireActiveSession();
     this.updateActivity();
 
     const result = { ...data };
-    
+
     for (const [fieldName, action] of Object.entries(fieldMap)) {
       if (action === 'encrypt' && fieldName in data) {
         try {
           result[fieldName] = await this.encryptData(data[fieldName], 'text');
         } catch (error) {
-          throw new Error(`Failed to encrypt field ${fieldName}: ${error instanceof Error ? error.message : 'Unknown error'}`);
+          throw new Error(
+            `Failed to encrypt field ${fieldName}: ${error instanceof Error ? error.message : 'Unknown error'}`
+          );
         }
       }
     }
-    
+
     return result;
   }
 
   /**
    * Decrypt specific fields of an object
    */
-  async decryptFields(data: Record<string, any>, fieldMap: FieldEncryptionMap): Promise<Record<string, any>> {
+  async decryptFields(
+    data: Record<string, any>,
+    fieldMap: FieldEncryptionMap
+  ): Promise<Record<string, any>> {
     this.requireInitialized();
     this.requireActiveSession();
     this.updateActivity();
 
     const result = { ...data };
-    
+
     for (const [fieldName, action] of Object.entries(fieldMap)) {
       if (action === 'encrypt' && fieldName in data && isValidEncryptedData(data[fieldName])) {
         try {
           result[fieldName] = await this.decryptData(data[fieldName], 'text');
         } catch (error) {
-          throw new Error(`Failed to decrypt field ${fieldName}: ${error instanceof Error ? error.message : 'Unknown error'}`);
+          throw new Error(
+            `Failed to decrypt field ${fieldName}: ${error instanceof Error ? error.message : 'Unknown error'}`
+          );
         }
       }
     }
-    
+
     return result;
   }
 
@@ -479,12 +492,12 @@ export class EncryptionService {
 
     const { batchSize = DEFAULT_BATCH_SIZE, failFast = false } = options;
     const success: EncryptedData[] = [];
-    const errors: Array<{ item: T; error: Error }> = [];
+    const errors: Array<{ item: EncryptedData; error: Error }> = [];
 
     // Process items in batches
     for (let i = 0; i < items.length; i += batchSize) {
       const batch = items.slice(i, i + batchSize);
-      
+
       // Process batch items
       for (const item of batch) {
         try {
@@ -492,14 +505,14 @@ export class EncryptionService {
           success.push(encrypted);
         } catch (error) {
           const errorObj = error instanceof Error ? error : new Error('Unknown error');
-          errors.push({ item, error: errorObj });
-          
+          errors.push({ item: {} as EncryptedData, error: errorObj });
+
           if (failFast) {
             break;
           }
         }
       }
-      
+
       if (failFast && errors.length > 0) {
         break;
       }
@@ -528,12 +541,12 @@ export class EncryptionService {
 
     const { batchSize = DEFAULT_BATCH_SIZE, failFast = false } = options;
     const success: T[] = [];
-    const errors: Array<{ item: EncryptedData; error: Error }> = [];
+    const errors: Array<{ item: T; error: Error }> = [] as any;
 
     // Process items in batches
     for (let i = 0; i < items.length; i += batchSize) {
       const batch = items.slice(i, i + batchSize);
-      
+
       // Process batch items
       for (const item of batch) {
         try {
@@ -541,14 +554,14 @@ export class EncryptionService {
           success.push(decrypted);
         } catch (error) {
           const errorObj = error instanceof Error ? error : new Error('Unknown error');
-          errors.push({ item, error: errorObj });
-          
+          errors.push({ item: item as unknown as T, error: errorObj });
+
           if (failFast) {
             break;
           }
         }
       }
-      
+
       if (failFast && errors.length > 0) {
         break;
       }
@@ -575,16 +588,18 @@ export class EncryptionService {
       const hash = Array.from(hashBytes)
         .map(b => b.toString(16).padStart(2, '0'))
         .join('');
-      
+
       const isValid = expectedHash ? hash === expectedHash : true;
-      
+
       return {
         isValid,
         hash,
         verifiedAt: new Date(),
       };
     } catch (error) {
-      throw new Error(`Failed to verify integrity: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      throw new Error(
+        `Failed to verify integrity: ${error instanceof Error ? error.message : 'Unknown error'}`
+      );
     }
   }
 
@@ -602,20 +617,25 @@ export class EncryptionService {
         data: Array.from(encryptedData.data),
         version: encryptedData.version,
       };
-      
+
       const hashBytes = await hashData(dataToHash);
       return Array.from(hashBytes)
         .map(b => b.toString(16).padStart(2, '0'))
         .join('');
     } catch (error) {
-      throw new Error(`Failed to create checksum: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      throw new Error(
+        `Failed to create checksum: ${error instanceof Error ? error.message : 'Unknown error'}`
+      );
     }
   }
 
   /**
    * Validate integrity checksum
    */
-  async validateIntegrityChecksum(encryptedData: EncryptedData, checksum: string): Promise<boolean> {
+  async validateIntegrityChecksum(
+    encryptedData: EncryptedData,
+    checksum: string
+  ): Promise<boolean> {
     try {
       const actualChecksum = await this.createIntegrityChecksum(encryptedData);
       return actualChecksum === checksum;
@@ -647,7 +667,7 @@ export class EncryptionService {
     await this.terminateSession();
     this.keyManager.clearMasterKey();
     this.isServiceInitialized = false;
-    
+
     // Reset singleton instance
     if (EncryptionService.instance === this) {
       EncryptionService.instance = null;
@@ -665,11 +685,11 @@ export class EncryptionService {
     if (config.sessionTimeout !== undefined && config.sessionTimeout <= 0) {
       throw new Error('Invalid configuration: sessionTimeout must be positive');
     }
-    
+
     if (config.keyRotationInterval !== undefined && config.keyRotationInterval <= 0) {
       throw new Error('Invalid configuration: keyRotationInterval must be positive');
     }
-    
+
     if (config.memoryCleanupInterval !== undefined && config.memoryCleanupInterval <= 0) {
       throw new Error('Invalid configuration: memoryCleanupInterval must be positive');
     }
@@ -726,7 +746,7 @@ export class EncryptionService {
     if (this.sessionState.timeoutHandle) {
       clearTimeout(this.sessionState.timeoutHandle);
     }
-    
+
     this.sessionState.timeoutHandle = setTimeout(() => {
       this.sessionState.isActive = false;
       this.keyCache.clear();
@@ -738,7 +758,7 @@ export class EncryptionService {
    */
   private scheduleKeyRotation(): void {
     this.clearRotationTimer();
-    
+
     this.sessionState.rotationHandle = setTimeout(async () => {
       if (this.isServiceInitialized && this.sessionState.isActive) {
         try {
@@ -747,7 +767,7 @@ export class EncryptionService {
           for (const purpose of purposes) {
             await this.rotateKey(purpose);
           }
-          
+
           // Schedule next rotation
           this.scheduleKeyRotation();
         } catch (error) {
@@ -764,7 +784,7 @@ export class EncryptionService {
     if (this.sessionState.cleanupHandle) {
       clearInterval(this.sessionState.cleanupHandle);
     }
-    
+
     this.sessionState.cleanupHandle = setInterval(() => {
       if (this.isServiceInitialized && this.sessionState.isActive) {
         // Perform lightweight memory cleanup without clearing active keys
@@ -781,9 +801,9 @@ export class EncryptionService {
       clearTimeout(this.sessionState.timeoutHandle);
       this.sessionState.timeoutHandle = null;
     }
-    
+
     this.clearRotationTimer();
-    
+
     if (this.sessionState.cleanupHandle) {
       clearInterval(this.sessionState.cleanupHandle);
       this.sessionState.cleanupHandle = null;
@@ -809,27 +829,13 @@ export class EncryptionService {
         [STORAGE_KEY_SALT]: Array.from(salt),
       });
     } catch (error) {
-      throw new Error(`Failed to store salt: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      throw new Error(
+        `Failed to store salt: ${error instanceof Error ? error.message : 'Unknown error'}`
+      );
     }
   }
 
-  /**
-   * Load salt from Chrome storage
-   */
-  private async loadSalt(): Promise<Uint8Array | null> {
-    try {
-      const result = await chrome.storage.local.get(STORAGE_KEY_SALT);
-      const saltArray = result[STORAGE_KEY_SALT];
-      
-      if (saltArray && Array.isArray(saltArray)) {
-        return new Uint8Array(saltArray);
-      }
-      
-      return null;
-    } catch (error) {
-      throw new Error(`Failed to load salt: ${error instanceof Error ? error.message : 'Unknown error'}`);
-    }
-  }
+  // Note: loadSalt() intentionally omitted until restore flows are implemented to avoid unused declarations
 }
 
 // =============================================================================

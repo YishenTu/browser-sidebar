@@ -1,9 +1,9 @@
 /**
  * @file Conversation Type Definitions
- * 
+ *
  * Comprehensive conversation type definitions for IndexedDB storage compatibility.
  * Includes tab context, model settings, serialization utilities, and type guards.
- * 
+ *
  * Features:
  * - Complete conversation data structure with metadata
  * - Tab context for web page information
@@ -13,7 +13,7 @@
  * - Helper functions for creating and updating conversations
  */
 
-import type { ChatMessage, MessageRole } from './chat';
+import type { ChatMessage } from './chat';
 
 // =============================================================================
 // Core Type Definitions
@@ -182,7 +182,7 @@ export function isTabContext(value: unknown): value is TabContext {
     (obj['selectedText'] === undefined || typeof obj['selectedText'] === 'string') &&
     (obj['favicon'] === undefined || typeof obj['favicon'] === 'string') &&
     (obj['language'] === undefined || typeof obj['language'] === 'string') &&
-    (obj['metadata'] === undefined || 
+    (obj['metadata'] === undefined ||
       (typeof obj['metadata'] === 'object' && obj['metadata'] !== null))
   );
 }
@@ -203,16 +203,22 @@ export function isModelSettings(value: unknown): value is ModelSettings {
     typeof obj['temperature'] === 'number' &&
     (obj['temperature'] as number) >= 0 &&
     (obj['temperature'] as number) <= 2 &&
-    (obj['maxTokens'] === undefined || 
+    (obj['maxTokens'] === undefined ||
       (typeof obj['maxTokens'] === 'number' && (obj['maxTokens'] as number) > 0)) &&
-    (obj['topP'] === undefined || 
-      (typeof obj['topP'] === 'number' && (obj['topP'] as number) >= 0 && (obj['topP'] as number) <= 1)) &&
-    (obj['frequencyPenalty'] === undefined || 
-      (typeof obj['frequencyPenalty'] === 'number' && (obj['frequencyPenalty'] as number) >= -2 && (obj['frequencyPenalty'] as number) <= 2)) &&
-    (obj['presencePenalty'] === undefined || 
-      (typeof obj['presencePenalty'] === 'number' && (obj['presencePenalty'] as number) >= -2 && (obj['presencePenalty'] as number) <= 2)) &&
+    (obj['topP'] === undefined ||
+      (typeof obj['topP'] === 'number' &&
+        (obj['topP'] as number) >= 0 &&
+        (obj['topP'] as number) <= 1)) &&
+    (obj['frequencyPenalty'] === undefined ||
+      (typeof obj['frequencyPenalty'] === 'number' &&
+        (obj['frequencyPenalty'] as number) >= -2 &&
+        (obj['frequencyPenalty'] as number) <= 2)) &&
+    (obj['presencePenalty'] === undefined ||
+      (typeof obj['presencePenalty'] === 'number' &&
+        (obj['presencePenalty'] as number) >= -2 &&
+        (obj['presencePenalty'] as number) <= 2)) &&
     (obj['systemPrompt'] === undefined || typeof obj['systemPrompt'] === 'string') &&
-    (obj['customSettings'] === undefined || 
+    (obj['customSettings'] === undefined ||
       (typeof obj['customSettings'] === 'object' && obj['customSettings'] !== null))
   );
 }
@@ -220,7 +226,9 @@ export function isModelSettings(value: unknown): value is ModelSettings {
 /**
  * Type guard to check if a value is a valid ConversationStorageMetadata
  */
-export function isConversationStorageMetadata(value: unknown): value is ConversationStorageMetadata {
+export function isConversationStorageMetadata(
+  value: unknown
+): value is ConversationStorageMetadata {
   if (typeof value !== 'object' || value === null) {
     return false;
   }
@@ -234,11 +242,12 @@ export function isConversationStorageMetadata(value: unknown): value is Conversa
     (obj['updatedAt'] as number) > 0 &&
     typeof obj['messageCount'] === 'number' &&
     (obj['messageCount'] as number) >= 0 &&
-    (obj['tags'] === undefined || 
-      (Array.isArray(obj['tags']) && (obj['tags'] as unknown[]).every(tag => typeof tag === 'string'))) &&
+    (obj['tags'] === undefined ||
+      (Array.isArray(obj['tags']) &&
+        (obj['tags'] as unknown[]).every(tag => typeof tag === 'string'))) &&
     (obj['archived'] === undefined || typeof obj['archived'] === 'boolean') &&
     (obj['pinned'] === undefined || typeof obj['pinned'] === 'boolean') &&
-    (obj['lastActivity'] === undefined || 
+    (obj['lastActivity'] === undefined ||
       (typeof obj['lastActivity'] === 'number' && (obj['lastActivity'] as number) > 0))
   );
 }
@@ -282,15 +291,15 @@ export function generateConversationId(): string {
  * Create a new TabContext
  */
 export function createTabContext(
-  url: string, 
-  title: string, 
+  url: string,
+  title: string,
   options: Partial<Omit<TabContext, 'url' | 'title' | 'timestamp'>> = {}
 ): TabContext {
   return {
     url,
     title,
     timestamp: Date.now(),
-    ...options
+    ...options,
   };
 }
 
@@ -300,13 +309,15 @@ export function createTabContext(
 export function createModelSettings(
   provider: string,
   model: string,
-  options: Partial<Omit<ModelSettings, 'provider' | 'model' | 'temperature'>> & { temperature?: number } = {}
+  options: Partial<Omit<ModelSettings, 'provider' | 'model' | 'temperature'>> & {
+    temperature?: number;
+  } = {}
 ): ModelSettings {
   return {
     provider,
     model,
     temperature: options.temperature ?? 0.7,
-    ...options
+    ...options,
   };
 }
 
@@ -314,7 +325,7 @@ export function createModelSettings(
  * Create a new conversation for storage
  */
 export function createStorageConversation(
-  title: string, 
+  title: string,
   options: ConversationStorageCreate = {}
 ): ConversationData {
   const now = Date.now();
@@ -328,10 +339,10 @@ export function createStorageConversation(
       createdAt: now,
       updatedAt: now,
       messageCount: messages.length,
-      ...options.metadata
+      ...options.metadata,
     },
     tabContext: options.tabContext,
-    modelSettings: options.modelSettings
+    modelSettings: options.modelSettings,
   };
 }
 
@@ -339,13 +350,13 @@ export function createStorageConversation(
  * Update an existing conversation
  */
 export function updateStorageConversation(
-  conversation: ConversationData, 
+  conversation: ConversationData,
   updates: ConversationStorageUpdate
 ): ConversationData {
   const now = Date.now();
   // Ensure updatedAt is always greater than original
   const updatedAt = Math.max(now, conversation.metadata.updatedAt + 1);
-  
+
   return {
     ...conversation,
     title: updates.title ?? conversation.title,
@@ -354,8 +365,8 @@ export function updateStorageConversation(
     metadata: {
       ...conversation.metadata,
       ...updates.metadata,
-      updatedAt
-    }
+      updatedAt,
+    },
   };
 }
 
@@ -374,12 +385,14 @@ export function serializeConversation(conversation: ConversationData): string {
       messages: conversation.messages,
       metadata: conversation.metadata,
       tabContext: conversation.tabContext,
-      modelSettings: conversation.modelSettings
+      modelSettings: conversation.modelSettings,
     };
 
     return JSON.stringify(serializable);
   } catch (error) {
-    throw new Error(`Failed to serialize conversation: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    throw new Error(
+      `Failed to serialize conversation: ${error instanceof Error ? error.message : 'Unknown error'}`
+    );
   }
 }
 
@@ -389,7 +402,7 @@ export function serializeConversation(conversation: ConversationData): string {
 export function deserializeConversation(serialized: string): ConversationData {
   try {
     const parsed = JSON.parse(serialized);
-    
+
     if (!isConversationData(parsed)) {
       throw new Error('Invalid conversation data structure');
     }
@@ -410,7 +423,9 @@ export function deserializeConversation(serialized: string): ConversationData {
 /**
  * Validate conversation data for IndexedDB storage compatibility
  */
-export function validateConversationForStorage(conversation: unknown): ConversationValidationResult {
+export function validateConversationForStorage(
+  conversation: unknown
+): ConversationValidationResult {
   const errors: string[] = [];
 
   // First check basic structure
@@ -453,14 +468,20 @@ export function validateConversationForStorage(conversation: unknown): Conversat
     errors.push('Updated timestamp must be a positive number');
   }
 
-  if (typeof metadata['createdAt'] === 'number' && typeof metadata['updatedAt'] === 'number' &&
-      metadata['createdAt'] > metadata['updatedAt']) {
+  if (
+    typeof metadata['createdAt'] === 'number' &&
+    typeof metadata['updatedAt'] === 'number' &&
+    metadata['createdAt'] > metadata['updatedAt']
+  ) {
     errors.push('Created timestamp cannot be after updated timestamp');
   }
 
   // Validate messages array matches count if both are valid
-  if (Array.isArray(obj['messages']) && typeof metadata['messageCount'] === 'number' &&
-      obj['messages'].length !== metadata['messageCount']) {
+  if (
+    Array.isArray(obj['messages']) &&
+    typeof metadata['messageCount'] === 'number' &&
+    obj['messages'].length !== metadata['messageCount']
+  ) {
     errors.push('Message count mismatch between metadata and actual messages');
   }
 
@@ -485,17 +506,20 @@ export function validateConversationForStorage(conversation: unknown): Conversat
     // Check serialization compatibility
     try {
       const serialized = serializeConversation(conv);
-      if (serialized.length > 10 * 1024 * 1024) { // 10MB limit
+      if (serialized.length > 10 * 1024 * 1024) {
+        // 10MB limit
         errors.push('Serialized conversation exceeds size limit');
       }
     } catch (error) {
-      errors.push(`Serialization failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      errors.push(
+        `Serialization failed: ${error instanceof Error ? error.message : 'Unknown error'}`
+      );
     }
   }
 
   return {
     isValid: errors.length === 0,
-    errors
+    errors,
   };
 }
 
@@ -511,16 +535,9 @@ export function createTestConversation(
   overrides: Partial<ConversationStorageCreate> = {}
 ): ConversationData {
   return createStorageConversation(title, {
-    tabContext: createTabContext(
-      'https://example.com/test',
-      'Example Test Page'
-    ),
-    modelSettings: createModelSettings(
-      'openai',
-      'gpt-4',
-      { temperature: 0.7 }
-    ),
-    ...overrides
+    tabContext: createTabContext('https://example.com/test', 'Example Test Page'),
+    modelSettings: createModelSettings('openai', 'gpt-4', { temperature: 0.7 }),
+    ...overrides,
   });
 }
 
@@ -543,6 +560,6 @@ export function getConversationSummary(conversation: ConversationData): {
     lastActivity: new Date(conversation.metadata.updatedAt).toISOString(),
     provider: conversation.modelSettings?.provider,
     model: conversation.modelSettings?.model,
-    url: conversation.tabContext?.url
+    url: conversation.tabContext?.url,
   };
 }
