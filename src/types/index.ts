@@ -17,6 +17,9 @@ export * from './settings';
 // Chat types and interfaces
 export * from './chat';
 
+// Conversation types and storage utilities
+export * from './conversation';
+
 // API key types and management
 export * from './apiKeys';
 
