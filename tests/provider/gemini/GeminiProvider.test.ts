@@ -32,13 +32,13 @@ describe('GeminiProvider', () => {
 
   beforeEach(() => {
     provider = new GeminiProvider();
-    
+
     validGeminiConfig = {
       apiKey: 'test-gemini-api-key-12345',
       temperature: 0.7,
       thinkingMode: 'dynamic',
       showThoughts: true,
-      model: 'gemini-pro',
+      model: 'gemini-2.5-flash-lite',
       maxTokens: 8192,
       topP: 0.8,
       topK: 40,
@@ -133,8 +133,9 @@ describe('GeminiProvider', () => {
 
       expect(result).toEqual({
         id: expect.any(String),
-        content: 'Quantum computing is a revolutionary technology that uses quantum mechanical phenomena...',
-        model: 'gemini-pro',
+        content:
+          'Quantum computing is a revolutionary technology that uses quantum mechanical phenomena...',
+        model: 'gemini-2.5-flash-lite',
         usage: {
           promptTokens: 15,
           completionTokens: 85,
@@ -144,7 +145,7 @@ describe('GeminiProvider', () => {
         metadata: {
           provider: 'gemini',
           timestamp: expect.any(Date),
-          model: 'gemini-pro',
+          model: 'gemini-2.5-flash-lite',
         },
       });
 
@@ -199,7 +200,9 @@ describe('GeminiProvider', () => {
 
     it('should require initialization before chat', async () => {
       const uninitializedProvider = new GeminiProvider();
-      await expect(uninitializedProvider.chat(mockMessages)).rejects.toThrow('Provider not initialized');
+      await expect(uninitializedProvider.chat(mockMessages)).rejects.toThrow(
+        'Provider not initialized'
+      );
     });
 
     it('should track requests for rate limiting', async () => {
@@ -297,7 +300,7 @@ describe('GeminiProvider', () => {
         ...validConfig,
         config: { ...validGeminiConfig, thinkingMode: 'off' as const },
       };
-      
+
       await provider.initialize(offConfig);
 
       mockFetch.mockResolvedValue({
@@ -312,7 +315,7 @@ describe('GeminiProvider', () => {
       const result = await provider.chat(mockMessages);
 
       expect(result.thinking).toBeUndefined();
-      
+
       const requestBody = JSON.parse(mockFetch.mock.calls[0][1].body);
       expect(requestBody.generationConfig.responseModalities).toBeUndefined();
     });
@@ -322,7 +325,7 @@ describe('GeminiProvider', () => {
         ...validConfig,
         config: { ...validGeminiConfig, thinkingMode: 'dynamic' as const },
       };
-      
+
       await provider.initialize(dynamicConfig);
 
       mockFetch.mockResolvedValue({
@@ -335,7 +338,8 @@ describe('GeminiProvider', () => {
                 parts: [
                   {
                     text: 'Let me think about this question...',
-                    thinking: 'The user is asking about quantum computing. I should provide a comprehensive yet accessible explanation covering the key concepts.',
+                    thinking:
+                      'The user is asking about quantum computing. I should provide a comprehensive yet accessible explanation covering the key concepts.',
                   },
                   {
                     text: 'Quantum computing uses quantum mechanical phenomena like superposition and entanglement...',
@@ -355,7 +359,7 @@ describe('GeminiProvider', () => {
 
       expect(result.thinking).toBeDefined();
       expect(result.usage.thinkingTokens).toBe(45);
-      
+
       const requestBody = JSON.parse(mockFetch.mock.calls[0][1].body);
       expect(requestBody.generationConfig.responseModalities).toContain('TEXT');
     });
@@ -388,7 +392,7 @@ describe('GeminiProvider', () => {
         ...validConfig,
         config: { ...validGeminiConfig, showThoughts: true },
       };
-      
+
       await provider.initialize(configWithShowThoughts);
 
       mockFetch.mockResolvedValue({
@@ -421,7 +425,7 @@ describe('GeminiProvider', () => {
         ...validConfig,
         config: { ...validGeminiConfig, showThoughts: false },
       };
-      
+
       await provider.initialize(configWithoutShowThoughts);
 
       mockFetch.mockResolvedValue({
@@ -517,12 +521,10 @@ describe('GeminiProvider', () => {
       }
 
       expect(chunks.length).toBeGreaterThan(0);
-      
-      const contentChunks = chunks.filter(chunk => 
-        chunk.choices[0]?.delta?.content
-      );
+
+      const contentChunks = chunks.filter(chunk => chunk.choices[0]?.delta?.content);
       expect(contentChunks.length).toBeGreaterThan(0);
-      
+
       const finalChunk = chunks[chunks.length - 1];
       expect(finalChunk.choices[0]?.finishReason).toBe('stop');
     });
@@ -561,9 +563,7 @@ describe('GeminiProvider', () => {
         chunks.push(chunk);
       }
 
-      const thinkingChunks = chunks.filter(chunk => 
-        chunk.choices[0]?.delta?.thinking
-      );
+      const thinkingChunks = chunks.filter(chunk => chunk.choices[0]?.delta?.thinking);
       expect(thinkingChunks.length).toBeGreaterThan(0);
     });
 
@@ -606,19 +606,17 @@ describe('GeminiProvider', () => {
 
       // Verify that we get reasonable chunk count (TokenBuffer optimization would reduce this further)
       expect(chunks.length).toBeGreaterThan(0); // We should get some chunks
-      
-      const allContent = chunks
-        .map(chunk => chunk.choices[0]?.delta?.content || '')
-        .join('');
+
+      const allContent = chunks.map(chunk => chunk.choices[0]?.delta?.content || '').join('');
       expect(allContent).toContain('Quantum computing');
     });
 
     it('should handle stream errors gracefully', async () => {
       const mockErrorStream = new ReadableStream({
         start(controller) {
-          controller.enqueue(new TextEncoder().encode(
-            'data: {"error":{"code":401,"message":"Invalid API key"}}\n\n'
-          ));
+          controller.enqueue(
+            new TextEncoder().encode('data: {"error":{"code":401,"message":"Invalid API key"}}\n\n')
+          );
           controller.close();
         },
       });
@@ -638,7 +636,7 @@ describe('GeminiProvider', () => {
     beforeEach(async () => {
       const visionConfig = {
         ...validConfig,
-        config: { ...validGeminiConfig, model: 'gemini-pro-vision' },
+        config: { ...validGeminiConfig, model: 'gemini-2.5-flash-lite' },
       };
       await provider.initialize(visionConfig);
     });
@@ -684,7 +682,7 @@ describe('GeminiProvider', () => {
       const result = await provider.chat(multimodalMessages);
 
       expect(result.content).toContain('landscape');
-      
+
       const requestBody = JSON.parse(mockFetch.mock.calls[0][1].body);
       expect(requestBody.contents[0].parts).toHaveLength(2); // Text + image
       expect(requestBody.contents[0].parts[1].inlineData).toBeDefined();
@@ -736,7 +734,7 @@ describe('GeminiProvider', () => {
       const result = await provider.chat(multiImageMessages);
 
       expect(result.content).toContain('first image');
-      
+
       const requestBody = JSON.parse(mockFetch.mock.calls[0][1].body);
       expect(requestBody.contents[0].parts).toHaveLength(3); // Text + 2 images
     });
@@ -865,25 +863,26 @@ describe('GeminiProvider', () => {
 
     it('should support AbortController for request cancellation', async () => {
       const controller = new AbortController();
-      
-      mockFetch.mockImplementation(() => 
-        new Promise((_, reject) => {
-          controller.signal.addEventListener('abort', () => {
-            reject(new Error('Request aborted'));
-          });
-        })
+
+      mockFetch.mockImplementation(
+        () =>
+          new Promise((_, reject) => {
+            controller.signal.addEventListener('abort', () => {
+              reject(new Error('Request aborted'));
+            });
+          })
       );
 
       const chatPromise = provider.chat(mockMessages, { signal: controller.signal });
-      
+
       setTimeout(() => controller.abort(), 100);
-      
+
       await expect(chatPromise).rejects.toThrow('Request aborted');
     });
 
     it('should support cancellation during streaming', async () => {
       const controller = new AbortController();
-      
+
       const mockStreamData = [
         'data: {"candidates":[{"content":{"parts":[{"text":"Starting"}]}}]}\n\n',
         'data: {"candidates":[{"content":{"parts":[{"text":" response"}]}}]}\n\n',
@@ -913,7 +912,7 @@ describe('GeminiProvider', () => {
       });
 
       const streamIterator = provider.streamChat(mockMessages, { signal: controller.signal });
-      
+
       let chunkCount = 0;
       let caughtError: Error | null = null;
 
@@ -948,10 +947,10 @@ describe('GeminiProvider', () => {
         }),
       });
 
-      await provider.chat(mockMessages, { 
+      await provider.chat(mockMessages, {
         temperature: 1.8,
         thinkingMode: 'off',
-        showThoughts: false 
+        showThoughts: false,
       });
 
       const requestBody = JSON.parse(mockFetch.mock.calls[0][1].body);
@@ -960,7 +959,7 @@ describe('GeminiProvider', () => {
 
     it('should maintain rate limiting across configuration changes', async () => {
       await provider.initialize(validConfig);
-      
+
       mockFetch.mockResolvedValue({
         ok: true,
         status: 200,
@@ -1032,13 +1031,15 @@ describe('GeminiProvider', () => {
         }),
       });
 
-      const requests = Array.from({ length: 5 }, (_, i) => 
-        provider.chat([{
-          id: `concurrent-${i}`,
-          role: 'user',
-          content: `Concurrent request ${i}`,
-          timestamp: new Date(),
-        }])
+      const requests = Array.from({ length: 5 }, (_, i) =>
+        provider.chat([
+          {
+            id: `concurrent-${i}`,
+            role: 'user',
+            content: `Concurrent request ${i}`,
+            timestamp: new Date(),
+          },
+        ])
       );
 
       const results = await Promise.all(requests);
@@ -1083,7 +1084,7 @@ describe('GeminiProvider', () => {
       });
 
       const result = await provider.chat(longMessages);
-      
+
       expect(result.content).toBe('Response to long message');
       expect(result.usage.totalTokens).toBe(15000);
     });

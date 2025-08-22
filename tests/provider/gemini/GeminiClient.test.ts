@@ -27,13 +27,13 @@ describe('GeminiClient', () => {
 
   beforeEach(() => {
     client = new GeminiClient();
-    
+
     validGeminiConfig = {
       apiKey: 'test-gemini-api-key-12345',
       temperature: 0.7,
       thinkingMode: 'dynamic',
       showThoughts: true,
-      model: 'gemini-pro',
+      model: 'gemini-2.5-flash-lite',
       maxTokens: 8192,
       topP: 0.8,
       topK: 40,
@@ -77,14 +77,7 @@ describe('GeminiClient', () => {
         multimodal: true,
         functionCalling: true,
         maxContextLength: 2000000, // Max context length across all Gemini models
-        supportedModels: [
-          'gemini-pro',
-          'gemini-pro-vision',
-          'gemini-pro-1.5',
-          'gemini-flash',
-          'gemini-2.5-flash-lite',
-          'gemini-2.5-pro',
-        ],
+        supportedModels: ['gemini-2.5-flash-lite'],
       });
     });
 
@@ -248,14 +241,14 @@ describe('GeminiClient', () => {
           { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_NONE' },
         ],
       };
-      
+
       let result = client.validateConfig(validSafetyConfig);
       expect(result.isValid).toBe(true);
 
       // Missing safety settings should pass (optional)
       const noSafetyConfig = { ...validGeminiConfig };
       delete noSafetyConfig.safetySettings;
-      
+
       result = client.validateConfig(noSafetyConfig);
       expect(result.isValid).toBe(true);
 
@@ -264,7 +257,7 @@ describe('GeminiClient', () => {
         ...validGeminiConfig,
         safetySettings: 'invalid' as any,
       };
-      
+
       result = client.validateConfig(invalidSafetyConfig);
       expect(result.isValid).toBe(false);
       expect(result.errors).toContain('Invalid safety settings format');
@@ -276,14 +269,14 @@ describe('GeminiClient', () => {
         ...validGeminiConfig,
         stopSequences: ['END', 'STOP', 'FINISH'],
       };
-      
+
       let result = client.validateConfig(validStopConfig);
       expect(result.isValid).toBe(true);
 
       // Missing stop sequences should pass (optional)
       const noStopConfig = { ...validGeminiConfig };
       delete noStopConfig.stopSequences;
-      
+
       result = client.validateConfig(noStopConfig);
       expect(result.isValid).toBe(true);
 
@@ -292,7 +285,7 @@ describe('GeminiClient', () => {
         ...validGeminiConfig,
         stopSequences: 'invalid' as any,
       };
-      
+
       result = client.validateConfig(invalidStopConfig);
       expect(result.isValid).toBe(false);
       expect(result.errors).toContain('Invalid stop sequences format');
@@ -375,16 +368,16 @@ describe('GeminiClient', () => {
         config: {
           ...validGeminiConfig,
           temperature: 0.5,
-          model: 'gemini-flash',
+          model: 'gemini-2.5-flash-lite',
         },
       };
 
       await client.initialize(newConfig);
       expect(client.isConfigured()).toBe(true);
-      
+
       const storedConfig = client.getConfig();
       expect(storedConfig?.config.temperature).toBe(0.5);
-      expect(storedConfig?.config.model).toBe('gemini-flash');
+      expect(storedConfig?.config.model).toBe('gemini-2.5-flash-lite');
     });
   });
 
@@ -487,27 +480,22 @@ describe('GeminiClient', () => {
 
     it('should return supported models list', () => {
       const models = client.getModels();
-      expect(models).toHaveLength(6);
-      
+      expect(models).toHaveLength(1);
+
       const modelIds = models.map(m => m.id);
-      expect(modelIds).toContain('gemini-pro');
-      expect(modelIds).toContain('gemini-pro-vision');
-      expect(modelIds).toContain('gemini-pro-1.5');
-      expect(modelIds).toContain('gemini-flash');
       expect(modelIds).toContain('gemini-2.5-flash-lite');
-      expect(modelIds).toContain('gemini-2.5-pro');
 
       // Check model structure
-      const geminiPro = models.find(m => m.id === 'gemini-pro');
-      expect(geminiPro).toEqual({
-        id: 'gemini-pro',
-        name: 'Gemini Pro',
+      const geminiFlashLite = models.find(m => m.id === 'gemini-2.5-flash-lite');
+      expect(geminiFlashLite).toEqual({
+        id: 'gemini-2.5-flash-lite',
+        name: 'Gemini 2.5 Flash Lite',
         provider: 'gemini',
-        maxTokens: 30720,
-        contextLength: 1000000,
+        maxTokens: 65536, // Updated from model card
+        contextLength: 1048576, // Updated from model card
         costPer1kTokens: {
-          input: 0.00025,
-          output: 0.0005,
+          input: 0.00005,
+          output: 0.0001,
         },
         capabilities: {
           streaming: true,
@@ -518,17 +506,17 @@ describe('GeminiClient', () => {
           functionCalling: true,
         },
         parameters: {
-          temperature: { min: 0.0, max: 2.0, default: 0.9 },
-          topP: { min: 0.1, max: 1.0, default: 1.0 },
+          temperature: { min: 0.0, max: 2.0, default: 1.0 },
+          topP: { min: 0.1, max: 1.0, default: 0.95 },
           thinkingMode: ['off', 'dynamic'],
         },
       });
     });
 
     it('should find specific model by ID', () => {
-      const model = client.getModel('gemini-pro');
+      const model = client.getModel('gemini-2.5-flash-lite');
       expect(model).toBeDefined();
-      expect(model?.name).toBe('Gemini Pro');
+      expect(model?.name).toBe('Gemini 2.5 Flash Lite');
       expect(model?.provider).toBe('gemini');
     });
 
@@ -539,7 +527,7 @@ describe('GeminiClient', () => {
 
     it('should include thinking capabilities in model configs', () => {
       const models = client.getModels();
-      
+
       models.forEach(model => {
         expect(model.capabilities.thinking).toBe(true);
         expect(model.parameters.thinkingMode).toEqual(['off', 'dynamic']);
@@ -547,7 +535,7 @@ describe('GeminiClient', () => {
     });
 
     it('should have multimodal support for vision models', () => {
-      const visionModel = client.getModel('gemini-pro-vision');
+      const visionModel = client.getModel('gemini-2.5-flash-lite');
       expect(visionModel?.capabilities.multimodal).toBe(true);
     });
   });
@@ -580,10 +568,10 @@ describe('GeminiClient', () => {
     it('should scale reasonably with text length', () => {
       const shortText = 'Hello world';
       const longText = shortText.repeat(10);
-      
+
       const shortTokens = client.estimateTokens(shortText);
       const longTokens = client.estimateTokens(longText);
-      
+
       expect(longTokens).toBeGreaterThan(shortTokens);
       expect(longTokens).toBeLessThanOrEqual(shortTokens * 10 * 1.5); // Allow for some overhead
     });
@@ -611,7 +599,7 @@ describe('GeminiClient', () => {
         message: 'Invalid API key',
         code: 'UNAUTHENTICATED',
       };
-      
+
       const formatted = client.formatError(authError);
       expect(formatted.type).toBe('authentication');
       expect(formatted.message).toBe('Invalid API key');
@@ -624,7 +612,7 @@ describe('GeminiClient', () => {
         message: 'Quota exceeded',
         code: 'RESOURCE_EXHAUSTED',
       };
-      
+
       const formatted = client.formatError(rateLimitError);
       expect(formatted.type).toBe('rate_limit');
       expect(formatted.message).toBe('Quota exceeded');
@@ -660,7 +648,7 @@ describe('GeminiClient', () => {
           value: 'invalid',
         },
       };
-      
+
       const formatted = client.formatError(detailedError);
       expect(formatted.details).toMatchObject({
         statusCode: 400,
@@ -683,14 +671,14 @@ describe('GeminiClient', () => {
 
     it('should maintain rate limiting history through reset', async () => {
       await client.initialize(validConfig);
-      
+
       // Mock a request to create history
       global.fetch = vi.fn().mockResolvedValue({
         ok: true,
         json: async () => ({ models: [] }),
       });
       await client.testConnection();
-      
+
       const historyBeforeReset = client.getRequestHistory();
       expect(historyBeforeReset).toHaveLength(1);
 
@@ -720,9 +708,7 @@ describe('GeminiClient', () => {
 
     it('should have proper model selection for thinking capabilities', () => {
       const models = client.getModels();
-      const allModelsSupportThinking = models.every(model => 
-        model.capabilities.thinking === true
-      );
+      const allModelsSupportThinking = models.every(model => model.capabilities.thinking === true);
       expect(allModelsSupportThinking).toBe(true);
     });
   });
@@ -731,7 +717,7 @@ describe('GeminiClient', () => {
     it('should handle null or undefined configuration gracefully', () => {
       expect(() => client.validateConfig(null as any)).not.toThrow();
       expect(() => client.validateConfig(undefined as any)).not.toThrow();
-      
+
       const result = client.validateConfig(null as any);
       expect(result.isValid).toBe(false);
       expect(result.errors.length).toBeGreaterThan(0);

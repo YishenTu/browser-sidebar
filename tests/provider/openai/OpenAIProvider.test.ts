@@ -55,8 +55,8 @@ describe('OpenAIProvider', () => {
       apiKey: 'sk-test-key-123',
       temperature: 0.7,
       reasoningEffort: 'medium',
-      model: 'o1-preview',
-      maxTokens: 4000,
+      model: 'gpt-5-nano',
+      maxTokens: 4000, // Keep test value reasonable, model supports up to 128k
       topP: 1.0,
       frequencyPenalty: 0.0,
       presencePenalty: 0.0,
@@ -125,19 +125,10 @@ describe('OpenAIProvider', () => {
         temperature: true,
         reasoning: true,
         thinking: false,
-        multimodal: true,
-        functionCalling: true,
-        maxContextLength: 128000,
-        supportedModels: [
-          'gpt-5-nano',
-          'o1-preview',
-          'o1-mini',
-          'gpt-4o',
-          'gpt-4o-mini',
-          'gpt-4-turbo',
-          'gpt-4',
-          'gpt-3.5-turbo',
-        ],
+        multimodal: true, // Updated: GPT-5 nano supports multimodal
+        functionCalling: false,
+        maxContextLength: 400000, // Updated: 400k context window
+        supportedModels: ['gpt-5-nano'],
       });
     });
 
@@ -175,7 +166,9 @@ describe('OpenAIProvider', () => {
     it('should handle client initialization errors', async () => {
       mockOpenAIClient.initialize.mockRejectedValue(new Error('Client initialization failed'));
 
-      await expect(provider.initialize(validConfig)).rejects.toThrow('Client initialization failed');
+      await expect(provider.initialize(validConfig)).rejects.toThrow(
+        'Client initialization failed'
+      );
       expect(provider.isConfigured()).toBe(false);
     });
   });
@@ -304,7 +297,7 @@ describe('OpenAIProvider', () => {
         id: 'resp-123',
         object: 'response',
         created: Date.now(),
-        model: 'o1-preview',
+        model: 'gpt-5-nano',
         output_text: 'Hello! I am doing well, thank you for asking.',
         finish_reason: 'stop',
         usage: {
@@ -321,7 +314,7 @@ describe('OpenAIProvider', () => {
       expect(response).toEqual({
         id: 'resp-123',
         content: 'Hello! I am doing well, thank you for asking.',
-        model: 'o1-preview',
+        model: 'gpt-5-nano',
         usage: {
           promptTokens: 10,
           completionTokens: 15,
@@ -331,14 +324,14 @@ describe('OpenAIProvider', () => {
         metadata: {
           provider: 'openai',
           timestamp: expect.any(Date),
-          model: 'o1-preview',
+          model: 'gpt-5-nano',
           requestId: 'resp-123',
         },
       });
 
       expect(mockOpenAIClient.getOpenAIInstance().responses.create).toHaveBeenCalledWith(
         expect.objectContaining({
-          model: 'o1-preview',
+          model: 'gpt-5-nano',
           input: expect.stringContaining('User: Hello, how are you?'),
           temperature: 0.7,
           reasoning: { effort: 'medium' },
@@ -369,9 +362,7 @@ describe('OpenAIProvider', () => {
 
         await provider.chat(validMessages);
 
-        expect(
-          mockOpenAIClient.getOpenAIInstance().responses.create
-        ).toHaveBeenCalledWith(
+        expect(mockOpenAIClient.getOpenAIInstance().responses.create).toHaveBeenCalledWith(
           expect.objectContaining({
             temperature,
           })
@@ -398,9 +389,7 @@ describe('OpenAIProvider', () => {
 
         await provider.chat(validMessages);
 
-        expect(
-          mockOpenAIClient.getOpenAIInstance().responses.create
-        ).toHaveBeenCalledWith(
+        expect(mockOpenAIClient.getOpenAIInstance().responses.create).toHaveBeenCalledWith(
           expect.objectContaining({ reasoning: { effort: reasoningEffort } })
         );
       }
@@ -482,9 +471,7 @@ describe('OpenAIProvider', () => {
 
       await provider.chat(multipleMessages);
 
-      expect(
-        mockOpenAIClient.getOpenAIInstance().responses.create
-      ).toHaveBeenCalledWith(
+      expect(mockOpenAIClient.getOpenAIInstance().responses.create).toHaveBeenCalledWith(
         expect.objectContaining({
           input: expect.stringContaining('System: You are a helpful assistant.'),
         })
@@ -503,14 +490,14 @@ describe('OpenAIProvider', () => {
           id: 'resp-123',
           object: 'response.chunk',
           created: Date.now(),
-          model: 'o1-preview',
+          model: 'gpt-5-nano',
           delta: { output_text: 'Hello' },
         },
         {
           id: 'resp-123',
           object: 'response.chunk',
           created: Date.now(),
-          model: 'o1-preview',
+          model: 'gpt-5-nano',
           delta: { output_text: ' world!' },
           finish_reason: 'stop',
         },
@@ -523,9 +510,9 @@ describe('OpenAIProvider', () => {
         }
       }
 
-      mockOpenAIClient.getOpenAIInstance().responses.create.mockResolvedValue(
-        mockStreamGenerator()
-      );
+      mockOpenAIClient
+        .getOpenAIInstance()
+        .responses.create.mockResolvedValue(mockStreamGenerator());
 
       const chunks: StreamChunk[] = [];
       for await (const chunk of provider.streamChat(validMessages)) {
@@ -541,14 +528,14 @@ describe('OpenAIProvider', () => {
           id: 'resp-123',
           object: 'response.chunk',
           created: Date.now(),
-          model: 'o1-preview',
+          model: 'gpt-5-nano',
           delta: { output_text: 'Hello' },
         };
       }
 
-      mockOpenAIClient.getOpenAIInstance().responses.create.mockResolvedValue(
-        mockStreamGenerator()
-      );
+      mockOpenAIClient
+        .getOpenAIInstance()
+        .responses.create.mockResolvedValue(mockStreamGenerator());
 
       const chunks: StreamChunk[] = [];
       for await (const chunk of provider.streamChat(validMessages)) {
@@ -560,12 +547,13 @@ describe('OpenAIProvider', () => {
 
     it('should handle streaming errors gracefully', async () => {
       async function* mockErrorStreamGenerator() {
+        yield null; // Add yield to satisfy generator requirement
         throw new Error('Streaming error');
       }
 
-      mockOpenAIClient.getOpenAIInstance().responses.create.mockResolvedValue(
-        mockErrorStreamGenerator()
-      );
+      mockOpenAIClient
+        .getOpenAIInstance()
+        .responses.create.mockResolvedValue(mockErrorStreamGenerator());
 
       const stream = provider.streamChat(validMessages);
       await expect(stream.next()).rejects.toThrow('Streaming error');
@@ -578,15 +566,15 @@ describe('OpenAIProvider', () => {
           id: 'resp-123',
           object: 'response.chunk',
           created: Date.now(),
-          model: 'o1-preview',
+          model: 'gpt-5-nano',
           delta: { output_text: 'Complete chunk' },
           finish_reason: 'stop',
         } as any;
       }
 
-      mockOpenAIClient.getOpenAIInstance().responses.create.mockResolvedValue(
-        mockPartialStreamGenerator()
-      );
+      mockOpenAIClient
+        .getOpenAIInstance()
+        .responses.create.mockResolvedValue(mockPartialStreamGenerator());
 
       const chunks: StreamChunk[] = [];
       for await (const chunk of provider.streamChat(validMessages)) {
@@ -638,7 +626,7 @@ describe('OpenAIProvider', () => {
             id: 'resp-123',
             object: 'response.chunk',
             created: Date.now(),
-            model: 'o1-preview',
+            model: 'gpt-5-nano',
             delta: { output_text: `chunk ${counter}` },
           } as any;
           counter++;
@@ -646,9 +634,9 @@ describe('OpenAIProvider', () => {
         }
       }
 
-      mockOpenAIClient.getOpenAIInstance().responses.create.mockResolvedValue(
-        mockCancellableStreamGenerator()
-      );
+      mockOpenAIClient
+        .getOpenAIInstance()
+        .responses.create.mockResolvedValue(mockCancellableStreamGenerator());
 
       const stream = provider.streamChat(validMessages, { signal: abortController.signal });
 
@@ -680,50 +668,42 @@ describe('OpenAIProvider', () => {
     it('should provide list of supported OpenAI models', () => {
       const models = provider.getModels();
 
-      expect(models).toHaveLength(8);
-      expect(models.map(m => m.id)).toEqual([
-        'gpt-5-nano',
-        'o1-preview',
-        'o1-mini',
-        'gpt-4o',
-        'gpt-4o-mini',
-        'gpt-4-turbo',
-        'gpt-4',
-        'gpt-3.5-turbo',
-      ]);
+      expect(models).toHaveLength(1);
+      expect(models.map(m => m.id)).toEqual(['gpt-5-nano']);
 
       // Check first model structure (gpt-5-nano)
       expect(models[0]).toEqual({
         id: 'gpt-5-nano',
         name: 'GPT-5 Nano',
         provider: 'openai',
-        maxTokens: 4096,
-        contextLength: 128000,
+        maxTokens: 128000, // Updated: 128k max output
+        contextLength: 400000, // Updated: 400k context window
         costPer1kTokens: {
           input: 0.05,
-          output: 0.2,
+          output: 0.4, // Updated: $0.40 per 1M output tokens
         },
         capabilities: {
           streaming: true,
           temperature: true,
-          reasoning: false,
+          reasoning: true, // Supports reasoning
           thinking: false,
-          multimodal: false,
+          multimodal: true, // Updated: Supports text and image input
           functionCalling: false,
         },
         parameters: {
           temperature: { min: 0.0, max: 2.0, default: 1.0 },
+          reasoningEffort: ['low', 'medium', 'high'],
         },
       });
     });
 
     it('should find specific model by ID', () => {
-      const model = provider.getModel('gpt-4o');
+      const model = provider.getModel('gpt-5-nano');
 
       expect(model).toBeDefined();
-      expect(model?.id).toBe('gpt-4o');
-      expect(model?.name).toBe('GPT-4o');
-      expect(model?.capabilities.multimodal).toBe(true);
+      expect(model?.id).toBe('gpt-5-nano');
+      expect(model?.name).toBe('GPT-5 Nano');
+      expect(model?.capabilities.reasoning).toBe(true);
     });
 
     it('should return undefined for non-existent model', () => {
@@ -732,21 +712,21 @@ describe('OpenAIProvider', () => {
     });
 
     it('should provide correct model capabilities', () => {
-      const o1Model = provider.getModel('o1-preview');
-      const gpt4oModel = provider.getModel('gpt-4o');
+      const gpt5NanoModel = provider.getModel('gpt-5-nano');
 
-      expect(o1Model?.capabilities.reasoning).toBe(true);
-      expect(o1Model?.capabilities.functionCalling).toBe(false);
-
-      expect(gpt4oModel?.capabilities.multimodal).toBe(true);
-      expect(gpt4oModel?.capabilities.functionCalling).toBe(true);
+      expect(gpt5NanoModel?.capabilities.reasoning).toBe(true);
+      expect(gpt5NanoModel?.capabilities.functionCalling).toBe(false);
+      expect(gpt5NanoModel?.capabilities.multimodal).toBe(true); // Updated: multimodal is true
+      expect(gpt5NanoModel?.capabilities.streaming).toBe(true);
+      expect(gpt5NanoModel?.capabilities.temperature).toBe(true);
     });
   });
 
   describe('Token Estimation', () => {
     it('should estimate tokens for text input', () => {
       const shortText = 'Hello world';
-      const longText = 'This is a much longer text that should result in more tokens being estimated for the OpenAI API call.';
+      const longText =
+        'This is a much longer text that should result in more tokens being estimated for the OpenAI API call.';
 
       const shortTokens = provider.estimateTokens(shortText);
       const longTokens = provider.estimateTokens(longText);
@@ -908,7 +888,7 @@ describe('OpenAIProvider', () => {
       // Test inherited methods work correctly
       expect(provider.type).toBe('openai');
       expect(provider.isConfigured()).toBe(true);
-      
+
       const config = provider.getConfig();
       expect(config).toEqual(validConfig);
 
