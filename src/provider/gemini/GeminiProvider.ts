@@ -7,7 +7,7 @@
  *
  * Features:
  * - Temperature parameter support (0.0-2.0)
- * - Thinking modes ('off', 'dynamic') 
+ * - Thinking modes ('off', 'dynamic')
  * - Thought visibility control
  * - Streaming with TokenBuffer integration
  * - Multimodal support (text and images)
@@ -117,14 +117,20 @@ export class GeminiProvider extends GeminiClient {
   /**
    * Send chat messages and get response
    */
-  override async chat(messages: ProviderChatMessage[], config?: ChatConfig): Promise<ProviderResponse> {
+  override async chat(
+    messages: ProviderChatMessage[],
+    config?: ChatConfig
+  ): Promise<ProviderResponse> {
     return this.performChat(messages, this.sendMessage.bind(this), config);
   }
 
   /**
    * Stream chat messages
    */
-  override async *streamChat(messages: ProviderChatMessage[], config?: ChatConfig): AsyncIterable<StreamChunk> {
+  override async *streamChat(
+    messages: ProviderChatMessage[],
+    config?: ChatConfig
+  ): AsyncIterable<StreamChunk> {
     yield* this.performStreamChat(messages, this.streamMessage.bind(this), config);
   }
 
@@ -136,7 +142,7 @@ export class GeminiProvider extends GeminiClient {
    * Send a single chat request to Gemini API
    */
   private async sendMessage(
-    messages: ProviderChatMessage[], 
+    messages: ProviderChatMessage[],
     config?: ChatConfig
   ): Promise<ProviderResponse> {
     this.ensureConfigured();
@@ -162,12 +168,12 @@ export class GeminiProvider extends GeminiClient {
       if (error instanceof Error && error.name === 'AbortError') {
         throw error;
       }
-      
+
       // If this is already a formatted provider error, re-throw it
       if (error && typeof error === 'object' && 'type' in error && 'provider' in error) {
         throw error;
       }
-      
+
       const formattedError = this.formatError(error);
       const providerError = new Error(formattedError.message) as Error & typeof formattedError;
       Object.assign(providerError, formattedError);
@@ -179,7 +185,7 @@ export class GeminiProvider extends GeminiClient {
    * Stream chat messages from Gemini API
    */
   private async *streamMessage(
-    messages: ProviderChatMessage[], 
+    messages: ProviderChatMessage[],
     config?: ChatConfig
   ): AsyncIterable<StreamChunk> {
     this.ensureConfigured();
@@ -243,9 +249,9 @@ export class GeminiProvider extends GeminiClient {
           if (config?.signal?.aborted) {
             throw new Error('Request aborted');
           }
-          
+
           const { done, value } = await reader.read();
-          
+
           if (done) break;
 
           const chunk = decoder.decode(value, { stream: true });
@@ -253,17 +259,17 @@ export class GeminiProvider extends GeminiClient {
 
           for (const parsedChunk of parsedChunks) {
             const processedChunk = this.processStreamChunk(parsedChunk, config);
-            
+
             // Track finish reason
             if (processedChunk.choices[0]?.finishReason) {
               lastFinishReason = processedChunk.choices[0].finishReason;
             }
-            
+
             // Check if this chunk has content to buffer
             const hasContent = processedChunk.choices[0]?.delta?.content;
             const hasThinking = processedChunk.choices[0]?.delta?.thinking;
             const isCompletion = processedChunk.choices[0]?.finishReason;
-            
+
             // For now, prioritize functionality over TokenBuffer optimization
             if (hasContent || hasThinking || isCompletion) {
               yield processedChunk;
@@ -308,12 +314,12 @@ export class GeminiProvider extends GeminiClient {
       if (error instanceof Error && error.name === 'AbortError') {
         throw error;
       }
-      
+
       // If this is already a formatted provider error, re-throw it
       if (error && typeof error === 'object' && 'type' in error && 'provider' in error) {
         throw error;
       }
-      
+
       const formattedError = this.formatError(error);
       const providerError = new Error(formattedError.message) as Error & typeof formattedError;
       Object.assign(providerError, formattedError);
@@ -328,14 +334,19 @@ export class GeminiProvider extends GeminiClient {
   /**
    * Build Gemini API request
    */
-  private buildRequest(
-    messages: ProviderChatMessage[], 
-    config?: ChatConfig
-  ): GeminiRequest {
+  private buildRequest(messages: ProviderChatMessage[], config?: ChatConfig): GeminiRequest {
     const geminiConfig = this.getConfig()?.config as GeminiConfig;
-    
+
+    // Convert messages and filter out any empty ones
+    const contents = this.convertMessages(messages);
+
+    // Validate that we have at least one message with content
+    if (contents.length === 0 || contents.every(c => c.parts.length === 0)) {
+      throw new Error('Messages array cannot be empty');
+    }
+
     const request: GeminiRequest = {
-      contents: this.convertMessages(messages),
+      contents,
       generationConfig: this.buildGenerationConfig(geminiConfig, config),
     };
 
@@ -367,7 +378,7 @@ export class GeminiProvider extends GeminiClient {
             const matches = attachment.data.match(/^data:([^;]+);base64,(.+)$/);
             if (matches) {
               const [, mimeType, data] = matches;
-              
+
               // Validate supported image types
               if (!this.isSupportedImageType(mimeType)) {
                 throw new Error(`Unsupported image type: ${mimeType}`);
@@ -397,7 +408,7 @@ export class GeminiProvider extends GeminiClient {
    * Build generation config from provider config and chat config
    */
   private buildGenerationConfig(
-    geminiConfig: GeminiConfig, 
+    geminiConfig: GeminiConfig,
     chatConfig?: ChatConfig
   ): GeminiGenerationConfig {
     const config: GeminiGenerationConfig = {
@@ -409,10 +420,12 @@ export class GeminiProvider extends GeminiClient {
 
     // Validate temperature
     if (config.temperature !== undefined) {
-      if (typeof config.temperature !== 'number' || 
-          isNaN(config.temperature) ||
-          config.temperature < 0.0 || 
-          config.temperature > 2.0) {
+      if (
+        typeof config.temperature !== 'number' ||
+        isNaN(config.temperature) ||
+        config.temperature < 0.0 ||
+        config.temperature > 2.0
+      ) {
         throw new Error('Temperature must be between 0.0 and 2.0');
       }
     }
@@ -436,7 +449,13 @@ export class GeminiProvider extends GeminiClient {
    */
   private buildHeaders(): Record<string, string> {
     const geminiConfig = this.getConfig()?.config as GeminiConfig;
-    
+
+    if (!geminiConfig || !geminiConfig.apiKey) {
+      throw new Error(
+        'Gemini API key is not configured. Please add your Google API key in settings.'
+      );
+    }
+
     return {
       'x-goog-api-key': geminiConfig.apiKey,
       'Content-Type': 'application/json',
@@ -462,14 +481,12 @@ export class GeminiProvider extends GeminiClient {
   private parseResponse(data: GeminiResponse, config?: ChatConfig): ProviderResponse {
     const geminiConfig = this.getConfig()?.config as GeminiConfig;
     const candidate = data.candidates?.[0];
-    
+
     let content = '';
     let thinking: string | undefined;
 
     if (candidate?.content?.parts) {
-      const textParts = candidate.content.parts
-        .filter(part => part.text)
-        .map(part => part.text);
+      const textParts = candidate.content.parts.filter(part => part.text).map(part => part.text);
       content = textParts.join('');
 
       // Handle thinking tokens
@@ -527,7 +544,7 @@ export class GeminiProvider extends GeminiClient {
     const processedChunk = { ...chunk };
     processedChunk.choices = chunk.choices.map(choice => {
       const processedChoice = { ...choice };
-      
+
       // Filter out thinking content if showThoughts is false
       if (!showThoughts && choice.delta?.thinking) {
         processedChoice.delta = {
@@ -537,7 +554,7 @@ export class GeminiProvider extends GeminiClient {
       } else {
         processedChoice.delta = { ...choice.delta };
       }
-      
+
       return processedChoice;
     });
 
@@ -574,7 +591,7 @@ export class GeminiProvider extends GeminiClient {
    */
   private async handleErrorResponse(response: Response): Promise<never> {
     let errorData: any = {};
-    
+
     try {
       errorData = await response.json();
     } catch {
@@ -602,7 +619,7 @@ export class GeminiProvider extends GeminiClient {
     // Create error with provider error properties
     const error = new Error(formattedError.message) as Error & typeof formattedError;
     Object.assign(error, formattedError);
-    
+
     throw error;
   }
 
@@ -622,13 +639,7 @@ export class GeminiProvider extends GeminiClient {
    * Check if image type is supported
    */
   private isSupportedImageType(mimeType: string): boolean {
-    const supportedTypes = [
-      'image/jpeg',
-      'image/jpg', 
-      'image/png',
-      'image/gif',
-      'image/webp',
-    ];
+    const supportedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
     return supportedTypes.includes(mimeType.toLowerCase());
   }
 }

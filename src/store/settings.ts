@@ -371,8 +371,16 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
       currentSettings.ai = settings.ai;
       currentSettings.privacy = settings.privacy;
       currentSettings.apiKeys = settings.apiKeys;
-      currentSettings.selectedModel = settings.selectedModel;
-      currentSettings.availableModels = settings.availableModels;
+
+      // Always use the current supported models from config as source of truth
+      currentSettings.availableModels = [...DEFAULT_AVAILABLE_MODELS];
+
+      // Validate and fix selected model
+      if (DEFAULT_AVAILABLE_MODELS.some(m => m.id === settings.selectedModel)) {
+        currentSettings.selectedModel = settings.selectedModel;
+      } else {
+        currentSettings.selectedModel = DEFAULT_MODEL_ID;
+      }
 
       // Check if migration occurred (different from defaults)
       const needsMigration = migrated;
@@ -491,8 +499,14 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
     set({ isLoading: true, error: null });
     const currentSettings = get().settings;
 
+    // Always use the current supported models from config as source of truth
+    const availableModels = [...DEFAULT_AVAILABLE_MODELS];
+
+    // Update the settings with the correct available models
+    currentSettings.availableModels = availableModels;
+
     // Validate upfront; tests expect rejection for invalid model
-    if (!isValidSelectedModel(modelId, currentSettings.availableModels)) {
+    if (!isValidSelectedModel(modelId, availableModels)) {
       const error = new Error(`Invalid model: ${modelId}. Model not found in available models.`);
       set({ isLoading: false, error: error.message });
       return Promise.reject(error);

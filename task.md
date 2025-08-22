@@ -17,7 +17,7 @@ Connect the existing Chat UI to real AI providers (OpenAI `gpt-5-nano` and Googl
 - [x] Phase 1: Settings & Provider Initialization (5/5 tasks)
 - [x] Phase 2: UI Model Restrictions (4/4 tasks)
 - [x] Phase 3: Chat Hook Wiring & Streaming (5/5 tasks)
-- [ ] Phase 4: ChatPanel Integration (0/3 tasks)
+- [x] Phase 4: ChatPanel Integration (3/3 tasks)
 - [ ] Phase 5: Error Handling & UX (0/3 tasks)
 - [ ] Phase 6: Permissions & CSP (0/2 tasks)
 - [ ] Phase 7: Testing & Verification (0/4 tasks)
@@ -278,7 +278,7 @@ const content = chunk.choices?.[0]?.delta?.content || '';
 
 ## Phase 4: ChatPanel Integration
 
-### ⚡ [ ] Task 4.1: Wire useAIChat to ChatPanel
+### ⚡ [x] Task 4.1: Wire useAIChat to ChatPanel
 
 **Prerequisites**: Phase 3 complete
 **Description**: Ensure ChatPanel properly initializes and uses the AI chat hook
@@ -290,7 +290,7 @@ const content = chunk.choices?.[0]?.delta?.content || '';
 - Hook initializes after settings load
 - No duplicate initializations
 
-### ⚡ [ ] Task 4.2: Connect Model Selection to Settings
+### ⚡ [x] Task 4.2: Connect Model Selection to Settings
 
 **Prerequisites**: Task 4.1, Phase 2 complete
 **Description**: Wire model selector in header to update settings
@@ -303,7 +303,7 @@ const content = chunk.choices?.[0]?.delta?.content || '';
 - Provider switches correctly
 - UI reflects current selection
 
-### ⚡ [ ] Task 4.3: Verify End-to-End Chat Flow
+### ⚡ [x] Task 4.3: Verify End-to-End Chat Flow
 
 **Prerequisites**: Tasks 4.1, 4.2
 **Description**: Test complete chat interaction flow

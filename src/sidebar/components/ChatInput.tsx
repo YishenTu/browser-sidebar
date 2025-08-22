@@ -13,6 +13,8 @@ export interface ChatInputProps extends Omit<TextAreaProps, 'onKeyDown' | 'value
   onChange?: (message: string) => void;
   /** Whether the component is in loading state */
   loading?: boolean;
+  /** Callback fired when user cancels current operation */
+  onCancel?: () => void;
   /** Whether to clear input after successful send */
   clearOnSend?: boolean;
   /** Whether to show character counter */
@@ -21,6 +23,8 @@ export interface ChatInputProps extends Omit<TextAreaProps, 'onKeyDown' | 'value
   maxLength?: number;
   /** Send button label */
   sendButtonLabel?: string;
+  /** Cancel button label */
+  cancelButtonLabel?: string;
   /** Aria label for the textarea */
   ariaLabel?: string;
   /** Additional CSS classes for the container */
@@ -32,6 +36,18 @@ const SendIcon: React.FC = () => (
   <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
     <path
       d="M7 11L12 6L17 11M12 18V7"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+  </svg>
+);
+
+const CancelIcon: React.FC = () => (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+    <path
+      d="M6 18L18 6M6 6l12 12"
       stroke="currentColor"
       strokeWidth="2"
       strokeLinecap="round"
@@ -54,10 +70,12 @@ export const ChatInput = React.forwardRef<HTMLTextAreaElement, ChatInputProps>(
       defaultValue,
       onChange,
       loading = false,
+      onCancel,
       clearOnSend = true,
       showCounter = false,
       maxLength,
       sendButtonLabel = 'Send',
+      cancelButtonLabel = 'Cancel',
       ariaLabel = 'Chat message input',
       className,
       placeholder = 'Type your message here...',
@@ -128,6 +146,13 @@ export const ChatInput = React.forwardRef<HTMLTextAreaElement, ChatInputProps>(
         setIsSending(false);
       }
     }, [currentValue, onSend, clearOnSend, handleValueChange, isSending, loading]);
+
+    // Handle cancel
+    const handleCancel = useCallback(() => {
+      if (onCancel) {
+        onCancel();
+      }
+    }, [onCancel]);
 
     // Handle keyboard shortcuts
     const handleKeyDown = useCallback(
@@ -262,32 +287,55 @@ export const ChatInput = React.forwardRef<HTMLTextAreaElement, ChatInputProps>(
                 </div>
               )}
 
-              <button
-                onClick={handleSend}
-                disabled={!canSend}
-                className="chat-input__send-button"
-                aria-label={sendButtonLabel}
-                style={{
-                  background: canSend ? '#10b981' : '#374151',
-                  opacity: canSend ? 1 : 0.5,
-                  cursor: canSend ? 'pointer' : 'not-allowed',
-                  border: 'none',
-                  borderRadius: '50%',
-                  width: '32px',
-                  height: '32px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  transition: 'all 0.2s',
-                  color: 'white',
-                }}
-              >
-                {isSending || loading ? (
-                  <span className="spinner" style={{ width: '16px', height: '16px' }} />
-                ) : (
-                  <SendIcon />
-                )}
-              </button>
+              {loading && onCancel ? (
+                <button
+                  onClick={handleCancel}
+                  className="chat-input__cancel-button"
+                  aria-label={cancelButtonLabel}
+                  style={{
+                    background: '#dc2626',
+                    cursor: 'pointer',
+                    border: 'none',
+                    borderRadius: '50%',
+                    width: '32px',
+                    height: '32px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    transition: 'all 0.2s',
+                    color: 'white',
+                  }}
+                >
+                  <CancelIcon />
+                </button>
+              ) : (
+                <button
+                  onClick={handleSend}
+                  disabled={!canSend}
+                  className="chat-input__send-button"
+                  aria-label={sendButtonLabel}
+                  style={{
+                    background: canSend ? '#10b981' : '#374151',
+                    opacity: canSend ? 1 : 0.5,
+                    cursor: canSend ? 'pointer' : 'not-allowed',
+                    border: 'none',
+                    borderRadius: '50%',
+                    width: '32px',
+                    height: '32px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    transition: 'all 0.2s',
+                    color: 'white',
+                  }}
+                >
+                  {isSending || loading ? (
+                    <span className="spinner" style={{ width: '16px', height: '16px' }} />
+                  ) : (
+                    <SendIcon />
+                  )}
+                </button>
+              )}
             </div>
           </div>
         </div>

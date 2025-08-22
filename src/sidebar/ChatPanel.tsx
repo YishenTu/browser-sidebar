@@ -77,6 +77,12 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ className, onClose }) => {
   const selectedModel = useSettingsStore(state => state.settings.selectedModel);
   const updateSelectedModel = useSettingsStore(state => state.updateSelectedModel);
   const getProviderTypeForModel = useSettingsStore(state => state.getProviderTypeForModel);
+  const loadSettings = useSettingsStore(state => state.loadSettings);
+
+  // Load settings on mount
+  useEffect(() => {
+    loadSettings();
+  }, [loadSettings]);
 
   // Apply theme when it changes
   useEffect(() => {
@@ -85,10 +91,16 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ className, onClose }) => {
 
   // Chat store and AI chat integration
   const { messages, isLoading, clearConversation, hasMessages } = useChatStore();
-  const { sendMessage, switchProvider } = useAIChat({
+  const { sendMessage, switchProvider, cancelMessage } = useAIChat({
     enabled: true,
-    autoInitialize: false, // Manual initialization for better control
+    autoInitialize: true, // Auto-initialize providers from settings
   });
+
+  // API key state for temporary settings
+  const [showSettings, setShowSettings] = useState(false);
+  const [apiKeys, setApiKeys] = useState({ openai: '', google: '' });
+  const updateAPIKeyReferences = useSettingsStore(state => state.updateAPIKeyReferences);
+  const resetToDefaults = useSettingsStore(state => state.resetToDefaults);
 
   // Handle sending messages
   const handleSendMessage = useCallback(
@@ -297,6 +309,34 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ className, onClose }) => {
             <h2></h2>
           </div>
           <div className="ai-sidebar-header-actions">
+            <button
+              onClick={() => setShowSettings(!showSettings)}
+              className="ai-sidebar-settings"
+              aria-label="Settings"
+              title="API Settings"
+              style={{
+                marginRight: '8px',
+                background: 'none',
+                border: 'none',
+                color: 'inherit',
+                cursor: 'pointer',
+                padding: '4px',
+              }}
+            >
+              <svg
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <circle cx="12" cy="12" r="3" />
+                <path d="M12 1v6M12 17v6M4.22 4.22l4.24 4.24M15.54 15.54l4.24 4.24M1 12h6M17 12h6M4.22 19.78l4.24-4.24M15.54 8.46l4.24-4.24" />
+              </svg>
+            </button>
             {hasMessages() && (
               <button
                 onClick={handleClearConversation}
@@ -334,19 +374,144 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ className, onClose }) => {
         </div>
 
         <ThemeProvider>
-          <div className="ai-sidebar-body" data-testid="sidebar-body">
-            <MessageList
-              messages={messages}
-              isLoading={isLoading}
-              emptyMessage=""
-              autoScroll={true}
-              height="100%"
-            />
-          </div>
+          {showSettings ? (
+            <div
+              className="ai-sidebar-settings-panel"
+              style={{
+                padding: '20px',
+                overflowY: 'auto',
+                height: 'calc(100% - 60px - 70px)',
+              }}
+            >
+              <h3 style={{ marginBottom: '20px', fontSize: '16px', fontWeight: 'bold' }}>
+                API Settings
+              </h3>
+
+              <div style={{ marginBottom: '20px' }}>
+                <label style={{ display: 'block', marginBottom: '5px', fontSize: '14px' }}>
+                  OpenAI API Key (for GPT-5 Nano)
+                </label>
+                <input
+                  type="password"
+                  placeholder="sk-..."
+                  style={{
+                    width: '100%',
+                    padding: '8px',
+                    border: '1px solid #ccc',
+                    borderRadius: '4px',
+                    fontSize: '14px',
+                  }}
+                  onChange={e => setApiKeys(prev => ({ ...prev, openai: e.target.value }))}
+                />
+              </div>
+
+              <div style={{ marginBottom: '20px' }}>
+                <label style={{ display: 'block', marginBottom: '5px', fontSize: '14px' }}>
+                  Google API Key (for Gemini 2.5 Flash Lite)
+                </label>
+                <input
+                  type="password"
+                  placeholder="AIza..."
+                  style={{
+                    width: '100%',
+                    padding: '8px',
+                    border: '1px solid #ccc',
+                    borderRadius: '4px',
+                    fontSize: '14px',
+                  }}
+                  onChange={e => setApiKeys(prev => ({ ...prev, google: e.target.value }))}
+                />
+              </div>
+
+              <div style={{ display: 'flex', gap: '10px' }}>
+                <button
+                  onClick={async () => {
+                    try {
+                      await updateAPIKeyReferences({ ...apiKeys, openrouter: null });
+                      alert('API keys saved! Select a model from the dropdown to start chatting.');
+                      setShowSettings(false);
+                    } catch (error) {
+                      alert('Failed to save API keys: ' + error);
+                    }
+                  }}
+                  style={{
+                    padding: '10px 20px',
+                    backgroundColor: '#4CAF50',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '4px',
+                    cursor: 'pointer',
+                    fontSize: '14px',
+                  }}
+                >
+                  Save API Keys
+                </button>
+
+                <button
+                  onClick={async () => {
+                    try {
+                      await resetToDefaults();
+                      alert('Settings reset! Please re-enter your API keys.');
+                      window.location.reload();
+                    } catch (error) {
+                      alert('Failed to reset settings: ' + error);
+                    }
+                  }}
+                  style={{
+                    padding: '10px 20px',
+                    backgroundColor: '#f44336',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '4px',
+                    cursor: 'pointer',
+                    fontSize: '14px',
+                  }}
+                >
+                  Reset Settings
+                </button>
+              </div>
+
+              <div style={{ marginTop: '20px', fontSize: '12px', color: '#666' }}>
+                <p>
+                  • Get OpenAI API key from:{' '}
+                  <a
+                    href="https://platform.openai.com/api-keys"
+                    target="_blank"
+                    style={{ color: '#0066cc' }}
+                    rel="noreferrer"
+                  >
+                    platform.openai.com
+                  </a>
+                </p>
+                <p>
+                  • Get Google API key from:{' '}
+                  <a
+                    href="https://makersuite.google.com/app/apikey"
+                    target="_blank"
+                    style={{ color: '#0066cc' }}
+                    rel="noreferrer"
+                  >
+                    makersuite.google.com
+                  </a>
+                </p>
+              </div>
+            </div>
+          ) : (
+            <div className="ai-sidebar-body" data-testid="sidebar-body">
+              <MessageList
+                messages={messages}
+                isLoading={isLoading}
+                emptyMessage=""
+                autoScroll={true}
+                height="100%"
+              />
+            </div>
+          )}
 
           <div className="ai-sidebar-footer" data-testid="sidebar-footer">
             <ChatInput
               onSend={handleSendMessage}
+              onCancel={cancelMessage}
               loading={isLoading}
               placeholder="Ask about this webpage..."
             />

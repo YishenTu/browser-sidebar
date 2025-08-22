@@ -326,7 +326,7 @@ export function useAIChat(options: UseAIChatOptions = {}): UseAIChatReturn {
    * Handle streaming response from provider
    */
   const handleStreamingResponse = useCallback(
-    async (provider: AIProvider, assistantMessage: any): Promise<void> => {
+    async (provider: AIProvider, assistantMessage: any, userMessage?: any): Promise<void> => {
       if (!provider.streamChat) {
         throw new Error('Provider does not support streaming');
       }
@@ -335,13 +335,46 @@ export function useAIChat(options: UseAIChatOptions = {}): UseAIChatReturn {
         // Set active message for streaming
         chatStore.setActiveMessage(assistantMessage.id);
 
-        // Create messages array for provider (user message already in store)
-        const messages = chatStore.messages.map(msg => ({
-          id: msg.id,
-          role: msg.role,
-          content: msg.content,
-          timestamp: new Date(msg.timestamp),
-        }));
+        // Build messages array for the provider
+        // If we have userMessage passed in (first message case), use it directly
+        // Otherwise get all messages from store and filter
+        let messages: any[];
+
+        if (userMessage && chatStore.messages.length <= 2) {
+          // This is likely the first exchange - use the userMessage directly
+          messages = [
+            {
+              id: userMessage.id,
+              role: userMessage.role,
+              content: userMessage.content,
+              timestamp:
+                userMessage.timestamp instanceof Date
+                  ? userMessage.timestamp
+                  : new Date(userMessage.timestamp),
+            },
+          ];
+        } else {
+          // Get all messages from store and filter out empty ones
+          messages = chatStore.messages
+            .filter(msg => {
+              // Exclude the empty assistant message we just created for streaming
+              if (msg.id === assistantMessage.id) return false;
+              // Also exclude any other empty messages
+              if (!msg.content || msg.content.trim() === '') return false;
+              return true;
+            })
+            .map(msg => ({
+              id: msg.id,
+              role: msg.role,
+              content: msg.content,
+              timestamp: new Date(msg.timestamp),
+            }));
+        }
+
+        // Ensure we have at least one message
+        if (messages.length === 0) {
+          throw new Error('No valid messages to send to AI provider');
+        }
 
         // Start streaming (pass AbortSignal for cancellation)
         const stream = provider.streamChat(messages, {
@@ -367,9 +400,20 @@ export function useAIChat(options: UseAIChatOptions = {}): UseAIChatReturn {
           status: 'received',
         });
       } catch (error) {
-        // Handle streaming error
+        // Handle streaming error with more detail
+        console.error('Streaming error:', error);
+        let errorMessage = 'An unexpected error occurred';
+
+        if (error instanceof Error) {
+          errorMessage = error.message;
+        }
+
+        // Try to get more specific error from provider
         const providerError = provider.formatError?.(error as Error);
-        const errorMessage = providerError ? providerError.message : (error as Error).message;
+        if (providerError) {
+          errorMessage = providerError.message;
+        }
+
         chatStore.updateMessage(assistantMessage.id, {
           status: 'error',
           error: errorMessage,
@@ -387,13 +431,15 @@ export function useAIChat(options: UseAIChatOptions = {}): UseAIChatReturn {
    */
   const handleNonStreamingResponse = useCallback(
     async (provider: AIProvider): Promise<void> => {
-      // Create messages array for provider (user message already in store)
-      const messages = chatStore.messages.map(msg => ({
-        id: msg.id,
-        role: msg.role,
-        content: msg.content,
-        timestamp: new Date(msg.timestamp),
-      }));
+      // Create messages array for provider (only non-empty messages)
+      const messages = chatStore.messages
+        .filter(msg => msg.content.trim() !== '') // Filter out empty messages
+        .map(msg => ({
+          id: msg.id,
+          role: msg.role,
+          content: msg.content,
+          timestamp: new Date(msg.timestamp),
+        }));
 
       // Get response from provider
       const response = await provider.chat(messages, {
@@ -468,7 +514,7 @@ export function useAIChat(options: UseAIChatOptions = {}): UseAIChatReturn {
                 status: 'streaming',
               });
 
-              await handleStreamingResponse(provider, assistantMessage);
+              await handleStreamingResponse(provider, assistantMessage, userMessage);
             } else {
               // Non-streaming response
               await handleNonStreamingResponse(provider);
