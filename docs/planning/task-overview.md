@@ -33,10 +33,10 @@ Note: Some example paths below use generic `src/components/...` style. The actua
 - [x] Stage 1: Extension Infrastructure (15/15 tasks) ✅ COMPLETED
 - [x] Stage 2: Chat Panel UI (24/24 tasks) ✅ COMPLETED
 - [x] Stage 3: Storage & Security (18/18 tasks) ✅ COMPLETED
-- [ ] Stage 4: AI Provider System (4/23 tasks)
+- [ ] Stage 4: AI Provider System (10/23 tasks)
 - [ ] Stage 5: Tab Content Extraction (0/21 tasks)
 
-**Total Progress: 61/101 tasks**
+**Total Progress: 67/101 tasks**
 
 ---
 
@@ -847,7 +847,7 @@ Building the React-based chat interface within the custom sidebar container. The
 
 🔄 **Parallelizable Tasks:**
 
-- [ ] **Task 4.2.1a** - OpenAI Client Setup 🧪
+- [x] **Task 4.2.1a** - OpenAI Client Setup 🧪
   - Prerequisites: Task 4.1.1b
   - Tests First:
     - Test client initialization
@@ -858,7 +858,7 @@ Building the React-based chat interface within the custom sidebar container. The
     - Authentication setup
   - Acceptance: Client initializes
 
-- [ ] **Task 4.2.1b** - OpenAI Chat Implementation 🧪
+- [x] **Task 4.2.1b** - OpenAI Response API Implementation 🧪
   - Prerequisites: Task 4.2.1a, Task 4.1.2b
   - Tests First:
     - Test chat completion
@@ -870,7 +870,7 @@ Building the React-based chat interface within the custom sidebar container. The
     - `tests/provider/openai/OpenAIProvider.test.ts`
   - Acceptance: OpenAI chat works
 
-- [ ] **Task 4.2.1c** - OpenAI Models Configuration 🧪
+- [x] **Task 4.2.1c** - OpenAI Models Configuration 🧪
   - Prerequisites: Task 4.2.1b
   - Tests First:
     - Test model listing
@@ -881,7 +881,7 @@ Building the React-based chat interface within the custom sidebar container. The
     - Model capabilities
   - Acceptance: Models configured
 
-- [ ] **Task 4.2.2a** - Gemini Client Setup 🧪
+- [x] **Task 4.2.2a** - Gemini Client Setup 🧪
   - Prerequisites: Task 4.1.1b
   - Tests First:
     - Test client initialization
@@ -891,7 +891,7 @@ Building the React-based chat interface within the custom sidebar container. The
     - Gemini client configuration
   - Acceptance: Client initializes
 
-- [ ] **Task 4.2.2b** - Gemini Chat Implementation 🧪
+- [x] **Task 4.2.2b** - Gemini Chat Implementation 🧪
   - Prerequisites: Task 4.2.2a, Task 4.1.2b
   - Tests First:
     - Test chat generation
@@ -903,7 +903,7 @@ Building the React-based chat interface within the custom sidebar container. The
     - `tests/provider/gemini/GeminiProvider.test.ts`
   - Acceptance: Gemini chat works
 
-- [ ] **Task 4.2.2c** - Gemini Models Configuration 🧪
+- [x] **Task 4.2.2c** - Gemini Models Configuration 🧪
   - Prerequisites: Task 4.2.2b
   - Tests First:
     - Test model configuration

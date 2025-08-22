@@ -190,7 +190,11 @@ export class StreamParser {
       return this.parseGeminiFormat(parsed);
     } else if (parsed.type === 'content_block_delta' || parsed.type === 'message_stop') {
       return this.parseClaudeFormat(parsed);
-    } else if (parsed.choices || parsed.object === 'chat.completion.chunk') {
+    } else if (
+      parsed.choices ||
+      parsed.object === 'chat.completion.chunk' ||
+      parsed.object === 'response.chunk'
+    ) {
       return this.parseOpenAIFormat(parsed);
     }
 
@@ -214,6 +218,7 @@ export class StreamParser {
       parsed.type === 'content_block_delta' ||
       parsed.type === 'message_stop' ||
       parsed.object === 'chat.completion.chunk' ||
+      parsed.object === 'response.chunk' ||
       parsed.id ||
       parsed.model ||
       parsed.complete !== undefined ||
@@ -256,6 +261,7 @@ export class StreamParser {
     const content = candidate.content || {};
     const parts = content.parts || [];
     const textPart = parts.find((p: any) => p.text) || {};
+    const thinkingPart = parts.find((p: any) => p.thinking) || {};
 
     return {
       id: `gemini-${Date.now()}`,
@@ -268,7 +274,7 @@ export class StreamParser {
           delta: {
             role: content.role === 'model' ? 'assistant' : content.role,
             content: textPart.text,
-            thinking: textPart.thinking,
+            thinking: textPart.thinking || thinkingPart.thinking,
           },
           finishReason: this.normalizeFinishReason(candidate.finishReason),
         },
@@ -278,6 +284,7 @@ export class StreamParser {
             promptTokens: data.usageMetadata.promptTokenCount || 0,
             completionTokens: data.usageMetadata.candidatesTokenCount || 0,
             totalTokens: data.usageMetadata.totalTokenCount || 0,
+            thinkingTokens: data.usageMetadata.thinkingTokenCount,
           }
         : undefined,
     };

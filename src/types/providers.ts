@@ -93,6 +93,7 @@ export interface GeminiConfig {
     threshold: string;
   }>;
   stopSequences?: string[];
+  endpoint?: string; // Optional custom endpoint for testing
 }
 
 /**

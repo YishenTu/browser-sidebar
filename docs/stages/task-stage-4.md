@@ -31,10 +31,10 @@ Architecture: The extension uses ONLY a custom injected React sidebar (no popup,
 - [x] Stage 1: Extension Infrastructure (15/15 tasks) ✅ COMPLETED
 - [x] Stage 2: Chat Panel UI (24/24 tasks) ✅ COMPLETED
 - [x] Stage 3: Storage & Security (18/18 tasks) ✅ COMPLETED
-- [ ] Stage 4: AI Provider System (4/23 tasks)
+- [ ] Stage 4: AI Provider System (10/23 tasks)
 - [ ] Stage 5: Tab Content Extraction (0/21 tasks)
 
-**Total Progress: 61/101 tasks**
+**Total Progress: 67/101 tasks**
 
 ---
 
@@ -102,7 +102,7 @@ Deliverable highlight: Unified AI provider system supporting OpenAI, Gemini with
 
 🔄 **Parallelizable Tasks:**
 
-- [ ] **Task 4.2.1a** - OpenAI Client Setup 🧪
+- [x] **Task 4.2.1a** - OpenAI Client Setup 🧪
   - Prerequisites: Task 4.1.1b
   - Tests First:
     - Test client initialization
@@ -113,7 +113,7 @@ Deliverable highlight: Unified AI provider system supporting OpenAI, Gemini with
     - Authentication setup
   - Acceptance: Client initializes
 
-- [ ] **Task 4.2.1b** - OpenAI Response API Implementation 🧪
+- [x] **Task 4.2.1b** - OpenAI Response API Implementation 🧪
   - Prerequisites: Task 4.2.1a, Task 4.1.2b
   - Tests First:
     - Test response API (not chat completion)
@@ -127,7 +127,7 @@ Deliverable highlight: Unified AI provider system supporting OpenAI, Gemini with
     - `tests/provider/openai/OpenAIProvider.test.ts`
   - Acceptance: OpenAI Response API works with temperature and reasoning support
 
-- [ ] **Task 4.2.1c** - OpenAI Models Configuration 🧪
+- [x] **Task 4.2.1c** - OpenAI Models Configuration 🧪
   - Prerequisites: Task 4.2.1b
   - Tests First:
     - Test model listing (gpt-5-nano)
@@ -142,7 +142,7 @@ Deliverable highlight: Unified AI provider system supporting OpenAI, Gemini with
     - Temperature and reasoning effort support matrix
   - Acceptance: Models configured with correct parameter support
 
-- [ ] **Task 4.2.2a** - Gemini Client Setup 🧪
+- [x] **Task 4.2.2a** - Gemini Client Setup 🧪
   - Prerequisites: Task 4.1.1b
   - Tests First:
     - Test client initialization
@@ -152,7 +152,7 @@ Deliverable highlight: Unified AI provider system supporting OpenAI, Gemini with
     - Gemini client configuration
   - Acceptance: Client initializes
 
-- [ ] **Task 4.2.2b** - Gemini Chat Implementation 🧪
+- [x] **Task 4.2.2b** - Gemini Chat Implementation 🧪
   - Prerequisites: Task 4.2.2a, Task 4.1.2b
   - Tests First:
     - Test chat generation
@@ -167,7 +167,7 @@ Deliverable highlight: Unified AI provider system supporting OpenAI, Gemini with
     - `tests/provider/gemini/GeminiProvider.test.ts`
   - Acceptance: Gemini chat works with temperature and thinking modes
 
-- [ ] **Task 4.2.2c** - Gemini Models Configuration 🧪
+- [x] **Task 4.2.2c** - Gemini Models Configuration 🧪
   - Prerequisites: Task 4.2.2b
   - Tests First:
     - Test model configuration (gemini-2.5-flash-lite)
