@@ -154,7 +154,7 @@ export function useAIChat(options: UseAIChatOptions = {}): UseAIChatReturn {
               apiKey: apiKeys.openai,
               model: 'gpt-5-nano',
               temperature: 0.7,
-              reasoningEffort: 'medium',
+              reasoningEffort: 'low',
               maxTokens: 4096,
               topP: 1.0,
               frequencyPenalty: 0.0,
@@ -283,7 +283,7 @@ export function useAIChat(options: UseAIChatOptions = {}): UseAIChatReturn {
 
     syncProviders();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [enabled, settings.ai.defaultProvider, settings.apiKeys.openai, settings.apiKeys.google]);
+  }, [enabled, settings.ai?.defaultProvider, settings.apiKeys?.openai, settings.apiKeys?.google]);
 
   // Cleanup on unmount
   useEffect(() => {
@@ -326,7 +326,7 @@ export function useAIChat(options: UseAIChatOptions = {}): UseAIChatReturn {
    * Handle streaming response from provider
    */
   const handleStreamingResponse = useCallback(
-    async (provider: AIProvider, content: string, assistantMessage: any): Promise<void> => {
+    async (provider: AIProvider, assistantMessage: any): Promise<void> => {
       if (!provider.streamChat) {
         throw new Error('Provider does not support streaming');
       }
@@ -335,21 +335,13 @@ export function useAIChat(options: UseAIChatOptions = {}): UseAIChatReturn {
         // Set active message for streaming
         chatStore.setActiveMessage(assistantMessage.id);
 
-        // Create messages array for provider
-        const messages = [
-          ...chatStore.messages.map(msg => ({
-            id: msg.id,
-            role: msg.role,
-            content: msg.content,
-            timestamp: new Date(msg.timestamp),
-          })),
-          {
-            id: `temp-${Date.now()}`,
-            role: 'user' as const,
-            content,
-            timestamp: new Date(),
-          },
-        ];
+        // Create messages array for provider (user message already in store)
+        const messages = chatStore.messages.map(msg => ({
+          id: msg.id,
+          role: msg.role,
+          content: msg.content,
+          timestamp: new Date(msg.timestamp),
+        }));
 
         // Start streaming (pass AbortSignal for cancellation)
         const stream = provider.streamChat(messages, {
@@ -394,22 +386,14 @@ export function useAIChat(options: UseAIChatOptions = {}): UseAIChatReturn {
    * Handle non-streaming response from provider
    */
   const handleNonStreamingResponse = useCallback(
-    async (provider: AIProvider, content: string): Promise<void> => {
-      // Create messages array for provider
-      const messages = [
-        ...chatStore.messages.map(msg => ({
-          id: msg.id,
-          role: msg.role,
-          content: msg.content,
-          timestamp: new Date(msg.timestamp),
-        })),
-        {
-          id: `temp-${Date.now()}`,
-          role: 'user' as const,
-          content,
-          timestamp: new Date(),
-        },
-      ];
+    async (provider: AIProvider): Promise<void> => {
+      // Create messages array for provider (user message already in store)
+      const messages = chatStore.messages.map(msg => ({
+        id: msg.id,
+        role: msg.role,
+        content: msg.content,
+        timestamp: new Date(msg.timestamp),
+      }));
 
       // Get response from provider
       const response = await provider.chat(messages, {
@@ -484,10 +468,10 @@ export function useAIChat(options: UseAIChatOptions = {}): UseAIChatReturn {
                 status: 'streaming',
               });
 
-              await handleStreamingResponse(provider, trimmedContent, assistantMessage);
+              await handleStreamingResponse(provider, assistantMessage);
             } else {
               // Non-streaming response
-              await handleNonStreamingResponse(provider, trimmedContent);
+              await handleNonStreamingResponse(provider);
             }
 
             // Mark user message as sent on success

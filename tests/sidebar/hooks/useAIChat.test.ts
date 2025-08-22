@@ -69,17 +69,19 @@ describe('useAIChat Hook', () => {
     // Mock settings store
     mockSettingsStore = {
       settings: {
-        selectedModel: 'gpt-4o',
-        activeProvider: 'openai',
+        selectedModel: 'gpt-5-nano',
+        ai: {
+          defaultProvider: 'openai',
+        },
         apiKeys: {
           openai: 'sk-test-key',
-          gemini: 'ai-test-key',
+          google: 'ai-test-key',
         },
         availableModels: [
-          { id: 'gpt-4o', name: 'GPT-4 Optimized', provider: 'openai', available: true },
+          { id: 'gpt-5-nano', name: 'GPT-5 Nano', provider: 'openai', available: true },
         ],
       },
-      updateActiveProvider: vi.fn(),
+      updateAISettings: vi.fn(),
       setError: vi.fn(),
       clearError: vi.fn(),
     };
@@ -125,7 +127,7 @@ describe('useAIChat Hook', () => {
 
     // Mock request queue
     mockRequestQueue = {
-      enqueue: vi.fn().mockImplementation(async (requestFn) => {
+      enqueue: vi.fn().mockImplementation(async requestFn => {
         // Execute the request immediately in tests
         return await requestFn();
       }),
@@ -261,9 +263,9 @@ describe('useAIChat Hook', () => {
   describe('Response Streaming', () => {
     it('should handle streaming responses', async () => {
       const mockStreamGenerator = async function* () {
-        yield { content: 'Hello' };
-        yield { content: ' world' };
-        yield { content: '!' };
+        yield { choices: [{ delta: { content: 'Hello' } }] };
+        yield { choices: [{ delta: { content: ' world' } }] };
+        yield { choices: [{ delta: { content: '!' } }] };
       };
 
       mockProvider.streamChat.mockReturnValue(mockStreamGenerator());
@@ -287,13 +289,13 @@ describe('useAIChat Hook', () => {
 
     it('should append streaming content to message', async () => {
       const mockStreamGenerator = async function* () {
-        yield { content: 'Hello' };
-        yield { content: ' world' };
+        yield { choices: [{ delta: { content: 'Hello' } }] };
+        yield { choices: [{ delta: { content: ' world' } }] };
       };
 
       mockProvider.streamChat.mockReturnValue(mockStreamGenerator());
       mockChatStore.addMessage.mockReturnValue({ id: 'msg-1' });
-      
+
       // Request queue is already mocked to execute immediately
 
       const { result } = renderHook(() => useAIChat());
@@ -309,21 +311,23 @@ describe('useAIChat Hook', () => {
 
     it('should handle streaming errors', async () => {
       const mockStreamGenerator = async function* () {
-        yield { content: 'Hello' };
+        yield { choices: [{ delta: { content: 'Hello' } }] };
         throw new Error('Streaming error');
       };
 
       mockProvider.streamChat.mockReturnValue(mockStreamGenerator());
-      mockProvider.formatError.mockReturnValue('Streaming error');
-      mockChatStore.addMessage.mockReturnValue({ id: 'msg-1' });
-      
+      mockProvider.formatError.mockReturnValue({ message: 'Streaming error' });
+      mockChatStore.addMessage
+        .mockReturnValueOnce({ id: 'user-msg-1' })
+        .mockReturnValueOnce({ id: 'assistant-msg-1' });
+
       const { result } = renderHook(() => useAIChat());
 
       await act(async () => {
         await result.current.sendMessage('Hello', { streaming: true });
       });
 
-      expect(mockChatStore.updateMessage).toHaveBeenCalledWith('msg-1', {
+      expect(mockChatStore.updateMessage).toHaveBeenCalledWith('assistant-msg-1', {
         status: 'error',
         error: 'Streaming error',
       });
@@ -331,12 +335,12 @@ describe('useAIChat Hook', () => {
 
     it('should complete streaming successfully', async () => {
       const mockStreamGenerator = async function* () {
-        yield { content: 'Complete response' };
+        yield { choices: [{ delta: { content: 'Complete response' } }] };
       };
 
       mockProvider.streamChat.mockReturnValue(mockStreamGenerator());
       mockChatStore.addMessage.mockReturnValue({ id: 'msg-1' });
-      
+
       // Request queue is already mocked to execute immediately
 
       const { result } = renderHook(() => useAIChat());
@@ -357,8 +361,10 @@ describe('useAIChat Hook', () => {
     it('should display provider errors gracefully', async () => {
       const providerError = new Error('API quota exceeded');
       mockProvider.chat.mockRejectedValue(providerError);
-      mockProvider.formatError.mockReturnValue('Rate limit exceeded. Please try again later.');
-      
+      mockProvider.formatError.mockReturnValue({
+        message: 'Rate limit exceeded. Please try again later.',
+      });
+
       mockChatStore.addMessage.mockReturnValue({ id: 'msg-1' });
 
       const { result } = renderHook(() => useAIChat());
@@ -367,36 +373,46 @@ describe('useAIChat Hook', () => {
         await result.current.sendMessage('Hello');
       });
 
-      expect(mockChatStore.setError).toHaveBeenCalledWith('Rate limit exceeded. Please try again later.');
+      expect(mockChatStore.setError).toHaveBeenCalledWith(
+        'Rate limit exceeded. Please try again later.'
+      );
       expect(mockChatStore.setLoading).toHaveBeenCalledWith(false);
     });
 
     it('should handle network errors', async () => {
       const networkError = new Error('Network request failed');
       mockProvider.chat.mockRejectedValue(networkError);
-      mockProvider.formatError.mockReturnValue('Network error. Please check your connection.');
-      
+      mockProvider.formatError.mockReturnValue({
+        message: 'Network error. Please check your connection.',
+      });
+
       const { result } = renderHook(() => useAIChat());
 
       await act(async () => {
         await result.current.sendMessage('Hello');
       });
 
-      expect(mockChatStore.setError).toHaveBeenCalledWith('Network error. Please check your connection.');
+      expect(mockChatStore.setError).toHaveBeenCalledWith(
+        'Network error. Please check your connection.'
+      );
     });
 
     it('should handle authentication errors', async () => {
       const authError = new Error('Invalid API key');
       mockProvider.chat.mockRejectedValue(authError);
-      mockProvider.formatError.mockReturnValue('Invalid API key. Please check your settings.');
-      
+      mockProvider.formatError.mockReturnValue({
+        message: 'Invalid API key. Please check your settings.',
+      });
+
       const { result } = renderHook(() => useAIChat());
 
       await act(async () => {
         await result.current.sendMessage('Hello');
       });
 
-      expect(mockChatStore.setError).toHaveBeenCalledWith('Invalid API key. Please check your settings.');
+      expect(mockChatStore.setError).toHaveBeenCalledWith(
+        'Invalid API key. Please check your settings.'
+      );
     });
 
     it('should clear errors on successful send', async () => {
@@ -422,7 +438,9 @@ describe('useAIChat Hook', () => {
       });
 
       expect(mockRegistry.setActiveProvider).toHaveBeenCalledWith('gemini');
-      expect(mockSettingsStore.updateActiveProvider).toHaveBeenCalledWith('gemini');
+      expect(mockSettingsStore.updateAISettings).toHaveBeenCalledWith({
+        defaultProvider: 'gemini',
+      });
     });
 
     it('should handle provider switching errors', async () => {
@@ -436,7 +454,9 @@ describe('useAIChat Hook', () => {
         await result.current.switchProvider('invalid' as any);
       });
 
-      expect(mockChatStore.setError).toHaveBeenCalledWith('Failed to switch provider: Provider not found: invalid');
+      expect(mockChatStore.setError).toHaveBeenCalledWith(
+        'Failed to switch provider: Provider not found: invalid'
+      );
     });
 
     it('should clear errors on successful provider switch', async () => {
@@ -457,7 +477,9 @@ describe('useAIChat Hook', () => {
         await result.current.switchProvider('openrouter');
       });
 
-      expect(mockSettingsStore.updateActiveProvider).toHaveBeenCalledWith('openrouter');
+      expect(mockSettingsStore.updateAISettings).toHaveBeenCalledWith({
+        defaultProvider: 'openrouter',
+      });
     });
   });
 
@@ -511,7 +533,9 @@ describe('useAIChat Hook', () => {
         await result.current.sendMessage('This is a longer message that should use more tokens');
       });
 
-      expect(mockProvider.estimateTokens).toHaveBeenCalledWith('This is a longer message that should use more tokens');
+      expect(mockProvider.estimateTokens).toHaveBeenCalledWith(
+        'This is a longer message that should use more tokens'
+      );
       expect(mockRequestQueue.enqueue).toHaveBeenCalledWith(
         expect.any(Function),
         expect.objectContaining({
@@ -541,9 +565,21 @@ describe('useAIChat Hook', () => {
 
     it('should cancel streaming messages', async () => {
       const mockStreamGenerator = async function* () {
-        yield { id: 's1', object: 'response.chunk', created: Date.now(), model: 'test', choices: [{ index: 0, delta: { content: 'Start' }, finishReason: null }] } as any;
+        yield {
+          id: 's1',
+          object: 'response.chunk',
+          created: Date.now(),
+          model: 'test',
+          choices: [{ index: 0, delta: { content: 'Start' }, finishReason: null }],
+        } as any;
         // This would continue, but should be cancelled
-        yield { id: 's2', object: 'response.chunk', created: Date.now(), model: 'test', choices: [{ index: 0, delta: { content: 'Never reached' }, finishReason: null }] } as any;
+        yield {
+          id: 's2',
+          object: 'response.chunk',
+          created: Date.now(),
+          model: 'test',
+          choices: [{ index: 0, delta: { content: 'Never reached' }, finishReason: null }],
+        } as any;
       };
 
       mockProvider.streamChat.mockReturnValue(mockStreamGenerator());
@@ -594,7 +630,13 @@ describe('useAIChat Hook', () => {
 
     it('should set active message during streaming', async () => {
       const mockStreamGenerator = async function* () {
-        yield { id: 's1', object: 'response.chunk', created: Date.now(), model: 'test', choices: [{ index: 0, delta: { content: 'Streaming...' }, finishReason: null }] } as any;
+        yield {
+          id: 's1',
+          object: 'response.chunk',
+          created: Date.now(),
+          model: 'test',
+          choices: [{ index: 0, delta: { content: 'Streaming...' }, finishReason: null }],
+        } as any;
       };
 
       mockProvider.streamChat.mockReturnValue(mockStreamGenerator());
@@ -638,7 +680,7 @@ describe('useAIChat Hook', () => {
 
     it('should handle loading states correctly', async () => {
       mockProvider.chat.mockResolvedValue({ content: 'Response' });
-      
+
       // Request queue is already mocked to execute immediately
 
       const { result } = renderHook(() => useAIChat());
@@ -713,9 +755,11 @@ describe('useAIChat Hook', () => {
   describe('Cleanup and Memory Management', () => {
     it('should cleanup resources on unmount', async () => {
       // Mock a delayed request to simulate ongoing operation
-      const delayedPromise = new Promise(resolve => setTimeout(() => resolve({ content: 'Response' }), 100));
+      const delayedPromise = new Promise(resolve =>
+        setTimeout(() => resolve({ content: 'Response' }), 100)
+      );
       mockRequestQueue.enqueue.mockReturnValue(delayedPromise);
-      
+
       const { result, unmount } = renderHook(() => useAIChat());
 
       // Start a request

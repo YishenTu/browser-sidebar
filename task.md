@@ -16,7 +16,7 @@ Connect the existing Chat UI to real AI providers (OpenAI `gpt-5-nano` and Googl
 
 - [x] Phase 1: Settings & Provider Initialization (5/5 tasks)
 - [x] Phase 2: UI Model Restrictions (4/4 tasks)
-- [ ] Phase 3: Chat Hook Wiring & Streaming (4/5 tasks)
+- [x] Phase 3: Chat Hook Wiring & Streaming (5/5 tasks)
 - [ ] Phase 4: ChatPanel Integration (0/3 tasks)
 - [ ] Phase 5: Error Handling & UX (0/3 tasks)
 - [ ] Phase 6: Permissions & CSP (0/2 tasks)
@@ -261,7 +261,7 @@ const content = chunk.choices?.[0]?.delta?.content || '';
 - Handles provider-specific format
 - Falls back gracefully if not implemented
 
-### ⚡ [ ] Task 3.5: Verify Streaming Integration
+### ⚡ [x] Task 3.5: Verify Streaming Integration
 
 **Prerequisites**: Tasks 3.1, 3.2, 3.3, 3.4
 **Description**: Test complete streaming flow for both providers
