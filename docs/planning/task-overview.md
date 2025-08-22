@@ -33,10 +33,10 @@ Note: Some example paths below use generic `src/components/...` style. The actua
 - [x] Stage 1: Extension Infrastructure (15/15 tasks) ✅ COMPLETED
 - [x] Stage 2: Chat Panel UI (24/24 tasks) ✅ COMPLETED
 - [x] Stage 3: Storage & Security (18/18 tasks) ✅ COMPLETED
-- [ ] Stage 4: AI Provider System (0/22 tasks)
+- [ ] Stage 4: AI Provider System (4/23 tasks)
 - [ ] Stage 5: Tab Content Extraction (0/21 tasks)
 
-**Total Progress: 57/100 tasks**
+**Total Progress: 61/101 tasks**
 
 ---
 
@@ -795,7 +795,7 @@ Building the React-based chat interface within the custom sidebar container. The
 
 ⚡ **Sequential Tasks:**
 
-- [ ] **Task 4.1.1a** - Provider Types 🧪
+- [x] **Task 4.1.1a** - Provider Types 🧪
   - Prerequisites: Task 3.2.2b
   - Tests First:
     - Test type definitions compile
@@ -807,7 +807,7 @@ Building the React-based chat interface within the custom sidebar container. The
     - Error types
   - Acceptance: Types are comprehensive
 
-- [ ] **Task 4.1.1b** - Base Provider Class 🧪
+- [x] **Task 4.1.1b** - Base Provider Class 🧪
   - Prerequisites: Task 4.1.1a
   - Tests First:
     - Test abstract methods
@@ -818,7 +818,7 @@ Building the React-based chat interface within the custom sidebar container. The
     - `tests/provider/BaseProvider.test.ts`
   - Acceptance: Base class works
 
-- [ ] **Task 4.1.2a** - Stream Parser 🧪
+- [x] **Task 4.1.2a** - Stream Parser 🧪
   - Prerequisites: Task 4.1.1a
   - Tests First:
     - Test SSE parsing
@@ -830,7 +830,7 @@ Building the React-based chat interface within the custom sidebar container. The
     - `tests/provider/streamParser.test.ts`
   - Acceptance: Parses SSE correctly
 
-- [ ] **Task 4.1.2b** - Token Buffer 🧪
+- [x] **Task 4.1.2b** - Token Buffer 🧪
   - Prerequisites: Task 4.1.2a
   - Tests First:
     - Test buffering logic

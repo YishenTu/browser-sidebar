@@ -68,5 +68,55 @@ export {
   applyMigrations,
 } from './storage';
 
+// Provider types and interfaces (specific exports to avoid conflicts)
+export type {
+  ProviderType,
+  ProviderChatRole,
+  ErrorType,
+  ReasoningEffort,
+  ThinkingMode,
+  FinishReason,
+  TemperatureConfig,
+  OpenAIConfig,
+  GeminiConfig,
+  OpenRouterConfig,
+  ProviderConfig,
+  ProviderChatMessage,
+  Delta,
+  StreamChoice,
+  Choice,
+  Usage,
+  ResponseMetadata,
+  ProviderResponse,
+  StreamingResponse,
+  StreamChunk,
+  ProviderError,
+  ProviderValidationResult,
+  ProviderCapabilities,
+  ModelConfig,
+  ProviderMetadata,
+  AIProvider,
+} from './providers';
+
+export {
+  isProviderType,
+  isProviderError,
+  isStreamChunk,
+  isProviderResponse,
+  isStreamingResponse,
+  isValidTemperature,
+  isValidReasoningEffort,
+  isValidThinkingMode,
+  isValidMaxThinkingTokens,
+  validateOpenAIConfig,
+  validateGeminiConfig,
+  validateOpenRouterConfig,
+  validateProviderConfig,
+  TEMPERATURE_CONFIG,
+  REASONING_EFFORTS,
+  THINKING_MODES,
+  MAX_THINKING_TOKENS_RANGE,
+} from './providers';
+
 // Note: CSS module declarations are in css.d.ts as ambient declarations
 // and don't need to be re-exported here
