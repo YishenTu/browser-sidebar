@@ -218,13 +218,12 @@ export class OpenAIProvider extends BaseProvider {
         if (currentConfig.user) {
           requestParams.user = currentConfig.user;
         }
-        if (cfg?.signal) {
-          requestParams.signal = cfg.signal;
-        }
-
         try {
-          // Use Responses API
-          const response = await (openaiInstance as any).responses.create(requestParams);
+          // Use Responses API with AbortSignal passed via RequestOptions
+          const response = await (openaiInstance as any).responses.create(
+            requestParams,
+            { signal: cfg?.signal }
+          );
           return this.convertResponsesToProviderFormat(response);
         } catch (error) {
           // Wrap in Error instance with ProviderError fields for consistency
@@ -283,10 +282,6 @@ export class OpenAIProvider extends BaseProvider {
         if (currentConfig.user) {
           requestParams.user = currentConfig.user;
         }
-        if (cfg?.signal) {
-          requestParams.signal = cfg.signal;
-        }
-
         // Initialize token buffer if not exists
         if (!self.tokenBuffer) {
           self.tokenBuffer = new TokenBuffer({
@@ -300,11 +295,14 @@ export class OpenAIProvider extends BaseProvider {
         }
 
         try {
-          // Use Responses API streaming
-          const stream = await (openaiInstance as any).responses.create({
-            ...requestParams,
-            stream: true,
-          }) as any;
+          // Use Responses API streaming with AbortSignal in RequestOptions
+          const stream = await (openaiInstance as any).responses.create(
+            {
+              ...requestParams,
+              stream: true,
+            },
+            { signal: cfg?.signal }
+          ) as any;
 
           if (stream && typeof stream[Symbol.asyncIterator] === 'function') {
             for await (const event of stream) {

@@ -20,7 +20,6 @@ import type {
   ProviderError,
   OpenAIConfig,
   GeminiConfig,
-  OpenRouterConfig,
   ModelConfig,
   TemperatureConfig,
   ReasoningEffort,
@@ -48,7 +47,6 @@ import {
   isValidMaxThinkingTokens,
   validateOpenAIConfig,
   validateGeminiConfig,
-  validateOpenRouterConfig,
   validateProviderConfig,
 } from '@types/providers';
 
@@ -57,11 +55,10 @@ describe('Provider Type Definitions', () => {
     it('should define all provider types correctly', () => {
       const openai: ProviderType = 'openai';
       const gemini: ProviderType = 'gemini';
-      const openrouter: ProviderType = 'openrouter';
+      // OpenRouter removed from supported providers
 
       expect(openai).toBe('openai');
       expect(gemini).toBe('gemini');
-      expect(openrouter).toBe('openrouter');
     });
 
     it('should define chat roles correctly', () => {
@@ -155,20 +152,7 @@ describe('Provider Type Definitions', () => {
       expect(config.showThoughts).toBe(true);
     });
 
-    it('should define OpenRouter configuration', () => {
-      const config: OpenRouterConfig = {
-        apiKey: 'test-key',
-        temperature: 0.7,
-        maxThinkingTokens: 25000,
-        model: 'anthropic/claude-3.5-sonnet',
-        maxTokens: 4000,
-        topP: 1.0,
-        endpoint: 'https://openrouter.ai/api/v1',
-      };
-
-      expect(config.apiKey).toBe('test-key');
-      expect(config.maxThinkingTokens).toBe(25000);
-    });
+    // OpenRouter configuration test removed
   });
 
   describe('Message Types', () => {
@@ -390,7 +374,7 @@ describe('Type Guards', () => {
     it('should validate provider types', () => {
       expect(isProviderType('openai')).toBe(true);
       expect(isProviderType('gemini')).toBe(true);
-      expect(isProviderType('openrouter')).toBe(true);
+      // OpenRouter not supported
       expect(isProviderType('invalid')).toBe(false);
       expect(isProviderType(null)).toBe(false);
       expect(isProviderType(undefined)).toBe(false);
@@ -573,29 +557,7 @@ describe('Type Guards', () => {
       expect(invalidResult.errors.length).toBeGreaterThan(0);
     });
 
-    it('should validate OpenRouter configuration', () => {
-      const validConfig: OpenRouterConfig = {
-        apiKey: 'sk-or-test-key',
-        temperature: 0.7,
-        maxThinkingTokens: 25000,
-        model: 'anthropic/claude-3.5-sonnet',
-        maxTokens: 4000,
-        topP: 1.0,
-        endpoint: 'https://openrouter.ai/api/v1',
-      };
-
-      const invalidConfig = {
-        apiKey: '',
-        maxThinkingTokens: 200000, // Too high
-        endpoint: 'invalid-url',
-      };
-
-      const validResult = validateOpenRouterConfig(validConfig);
-      const invalidResult = validateOpenRouterConfig(invalidConfig as any);
-
-      expect(validResult.isValid).toBe(true);
-      expect(invalidResult.isValid).toBe(false);
-    });
+    // OpenRouter configuration validation test removed
 
     it('should validate generic provider configuration', () => {
       const validConfig: ProviderConfig = {

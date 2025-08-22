@@ -7,3 +7,6 @@ export { MessageList, type MessageListProps } from './MessageList';
 export { MessageBubble, type MessageBubbleProps } from './MessageBubble';
 export { ThemeToggle, type ThemeToggleProps } from './ThemeToggle';
 export { ModelSelector, type ModelSelectorProps } from './ModelSelector';
+
+// Settings components
+export { ProviderSettings } from './Settings/ProviderSettings';

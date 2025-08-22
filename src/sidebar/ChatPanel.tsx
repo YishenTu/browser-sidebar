@@ -15,7 +15,7 @@ import { MessageList } from '@components/MessageList';
 import { ChatInput } from '@components/ChatInput';
 import { ModelSelector } from '@components/ModelSelector';
 import { useChatStore } from '@store/chat';
-import { useMockChat } from '@hooks/useMockChat';
+import { useAIChat } from '@hooks/useAIChat';
 
 // Constants for sizing and positioning
 const MIN_WIDTH = 300;
@@ -83,25 +83,22 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ className, onClose }) => {
     setTheme(theme);
   }, [theme]);
 
-  // Chat store and mock chat integration
+  // Chat store and AI chat integration
   const { messages, isLoading, addMessage, clearConversation, hasMessages } = useChatStore();
-  const { generateResponse } = useMockChat({
+  const { sendMessage, cancelMessage, switchProvider, isStreaming } = useAIChat({
     enabled: true,
-    responseType: 'text',
-    streamingSpeed: 'normal',
-    thinkingDelay: 800,
+    autoInitialize: false, // Manual initialization for better control
   });
 
   // Handle sending messages
   const handleSendMessage = useCallback(
     async (content: string) => {
-      addMessage({
-        role: 'user',
-        content,
+      await sendMessage(content, {
+        streaming: true,
+        priority: 'high',
       });
-      await generateResponse(content);
     },
-    [addMessage, generateResponse]
+    [sendMessage]
   );
 
   // Handle clear conversation
@@ -348,6 +345,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ className, onClose }) => {
               onSend={handleSendMessage}
               loading={isLoading}
               placeholder="Ask about this webpage..."
+              onCancel={isStreaming() ? cancelMessage : undefined}
             />
           </div>
         </ThemeProvider>
