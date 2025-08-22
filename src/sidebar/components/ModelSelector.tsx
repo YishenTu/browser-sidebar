@@ -1,13 +1,12 @@
 import React, { useState, useRef, useEffect, useId } from 'react';
 import { cn } from '@utils/cn';
+import { SUPPORTED_MODELS } from '../../config/models';
 
 export interface ModelSelectorProps {
-  /** Current selected model value */
+  /** Current selected model ID */
   value: string;
   /** Callback when model selection changes */
-  onChange: (model: string) => void;
-  /** Available AI models to select from */
-  models?: string[];
+  onChange: (modelId: string) => void;
   /** Disabled state */
   disabled?: boolean;
   /** Custom CSS class */
@@ -15,8 +14,6 @@ export interface ModelSelectorProps {
   /** ARIA label for accessibility */
   'aria-label'?: string;
 }
-
-const DEFAULT_MODELS = ['GPT-4', 'GPT-3.5', 'Claude 3', 'Claude 2', 'Gemini Pro', 'Llama 2'];
 
 /**
  * ModelSelector Component
@@ -27,9 +24,8 @@ const DEFAULT_MODELS = ['GPT-4', 'GPT-3.5', 'Claude 3', 'Claude 2', 'Gemini Pro'
  * @example
  * ```tsx
  * <ModelSelector
- *   value="GPT-4"
- *   onChange={(model) => setSelectedModel(model)}
- *   models={['GPT-4', 'Claude 3', 'Gemini Pro']}
+ *   value="gpt-5-nano"
+ *   onChange={(modelId) => setSelectedModel(modelId)}
  *   disabled={false}
  * />
  * ```
@@ -37,7 +33,6 @@ const DEFAULT_MODELS = ['GPT-4', 'GPT-3.5', 'Claude 3', 'Claude 2', 'Gemini Pro'
 export function ModelSelector({
   value,
   onChange,
-  models = DEFAULT_MODELS,
   disabled = false,
   className,
   'aria-label': ariaLabel = 'Select AI model',
@@ -53,14 +48,15 @@ export function ModelSelector({
   const comboboxId = useId();
   const listboxId = useId();
 
-  // Find current value index
-  const selectedIndex = models.findIndex(model => model === value);
+  // Find current value index by model ID
+  const selectedIndex = SUPPORTED_MODELS.findIndex(model => model.id === value);
+  const selectedModel = SUPPORTED_MODELS.find(model => model.id === value);
 
   const handleSelectModel = React.useCallback(
-    (model: string) => {
+    (modelId: string) => {
       // Only trigger onChange if the value actually changed
-      if (model !== value) {
-        onChange(model);
+      if (modelId !== value) {
+        onChange(modelId);
       }
       setIsOpen(false);
       setHighlightedIndex(-1);
@@ -99,20 +95,20 @@ export function ModelSelector({
       switch (keyboardEvent.key) {
         case 'ArrowDown':
           keyboardEvent.preventDefault();
-          setHighlightedIndex(prev => (prev < models.length - 1 ? prev + 1 : 0));
+          setHighlightedIndex(prev => (prev < SUPPORTED_MODELS.length - 1 ? prev + 1 : 0));
           break;
 
         case 'ArrowUp':
           keyboardEvent.preventDefault();
-          setHighlightedIndex(prev => (prev > 0 ? prev - 1 : models.length - 1));
+          setHighlightedIndex(prev => (prev > 0 ? prev - 1 : SUPPORTED_MODELS.length - 1));
           break;
 
         case 'Enter':
           keyboardEvent.preventDefault();
-          if (highlightedIndex >= 0 && highlightedIndex < models.length) {
-            const selectedModel = models[highlightedIndex];
-            if (selectedModel) {
-              handleSelectModel(selectedModel);
+          if (highlightedIndex >= 0 && highlightedIndex < SUPPORTED_MODELS.length) {
+            const model = SUPPORTED_MODELS[highlightedIndex];
+            if (model) {
+              handleSelectModel(model.id);
             }
           }
           break;
@@ -142,7 +138,7 @@ export function ModelSelector({
       return () => rootNode.removeEventListener('keydown', handleKeyDown);
     }
     return undefined;
-  }, [isOpen, highlightedIndex, models, disabled, handleSelectModel]);
+  }, [isOpen, highlightedIndex, disabled, handleSelectModel]);
 
   // Scroll highlighted option into view
   useEffect(() => {
@@ -199,11 +195,11 @@ export function ModelSelector({
     comboboxRef.current?.classList.remove('model-selector__trigger--focused');
   };
 
-  const handleOptionClick = (model: string, index: number, e: React.MouseEvent) => {
+  const handleOptionClick = (modelId: string, index: number, e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
     setHighlightedIndex(index);
-    handleSelectModel(model);
+    handleSelectModel(modelId);
   };
 
   const handleOptionMouseEnter = (index: number) => {
@@ -237,7 +233,7 @@ export function ModelSelector({
         value={value}
         style={{ cursor: disabled ? 'not-allowed' : 'pointer' }}
       >
-        <span className="model-selector__value">{value || 'Select model...'}</span>
+        <span className="model-selector__value">{selectedModel?.name || 'Select model...'}</span>
         <span
           className={cn('model-selector__icon', {
             'model-selector__icon--rotated': isOpen,
@@ -254,21 +250,24 @@ export function ModelSelector({
           aria-label="Available AI models"
           className="model-selector__dropdown"
         >
-          {models.map((model, index) => (
+          {SUPPORTED_MODELS.map((model, index) => (
             <li
-              key={model}
+              key={model.id}
               ref={el => (optionRefs.current[index] = el)}
               id={`${listboxId}-option-${index}`}
               role="option"
-              aria-selected={model === value}
+              aria-selected={model.id === value}
               className={cn('model-selector__option', {
-                'model-selector__option--selected': model === value,
+                'model-selector__option--selected': model.id === value,
                 'model-selector__option--highlighted': index === highlightedIndex,
               })}
-              onClick={e => handleOptionClick(model, index, e)}
+              onClick={e => handleOptionClick(model.id, index, e)}
               onMouseEnter={() => handleOptionMouseEnter(index)}
             >
-              {model}
+              <div className="model-selector__option-content">
+                <div className="model-selector__option-name">{model.name}</div>
+                <div className="model-selector__option-provider">{model.provider}</div>
+              </div>
             </li>
           ))}
         </ul>

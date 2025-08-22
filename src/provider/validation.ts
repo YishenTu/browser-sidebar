@@ -15,13 +15,7 @@
  */
 
 import { ProviderFactory } from './ProviderFactory';
-import type {
-  ProviderType,
-  OpenAIConfig,
-  GeminiConfig,
-  OpenRouterConfig,
-  AIProvider,
-} from '../types/providers';
+import type { ProviderType, OpenAIConfig, GeminiConfig, AIProvider } from '../types/providers';
 
 // ============================================================================
 // Types and Interfaces
@@ -178,7 +172,7 @@ class ValidationCache<T> {
   set(key: string, data: T): void {
     // Clean expired entries and enforce size limit
     this.cleanup();
-    
+
     this.cache.set(key, {
       data,
       timestamp: Date.now(),
@@ -195,7 +189,7 @@ class ValidationCache<T> {
 
   private cleanup(): void {
     const now = Date.now();
-    
+
     // Remove expired entries
     for (const [key, entry] of this.cache.entries()) {
       if (now - entry.timestamp > this.ttl) {
@@ -207,7 +201,7 @@ class ValidationCache<T> {
     if (this.cache.size >= this.maxSize) {
       const entries = Array.from(this.cache.entries());
       const toDelete = Math.ceil(this.maxSize * 0.2); // Delete 20% oldest
-      
+
       for (let i = 0; i < toDelete && i < entries.length; i++) {
         this.cache.delete(entries[i]![0]);
       }
@@ -293,7 +287,7 @@ export class APIKeyValidationService {
         const liveStartTime = performance.now();
         try {
           liveValidation = await this.validateKeyLive(key, provider, options);
-          
+
           if (!liveValidation.isValid) {
             formatValidation.isValid = false;
             formatValidation.errors.push(`Live validation failed: ${liveValidation.error}`);
@@ -327,7 +321,6 @@ export class APIKeyValidationService {
       // Cache result
       this.cache.set(cacheKey, result);
       return result;
-
     } catch (error) {
       return {
         isValid: false,
@@ -350,14 +343,16 @@ export class APIKeyValidationService {
   ): Promise<ValidationResult[]> {
     const { concurrency = 5 } = options;
 
-    const validationPromises = keys.map(({ key, provider }) => 
+    const validationPromises = keys.map(({ key, provider }) =>
       this.validateAPIKey(key, provider, {
         skipLiveValidation: options.skipLiveValidation,
         timeout: options.timeout,
       }).catch(error => ({
         isValid: false,
         provider,
-        errors: [`Batch validation error: ${error instanceof Error ? error.message : 'Unknown error'}`],
+        errors: [
+          `Batch validation error: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        ],
         warnings: [],
       }))
     );
@@ -453,12 +448,12 @@ export class APIKeyValidationService {
         // For this validation service, we'll continue with direct API testing
         // as provider creation might fail due to test mocking
       }
-      
+
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), timeout);
 
       const headers = this.createHeaders(key, provider);
-      
+
       const response = await fetch(endpoint, {
         method: 'GET',
         headers,
@@ -494,7 +489,7 @@ export class APIKeyValidationService {
         };
       } else {
         let errorMessage = `${response.status} ${response.statusText}`;
-        
+
         try {
           const errorData = await response.json();
           if (errorData.error?.message) {
@@ -514,10 +509,9 @@ export class APIKeyValidationService {
           error: errorMessage,
         };
       }
-
     } catch (error) {
       const responseTime = performance.now() - startTime;
-      
+
       let errorMessage = 'Unknown error';
       if (error instanceof Error) {
         if (error.name === 'AbortError') {
@@ -556,7 +550,7 @@ export class APIKeyValidationService {
         };
         return await this.providerFactory.createOpenAIProvider(config);
       }
-      
+
       case 'gemini': {
         const config: GeminiConfig = {
           apiKey: key,
@@ -570,12 +564,12 @@ export class APIKeyValidationService {
         };
         return await this.providerFactory.createGeminiProvider(config);
       }
-      
+
       case 'openrouter': {
         // OpenRouter provider not implemented; skip provider creation
         throw new Error('OpenRouter provider not supported');
       }
-      
+
       default:
         throw new Error(`Unsupported provider: ${provider}`);
     }
@@ -622,7 +616,7 @@ export class APIKeyValidationService {
     let hash = 0;
     for (let i = 0; i < str.length; i++) {
       const char = str.charCodeAt(i);
-      hash = ((hash << 5) - hash) + char;
+      hash = (hash << 5) - hash + char;
       hash = hash & hash; // Convert to 32-bit integer
     }
     return hash.toString(36);
@@ -640,10 +634,14 @@ export class APIKeyValidationService {
    */
   private getProviderName(provider: ProviderType): string {
     switch (provider) {
-      case 'openai': return 'OpenAI';
-      case 'gemini': return 'Gemini';
-      case 'openrouter': return 'OpenRouter';
-      default: return provider;
+      case 'openai':
+        return 'OpenAI';
+      case 'gemini':
+        return 'Gemini';
+      case 'openrouter':
+        return 'OpenRouter';
+      default:
+        return provider;
     }
   }
 

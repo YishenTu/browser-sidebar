@@ -1,9 +1,9 @@
 /**
  * @file Request Queue Implementation
- * 
+ *
  * A comprehensive request queue system that manages API requests with priority handling,
  * rate limiting integration, cancellation support, and configurable processing options.
- * 
+ *
  * Features:
  * - Priority-based request ordering (high, medium, low)
  * - Rate limiter integration with automatic retry
@@ -14,7 +14,7 @@
  * - Comprehensive statistics and monitoring
  * - Pause/resume functionality
  * - Memory-efficient processing
- * 
+ *
  * Architecture:
  * - Uses priority queue data structure for efficient ordering
  * - Integrates with RateLimiter for provider-specific limits
@@ -159,10 +159,14 @@ class PriorityQueue<T> {
    */
   private getPriorityNumber(priority: RequestPriority): number {
     switch (priority) {
-      case 'high': return 3;
-      case 'medium': return 2;
-      case 'low': return 1;
-      default: return 2; // Default to medium
+      case 'high':
+        return 3;
+      case 'medium':
+        return 2;
+      case 'low':
+        return 1;
+      default:
+        return 2; // Default to medium
     }
   }
 
@@ -176,7 +180,7 @@ class PriorityQueue<T> {
       priority: priorityNumber,
       insertOrder: this.insertCounter++,
     });
-    
+
     // Sort by priority (desc) then by insert order (asc) for FIFO within priority
     this.items.sort((a, b) => {
       if (a.priority !== b.priority) {
@@ -214,7 +218,8 @@ class PriorityQueue<T> {
   remove(predicate: (item: T) => boolean): T | null {
     const index = this.items.findIndex(node => predicate(node.item));
     if (index >= 0) {
-      const removed = this.items.splice(index, 1)[0];
+      const [removed] = this.items.splice(index, 1);
+      if (!removed) return null;
       return removed.item;
     }
     return null;
@@ -280,7 +285,7 @@ export class RequestQueue {
 
     this.rateLimiter = rateLimiter;
     this.options = this.validateAndSetDefaults(options);
-    
+
     this.stats = {
       totalQueued: 0,
       currentSize: 0,
@@ -317,7 +322,7 @@ export class RequestQueue {
     }
 
     const requestId = this.generateRequestId();
-    
+
     const promise = new Promise<T>((resolve, reject) => {
       const queuedRequest = this.createQueuedRequest(requestId, request, options, resolve, reject);
 
@@ -325,7 +330,7 @@ export class RequestQueue {
       if (this.options.enableDeduplication) {
         const dedupKey = this.createDeduplicationKey(options);
         const existingRequests = this.deduplicationMap.get(dedupKey);
-        
+
         if (existingRequests && existingRequests.length > 0) {
           // Add to existing deduplication group
           existingRequests.push(queuedRequest);
@@ -344,7 +349,7 @@ export class RequestQueue {
 
     // Track promise for cancellation
     this.promiseToIdMap.set(promise, requestId);
-    
+
     return promise;
   }
 
@@ -363,7 +368,7 @@ export class RequestQueue {
 
     // Try to remove from queue first
     const removedRequest = this.queue.remove(req => req.id === id);
-    
+
     if (removedRequest) {
       // Reject the request promise
       removedRequest.reject(new Error('Request cancelled'));
@@ -384,13 +389,13 @@ export class RequestQueue {
    */
   cancelMultiple(requestIds: (string | Promise<any>)[]): (string | Promise<any>)[] {
     const cancelled: (string | Promise<any>)[] = [];
-    
+
     for (const id of requestIds) {
       if (this.cancel(id)) {
         cancelled.push(id);
       }
     }
-    
+
     return cancelled;
   }
 
@@ -443,11 +448,11 @@ export class RequestQueue {
     const currentStats = { ...this.stats };
     currentStats.currentSize = this.queue.size;
     currentStats.processing = this.processing.size;
-    
+
     // Update priority and provider counts
     currentStats.byPriority = { high: 0, medium: 0, low: 0 };
     currentStats.byProvider = { openai: 0, gemini: 0, openrouter: 0 };
-    
+
     for (const request of this.queue.getAll()) {
       currentStats.byPriority[request.priority]++;
       currentStats.byProvider[request.provider]++;
@@ -484,24 +489,24 @@ export class RequestQueue {
     if (this.destroyed) {
       return; // Already destroyed
     }
-    
+
     // Cancel all queued requests
     this.cancelAll();
-    
+
     // Cancel all processing requests
-    for (const [id, request] of this.processing) {
+    for (const id of this.processing.keys()) {
       this.cancelRequest(id, 'Queue destroyed');
     }
-    
+
     // Set destroyed flag
     this.destroyed = true;
-    
+
     // Clear processing timer
     if (this.processingTimer) {
       clearInterval(this.processingTimer);
       this.processingTimer = undefined;
     }
-    
+
     // Clear all maps
     this.processing.clear();
     this.deduplicationMap.clear();
@@ -564,7 +569,10 @@ export class RequestQueue {
       throw new Error('Invalid priority');
     }
 
-    if (options.timeout !== undefined && (typeof options.timeout !== 'number' || options.timeout <= 0)) {
+    if (
+      options.timeout !== undefined &&
+      (typeof options.timeout !== 'number' || options.timeout <= 0)
+    ) {
       throw new Error('Invalid timeout: must be positive number');
     }
   }
@@ -614,7 +622,7 @@ export class RequestQueue {
       priority: options.priority,
       metadata: options.metadata,
     };
-    
+
     return JSON.stringify(keyData);
   }
 
@@ -692,7 +700,6 @@ export class RequestQueue {
 
       // Handle success
       this.handleRequestSuccess(request, result);
-
     } catch (error) {
       // Handle failure
       this.handleRequestFailure(request, error as Error);
@@ -709,7 +716,7 @@ export class RequestQueue {
    */
   private async checkRateLimit(request: QueuedRequest): Promise<void> {
     let retryCount = 0;
-    
+
     while (retryCount <= this.options.maxRetries) {
       try {
         const rateLimitResult: RateLimitResult = await this.rateLimiter.checkLimit(
@@ -728,12 +735,11 @@ export class RequestQueue {
 
         await this.sleep(rateLimitResult.retryAfter);
         retryCount++;
-
       } catch (error) {
         if (retryCount >= this.options.maxRetries) {
           throw error;
         }
-        
+
         // Exponential backoff on error
         const backoffDelay = Math.min(1000 * Math.pow(2, retryCount), 30000);
         await this.sleep(backoffDelay);
@@ -748,7 +754,7 @@ export class RequestQueue {
   private handleRequestSuccess<T>(request: QueuedRequest<T>, result: T): void {
     const waitTime = Date.now() - request.createdAt;
     this.updateAverageWaitTime(waitTime);
-    
+
     // Handle deduplication
     if (this.options.enableDeduplication) {
       const dedupKey = this.createDeduplicationKey({
@@ -757,7 +763,7 @@ export class RequestQueue {
         priority: request.priority,
         metadata: request.metadata,
       });
-      
+
       const duplicates = this.deduplicationMap.get(dedupKey);
       if (duplicates) {
         // Resolve all duplicate requests
@@ -787,7 +793,7 @@ export class RequestQueue {
         priority: request.priority,
         metadata: request.metadata,
       });
-      
+
       const duplicates = this.deduplicationMap.get(dedupKey);
       if (duplicates) {
         // Reject all duplicate requests
@@ -808,7 +814,7 @@ export class RequestQueue {
   /**
    * Cancel a queued request (not yet processing)
    */
-  private cancelQueuedRequest(requestId: string, reason: string): void {
+  private cancelQueuedRequest(_requestId: string, _reason: string): void {
     // Find the request in the queue (it should have been removed already)
     // This is mainly for cleanup and stats
     this.stats.cancelled++;
@@ -831,7 +837,7 @@ export class RequestQueue {
 
     // Reject the request
     request.reject(new Error(reason));
-    
+
     // Handle deduplication cleanup
     if (this.options.enableDeduplication) {
       const dedupKey = this.createDeduplicationKey({
@@ -840,7 +846,7 @@ export class RequestQueue {
         priority: request.priority,
         metadata: request.metadata,
       });
-      
+
       this.deduplicationMap.delete(dedupKey);
     }
   }
@@ -871,7 +877,7 @@ export class RequestQueue {
    */
   private updateAverageWaitTime(waitTime: number): void {
     const totalCompleted = this.stats.completed + 1;
-    this.stats.averageWaitTime = 
+    this.stats.averageWaitTime =
       (this.stats.averageWaitTime * this.stats.completed + waitTime) / totalCompleted;
   }
 

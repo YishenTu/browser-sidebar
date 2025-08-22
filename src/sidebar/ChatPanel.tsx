@@ -75,8 +75,8 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ className, onClose }) => {
   // Settings store integration
   const theme = useSettingsStore(state => state.settings.theme);
   const selectedModel = useSettingsStore(state => state.settings.selectedModel);
-  const availableModels = useSettingsStore(state => state.settings.availableModels);
   const updateSelectedModel = useSettingsStore(state => state.updateSelectedModel);
+  const getProviderTypeForModel = useSettingsStore(state => state.getProviderTypeForModel);
 
   // Apply theme when it changes
   useEffect(() => {
@@ -84,8 +84,8 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ className, onClose }) => {
   }, [theme]);
 
   // Chat store and AI chat integration
-  const { messages, isLoading, addMessage, clearConversation, hasMessages } = useChatStore();
-  const { sendMessage, cancelMessage, switchProvider, isStreaming } = useAIChat({
+  const { messages, isLoading, clearConversation, hasMessages } = useChatStore();
+  const { sendMessage, switchProvider } = useAIChat({
     enabled: true,
     autoInitialize: false, // Manual initialization for better control
   });
@@ -275,18 +275,22 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ className, onClose }) => {
           <div className="ai-sidebar-header-title">
             <ModelSelector
               className="model-selector--header"
-              value={availableModels.find(m => m.id === selectedModel)?.name || 'GPT-4'}
-              onChange={async modelName => {
-                // Map display name back to model ID
-                const model = availableModels.find(m => m.name === modelName);
-                if (!model) return;
+              value={selectedModel}
+              onChange={async modelId => {
                 try {
-                  await updateSelectedModel(model.id);
+                  // Update the selected model in settings (this also updates the provider)
+                  await updateSelectedModel(modelId);
+
+                  // Switch to the corresponding provider in the AI chat system
+                  const providerType = getProviderTypeForModel(modelId);
+                  if (providerType) {
+                    await switchProvider(providerType);
+                  }
                 } catch (err) {
                   // Gracefully ignore here; store already set error
+                  console.warn('Failed to switch model/provider:', err);
                 }
               }}
-              models={availableModels.filter(m => m.available).map(m => m.name)}
               disabled={isLoading}
               aria-label="Select AI model"
             />
@@ -345,7 +349,6 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ className, onClose }) => {
               onSend={handleSendMessage}
               loading={isLoading}
               placeholder="Ask about this webpage..."
-              onCancel={isStreaming() ? cancelMessage : undefined}
             />
           </div>
         </ThemeProvider>

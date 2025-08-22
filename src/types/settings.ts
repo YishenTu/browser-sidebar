@@ -16,9 +16,9 @@ export type Theme = 'light' | 'dark' | 'auto';
 export type FontSize = 'small' | 'medium' | 'large';
 
 /**
- * Supported AI providers
+ * Supported AI providers - matches ProviderType from providers.ts
  */
-export type AIProvider = 'openai' | 'anthropic' | 'google' | null;
+export type AIProvider = 'openai' | 'gemini' | 'openrouter' | null;
 
 /**
  * AI model definition with provider and availability information
@@ -82,10 +82,10 @@ export interface PrivacySettings {
 export interface APIKeyReferences {
   /** OpenAI API key reference */
   openai: string | null;
-  /** Anthropic API key reference */
-  anthropic: string | null;
-  /** Google API key reference */
+  /** Google/Gemini API key reference */
   google: string | null;
+  /** OpenRouter API key reference */
+  openrouter: string | null;
 }
 
 /**
@@ -138,10 +138,14 @@ export interface SettingsState {
   resetToDefaults: () => Promise<void>;
   /** Set error message */
   setError: (error: string | null) => void;
+  /** Clear error message */
+  clearError: () => void;
   /** Update selected model */
   updateSelectedModel: (modelId: string) => Promise<void>;
   /** Get available models (optionally filter by availability) */
   getAvailableModels: (availableOnly?: boolean) => Model[];
+  /** Get provider type for a given model ID */
+  getProviderTypeForModel: (modelId: string) => 'openai' | 'gemini' | 'openrouter' | null;
 }
 
 /**

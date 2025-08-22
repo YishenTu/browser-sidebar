@@ -14,9 +14,9 @@ Connect the existing Chat UI to real AI providers (OpenAI `gpt-5-nano` and Googl
 
 ## Progress Tracking
 
-- [ ] Phase 1: Settings & Provider Initialization (0/5 tasks)
-- [ ] Phase 2: UI Model Restrictions (0/4 tasks)
-- [ ] Phase 3: Chat Hook Wiring & Streaming (0/5 tasks)
+- [x] Phase 1: Settings & Provider Initialization (5/5 tasks)
+- [x] Phase 2: UI Model Restrictions (4/4 tasks)
+- [ ] Phase 3: Chat Hook Wiring & Streaming (4/5 tasks)
 - [ ] Phase 4: ChatPanel Integration (0/3 tasks)
 - [ ] Phase 5: Error Handling & UX (0/3 tasks)
 - [ ] Phase 6: Permissions & CSP (0/2 tasks)
@@ -27,7 +27,7 @@ Connect the existing Chat UI to real AI providers (OpenAI `gpt-5-nano` and Googl
 
 ## Phase 1: Settings & Provider Initialization
 
-### ⚡ [ ] Task 1.1: Update useAIChat Settings Integration
+### ⚡ [x] Task 1.1: Update useAIChat Settings Integration
 
 **Prerequisites**: None
 **Description**: Replace all references to `settings.activeProvider` with `settings.ai.defaultProvider` in the useAIChat hook
@@ -39,7 +39,7 @@ Connect the existing Chat UI to real AI providers (OpenAI `gpt-5-nano` and Googl
 - Hook correctly reads from `settings.ai.defaultProvider`
 - No TypeScript errors
 
-### 🔄 [ ] Task 1.2: Fix API Key Mappings
+### 🔄 [x] Task 1.2: Fix API Key Mappings
 
 **Prerequisites**: None
 **Description**: Update API key field mappings to use correct settings paths
@@ -51,7 +51,7 @@ Connect the existing Chat UI to real AI providers (OpenAI `gpt-5-nano` and Googl
 - Gemini reads from `settings.apiKeys.google` (not `gemini`)
 - Keys correctly passed to provider constructors
 
-### 🔄 [ ] Task 1.3: Update Provider Default Configurations
+### 🔄 [x] Task 1.3: Update Provider Default Configurations
 
 **Prerequisites**: None
 **Description**: Set default model configurations for the two supported models
@@ -81,7 +81,7 @@ const geminiConfig = {
 - Default configs use only the two supported models
 - Configs include all required fields for each provider
 
-### ⚡ [ ] Task 1.4: Fix Provider State Updates
+### ⚡ [x] Task 1.4: Fix Provider State Updates
 
 **Prerequisites**: Task 1.1
 **Description**: Replace calls to non-existent `settingsStore.updateActiveProvider` with `updateAISettings({ defaultProvider })`
@@ -93,7 +93,7 @@ const geminiConfig = {
 - Provider switching uses `updateAISettings`
 - State updates trigger re-initialization
 
-### ⚡ [ ] Task 1.5: Verify Provider Initialization
+### ⚡ [x] Task 1.5: Verify Provider Initialization
 
 **Prerequisites**: Tasks 1.1, 1.2, 1.3, 1.4
 **Description**: Ensure providers initialize correctly with autoInitialize flag
@@ -109,7 +109,7 @@ const geminiConfig = {
 
 ## Phase 2: UI Model Restrictions
 
-### 🔄 [ ] Task 2.1: Update ModelSelector Component
+### 🔄 [x] Task 2.1: Update ModelSelector Component
 
 **Prerequisites**: None
 **Description**: Restrict ModelSelector to display only the two supported models
@@ -131,7 +131,7 @@ const AVAILABLE_MODELS = [
 - Model selection updates settings correctly
 - UI displays friendly names
 
-### 🔄 [ ] Task 2.2: Update Settings Store Defaults
+### 🔄 [x] Task 2.2: Update Settings Store Defaults
 
 **Prerequisites**: None
 **Description**: Update DEFAULT_AVAILABLE_MODELS in settings store
@@ -158,7 +158,7 @@ export const DEFAULT_AVAILABLE_MODELS = [
 - Default selectedModel is 'gpt-5-nano'
 - Models marked as available
 
-### 🔄 [ ] Task 2.3: Update ProviderSettings Component
+### 🔄 [x] Task 2.3: Update ProviderSettings Component
 
 **Prerequisites**: None
 **Description**: Restrict provider settings UI to supported models only
@@ -170,7 +170,7 @@ export const DEFAULT_AVAILABLE_MODELS = [
 - Max token validation matches model limits
 - Temperature and other settings properly bounded
 
-### ⚡ [ ] Task 2.4: Verify Model Selection Integration
+### ⚡ [x] Task 2.4: Verify Model Selection Integration
 
 **Prerequisites**: Tasks 2.1, 2.2, 2.3
 **Description**: Ensure model selection properly maps to provider switching
@@ -186,7 +186,7 @@ export const DEFAULT_AVAILABLE_MODELS = [
 
 ## Phase 3: Chat Hook Wiring & Streaming
 
-### ⚡ [ ] Task 3.1: Implement Active Message State Management
+### ⚡ [x] Task 3.1: Implement Active Message State Management
 
 **Prerequisites**: Phase 1 complete
 **Description**: Add activeMessageId tracking for streaming state
@@ -208,7 +208,7 @@ chatStore.clearActiveMessage();
 - Active message cleared on completion/cancel
 - State properly synchronized with UI
 
-### 🔄 [ ] Task 3.2: Implement Cancel Functionality
+### 🔄 [x] Task 3.2: Implement Cancel Functionality
 
 **Prerequisites**: None
 **Description**: Add proper abort controller handling for cancellation
@@ -221,7 +221,7 @@ chatStore.clearActiveMessage();
 - Sets loading to false
 - Preserves partial message content
 
-### 🔄 [ ] Task 3.3: OpenAI Stream Parsing
+### 🔄 [x] Task 3.3: OpenAI Stream Parsing
 
 **Prerequisites**: None
 **Description**: Implement correct OpenAI streaming chunk parsing
@@ -241,7 +241,7 @@ const content = chunk.choices?.[0]?.delta?.content || '';
 - Handles missing/null chunks gracefully
 - Accumulates content properly
 
-### 🔄 [ ] Task 3.4: Gemini Stream Parsing
+### 🔄 [x] Task 3.4: Gemini Stream Parsing
 
 **Prerequisites**: None
 **Description**: Implement Gemini streaming chunk parsing

@@ -87,6 +87,13 @@ beforeAll(() => {
       }),
     });
   }
+
+  // Polyfill Element.scrollTo used by MessageList in jsdom environment
+  if (!('scrollTo' in Element.prototype)) {
+    (Element.prototype as any).scrollTo = function scrollTo() {
+      // no-op polyfill for jsdom
+    } as any;
+  }
 });
 
 // Clean up after each test

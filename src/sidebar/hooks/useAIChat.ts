@@ -4,7 +4,7 @@
  * React hook that integrates real AI providers with the chat store.
  * Handles message sending, response streaming, error handling, provider
  * switching, rate limiting, and cancellation support.
- * 
+ *
  * Features:
  * - Real AI provider integration via ProviderRegistry and ProviderFactory
  * - Streaming response support with token-by-token updates
@@ -94,6 +94,8 @@ export function useAIChat(options: UseAIChatOptions = {}): UseAIChatReturn {
   // Store hooks
   const chatStore = useChatStore();
   const settingsStore = useSettingsStore();
+  // Reactive settings snapshot for effects to respond to changes
+  const settings = useSettingsStore(state => state.settings);
 
   // Refs for persistent instances
   const registryRef = useRef<ProviderRegistry | null>(null);
@@ -129,7 +131,7 @@ export function useAIChat(options: UseAIChatOptions = {}): UseAIChatReturn {
   // Initialize providers from settings
   useEffect(() => {
     if (!enabled || !autoInitialize) return;
-    
+
     const initializeProviders = async () => {
       try {
         const { settings } = settingsStore;
@@ -137,7 +139,8 @@ export function useAIChat(options: UseAIChatOptions = {}): UseAIChatReturn {
           console.warn('No settings or API keys available for provider initialization');
           return;
         }
-        const { apiKeys, activeProvider } = settings;
+        const { apiKeys, ai } = settings;
+        const defaultProvider = ai?.defaultProvider;
 
         if (!registryRef.current || !factoryRef.current) return;
 
@@ -149,9 +152,9 @@ export function useAIChat(options: UseAIChatOptions = {}): UseAIChatReturn {
             type: 'openai',
             config: {
               apiKey: apiKeys.openai,
+              model: 'gpt-5-nano',
               temperature: 0.7,
               reasoningEffort: 'medium',
-              model: 'gpt-4o',
               maxTokens: 4096,
               topP: 1.0,
               frequencyPenalty: 0.0,
@@ -160,15 +163,15 @@ export function useAIChat(options: UseAIChatOptions = {}): UseAIChatReturn {
           });
         }
 
-        if (apiKeys.gemini) {
+        if (apiKeys.google) {
           providerConfigs.push({
             type: 'gemini',
             config: {
-              apiKey: apiKeys.gemini,
+              apiKey: apiKeys.google,
+              model: 'gemini-2.5-flash-lite',
               temperature: 0.7,
-              thinkingMode: 'dynamic',
-              showThoughts: true,
-              model: 'gemini-2.0-flash-thinking-exp',
+              thinkingMode: 'off',
+              showThoughts: false,
               maxTokens: 8192,
               topP: 0.95,
               topK: 40,
@@ -176,7 +179,7 @@ export function useAIChat(options: UseAIChatOptions = {}): UseAIChatReturn {
           });
         }
 
-        // OpenRouter disabled/not implemented
+        // Note: OpenRouter intentionally excluded for Phase 1
 
         // Create and register providers
         for (const config of providerConfigs) {
@@ -189,13 +192,16 @@ export function useAIChat(options: UseAIChatOptions = {}): UseAIChatReturn {
         }
 
         // Set active provider if specified and available
-        if (activeProvider && registryRef.current.hasProvider(activeProvider)) {
-          registryRef.current.setActiveProvider(activeProvider);
-        } else if (providerConfigs.length > 0) {
+        if (
+          defaultProvider &&
+          registryRef.current &&
+          registryRef.current.hasProvider(defaultProvider)
+        ) {
+          registryRef.current.setActiveProvider(defaultProvider);
+        } else if (providerConfigs.length > 0 && registryRef.current && providerConfigs[0]) {
           // Default to first available provider
           registryRef.current.setActiveProvider(providerConfigs[0].type);
         }
-
       } catch (error) {
         console.error('Failed to initialize providers:', error);
         chatStore.setError('Failed to initialize AI providers');
@@ -204,6 +210,80 @@ export function useAIChat(options: UseAIChatOptions = {}): UseAIChatReturn {
 
     initializeProviders();
   }, [enabled, autoInitialize, settingsStore, chatStore]);
+
+  // React to settings changes: register/unregister providers and select active
+  useEffect(() => {
+    if (!enabled) return;
+    const registry = registryRef.current;
+    const factory = factoryRef.current;
+    if (!registry || !factory) return;
+
+    const syncProviders = async () => {
+      try {
+        const { apiKeys, ai } = settings;
+
+        // Helper to ensure a provider is registered when key exists, or unregistered when missing
+        const ensureProvider = async (
+          type: ProviderType,
+          hasKey: boolean,
+          config: ProviderConfig['config']
+        ) => {
+          const isRegistered = registry.hasProvider(type);
+          if (hasKey && !isRegistered) {
+            try {
+              const provider = await factory.createProvider({ type, config });
+              registry.register(provider);
+            } catch (error) {
+              console.warn(`Failed to (re)initialize ${type} provider:`, error);
+            }
+          } else if (!hasKey && isRegistered) {
+            registry.unregister(type);
+          }
+        };
+
+        // Desired configs using Phase 1 models/defaults
+        const openAIConfig: ProviderConfig['config'] = {
+          apiKey: apiKeys.openai as string,
+          model: 'gpt-5-nano',
+          temperature: 0.7,
+          reasoningEffort: 'medium',
+          maxTokens: 4096,
+          topP: 1.0,
+          frequencyPenalty: 0.0,
+          presencePenalty: 0.0,
+        } as any;
+
+        const geminiConfig: ProviderConfig['config'] = {
+          apiKey: apiKeys.google as string,
+          model: 'gemini-2.5-flash-lite',
+          temperature: 0.7,
+          thinkingMode: 'off',
+          showThoughts: false,
+          maxTokens: 8192,
+          topP: 0.95,
+          topK: 40,
+        } as any;
+
+        await ensureProvider('openai', !!apiKeys.openai, openAIConfig);
+        await ensureProvider('gemini', !!apiKeys.google, geminiConfig);
+
+        // Re-select active provider if available
+        const desired = ai?.defaultProvider;
+        if (desired && registry.hasProvider(desired)) {
+          try {
+            registry.setActiveProvider(desired);
+          } catch (err) {
+            // ignore
+          }
+        }
+      } catch (err) {
+        console.warn('Failed to sync providers with settings:', err);
+      }
+    };
+
+    syncProviders();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [enabled, settings.ai.defaultProvider, settings.apiKeys.openai, settings.apiKeys.google]);
 
   // Cleanup on unmount
   useEffect(() => {
@@ -225,7 +305,7 @@ export function useAIChat(options: UseAIChatOptions = {}): UseAIChatReturn {
    */
   const estimateTokens = useCallback((content: string, provider?: AIProvider): number => {
     if (!provider) return DEFAULT_TOKEN_ESTIMATE;
-    
+
     try {
       return provider.estimateTokens(content);
     } catch (error) {
@@ -245,221 +325,231 @@ export function useAIChat(options: UseAIChatOptions = {}): UseAIChatReturn {
   /**
    * Handle streaming response from provider
    */
-  const handleStreamingResponse = useCallback(async (
-    provider: AIProvider,
-    content: string,
-    assistantMessage: any
-  ): Promise<void> => {
-    if (!provider.streamChat) {
-      throw new Error('Provider does not support streaming');
-    }
-
-    try {
-      // Set active message for streaming
-      chatStore.setActiveMessage(assistantMessage.id);
-
-      // Create messages array for provider
-      const messages = [
-        ...chatStore.messages.map(msg => ({
-          role: msg.role,
-          content: msg.content,
-        })),
-        { role: 'user' as const, content },
-      ];
-
-      // Start streaming (pass AbortSignal for cancellation)
-      const stream = provider.streamChat(messages, {
-        signal: abortControllerRef.current?.signal,
-      });
-      let accumulatedContent = '';
-
-      for await (const chunk of stream) {
-        // Check if cancelled
-        if (abortControllerRef.current?.signal.aborted) {
-          break;
-        }
-
-        // Extract text content from streaming chunk
-        const piece = (chunk as any)?.choices?.[0]?.delta?.content;
-        if (piece) {
-          accumulatedContent += piece;
-          // Append chunk to message
-          chatStore.appendToMessage(assistantMessage.id, piece);
-        }
+  const handleStreamingResponse = useCallback(
+    async (provider: AIProvider, content: string, assistantMessage: any): Promise<void> => {
+      if (!provider.streamChat) {
+        throw new Error('Provider does not support streaming');
       }
 
-      // Mark streaming complete
-      chatStore.updateMessage(assistantMessage.id, {
-        status: 'received',
-      });
+      try {
+        // Set active message for streaming
+        chatStore.setActiveMessage(assistantMessage.id);
 
-    } catch (error) {
-      // Handle streaming error
-      const errorMessage = provider.formatError?.(error as Error) || (error as Error).message;
-      chatStore.updateMessage(assistantMessage.id, {
-        status: 'error',
-        error: errorMessage,
-      });
-      throw error;
-    } finally {
-      chatStore.clearActiveMessage();
-    }
-  }, [chatStore]);
+        // Create messages array for provider
+        const messages = [
+          ...chatStore.messages.map(msg => ({
+            id: msg.id,
+            role: msg.role,
+            content: msg.content,
+            timestamp: new Date(msg.timestamp),
+          })),
+          {
+            id: `temp-${Date.now()}`,
+            role: 'user' as const,
+            content,
+            timestamp: new Date(),
+          },
+        ];
+
+        // Start streaming (pass AbortSignal for cancellation)
+        const stream = provider.streamChat(messages, {
+          signal: abortControllerRef.current?.signal,
+        });
+
+        for await (const chunk of stream) {
+          // Check if cancelled
+          if (abortControllerRef.current?.signal.aborted) {
+            break;
+          }
+
+          // Extract text content from streaming chunk
+          const piece = (chunk as any)?.choices?.[0]?.delta?.content || '';
+          if (piece) {
+            // Append chunk to message
+            chatStore.appendToMessage(assistantMessage.id, piece);
+          }
+        }
+
+        // Mark streaming complete
+        chatStore.updateMessage(assistantMessage.id, {
+          status: 'received',
+        });
+      } catch (error) {
+        // Handle streaming error
+        const providerError = provider.formatError?.(error as Error);
+        const errorMessage = providerError ? providerError.message : (error as Error).message;
+        chatStore.updateMessage(assistantMessage.id, {
+          status: 'error',
+          error: errorMessage,
+        });
+        throw error;
+      } finally {
+        chatStore.clearActiveMessage();
+      }
+    },
+    [chatStore]
+  );
 
   /**
    * Handle non-streaming response from provider
    */
-  const handleNonStreamingResponse = useCallback(async (
-    provider: AIProvider,
-    content: string
-  ): Promise<void> => {
-    // Create messages array for provider
-    const messages = [
-      ...chatStore.messages.map(msg => ({
-        role: msg.role,
-        content: msg.content,
-      })),
-      { role: 'user' as const, content },
-    ];
+  const handleNonStreamingResponse = useCallback(
+    async (provider: AIProvider, content: string): Promise<void> => {
+      // Create messages array for provider
+      const messages = [
+        ...chatStore.messages.map(msg => ({
+          id: msg.id,
+          role: msg.role,
+          content: msg.content,
+          timestamp: new Date(msg.timestamp),
+        })),
+        {
+          id: `temp-${Date.now()}`,
+          role: 'user' as const,
+          content,
+          timestamp: new Date(),
+        },
+      ];
 
-    // Get response from provider
-    const response = await provider.chat(messages, {
-      signal: abortControllerRef.current?.signal,
-    });
+      // Get response from provider
+      const response = await provider.chat(messages, {
+        signal: abortControllerRef.current?.signal,
+      });
 
-    // Add assistant message to store
-    chatStore.addMessage({
-      role: 'assistant',
-      content: response.content,
-      status: 'received',
-    });
-  }, [chatStore]);
+      // Add assistant message to store
+      chatStore.addMessage({
+        role: 'assistant',
+        content: response.content,
+        status: 'received',
+      });
+    },
+    [chatStore]
+  );
 
   /**
    * Send a message to the active AI provider
    */
-  const sendMessage = useCallback(async (
-    content: string,
-    options: SendMessageOptions = {}
-  ): Promise<void> => {
-    if (!enabled) return;
+  const sendMessage = useCallback(
+    async (content: string, options: SendMessageOptions = {}): Promise<void> => {
+      if (!enabled) return;
 
-    // Validate input
-    const trimmedContent = content.trim();
-    if (!trimmedContent) {
-      return; // Don't send empty messages
-    }
-
-    const {
-      streaming = true,
-      priority = 'high',
-      timeout = DEFAULT_REQUEST_TIMEOUT,
-      metadata,
-    } = options;
-
-    try {
-      // Clear any previous errors
-      chatStore.clearError();
-      settingsStore.clearError();
-      
-      // Set loading state
-      chatStore.setLoading(true);
-
-      // Get active provider
-      const provider = getActiveProvider();
-      if (!provider) {
-        throw new Error('No active AI provider configured');
+      // Validate input
+      const trimmedContent = content.trim();
+      if (!trimmedContent) {
+        return; // Don't send empty messages
       }
 
-      // Add user message to chat store
-      const userMessage = chatStore.addMessage({
-        role: 'user',
-        content: trimmedContent,
-        status: 'sending',
-      });
+      const {
+        streaming = true,
+        priority = 'high',
+        timeout = DEFAULT_REQUEST_TIMEOUT,
+        metadata,
+      } = options;
 
-      // Estimate token usage
-      const tokens = estimateTokens(trimmedContent, provider);
+      try {
+        // Clear any previous errors
+        chatStore.clearError();
+        settingsStore.clearError();
 
-      // Create request function
-      const requestFn = async () => {
-        // Create abort controller for this request
-        abortControllerRef.current = new AbortController();
+        // Set loading state
+        chatStore.setLoading(true);
 
-        try {
-          if (streaming && provider.streamChat) {
-            // Create assistant message for streaming
-            const assistantMessage = chatStore.addMessage({
-              role: 'assistant',
-              content: '',
-              status: 'streaming',
-            });
-
-            await handleStreamingResponse(provider, trimmedContent, assistantMessage);
-          } else {
-            // Non-streaming response
-            await handleNonStreamingResponse(provider, trimmedContent);
-          }
-
-          // Mark user message as sent on success
-          chatStore.updateMessage(userMessage.id, {
-            status: 'sent',
-          });
-
-        } catch (error) {
-          // Handle provider errors
-          const errorMessage = provider.formatError?.(error as Error) || (error as Error).message;
-          chatStore.setError(errorMessage);
-          
-          // Mark user message as error
-          chatStore.updateMessage(userMessage.id, {
-            status: 'error',
-            error: errorMessage,
-          });
-          
-          throw error;
-        }
-      };
-
-      // Enqueue request with rate limiting
-      if (requestQueueRef.current) {
-        const providerType = registryRef.current?.getActiveProviderType();
-        if (!providerType) {
-          throw new Error('No active provider type');
+        // Get active provider
+        const provider = getActiveProvider();
+        if (!provider) {
+          throw new Error('No active AI provider configured');
         }
 
-        currentRequestRef.current = requestQueueRef.current.enqueue(requestFn, {
-          provider: providerType,
-          tokens,
-          priority,
-          timeout,
-          metadata,
+        // Add user message to chat store
+        const userMessage = chatStore.addMessage({
+          role: 'user',
+          content: trimmedContent,
+          status: 'sending',
         });
 
-        await currentRequestRef.current;
-      } else {
-        // Fallback: execute directly if no queue
-        await requestFn();
-      }
+        // Estimate token usage
+        const tokens = estimateTokens(trimmedContent, provider);
 
-    } catch (error) {
-      // Handle general errors
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
-      chatStore.setError(errorMessage);
-    } finally {
-      // Clear loading state
-      chatStore.setLoading(false);
-      currentRequestRef.current = null;
-    }
-  }, [
-    enabled,
-    chatStore,
-    settingsStore,
-    getActiveProvider,
-    estimateTokens,
-    handleStreamingResponse,
-    handleNonStreamingResponse,
-  ]);
+        // Create request function
+        const requestFn = async () => {
+          // Create abort controller for this request
+          abortControllerRef.current = new AbortController();
+
+          try {
+            if (streaming && typeof provider.streamChat === 'function') {
+              // Create assistant message for streaming
+              const assistantMessage = chatStore.addMessage({
+                role: 'assistant',
+                content: '',
+                status: 'streaming',
+              });
+
+              await handleStreamingResponse(provider, trimmedContent, assistantMessage);
+            } else {
+              // Non-streaming response
+              await handleNonStreamingResponse(provider, trimmedContent);
+            }
+
+            // Mark user message as sent on success
+            chatStore.updateMessage(userMessage.id, {
+              status: 'sent',
+            });
+          } catch (error) {
+            // Handle provider errors
+            const providerError = provider.formatError?.(error as Error);
+            const errorMessage = providerError ? providerError.message : (error as Error).message;
+            chatStore.setError(errorMessage);
+
+            // Mark user message as error
+            chatStore.updateMessage(userMessage.id, {
+              status: 'error',
+              error: errorMessage,
+            });
+
+            throw error;
+          }
+        };
+
+        // Enqueue request with rate limiting
+        if (requestQueueRef.current) {
+          const providerType = registryRef.current?.getActiveProviderType();
+          if (!providerType) {
+            throw new Error('No active provider type');
+          }
+
+          currentRequestRef.current = requestQueueRef.current.enqueue(requestFn, {
+            provider: providerType,
+            tokens,
+            priority,
+            timeout,
+            metadata,
+          });
+
+          await currentRequestRef.current;
+        } else {
+          // Fallback: execute directly if no queue
+          await requestFn();
+        }
+      } catch (error) {
+        // Handle general errors
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+        chatStore.setError(errorMessage);
+      } finally {
+        // Clear loading state
+        chatStore.setLoading(false);
+        currentRequestRef.current = null;
+      }
+    },
+    [
+      enabled,
+      chatStore,
+      settingsStore,
+      getActiveProvider,
+      estimateTokens,
+      handleStreamingResponse,
+      handleNonStreamingResponse,
+    ]
+  );
 
   /**
    * Cancel the current message/streaming operation
@@ -484,25 +574,30 @@ export function useAIChat(options: UseAIChatOptions = {}): UseAIChatReturn {
   /**
    * Switch to a different provider
    */
-  const switchProvider = useCallback(async (providerType: ProviderType) => {
-    try {
-      // Clear any errors
-      chatStore.clearError();
-      settingsStore.clearError();
+  const switchProvider = useCallback(
+    async (providerType: ProviderType) => {
+      try {
+        // Clear any errors
+        chatStore.clearError();
+        settingsStore.clearError();
 
-      // Switch provider in registry
-      if (registryRef.current) {
-        registryRef.current.setActiveProvider(providerType);
+        // Switch provider in registry
+        if (registryRef.current) {
+          registryRef.current.setActiveProvider(providerType);
+        }
+
+        // Update settings store
+        await settingsStore.updateAISettings({
+          ...settingsStore.settings.ai,
+          defaultProvider: providerType,
+        });
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        chatStore.setError(`Failed to switch provider: ${errorMessage}`);
       }
-
-      // Update settings store
-      await settingsStore.updateActiveProvider(providerType);
-
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      chatStore.setError(`Failed to switch provider: ${errorMessage}`);
-    }
-  }, [chatStore, settingsStore]);
+    },
+    [chatStore, settingsStore]
+  );
 
   /**
    * Check if currently streaming a response
@@ -527,19 +622,16 @@ export function useAIChat(options: UseAIChatOptions = {}): UseAIChatReturn {
   }, []);
 
   // Memoize return object to prevent unnecessary re-renders
-  return useMemo(() => ({
-    sendMessage,
-    cancelMessage,
-    switchProvider,
-    isStreaming,
-    getStats,
-  }), [
-    sendMessage,
-    cancelMessage,
-    switchProvider,
-    isStreaming,
-    getStats,
-  ]);
+  return useMemo(
+    () => ({
+      sendMessage,
+      cancelMessage,
+      switchProvider,
+      isStreaming,
+      getStats,
+    }),
+    [sendMessage, cancelMessage, switchProvider, isStreaming, getStats]
+  );
 }
 
 export default useAIChat;

@@ -17,6 +17,7 @@ import type {
   LegacySettings,
   Model,
 } from '../types/settings';
+import { SUPPORTED_MODELS, DEFAULT_MODEL_ID, getProviderTypeForModelId } from '../config/models';
 
 /**
  * Current settings schema version
@@ -29,46 +30,14 @@ const SETTINGS_VERSION = 1;
 const STORAGE_KEY = 'settings';
 
 /**
- * Available AI models with their metadata
+ * Available AI models with their metadata - from centralized config
  */
-const DEFAULT_AVAILABLE_MODELS: Model[] = [
-  {
-    id: 'gpt-4',
-    name: 'GPT-4',
-    provider: 'OpenAI',
-    available: true,
-  },
-  {
-    id: 'gpt-3.5-turbo',
-    name: 'GPT-3.5 Turbo',
-    provider: 'OpenAI',
-    available: true,
-  },
-  {
-    id: 'claude-3',
-    name: 'Claude 3',
-    provider: 'Anthropic',
-    available: true,
-  },
-  {
-    id: 'claude-2',
-    name: 'Claude 2',
-    provider: 'Anthropic',
-    available: true,
-  },
-  {
-    id: 'gemini-pro',
-    name: 'Gemini Pro',
-    provider: 'Google',
-    available: true,
-  },
-  {
-    id: 'llama-2',
-    name: 'Llama 2',
-    provider: 'Meta',
-    available: false,
-  },
-];
+const DEFAULT_AVAILABLE_MODELS: Model[] = SUPPORTED_MODELS.map(model => ({
+  id: model.id,
+  name: model.name,
+  provider: model.provider,
+  available: model.available,
+}));
 
 /**
  * Default settings configuration
@@ -96,10 +65,10 @@ const DEFAULT_SETTINGS: Settings = {
   },
   apiKeys: {
     openai: null,
-    anthropic: null,
     google: null,
+    openrouter: null,
   },
-  selectedModel: 'gpt-4',
+  selectedModel: DEFAULT_MODEL_ID,
   availableModels: [...DEFAULT_AVAILABLE_MODELS],
 };
 
@@ -122,18 +91,18 @@ const isValidFontSize = (fontSize: unknown): fontSize is 'small' | 'medium' | 'l
  */
 const isValidAIProvider = (
   provider: unknown
-): provider is 'openai' | 'anthropic' | 'google' | null => {
+): provider is 'openai' | 'gemini' | 'openrouter' | null => {
   return (
     provider === null ||
-    (typeof provider === 'string' && ['openai', 'anthropic', 'google'].includes(provider))
+    (typeof provider === 'string' && ['openai', 'gemini', 'openrouter'].includes(provider))
   );
 };
 
 /**
- * Validate temperature range (0.0 - 1.0)
+ * Validate temperature range (0.0 - 2.0) to match UI bounds
  */
 const isValidTemperature = (temp: unknown): boolean => {
-  return typeof temp === 'number' && temp >= 0.0 && temp <= 1.0;
+  return typeof temp === 'number' && temp >= 0.0 && temp <= 2.0;
 };
 
 /**
@@ -151,6 +120,24 @@ const isValidSelectedModel = (modelId: unknown, availableModels: Model[]): boole
     return false;
   }
   return availableModels.some(model => model.id === modelId);
+};
+
+/**
+ * Map model provider display name to provider type
+ */
+const getProviderTypeFromModel = (model: Model): 'openai' | 'gemini' | 'openrouter' | null => {
+  // Try centralized config first
+  const providerType = getProviderTypeForModelId(model.id);
+  if (providerType) return providerType as 'openai' | 'gemini' | 'openrouter';
+
+  // Fallback for any models not in centralized config
+  const providerMapping: Record<string, 'openai' | 'gemini' | 'openrouter' | null> = {
+    OpenAI: 'openai',
+    Google: 'gemini',
+    OpenRouter: 'openrouter',
+  };
+
+  return providerMapping[model.provider] || null;
 };
 
 /**
@@ -253,14 +240,14 @@ const validateAPIKeyReferences = (apiKeys: unknown): APIKeyReferences => {
       typeof a.openai === 'string' || a.openai === null
         ? (a.openai as string | null)
         : DEFAULT_SETTINGS.apiKeys.openai,
-    anthropic:
-      typeof a.anthropic === 'string' || a.anthropic === null
-        ? (a.anthropic as string | null)
-        : DEFAULT_SETTINGS.apiKeys.anthropic,
     google:
       typeof a.google === 'string' || a.google === null
         ? (a.google as string | null)
         : DEFAULT_SETTINGS.apiKeys.google,
+    openrouter:
+      typeof a.openrouter === 'string' || a.openrouter === null
+        ? (a.openrouter as string | null)
+        : DEFAULT_SETTINGS.apiKeys.openrouter,
   };
 };
 
@@ -496,6 +483,10 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
     set({ error });
   },
 
+  clearError: () => {
+    set({ error: null });
+  },
+
   updateSelectedModel: async (modelId: string) => {
     set({ isLoading: true, error: null });
     const currentSettings = get().settings;
@@ -508,8 +499,19 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
     }
 
     try {
-      // Update settings
-      const updatedSettings = { ...currentSettings, selectedModel: modelId };
+      // Find the provider for this model
+      const selectedModel = currentSettings.availableModels.find(m => m.id === modelId);
+      const newProvider = selectedModel ? getProviderTypeFromModel(selectedModel) : null;
+
+      // Update settings with new model and provider
+      const updatedSettings = {
+        ...currentSettings,
+        selectedModel: modelId,
+        ai: {
+          ...currentSettings.ai,
+          defaultProvider: newProvider,
+        },
+      };
       set({ settings: updatedSettings });
 
       // Save to storage
@@ -532,5 +534,14 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
     }
 
     return [...availableModels];
+  },
+
+  /**
+   * Get provider type for a given model
+   */
+  getProviderTypeForModel: (modelId: string) => {
+    const { availableModels } = get().settings;
+    const model = availableModels.find(m => m.id === modelId);
+    return model ? getProviderTypeFromModel(model) : null;
   },
 }));

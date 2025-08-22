@@ -1,9 +1,9 @@
 /**
  * @file Provider Settings Component
- * 
+ *
  * UI component for configuring AI provider settings including provider selection,
  * model configuration, and provider-specific parameters.
- * 
+ *
  * Features:
  * - Provider selection (OpenAI, Gemini)
  * - Model selection based on provider
@@ -15,19 +15,14 @@
  * - Provider status display
  */
 
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useSettingsStore } from '@store/settings';
 import { Button } from '@ui/Button';
 import { Input } from '@ui/Input';
 import { Card } from '@ui/Card';
 import { cn } from '@utils/cn';
-import type { 
-  ProviderType, 
-  ReasoningEffort, 
-  ThinkingMode,
-  ModelConfig
-} from '@types/providers';
-import type { AISettings } from '@types/settings';
+import type { ProviderType, ReasoningEffort, ThinkingMode } from '@/types/providers';
+import type { AISettings, AIProvider } from '@/types/settings';
 
 // ============================================================================
 // Types and Constants
@@ -51,49 +46,61 @@ interface ValidationError {
   message: string;
 }
 
-// Provider options
+// Extended AI settings interface for provider-specific settings
+interface ExtendedAISettings extends Omit<AISettings, 'defaultProvider'> {
+  defaultProvider: AIProvider;
+  selectedModel?: string | null;
+  reasoningEffort?: ReasoningEffort;
+  thinkingMode?: ThinkingMode;
+  showThoughts?: boolean;
+  maxThinkingTokens?: number;
+}
+
+// Provider options - restricted to supported providers only
 const PROVIDER_OPTIONS: ProviderOption[] = [
   {
     value: 'openai',
     label: 'OpenAI',
-    description: 'GPT models with reasoning capabilities'
+    description: 'GPT-5 Nano - Fast and efficient nano model',
   },
   {
     value: 'gemini',
     label: 'Google Gemini',
-    description: 'Advanced AI with thinking mode'
+    description: 'Gemini 2.5 Flash Lite - Lightweight flash model',
   },
-  // OpenRouter removed (not implemented)
 ];
 
-// Model options per provider (OpenRouter removed)
+// Model options per provider - restricted to supported models only
 const PROVIDER_MODELS: Partial<Record<ProviderType, ModelOption[]>> = {
   openai: [
-    { value: 'gpt-4', label: 'GPT-4', maxTokens: 8192, description: 'Most capable model' },
-    { value: 'gpt-4-turbo', label: 'GPT-4 Turbo', maxTokens: 128000, description: 'Latest GPT-4 with larger context' },
-    { value: 'gpt-3.5-turbo', label: 'GPT-3.5 Turbo', maxTokens: 4096, description: 'Fast and efficient' },
-    { value: 'o1-preview', label: 'o1 Preview', maxTokens: 32768, description: 'Advanced reasoning model' },
-    { value: 'o1-mini', label: 'o1 Mini', maxTokens: 65536, description: 'Faster reasoning model' }
+    {
+      value: 'gpt-5-nano',
+      label: 'GPT-5 Nano',
+      maxTokens: 4096,
+      description: 'Fast and efficient nano model',
+    },
   ],
   gemini: [
-    { value: 'gemini-2.0-flash-exp', label: 'Gemini 2.0 Flash (Experimental)', maxTokens: 8192, description: 'Latest experimental model' },
-    { value: 'gemini-1.5-pro', label: 'Gemini 1.5 Pro', maxTokens: 2097152, description: 'Most capable Gemini model' },
-    { value: 'gemini-1.5-flash', label: 'Gemini 1.5 Flash', maxTokens: 1048576, description: 'Fast and efficient' },
-    { value: 'gemini-1.0-pro', label: 'Gemini 1.0 Pro', maxTokens: 32768, description: 'Stable production model' }
-  ]
+    {
+      value: 'gemini-2.5-flash-lite',
+      label: 'Gemini 2.5 Flash Lite',
+      maxTokens: 8192,
+      description: 'Lightweight flash model',
+    },
+  ],
 };
 
 // Reasoning effort options
 const REASONING_EFFORTS: { value: ReasoningEffort; label: string; description: string }[] = [
   { value: 'low', label: 'Low', description: 'Faster responses, less reasoning' },
   { value: 'medium', label: 'Medium', description: 'Balanced speed and reasoning' },
-  { value: 'high', label: 'High', description: 'Slower responses, more thorough reasoning' }
+  { value: 'high', label: 'High', description: 'Slower responses, more thorough reasoning' },
 ];
 
 // Thinking mode options
 const THINKING_MODES: { value: ThinkingMode; label: string; description: string }[] = [
   { value: 'off', label: 'Off', description: 'No visible thinking process' },
-  { value: 'dynamic', label: 'Dynamic', description: 'Shows thinking process when beneficial' }
+  { value: 'dynamic', label: 'Dynamic', description: 'Shows thinking process when beneficial' },
 ];
 
 // Debounce delay for saving changes (ms)
@@ -130,43 +137,38 @@ function useDebounce<T>(value: T, delay: number): T {
  * Provider Settings Component
  */
 export function ProviderSettings() {
-  const { 
-    settings, 
-    updateAISettings, 
-    isLoading, 
-    error 
-  } = useSettingsStore();
+  const { settings, updateAISettings, isLoading, error } = useSettingsStore();
 
   // Local state for form values
-  const [formState, setFormState] = useState<Partial<AISettings>>({});
+  const [formState, setFormState] = useState<Partial<ExtendedAISettings>>({});
   const [validationErrors, setValidationErrors] = useState<ValidationError[]>([]);
   const [isInitialized, setIsInitialized] = useState(false);
 
   // Initialize form state from settings
   useEffect(() => {
-    const initialState = {
+    const aiSettings = settings.ai as any; // Type assertion for extended properties
+    const initialState: Partial<ExtendedAISettings> = {
       defaultProvider: settings.ai.defaultProvider,
       temperature: settings.ai.temperature,
       maxTokens: settings.ai.maxTokens,
-      reasoningEffort: (settings.ai as any).reasoningEffort || 'medium',
-      thinkingMode: (settings.ai as any).thinkingMode || 'off',
-      showThoughts: (settings.ai as any).showThoughts || false,
-      maxThinkingTokens: (settings.ai as any).maxThinkingTokens || 25000,
-      selectedModel: (settings.ai as any).selectedModel || null
+      streamResponse: settings.ai.streamResponse,
+      reasoningEffort: aiSettings.reasoningEffort || 'medium',
+      thinkingMode: aiSettings.thinkingMode || 'off',
+      showThoughts: aiSettings.showThoughts || false,
+      maxThinkingTokens: aiSettings.maxThinkingTokens || 25000,
+      selectedModel: settings.selectedModel || null,
     };
-    
+
     setFormState(initialState);
     setIsInitialized(true);
-  }, [settings.ai]);
+  }, [settings.ai, settings.selectedModel]);
 
   // Debounce form state changes for saving
   const debouncedFormState = useDebounce(formState, SAVE_DEBOUNCE_DELAY);
 
   // Get current provider models
   const currentModels = useMemo(() => {
-    return formState.defaultProvider 
-      ? PROVIDER_MODELS[formState.defaultProvider] || []
-      : [];
+    return formState.defaultProvider ? PROVIDER_MODELS[formState.defaultProvider] || [] : [];
   }, [formState.defaultProvider]);
 
   // Get current model details
@@ -195,63 +197,85 @@ export function ProviderSettings() {
     return null;
   }, []);
 
-  const validateForm = useCallback((state: Partial<AISettings>): ValidationError[] => {
-    const errors: ValidationError[] = [];
+  const validateForm = useCallback(
+    (state: Partial<ExtendedAISettings>): ValidationError[] => {
+      const errors: ValidationError[] = [];
 
-    // Validate temperature
-    if (typeof state.temperature === 'number') {
-      const tempError = validateTemperature(state.temperature);
-      if (tempError) {
-        errors.push({ field: 'temperature', message: tempError });
+      // Validate temperature
+      if (typeof state.temperature === 'number') {
+        const tempError = validateTemperature(state.temperature);
+        if (tempError) {
+          errors.push({ field: 'temperature', message: tempError });
+        }
       }
-    }
 
-    // Validate max tokens
-    if (typeof state.maxTokens === 'number' && currentModel) {
-      const tokensError = validateMaxTokens(state.maxTokens, currentModel.maxTokens);
-      if (tokensError) {
-        errors.push({ field: 'maxTokens', message: tokensError });
+      // Validate max tokens
+      if (typeof state.maxTokens === 'number' && currentModel) {
+        const tokensError = validateMaxTokens(state.maxTokens, currentModel.maxTokens);
+        if (tokensError) {
+          errors.push({ field: 'maxTokens', message: tokensError });
+        }
       }
-    }
 
-    return errors;
-  }, [validateTemperature, validateMaxTokens, currentModel]);
+      return errors;
+    },
+    [validateTemperature, validateMaxTokens, currentModel]
+  );
 
   // ============================================================================
   // Save Logic
   // ============================================================================
 
-  const saveSettings = useCallback(async (newSettings: Partial<AISettings>) => {
-    const errors = validateForm(newSettings);
-    
-    if (errors.length > 0) {
-      setValidationErrors(errors);
-      return;
-    }
+  const saveSettings = useCallback(
+    async (newSettings: Partial<ExtendedAISettings>) => {
+      const errors = validateForm(newSettings);
 
-    setValidationErrors([]);
+      if (errors.length > 0) {
+        setValidationErrors(errors);
+        return;
+      }
 
-    try {
-      await updateAISettings({
-        ...settings.ai,
-        ...newSettings
-      });
-    } catch (error) {
-      console.error('Failed to save AI settings:', error);
-    }
-  }, [settings.ai, updateAISettings, validateForm]);
+      setValidationErrors([]);
+
+      try {
+        // Extract only AISettings properties
+        const coreAISettings: AISettings = {
+          defaultProvider: newSettings.defaultProvider ?? settings.ai.defaultProvider,
+          temperature: newSettings.temperature ?? settings.ai.temperature,
+          maxTokens: newSettings.maxTokens ?? settings.ai.maxTokens,
+          streamResponse: newSettings.streamResponse ?? settings.ai.streamResponse,
+        };
+
+        await updateAISettings(coreAISettings);
+
+        // Handle selectedModel separately if it exists in the store
+        if (
+          newSettings.selectedModel !== undefined &&
+          'updateSelectedModel' in useSettingsStore.getState()
+        ) {
+          const { updateSelectedModel } = useSettingsStore.getState() as any;
+          if (updateSelectedModel) {
+            await updateSelectedModel(newSettings.selectedModel);
+          }
+        }
+      } catch (error) {
+        console.error('Failed to save AI settings:', error);
+      }
+    },
+    [settings.ai, updateAISettings, validateForm]
+  );
 
   // Save debounced changes - only when there are actual changes and after initialization
   useEffect(() => {
     if (!isInitialized || Object.keys(debouncedFormState).length === 0) return;
-    
+
     // Check if form state is different from current settings
     const hasChanges = Object.keys(debouncedFormState).some(key => {
       const formValue = debouncedFormState[key as keyof typeof debouncedFormState];
       const settingsValue = (settings.ai as any)[key];
       return formValue !== settingsValue;
     });
-    
+
     if (hasChanges) {
       saveSettings(debouncedFormState);
     }
@@ -261,51 +285,54 @@ export function ProviderSettings() {
   // Event Handlers
   // ============================================================================
 
-  const handleProviderChange = useCallback((provider: ProviderType | '') => {
-    const actualProvider = provider === '' ? null : provider as ProviderType;
-    
-    const newState = {
-      ...formState,
-      defaultProvider: actualProvider,
-      selectedModel: null, // Reset model selection
-    };
+  const handleProviderChange = useCallback(
+    (provider: string) => {
+      const actualProvider = provider === '' ? null : (provider as AIProvider);
 
-    // Reset provider-specific settings
-    if (actualProvider === 'openai') {
-      newState.reasoningEffort = 'medium';
-    } else if (actualProvider === 'gemini') {
-      newState.thinkingMode = 'off';
-      newState.showThoughts = false;
-    }
+      const newState = {
+        ...formState,
+        defaultProvider: actualProvider,
+        selectedModel: null, // Reset model selection
+      };
 
-    setFormState(newState);
-  }, [formState]);
+      // Reset provider-specific settings
+      if (actualProvider === 'openai') {
+        newState.reasoningEffort = 'medium';
+      } else if (actualProvider === 'gemini') {
+        newState.thinkingMode = 'off';
+        newState.showThoughts = false;
+      }
+
+      setFormState(newState);
+    },
+    [formState]
+  );
 
   const handleModelChange = useCallback((modelId: string) => {
     setFormState(prev => ({
       ...prev,
-      selectedModel: modelId
+      selectedModel: modelId,
     }));
   }, []);
 
   const handleTemperatureChange = useCallback((temperature: number) => {
     setFormState(prev => ({
       ...prev,
-      temperature
+      temperature,
     }));
   }, []);
 
   const handleMaxTokensChange = useCallback((maxTokens: number) => {
     setFormState(prev => ({
       ...prev,
-      maxTokens
+      maxTokens,
     }));
   }, []);
 
   const handleReasoningEffortChange = useCallback((reasoningEffort: ReasoningEffort) => {
     setFormState(prev => ({
       ...prev,
-      reasoningEffort
+      reasoningEffort,
     }));
   }, []);
 
@@ -313,14 +340,14 @@ export function ProviderSettings() {
     setFormState(prev => ({
       ...prev,
       thinkingMode,
-      showThoughts: thinkingMode === 'off' ? false : prev.showThoughts
+      showThoughts: thinkingMode === 'off' ? false : prev.showThoughts,
     }));
   }, []);
 
   const handleShowThoughtsChange = useCallback((showThoughts: boolean) => {
     setFormState(prev => ({
       ...prev,
-      showThoughts
+      showThoughts,
     }));
   }, []);
 
@@ -330,31 +357,30 @@ export function ProviderSettings() {
   // Helper Functions
   // ============================================================================
 
-  const getValidationError = useCallback((field: string): string | undefined => {
-    return validationErrors.find(error => error.field === field)?.message;
-  }, [validationErrors]);
-
-  const getProviderStatus = useCallback((): string => {
-    if (!formState.defaultProvider) {
-      return 'No Provider Selected';
-    }
-    
-    const provider = PROVIDER_OPTIONS.find(p => p.value === formState.defaultProvider);
-    const modelCount = currentModels.length;
-    
-    return `Provider: ${provider?.label} (${modelCount} models available)`;
-  }, [formState.defaultProvider, currentModels.length]);
+  const getValidationError = useCallback(
+    (field: string): string | undefined => {
+      return validationErrors.find(error => error.field === field)?.message;
+    },
+    [validationErrors]
+  );
 
   const hasApiKey = useCallback((): boolean => {
     if (!formState.defaultProvider) return false;
-    
+
     // This would check against actual API key store in real implementation
     // For now, assume we have API key configuration status
-    const apiKeyField = formState.defaultProvider === 'openai' ? 'openai' 
-      : formState.defaultProvider === 'gemini' ? 'google'
-      : null;
-    
-    return apiKeyField && settings.apiKeys && settings.apiKeys[apiKeyField as keyof typeof settings.apiKeys] !== null;
+    const apiKeyField =
+      formState.defaultProvider === 'openai'
+        ? 'openai'
+        : formState.defaultProvider === 'gemini'
+          ? 'google'
+          : null;
+
+    return !!(
+      apiKeyField &&
+      settings.apiKeys &&
+      settings.apiKeys[apiKeyField as keyof typeof settings.apiKeys]
+    );
   }, [formState.defaultProvider, settings.apiKeys]);
 
   // ============================================================================
@@ -371,9 +397,9 @@ export function ProviderSettings() {
         role="combobox"
         aria-label="Select AI provider"
         value={formState.defaultProvider || ''}
-        onChange={e => handleProviderChange(e.target.value as ProviderType | '')}
+        onChange={e => handleProviderChange(e.target.value)}
         className={cn('provider-settings__select', {
-          'provider-settings__select--error': getValidationError('defaultProvider')
+          'provider-settings__select--error': getValidationError('defaultProvider'),
         })}
       >
         <option value="">Select a provider...</option>
@@ -383,13 +409,14 @@ export function ProviderSettings() {
           </option>
         ))}
       </select>
-      {PROVIDER_OPTIONS.map(option => (
-        formState.defaultProvider === option.value && (
-          <p key={option.value} className="provider-settings__description">
-            {option.description}
-          </p>
-        )
-      ))}
+      {PROVIDER_OPTIONS.map(
+        option =>
+          formState.defaultProvider === option.value && (
+            <p key={option.value} className="provider-settings__description">
+              {option.description}
+            </p>
+          )
+      )}
     </div>
   );
 
@@ -407,7 +434,7 @@ export function ProviderSettings() {
         disabled={!formState.defaultProvider || currentModels.length === 0}
         className={cn('provider-settings__select', {
           'provider-settings__select--disabled': !formState.defaultProvider,
-          'provider-settings__select--error': getValidationError('selectedModel')
+          'provider-settings__select--error': getValidationError('selectedModel'),
         })}
       >
         {currentModels.length === 0 ? (
@@ -450,7 +477,7 @@ export function ProviderSettings() {
         value={formState.temperature || 0.7}
         onChange={e => handleTemperatureChange(parseFloat(e.target.value))}
         className={cn('provider-settings__slider', {
-          'provider-settings__slider--error': getValidationError('temperature')
+          'provider-settings__slider--error': getValidationError('temperature'),
         })}
       />
       <div className="provider-settings__slider-labels">
@@ -461,9 +488,7 @@ export function ProviderSettings() {
         Controls randomness in responses. Higher values make output more creative.
       </p>
       {getValidationError('temperature') && (
-        <p className="provider-settings__error">
-          {getValidationError('temperature')}
-        </p>
+        <p className="provider-settings__error">{getValidationError('temperature')}</p>
       )}
     </div>
   );
@@ -479,8 +504,11 @@ export function ProviderSettings() {
         role="spinbutton"
         aria-label="Max tokens"
         min="1"
-        max={currentModel?.maxTokens || 8192}
-        value={formState.maxTokens || 2048}
+        max={currentModel?.maxTokens || 4096}
+        value={
+          formState.maxTokens ||
+          (currentModel?.maxTokens ? Math.min(2048, currentModel.maxTokens) : 2048)
+        }
         onChange={e => handleMaxTokensChange(parseInt(e.target.value))}
         error={!!getValidationError('maxTokens')}
         errorMessage={getValidationError('maxTokens')}
@@ -496,7 +524,7 @@ export function ProviderSettings() {
     return (
       <div className="provider-settings__section">
         <h3 className="provider-settings__section-title">OpenAI Settings</h3>
-        
+
         <div className="provider-settings__field">
           <label htmlFor="reasoning-effort" className="provider-settings__label">
             Reasoning Effort
@@ -515,13 +543,14 @@ export function ProviderSettings() {
               </option>
             ))}
           </select>
-          {REASONING_EFFORTS.map(effort => (
-            formState.reasoningEffort === effort.value && (
-              <p key={effort.value} className="provider-settings__description">
-                {effort.description}
-              </p>
-            )
-          ))}
+          {REASONING_EFFORTS.map(
+            effort =>
+              formState.reasoningEffort === effort.value && (
+                <p key={effort.value} className="provider-settings__description">
+                  {effort.description}
+                </p>
+              )
+          )}
         </div>
       </div>
     );
@@ -533,7 +562,7 @@ export function ProviderSettings() {
     return (
       <div className="provider-settings__section">
         <h3 className="provider-settings__section-title">Gemini Settings</h3>
-        
+
         <div className="provider-settings__field">
           <label htmlFor="thinking-mode" className="provider-settings__label">
             Thinking Mode
@@ -552,13 +581,14 @@ export function ProviderSettings() {
               </option>
             ))}
           </select>
-          {THINKING_MODES.map(mode => (
-            formState.thinkingMode === mode.value && (
-              <p key={mode.value} className="provider-settings__description">
-                {mode.description}
-              </p>
-            )
-          ))}
+          {THINKING_MODES.map(
+            mode =>
+              formState.thinkingMode === mode.value && (
+                <p key={mode.value} className="provider-settings__description">
+                  {mode.description}
+                </p>
+              )
+          )}
         </div>
 
         <div className="provider-settings__field">
@@ -575,7 +605,7 @@ export function ProviderSettings() {
             <span>Show Thoughts</span>
           </label>
           <p className="provider-settings__description">
-            Display the model's thinking process in responses
+            Display the model&apos;s thinking process in responses
           </p>
         </div>
       </div>
@@ -592,31 +622,32 @@ export function ProviderSettings() {
       <Card.Body>
         <div className="provider-settings__status-item">
           <span className="provider-settings__status-label">Provider:</span>
-          <span className={cn('provider-settings__status-value', {
-            'provider-settings__status-value--inactive': !formState.defaultProvider
-          })}>
-            {formState.defaultProvider ? 
-              PROVIDER_OPTIONS.find(p => p.value === formState.defaultProvider)?.label :
-              'None Selected'
-            }
+          <span
+            className={cn('provider-settings__status-value', {
+              'provider-settings__status-value--inactive': !formState.defaultProvider,
+            })}
+          >
+            {formState.defaultProvider
+              ? PROVIDER_OPTIONS.find(p => p.value === formState.defaultProvider)?.label
+              : 'None Selected'}
           </span>
         </div>
-        
+
         <div className="provider-settings__status-item">
           <span className="provider-settings__status-label">API Key:</span>
-          <span className={cn('provider-settings__status-value', {
-            'provider-settings__status-value--active': hasApiKey(),
-            'provider-settings__status-value--inactive': !hasApiKey()
-          })}>
+          <span
+            className={cn('provider-settings__status-value', {
+              'provider-settings__status-value--active': hasApiKey(),
+              'provider-settings__status-value--inactive': !hasApiKey(),
+            })}
+          >
             {hasApiKey() ? 'Configured' : 'Not Configured'}
           </span>
         </div>
 
         <div className="provider-settings__status-item">
           <span className="provider-settings__status-label">Models:</span>
-          <span className="provider-settings__status-value">
-            {currentModels.length} available
-          </span>
+          <span className="provider-settings__status-value">{currentModels.length} available</span>
         </div>
       </Card.Body>
     </Card>
@@ -659,9 +690,7 @@ export function ProviderSettings() {
       <Card variant="elevated" padding="lg">
         <Card.Header>
           <Card.Title level={2}>Provider Settings</Card.Title>
-          <Card.Description>
-            Configure your AI provider and model preferences
-          </Card.Description>
+          <Card.Description>Configure your AI provider and model preferences</Card.Description>
         </Card.Header>
 
         <Card.Body>
