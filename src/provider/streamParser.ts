@@ -457,7 +457,6 @@ export class StreamParser {
   private detectProvider(data: any): ProviderType {
     if (data.model?.includes('gpt') || data.model?.includes('openai')) return 'openai';
     if (data.model?.includes('gemini') || data.candidates) return 'gemini';
-    if (data.model?.includes('claude') || data.type?.includes('anthropic')) return 'openrouter';
     return 'openai'; // Default fallback
   }
 

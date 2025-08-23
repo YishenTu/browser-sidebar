@@ -169,7 +169,6 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ className, onClose }) => {
     async (content: string) => {
       await sendMessage(content, {
         streaming: true,
-        priority: 'high',
       });
     },
     [sendMessage]

@@ -3,12 +3,11 @@
  *
  * Google Gemini AI provider client implementation extending BaseProvider.
  * Handles initialization, authentication, configuration validation, and
- * prepares for chat generation with thinking modes.
+ * prepares for chat generation with thinking budgets.
  *
  * Supports:
  * - API key authentication
- * - Temperature parameter (0.0-2.0)
- * - Thinking modes ('off', 'dynamic')
+ * - Thinking budgets ('0'=off, '-1'=dynamic)
  * - Thought visibility control
  * - Safety settings
  * - Stop sequences
@@ -16,6 +15,11 @@
  */
 
 import { BaseProvider } from '../BaseProvider';
+import { 
+  getModelsByProvider, 
+  getModelById, 
+  modelExists 
+} from '../../config/models';
 import type {
   ProviderConfig,
   GeminiConfig,
@@ -38,9 +42,6 @@ const GEMINI_API_CONFIG = {
   TOKEN_ESTIMATION_RATIO: 3.5, // average characters per token
 } as const;
 
-
-import { getGeminiModels, getGeminiModel } from './models';
-
 /**
  * Google Gemini AI provider client
  */
@@ -49,15 +50,16 @@ export class GeminiClient extends BaseProvider {
   private baseUrl: string = GEMINI_API_CONFIG.BASE_URL;
 
   constructor() {
+    const geminiModels = getModelsByProvider('gemini');
     super('gemini', 'Google Gemini', {
       streaming: true,
-      temperature: true,
+      temperature: false,
       reasoning: false, // Gemini doesn't have reasoning_effort like OpenAI
-      thinking: true, // Gemini supports thinking mode
+      thinking: true, // Gemini supports thinking budget
       multimodal: true, // Gemini supports vision
-      functionCalling: true, // Gemini supports function calling
-      maxContextLength: 2000000, // Max context length across all Gemini models
-      supportedModels: getGeminiModels().map(model => model.id),
+      functionCalling: false,
+      maxContextLength: 1048576, // Max context length for Gemini 2.5 Flash Lite
+      supportedModels: geminiModels.map(model => model.id),
     });
   }
 
@@ -106,24 +108,20 @@ export class GeminiClient extends BaseProvider {
       errors.push('Invalid API key');
     }
 
-    // Temperature validation (0.0 to 2.0)
-    if (
-      config.temperature !== undefined &&
-      (typeof config.temperature !== 'number' ||
-        isNaN(config.temperature) ||
-        config.temperature < 0.0 ||
-        config.temperature > 2.0)
-    ) {
-      errors.push('Invalid temperature');
+    // Model validation
+    if (!config.model || typeof config.model !== 'string' || config.model.trim() === '') {
+      errors.push('Invalid model');
+    } else if (!modelExists(config.model)) {
+      errors.push(`Unknown model: ${config.model}`);
     }
 
-    // Thinking mode validation (optional, defaults to 'off')
-    if (config.thinkingMode !== undefined) {
+    // Thinking budget validation (optional, defaults to '0')
+    if (config.thinkingBudget !== undefined) {
       if (
-        typeof config.thinkingMode !== 'string' ||
-        !['off', 'dynamic'].includes(config.thinkingMode)
+        typeof config.thinkingBudget !== 'string' ||
+        !['0', '-1'].includes(config.thinkingBudget)
       ) {
-        errors.push('Invalid thinking mode');
+        errors.push('Invalid thinking budget');
       }
     }
 
@@ -134,35 +132,15 @@ export class GeminiClient extends BaseProvider {
       }
     }
 
-    // Model validation
-    if (!config.model || typeof config.model !== 'string' || config.model.trim() === '') {
-      errors.push('Invalid model');
-    }
-
-    // Max tokens validation (optional)
-    if (config.maxTokens !== undefined) {
-      if (typeof config.maxTokens !== 'number' || config.maxTokens <= 0) {
-        errors.push('Invalid max tokens');
-      }
-    }
-
-    // Top P validation (optional, 0 < topP <= 1)
-    if (config.topP !== undefined) {
-      if (
-        typeof config.topP !== 'number' ||
-        isNaN(config.topP) ||
-        config.topP <= 0 ||
-        config.topP > 1
-      ) {
-        errors.push('Invalid top P');
-      }
-    }
-
-    // Top K validation (optional, > 0)
-    if (config.topK !== undefined) {
-      if (typeof config.topK !== 'number' || config.topK <= 0) {
-        errors.push('Invalid top K');
-      }
+    // Log if legacy parameters are provided (but don't fail)
+    if (config.temperature !== undefined || config.topP !== undefined || 
+        config.topK !== undefined || config.maxTokens !== undefined) {
+      console.debug('Legacy parameters ignored:', {
+        temperature: config.temperature,
+        topP: config.topP,
+        topK: config.topK,
+        maxTokens: config.maxTokens,
+      });
     }
 
     // Safety settings validation (optional)
@@ -251,14 +229,14 @@ export class GeminiClient extends BaseProvider {
    * Get available Gemini models
    */
   getModels(): ModelConfig[] {
-    return getGeminiModels();
+    return getModelsByProvider('gemini');
   }
 
   /**
    * Get specific model by ID
    */
   getModel(id: string): ModelConfig | undefined {
-    return getGeminiModel(id);
+    return getModelById(id);
   }
 
   // ============================================================================

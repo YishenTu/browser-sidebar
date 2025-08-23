@@ -2,7 +2,6 @@ import React from 'react';
 import { cn } from '@utils/cn';
 import { ChatMessage, MessageRole, MessageStatus } from '@store/chat';
 import { MarkdownRenderer } from './MarkdownRenderer';
-import { StreamingText } from './StreamingText';
 
 /**
  * MessageBubble Props Interface
@@ -114,20 +113,21 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
         }}
       >
         <div className={cn(getMessageClasses(message.role))}>
-          {message.status === 'streaming' ? (
-            <StreamingText
-              text={message.content}
-              isStreaming={true}
-              speed={20}
-              tokenizeBy="word"
-              preserveMarkdown={false}
-              data-testid="message-content"
-            />
-          ) : (
-            <div data-testid="message-content">
-              <MarkdownRenderer content={message.content} />
-            </div>
-          )}
+          <div data-testid="message-content">
+            <MarkdownRenderer content={message.content} />
+            {message.status === 'streaming' && (
+              <span
+                className="inline-block w-2 h-5 bg-current animate-pulse ml-1"
+                style={{
+                  animation: 'pulse 1s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                  verticalAlign: 'text-bottom'
+                }}
+                aria-hidden="true"
+              >
+                |
+              </span>
+            )}
+          </div>
         </div>
 
         {/* Timestamp and model name (for assistant) - same row under bubble */}
@@ -154,7 +154,7 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
                   }}
                   aria-label="model-name"
                 >
-                  {(message.metadata?.model as string) || 'AI Assistant'}
+                  {(message.metadata?.['model'] as string) || 'AI Assistant'}
                 </span>
               )}
               <time

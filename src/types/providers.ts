@@ -2,14 +2,17 @@
  * @file AI Provider type definitions and validation
  *
  * This file contains comprehensive type definitions for the AI provider system,
- * including interfaces for OpenAI, Gemini, and OpenRouter providers, along with
+ * including interfaces for OpenAI and Gemini providers, along with
  * configuration types, response types, and validation utilities.
  *
  * Supports all provider-specific configuration options:
- * - OpenAI: temperature (0.0-2.0), reasoning_effort (low/medium/high)
- * - Gemini: temperature (0.0-2.0), thinking_mode (off/dynamic), thought visibility
- * - OpenRouter/Claude: temperature (0.0-2.0), max_thinking_tokens (5k-100k)
+ * - OpenAI: reasoning_effort (low/medium/high)
+ * - Gemini: thinking_budget ('0'=off, '-1'=dynamic), thought visibility
  */
+
+// Import and re-export ModelConfig from centralized location
+import type { ModelConfig } from '../config/models';
+export type { ModelConfig };
 
 // ============================================================================
 // Core Types
@@ -18,7 +21,7 @@
 /**
  * Supported AI provider types
  */
-export type ProviderType = 'openai' | 'gemini' | 'openrouter';
+export type ProviderType = 'openai' | 'gemini';
 
 /**
  * Chat message roles for AI providers
@@ -33,12 +36,13 @@ export type ErrorType = 'authentication' | 'rate_limit' | 'network' | 'validatio
 /**
  * Reasoning effort levels for OpenAI models
  */
-export type ReasoningEffort = 'low' | 'medium' | 'high';
+export type ReasoningEffort = 'minimal' | 'low' | 'medium' | 'high';
 
 /**
- * Thinking modes for Gemini models
+ * Thinking budget for Gemini models
+ * '0' = off, '-1' = dynamic
  */
-export type ThinkingMode = 'off' | 'dynamic';
+export type ThinkingBudget = '0' | '-1';
 
 /**
  * Finish reasons for completion responses
@@ -65,15 +69,11 @@ export interface TemperatureConfig {
  */
 export interface OpenAIConfig {
   apiKey: string;
-  temperature: number;
-  reasoningEffort: ReasoningEffort;
   model: string;
-  maxTokens: number;
-  topP: number;
-  frequencyPenalty: number;
-  presencePenalty: number;
+  reasoningEffort?: ReasoningEffort;
   seed?: number;
   user?: string;
+  customOptions?: Record<string, unknown>;
 }
 
 /**
@@ -81,13 +81,9 @@ export interface OpenAIConfig {
  */
 export interface GeminiConfig {
   apiKey: string;
-  temperature: number;
-  thinkingMode: ThinkingMode;
-  showThoughts: boolean;
   model: string;
-  maxTokens: number;
-  topP: number;
-  topK: number;
+  thinkingBudget?: ThinkingBudget;
+  showThoughts?: boolean;
   safetySettings?: Array<{
     category: string;
     threshold: string;
@@ -97,26 +93,11 @@ export interface GeminiConfig {
 }
 
 /**
- * OpenRouter provider configuration
- */
-export interface OpenRouterConfig {
-  apiKey: string;
-  temperature: number;
-  maxThinkingTokens: number;
-  model: string;
-  maxTokens: number;
-  topP: number;
-  endpoint: string;
-  headers?: Record<string, string>;
-  transforms?: string[];
-}
-
-/**
  * Generic provider configuration wrapper
  */
 export interface ProviderConfig {
   type: ProviderType;
-  config: OpenAIConfig | GeminiConfig | OpenRouterConfig;
+  config: OpenAIConfig | GeminiConfig;
 }
 
 // ============================================================================
@@ -274,42 +255,13 @@ export interface ProviderCapabilities {
   streaming: boolean;
   temperature: boolean;
   reasoning: boolean; // OpenAI reasoning_effort
-  thinking: boolean; // Gemini thinking mode or Claude thinking tokens
+  thinking: boolean; // Gemini thinking budget or Claude thinking tokens
   multimodal: boolean;
   functionCalling: boolean;
   maxContextLength: number;
   supportedModels: string[];
 }
 
-/**
- * Model configuration
- */
-export interface ModelConfig {
-  id: string;
-  name: string;
-  provider: ProviderType;
-  maxTokens: number;
-  contextLength: number;
-  costPer1kTokens: {
-    input: number;
-    output: number;
-  };
-  capabilities: {
-    streaming: boolean;
-    temperature: boolean;
-    reasoning: boolean;
-    thinking: boolean;
-    multimodal: boolean;
-    functionCalling: boolean;
-  };
-  parameters: {
-    temperature: { min: number; max: number; default: number };
-    topP?: { min: number; max: number; default: number };
-    reasoningEffort?: ReasoningEffort[]; // Available for OpenAI
-    thinkingMode?: ThinkingMode[]; // Available for Gemini
-    maxThinkingTokens?: { min: number; max: number; default: number }; // OpenRouter/Claude
-  };
-}
 
 /**
  * Provider metadata
@@ -361,7 +313,7 @@ export interface AIProvider {
  * Type guard for provider types
  */
 export function isProviderType(value: any): value is ProviderType {
-  return typeof value === 'string' && ['openai', 'gemini', 'openrouter'].includes(value);
+  return typeof value === 'string' && ['openai', 'gemini'].includes(value);
 }
 
 /**
@@ -456,10 +408,10 @@ export function isValidReasoningEffort(value: any): value is ReasoningEffort {
 }
 
 /**
- * Validate thinking mode value
+ * Validate thinking budget value
  */
-export function isValidThinkingMode(value: any): value is ThinkingMode {
-  return typeof value === 'string' && ['off', 'dynamic'].includes(value);
+export function isValidThinkingBudget(value: any): value is ThinkingBudget {
+  return typeof value === 'string' && ['0', '-1'].includes(value);
 }
 
 /**
@@ -535,8 +487,8 @@ export function validateGeminiConfig(config: any): ProviderValidationResult {
     errors.push('Invalid temperature');
   }
 
-  if (!isValidThinkingMode(config.thinkingMode)) {
-    errors.push('Invalid thinking mode');
+  if (!isValidThinkingBudget(config.thinkingBudget)) {
+    errors.push('Invalid thinking budget');
   }
 
   if (typeof config.showThoughts !== 'boolean') {
@@ -566,52 +518,6 @@ export function validateGeminiConfig(config: any): ProviderValidationResult {
 }
 
 /**
- * Validate OpenRouter configuration
- */
-export function validateOpenRouterConfig(config: any): ProviderValidationResult {
-  const errors: string[] = [];
-
-  if (!config.apiKey || typeof config.apiKey !== 'string' || config.apiKey.trim() === '') {
-    errors.push('Invalid API key');
-  }
-
-  if (!isValidTemperature(config.temperature)) {
-    errors.push('Invalid temperature');
-  }
-
-  if (!isValidMaxThinkingTokens(config.maxThinkingTokens)) {
-    errors.push('Invalid max thinking tokens');
-  }
-
-  if (!config.model || typeof config.model !== 'string') {
-    errors.push('Invalid model');
-  }
-
-  if (typeof config.maxTokens !== 'number' || config.maxTokens <= 0) {
-    errors.push('Invalid max tokens');
-  }
-
-  if (typeof config.topP !== 'number' || config.topP < 0 || config.topP > 1) {
-    errors.push('Invalid top P');
-  }
-
-  if (!config.endpoint || typeof config.endpoint !== 'string') {
-    errors.push('Invalid endpoint URL');
-  } else {
-    try {
-      new URL(config.endpoint);
-    } catch {
-      errors.push('Invalid endpoint URL format');
-    }
-  }
-
-  return {
-    isValid: errors.length === 0,
-    errors,
-  };
-}
-
-/**
  * Validate generic provider configuration
  */
 export function validateProviderConfig(config: ProviderConfig): ProviderValidationResult {
@@ -627,8 +533,6 @@ export function validateProviderConfig(config: ProviderConfig): ProviderValidati
       return validateOpenAIConfig(config.config);
     case 'gemini':
       return validateGeminiConfig(config.config);
-    case 'openrouter':
-      return validateOpenRouterConfig(config.config);
     default:
       return {
         isValid: false,
@@ -658,12 +562,12 @@ export const TEMPERATURE_CONFIG: TemperatureConfig = {
 export const REASONING_EFFORTS: ReasoningEffort[] = ['low', 'medium', 'high'];
 
 /**
- * Gemini thinking mode options
+ * Gemini thinking budget options
  */
-export const THINKING_MODES: ThinkingMode[] = ['off', 'dynamic'];
+export const THINKING_BUDGETS: ThinkingBudget[] = ['0', '-1'];
 
 /**
- * Max thinking tokens range for Claude via OpenRouter
+ * Max thinking tokens range for future use
  */
 export const MAX_THINKING_TOKENS_RANGE = {
   min: 5000,

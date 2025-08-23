@@ -9,7 +9,6 @@
  * - Real AI provider integration via ProviderRegistry and ProviderFactory
  * - Streaming response support with token-by-token updates
  * - Rate limiting integration with automatic retries
- * - Request queue management with priority handling
  * - Provider switching and error recovery
  * - Message cancellation support
  * - Comprehensive error handling and formatting
@@ -20,8 +19,7 @@ import { useChatStore } from '@store/chat';
 import { useSettingsStore } from '@store/settings';
 import { ProviderRegistry } from '../../provider/ProviderRegistry';
 import { ProviderFactory } from '../../provider/ProviderFactory';
-import { RateLimiter } from '../../provider/RateLimiter';
-import { RequestQueue, type RequestPriority } from '../../provider/RequestQueue';
+import { SUPPORTED_MODELS } from '../../config/models';
 import type { ProviderType, AIProvider, ProviderConfig } from '../../types/providers';
 
 // ============================================================================
@@ -34,8 +32,6 @@ import type { ProviderType, AIProvider, ProviderConfig } from '../../types/provi
 interface SendMessageOptions {
   /** Whether to use streaming response (default: true) */
   streaming?: boolean;
-  /** Request priority (default: 'high') */
-  priority?: RequestPriority;
   /** Custom timeout in milliseconds */
   timeout?: number;
   /** Additional metadata */
@@ -75,9 +71,6 @@ interface UseAIChatReturn {
 /** Default token estimate for messages when provider estimation fails */
 const DEFAULT_TOKEN_ESTIMATE = 100;
 
-/** Default request timeout in milliseconds */
-const DEFAULT_REQUEST_TIMEOUT = 30000;
-
 // ============================================================================
 // Hook Implementation
 // ============================================================================
@@ -100,8 +93,6 @@ export function useAIChat(options: UseAIChatOptions = {}): UseAIChatReturn {
   // Refs for persistent instances
   const registryRef = useRef<ProviderRegistry | null>(null);
   const factoryRef = useRef<ProviderFactory | null>(null);
-  const rateLimiterRef = useRef<RateLimiter | null>(null);
-  const requestQueueRef = useRef<RequestQueue | null>(null);
   const currentRequestRef = useRef<Promise<any> | null>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
   
@@ -117,12 +108,6 @@ export function useAIChat(options: UseAIChatOptions = {}): UseAIChatReturn {
     }
     if (!factoryRef.current) {
       factoryRef.current = new ProviderFactory();
-    }
-    if (!rateLimiterRef.current) {
-      rateLimiterRef.current = new RateLimiter();
-    }
-    if (!requestQueueRef.current && rateLimiterRef.current) {
-      requestQueueRef.current = new RequestQueue(rateLimiterRef.current);
     }
   }, []);
 
@@ -168,8 +153,8 @@ export function useAIChat(options: UseAIChatOptions = {}): UseAIChatReturn {
 
         // Update the last initialized keys
         lastInitializedKeysRef.current = {
-          openai: apiKeys.openai,
-          google: apiKeys.google,
+          openai: apiKeys.openai || undefined,
+          google: apiKeys.google || undefined,
         };
 
         if (!registryRef.current || !factoryRef.current) {
@@ -186,26 +171,31 @@ export function useAIChat(options: UseAIChatOptions = {}): UseAIChatReturn {
         }
 
         // Create provider configurations for each available API key
+        // Use the first available model for each provider from config
         const providerConfigs: ProviderConfig[] = [];
+        
+        // Find default models for each provider from SUPPORTED_MODELS
+        const defaultOpenAIModel = SUPPORTED_MODELS.find(m => m.provider === 'openai');
+        const defaultGeminiModel = SUPPORTED_MODELS.find(m => m.provider === 'gemini');
 
-        if (apiKeys.openai) {
+        if (apiKeys.openai && defaultOpenAIModel) {
           providerConfigs.push({
             type: 'openai',
             config: {
               apiKey: apiKeys.openai,
-              model: 'gpt-5-nano',
-              reasoningEffort: 'low',
+              model: defaultOpenAIModel.id,
+              reasoningEffort: defaultOpenAIModel.reasoningEffort || 'low',
             },
           });
         }
 
-        if (apiKeys.google) {
+        if (apiKeys.google && defaultGeminiModel) {
           providerConfigs.push({
             type: 'gemini',
             config: {
               apiKey: apiKeys.google,
-              model: 'gemini-2.5-flash-lite',
-              thinkingMode: 'off',
+              model: defaultGeminiModel.id,
+              thinkingBudget: defaultGeminiModel.thinkingBudget || '0',
               showThoughts: false,
             },
           });
@@ -243,6 +233,7 @@ export function useAIChat(options: UseAIChatOptions = {}): UseAIChatReturn {
     };
 
     initializeProviders();
+    // Only initialize on API key changes, not model changes
   }, [enabled, autoInitialize, settings?.apiKeys?.openai, settings?.apiKeys?.google, chatStore]);
 
   // React to settings changes: register/unregister providers and select active
@@ -251,10 +242,13 @@ export function useAIChat(options: UseAIChatOptions = {}): UseAIChatReturn {
     const registry = registryRef.current;
     const factory = factoryRef.current;
     if (!registry || !factory) return;
+    
+    // Don't sync if we're still initializing
+    if (isInitializingRef.current) return;
 
     const syncProviders = async () => {
       try {
-        const { apiKeys, ai } = settings;
+        const { apiKeys } = settings;
 
         // Helper to ensure a provider is registered when key exists, or unregistered when missing
         const ensureProvider = async (
@@ -263,7 +257,12 @@ export function useAIChat(options: UseAIChatOptions = {}): UseAIChatReturn {
           config: ProviderConfig['config']
         ) => {
           const isRegistered = registry.hasProvider(type);
-          if (hasKey && !isRegistered) {
+          if (hasKey) {
+            // Always unregister first to ensure fresh configuration
+            if (isRegistered) {
+              registry.unregister(type);
+            }
+            // Then create and register with new config
             try {
               const provider = await factory.createProvider({ type, config });
               registry.register(provider);
@@ -275,37 +274,51 @@ export function useAIChat(options: UseAIChatOptions = {}): UseAIChatReturn {
           }
         };
 
-        // Desired configs using Phase 1 models/defaults
-        const openAIConfig: ProviderConfig['config'] = {
-          apiKey: apiKeys.openai as string,
-          model: 'gpt-5-nano',
-          reasoningEffort: 'medium',
-          maxTokens: 4096,
-          topP: 1.0,
-          frequencyPenalty: 0.0,
-          presencePenalty: 0.0,
-        } as any;
+        // Get selected model from settings
+        const selectedModelId = settings.selectedModel;
+        const selectedModel = SUPPORTED_MODELS.find(m => m.id === selectedModelId);
+        
+        if (!selectedModel) {
+          console.warn(`Selected model not found: ${selectedModelId}`);
+          return;
+        }
 
-        const geminiConfig: ProviderConfig['config'] = {
-          apiKey: apiKeys.google as string,
-          model: 'gemini-2.5-flash-lite',
-          thinkingMode: 'off',
-          showThoughts: false,
-          maxTokens: 8192,
-          topP: 0.95,
-          topK: 40,
-        } as any;
-
-        await ensureProvider('openai', !!apiKeys.openai, openAIConfig);
-        await ensureProvider('gemini', !!apiKeys.google, geminiConfig);
-
-        // Re-select active provider if available
-        const desired = ai?.defaultProvider;
-        if (desired && registry.hasProvider(desired)) {
-          try {
-            registry.setActiveProvider(desired);
-          } catch (err) {
-            // ignore
+        // Only update the provider that matches the selected model
+        // Keep both providers registered if API keys exist
+        if (selectedModel.provider === 'openai' && apiKeys.openai) {
+          const openAIConfig: ProviderConfig['config'] = {
+            apiKey: apiKeys.openai as string,
+            model: selectedModelId,
+            reasoningEffort: selectedModel.reasoningEffort || 'low',
+          } as any;
+          await ensureProvider('openai', true, openAIConfig);
+          
+          // Set OpenAI as active provider
+          if (registry.hasProvider('openai')) {
+            try {
+              registry.setActiveProvider('openai');
+            } catch (err) {
+              console.warn('Failed to set OpenAI as active provider:', err);
+            }
+          }
+        }
+        
+        if (selectedModel.provider === 'gemini' && apiKeys.google) {
+          const geminiConfig: ProviderConfig['config'] = {
+            apiKey: apiKeys.google as string,
+            model: selectedModelId,
+            thinkingBudget: selectedModel.thinkingBudget || '0',
+            showThoughts: false,
+          } as any;
+          await ensureProvider('gemini', true, geminiConfig);
+          
+          // Set Gemini as active provider
+          if (registry.hasProvider('gemini')) {
+            try {
+              registry.setActiveProvider('gemini');
+            } catch (err) {
+              console.warn('Failed to set Gemini as active provider:', err);
+            }
           }
         }
       } catch (err) {
@@ -313,19 +326,16 @@ export function useAIChat(options: UseAIChatOptions = {}): UseAIChatReturn {
       }
     };
 
-    syncProviders();
+    // Debounce to prevent rapid re-initialization
+    const timeoutId = setTimeout(syncProviders, 300);
+    return () => clearTimeout(timeoutId);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [enabled, settings.ai?.defaultProvider, settings.apiKeys?.openai, settings.apiKeys?.google]);
+  }, [enabled, settings.ai?.defaultProvider, settings.apiKeys?.openai, settings.apiKeys?.google, settings.selectedModel]);
 
   // Cleanup on unmount
   useEffect(() => {
     return () => {
-      if (currentRequestRef.current) {
-        // Cancel ongoing request
-        if (requestQueueRef.current) {
-          requestQueueRef.current.cancel(currentRequestRef.current);
-        }
-      }
+      // Clean up current request if any
       if (abortControllerRef.current) {
         abortControllerRef.current.abort();
       }
@@ -515,9 +525,6 @@ export function useAIChat(options: UseAIChatOptions = {}): UseAIChatReturn {
 
       const {
         streaming = true,
-        priority = 'high',
-        timeout = DEFAULT_REQUEST_TIMEOUT,
-        metadata,
       } = options;
 
       try {
@@ -541,8 +548,6 @@ export function useAIChat(options: UseAIChatOptions = {}): UseAIChatReturn {
           status: 'sending',
         });
 
-        // Estimate token usage
-        const tokens = estimateTokens(trimmedContent, provider);
 
         // Create request function
         const requestFn = async () => {
@@ -554,6 +559,7 @@ export function useAIChat(options: UseAIChatOptions = {}): UseAIChatReturn {
               // Get the selected model from settings
               const selectedModel = settingsStore.settings.selectedModel;
               const modelInfo = settingsStore.settings.availableModels.find(m => m.id === selectedModel);
+              
               
               // Create assistant message for streaming with model metadata
               const assistantMessage = chatStore.addMessage({
@@ -591,26 +597,8 @@ export function useAIChat(options: UseAIChatOptions = {}): UseAIChatReturn {
           }
         };
 
-        // Enqueue request with rate limiting
-        if (requestQueueRef.current) {
-          const providerType = registryRef.current?.getActiveProviderType();
-          if (!providerType) {
-            throw new Error('No active provider type');
-          }
-
-          currentRequestRef.current = requestQueueRef.current.enqueue(requestFn, {
-            provider: providerType,
-            tokens,
-            priority,
-            timeout,
-            metadata,
-          });
-
-          await currentRequestRef.current;
-        } else {
-          // Fallback: execute directly if no queue
-          await requestFn();
-        }
+        // Execute request directly
+        await requestFn();
       } catch (error) {
         // Handle general errors
         const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
@@ -636,11 +624,6 @@ export function useAIChat(options: UseAIChatOptions = {}): UseAIChatReturn {
    * Cancel the current message/streaming operation
    */
   const cancelMessage = useCallback(() => {
-    // Cancel current request in queue
-    if (requestQueueRef.current && currentRequestRef.current) {
-      requestQueueRef.current.cancel(currentRequestRef.current);
-    }
-
     // Abort any ongoing operations
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
@@ -664,6 +647,11 @@ export function useAIChat(options: UseAIChatOptions = {}): UseAIChatReturn {
 
         // Switch provider in registry
         if (registryRef.current) {
+          // Check if provider is registered before trying to switch
+          if (!registryRef.current.hasProvider(providerType)) {
+            console.warn(`Provider ${providerType} is not registered yet`);
+            return;
+          }
           registryRef.current.setActiveProvider(providerType);
         }
 
@@ -693,12 +681,7 @@ export function useAIChat(options: UseAIChatOptions = {}): UseAIChatReturn {
   const getStats = useCallback(() => {
     return {
       activeProvider: registryRef.current?.getActiveProviderType() || null,
-      queueStats: requestQueueRef.current?.getStats() || null,
-      rateLimiter: {
-        openai: rateLimiterRef.current?.getProviderStats('openai') || null,
-        gemini: rateLimiterRef.current?.getProviderStats('gemini') || null,
-        // openrouter removed/not implemented
-      },
+      // Queue and rate limiting stats removed (not needed for BYOK model)
     };
   }, []);
 

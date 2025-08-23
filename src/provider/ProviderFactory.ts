@@ -2,9 +2,8 @@
  * @file Provider Factory
  *
  * Factory class for creating and configuring AI provider instances.
- * Supports OpenAI, Gemini, and OpenRouter providers with their specific
- * configuration parameters including temperature, reasoning_effort, thinking_mode,
- * and maxThinkingTokens.
+ * Supports OpenAI and Gemini providers with their specific
+ * configuration parameters including reasoning_effort and thinking_budget.
  *
  * Features:
  * - Type-safe provider creation based on provider type
@@ -292,16 +291,11 @@ export class ProviderFactory {
    * @param model Model to use (defaults to gpt-4o)
    * @returns Default OpenAI configuration
    */
-  createDefaultOpenAIConfig(apiKey: string, model: string = 'gpt-4o'): OpenAIConfig {
+  createDefaultOpenAIConfig(apiKey: string, model: string = 'gpt-5-nano'): OpenAIConfig {
     return {
       apiKey,
-      temperature: 0.7,
-      reasoningEffort: 'medium',
       model,
-      maxTokens: 4096,
-      topP: 1.0,
-      frequencyPenalty: 0.0,
-      presencePenalty: 0.0,
+      reasoningEffort: 'medium',
     };
   }
 
@@ -311,16 +305,12 @@ export class ProviderFactory {
    * @param model Model to use (defaults to gemini-2.0-flash-thinking-exp)
    * @returns Default Gemini configuration
    */
-  createDefaultGeminiConfig(apiKey: string, model: string = 'gemini-2.0-flash-thinking-exp'): GeminiConfig {
+  createDefaultGeminiConfig(apiKey: string, model: string = 'gemini-2.5-flash-lite'): GeminiConfig {
     return {
       apiKey,
-      temperature: 0.7,
-      thinkingMode: 'dynamic',
-      showThoughts: true,
       model,
-      maxTokens: 8192,
-      topP: 0.95,
-      topK: 40,
+      thinkingBudget: '0',
+      showThoughts: false,
     };
   }
 }

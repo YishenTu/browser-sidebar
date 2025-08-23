@@ -94,7 +94,7 @@ src/provider/gemini/
 ```typescript
 getGeminiModels(): ModelConfig[]          // Get all models
 getGeminiModel(id: string): ModelConfig   // Get specific model
-supportsThinkingMode(id, mode): boolean   // Check thinking support
+supportsThinkingBudget(id, budget): boolean   // Check thinking support
 isMultimodalModel(id): boolean            // Check vision support
 ```
 
@@ -109,7 +109,7 @@ validateModelConfig(modelId): ValidationResult  // Validate model setup
 ```typescript
 const config = {
   temperature: 0.8,
-  thinkingMode: 'dynamic',
+  thinkingBudget: '-1',
   showThoughts: true
 };
 
@@ -143,7 +143,7 @@ const visionModel = geminiClient.getModel('gemini-pro-1.5');
 ## Acceptance Criteria ✅
 
 - [x] **gemini-2.5-flash-lite model configured** - Available with full thinking support
-- [x] **Model-specific thinking mode support** - All models support 'off' and 'dynamic' modes  
+- [x] **Model-specific thinking budget support** - All models support '0' (off) and '-1' (dynamic) budgets  
 - [x] **Context limits defined** - Each model has appropriate context window limits
 - [x] **Thought visibility configuration** - `showThoughts` controls thinking token display
 - [x] **Support matrix documented** - Comprehensive capability and thinking mode matrix

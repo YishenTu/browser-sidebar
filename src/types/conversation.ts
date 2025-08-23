@@ -14,6 +14,7 @@
  */
 
 import type { ChatMessage } from './chat';
+import { DEFAULT_MODEL_ID } from '../config/models';
 
 // =============================================================================
 // Core Type Definitions
@@ -536,7 +537,7 @@ export function createTestConversation(
 ): ConversationData {
   return createStorageConversation(title, {
     tabContext: createTabContext('https://example.com/test', 'Example Test Page'),
-    modelSettings: createModelSettings('openai', 'gpt-4', { temperature: 0.7 }),
+    modelSettings: createModelSettings('openai', DEFAULT_MODEL_ID, { temperature: 0.7 }),
     ...overrides,
   });
 }

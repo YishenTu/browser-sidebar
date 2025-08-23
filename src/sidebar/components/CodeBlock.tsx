@@ -51,11 +51,11 @@ const applySyntaxHighlight = (code: string, language?: string): React.ReactNode 
   };
 
   // Add aliases
-  langs.js = langs.javascript;
-  langs.ts = langs.typescript;
-  langs.jsx = langs.javascript;
-  langs.tsx = langs.typescript;
-  langs.py = langs.python;
+  langs['js'] = langs['javascript'] || [];
+  langs['ts'] = langs['typescript'] || [];
+  langs['jsx'] = langs['javascript'] || [];
+  langs['tsx'] = langs['typescript'] || [];
+  langs['py'] = langs['python'] || [];
 
   const rules = langs[language.toLowerCase()];
   if (!rules) {

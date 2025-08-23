@@ -1,12 +1,11 @@
 /**
  * @file OpenAI Provider Implementation
  *
- * OpenAI provider using Response API with temperature and reasoning_effort support.
+ * OpenAI provider using Response API with reasoning_effort support.
  * Implements streaming responses, error handling, and request cancellation.
  *
  * Features:
  * - OpenAI Responses API integration
- * - Temperature parameter support (0.0-2.0)
  * - Reasoning effort parameter (low/medium/high)
  * - Streaming with token buffering
  * - Request cancellation with AbortController
@@ -16,14 +15,19 @@
 
 import { BaseProvider } from '../BaseProvider';
 import { OpenAIClient } from './OpenAIClient';
-import { OPENAI_MODELS, OpenAIModelUtils } from './models';
 import { TokenBuffer, FlushStrategy } from '../tokenBuffer';
+import { 
+  getModelsByProvider, 
+  getModelById, 
+  supportsReasoning,
+  modelExists,
+  type ModelConfig 
+} from '../../config/models';
 import type {
   ProviderConfig,
   ProviderChatMessage,
   ProviderResponse,
   StreamChunk,
-  ModelConfig,
   ProviderValidationResult,
   ProviderError,
   OpenAIConfig,
@@ -40,15 +44,16 @@ export class OpenAIProvider extends BaseProvider {
 
 
   constructor() {
+    const openaiModels = getModelsByProvider('openai');
     super('openai', 'OpenAI', {
       streaming: true,
-      temperature: true,
+      temperature: false,
       reasoning: true,
       thinking: false,
       multimodal: true,
-      functionCalling: true,
-      maxContextLength: 128000,
-      supportedModels: OPENAI_MODELS.map(m => m.id),
+      functionCalling: false,
+      maxContextLength: 400000,
+      supportedModels: openaiModels.map(m => m.id),
     });
 
     this.openaiClient = new OpenAIClient();
@@ -81,7 +86,7 @@ export class OpenAIProvider extends BaseProvider {
   }
 
   /**
-   * Validate OpenAI configuration with model-specific parameter validation
+   * Validate OpenAI configuration
    */
   validateConfig(config: any): ProviderValidationResult {
     const errors: string[] = [];
@@ -93,71 +98,24 @@ export class OpenAIProvider extends BaseProvider {
       errors.push('API key must start with "sk-"');
     }
 
-    // Validate model first (needed for model-specific validation)
+    // Validate model
     if (!config.model || typeof config.model !== 'string') {
       errors.push('Invalid model');
-    } else {
-      const model = this.getModel(config.model);
-      if (!model) {
-        errors.push(`Unknown model: ${config.model}`);
-      } else {
-        // Model-specific parameter validation
-        const paramErrors = OpenAIModelUtils.validateModelParameters(config.model, config);
-        errors.push(...paramErrors);
-      }
+    } else if (!modelExists(config.model)) {
+      errors.push(`Unknown model: ${config.model}`);
     }
 
-    // General parameter validation (fallback if model validation fails)
-    if (config.temperature !== undefined) {
-      const model = this.getModel(config.model);
-      if (model && !model.capabilities.temperature) {
-        errors.push('Temperature is not supported for the selected model');
-      } else if (
-        typeof config.temperature !== 'number' ||
-        isNaN(config.temperature) ||
-        config.temperature < 0.0 ||
-        config.temperature > 2.0
-      ) {
-        errors.push('Invalid temperature');
-      }
-    }
-
-    // Validate reasoning effort
+    // Validate reasoning effort (only valid parameter for OpenAI)
     if (config.reasoningEffort !== undefined) {
       if (typeof config.reasoningEffort !== 'string' || 
-          !['low', 'medium', 'high'].includes(config.reasoningEffort)) {
+          !['minimal', 'low', 'medium', 'high'].includes(config.reasoningEffort)) {
         errors.push('Invalid reasoning effort');
       }
     }
 
-    // Validate maxTokens
-    if (config.maxTokens !== undefined) {
-      if (typeof config.maxTokens !== 'number' || config.maxTokens <= 0) {
-        errors.push('Invalid max tokens');
-      }
-    }
-
-    // Validate topP
-    if (config.topP !== undefined) {
-      if (typeof config.topP !== 'number' || config.topP < 0 || config.topP > 1) {
-        errors.push('Invalid top P');
-      }
-    }
-
-    // Validate frequency penalty
-    if (config.frequencyPenalty !== undefined) {
-      if (typeof config.frequencyPenalty !== 'number' ||
-          config.frequencyPenalty < -2 || config.frequencyPenalty > 2) {
-        errors.push('Invalid frequency penalty');
-      }
-    }
-
-    // Validate presence penalty
-    if (config.presencePenalty !== undefined) {
-      if (typeof config.presencePenalty !== 'number' ||
-          config.presencePenalty < -2 || config.presencePenalty > 2) {
-        errors.push('Invalid presence penalty');
-      }
+    // Log if legacy parameters are provided (but don't fail)
+    if (config.temperature !== undefined || config.topP !== undefined || 
+        config.frequencyPenalty !== undefined || config.presencePenalty !== undefined) {
     }
 
     return {
@@ -198,21 +156,18 @@ export class OpenAIProvider extends BaseProvider {
         // Convert messages to a single input string for Responses API
         const input = this.convertMessagesToResponsesInput(msgs);
 
-        // Build request parameters
+        // Build request parameters - minimal set only
         const requestParams: any = {
           model: currentConfig.model,
           input,
         };
 
-        // Only include temperature if the model supports it
-        if (OpenAIModelUtils.supportsParameter(currentConfig.model, 'temperature')) {
-          requestParams.temperature = currentConfig.temperature;
-        }
-
         // Add reasoning effort for supported models (Responses API schema)
-        if (currentConfig.reasoningEffort && this.supportsReasoning(currentConfig.model)) {
+        if (currentConfig.reasoningEffort && supportsReasoning(currentConfig.model)) {
           requestParams.reasoning = { effort: currentConfig.reasoningEffort };
         }
+
+        // Log the ACTUAL API request parameters
 
         try {
           // Use Responses API with AbortSignal passed via RequestOptions
@@ -220,6 +175,8 @@ export class OpenAIProvider extends BaseProvider {
             requestParams,
             { signal: cfg?.signal }
           );
+          
+          // Log the response model to verify what model actually responded
           return this.convertResponsesToProviderFormat(response);
         } catch (error) {
           // Wrap in Error instance with ProviderError fields for consistency
@@ -237,36 +194,32 @@ export class OpenAIProvider extends BaseProvider {
    * Stream chat messages using OpenAI Response API
    */
   async *streamChat(messages: ProviderChatMessage[], config?: any): AsyncIterable<StreamChunk> {
+    const self = this;
     yield* this.performStreamChat(
       messages,
-      async (msgs: ProviderChatMessage[], cfg?: any) => {
-        const openaiInstance = this.openaiClient.getOpenAIInstance();
+      async function* (msgs: ProviderChatMessage[], cfg?: any) {
+        const openaiInstance = self.openaiClient.getOpenAIInstance();
         if (!openaiInstance) {
           throw new Error('OpenAI client not initialized');
         }
 
-        const currentConfig = this.getConfig()?.config as OpenAIConfig;
+        const currentConfig = self.getConfig()?.config as OpenAIConfig;
         if (!currentConfig) {
           throw new Error('Provider configuration not found');
         }
 
         // Convert messages to Responses API input
-        const input = this.convertMessagesToResponsesInput(msgs);
+        const input = self.convertMessagesToResponsesInput(msgs);
 
-        // Build request parameters for streaming
+        // Build request parameters for streaming - minimal set only
         const requestParams: any = {
           model: currentConfig.model,
           input,
           stream: true,
         };
 
-        // Only include temperature if the model supports it
-        if (OpenAIModelUtils.supportsParameter(currentConfig.model, 'temperature')) {
-          (requestParams as any).temperature = currentConfig.temperature;
-        }
-
         // Add reasoning effort for supported models
-        if (currentConfig.reasoningEffort && this.supportsReasoning(currentConfig.model)) {
+        if (currentConfig.reasoningEffort && supportsReasoning(currentConfig.model)) {
           requestParams.reasoning = { effort: currentConfig.reasoningEffort };
         }
 
@@ -283,33 +236,31 @@ export class OpenAIProvider extends BaseProvider {
         }
 
         try {
-          // Use Responses API streaming with AbortSignal in RequestOptions
-          const stream = await (openaiInstance as any).responses.create(
-            {
-              ...requestParams,
-              stream: true,
-            },
-            { signal: cfg?.signal }
-          ) as any;
+          let asyncIterable: any;
 
-          if (stream && typeof stream[Symbol.asyncIterator] === 'function') {
-            for await (const event of stream) {
-              try {
-                const streamChunk = self.convertResponsesEventToStreamChunk(event);
-                if (streamChunk) {
-                  self.tokenBuffer!.addStreamChunk(streamChunk);
-                  yield streamChunk;
-                }
-              } catch (parseError) {
-                console.warn('Failed to parse stream event:', parseError);
-                continue;
-              }
-            }
+          // Prefer the official Responses streaming helper when available
+          if ((openaiInstance as any)?.responses?.stream) {
+            asyncIterable = await (openaiInstance as any).responses.stream(
+              { ...requestParams },
+              { signal: cfg?.signal }
+            );
           } else {
-            const streamChunk = self.convertResponsesEventToStreamChunk(stream);
-            if (streamChunk) {
-              self.tokenBuffer!.addStreamChunk(streamChunk);
-              yield streamChunk;
+            // Fallback: legacy pattern using create({ stream: true }) that returns an async-iterable
+            asyncIterable = await (openaiInstance as any).responses.create(
+              { ...requestParams, stream: true },
+              { signal: cfg?.signal }
+            );
+          }
+
+          for await (const event of asyncIterable as any) {
+            try {
+              const streamChunk = self.convertResponsesEventToStreamChunk(event);
+              if (streamChunk) {
+                self.tokenBuffer!.addStreamChunk(streamChunk);
+                yield streamChunk;
+              }
+            } catch (parseError) {
+              continue;
             }
           }
 
@@ -332,14 +283,14 @@ export class OpenAIProvider extends BaseProvider {
    * Get available OpenAI models
    */
   getModels(): ModelConfig[] {
-    return [...OPENAI_MODELS];
+    return getModelsByProvider('openai');
   }
 
   /**
    * Get specific model by ID
    */
   getModel(id: string): ModelConfig | undefined {
-    return OpenAIModelUtils.getModel(id);
+    return getModelById(id);
   }
 
   /**
@@ -494,12 +445,6 @@ export class OpenAIProvider extends BaseProvider {
     return 'stop';
   }
 
-  /**
-   * Check if model supports reasoning effort parameter
-   */
-  private supportsReasoning(modelId: string): boolean {
-    return OpenAIModelUtils.supportsParameter(modelId, 'reasoningEffort');
-  }
 
   /**
    * Convert OpenAI chunk to StreamChunk format

@@ -36,7 +36,7 @@ const DEFAULT_AVAILABLE_MODELS: Model[] = SUPPORTED_MODELS.map(model => ({
   id: model.id,
   name: model.name,
   provider: model.provider,
-  available: model.available,
+  available: true, // All models are available by default
 }));
 
 /**
@@ -54,8 +54,6 @@ const DEFAULT_SETTINGS: Settings = {
   },
   ai: {
     defaultProvider: null,
-    temperature: 0.7,
-    maxTokens: 2048,
     streamResponse: true,
   },
   privacy: {
@@ -66,7 +64,6 @@ const DEFAULT_SETTINGS: Settings = {
   apiKeys: {
     openai: null,
     google: null,
-    openrouter: null,
   },
   selectedModel: DEFAULT_MODEL_ID,
   availableModels: [...DEFAULT_AVAILABLE_MODELS],
@@ -89,28 +86,15 @@ const isValidFontSize = (fontSize: unknown): fontSize is 'small' | 'medium' | 'l
 /**
  * Validate AI provider value
  */
-const isValidAIProvider = (
+const isValidProvider = (
   provider: unknown
-): provider is 'openai' | 'gemini' | 'openrouter' | null => {
+): provider is 'openai' | 'gemini' | null => {
   return (
     provider === null ||
-    (typeof provider === 'string' && ['openai', 'gemini', 'openrouter'].includes(provider))
+    (typeof provider === 'string' && ['openai', 'gemini'].includes(provider))
   );
 };
 
-/**
- * Validate temperature range (0.0 - 2.0) to match UI bounds
- */
-const isValidTemperature = (temp: unknown): boolean => {
-  return typeof temp === 'number' && temp >= 0.0 && temp <= 2.0;
-};
-
-/**
- * Validate max tokens range (1 - 8192)
- */
-const isValidMaxTokens = (tokens: unknown): boolean => {
-  return typeof tokens === 'number' && tokens >= 1 && tokens <= 8192;
-};
 
 /**
  * Validate selected model against available models
@@ -125,16 +109,15 @@ const isValidSelectedModel = (modelId: unknown, availableModels: Model[]): boole
 /**
  * Map model provider display name to provider type
  */
-const getProviderTypeFromModel = (model: Model): 'openai' | 'gemini' | 'openrouter' | null => {
+const getProviderTypeFromModel = (model: Model): 'openai' | 'gemini' | null => {
   // Try centralized config first
   const providerType = getProviderTypeForModelId(model.id);
-  if (providerType) return providerType as 'openai' | 'gemini' | 'openrouter';
+  if (providerType) return providerType;
 
   // Fallback for any models not in centralized config
-  const providerMapping: Record<string, 'openai' | 'gemini' | 'openrouter' | null> = {
+  const providerMapping: Record<string, 'openai' | 'gemini' | null> = {
     OpenAI: 'openai',
     Google: 'gemini',
-    OpenRouter: 'openrouter',
   };
 
   return providerMapping[model.provider] || null;
@@ -196,15 +179,20 @@ const validateUIPreferences = (ui: unknown): UIPreferences => {
  * Validate AI settings
  */
 const validateAISettings = (ai: unknown): AISettings => {
-  const a = (ai && typeof ai === 'object' ? ai : {}) as Partial<AISettings>;
+  const a = (ai && typeof ai === 'object' ? ai : {}) as Partial<AISettings & { temperature?: number; maxTokens?: number }>;
+  
+  // Log if legacy parameters are being migrated
+  if ('temperature' in a || 'maxTokens' in a) {
+    console.debug('Migrating legacy AI settings, removing:', {
+      temperature: a.temperature,
+      maxTokens: a.maxTokens,
+    });
+  }
+  
   return {
-    defaultProvider: isValidAIProvider(a.defaultProvider)
+    defaultProvider: isValidProvider(a.defaultProvider)
       ? a.defaultProvider
       : DEFAULT_SETTINGS.ai.defaultProvider,
-    temperature: isValidTemperature(a.temperature)
-      ? a.temperature!
-      : DEFAULT_SETTINGS.ai.temperature,
-    maxTokens: isValidMaxTokens(a.maxTokens) ? a.maxTokens! : DEFAULT_SETTINGS.ai.maxTokens,
     streamResponse:
       typeof a.streamResponse === 'boolean' ? a.streamResponse : DEFAULT_SETTINGS.ai.streamResponse,
   };
@@ -233,8 +221,14 @@ const validatePrivacySettings = (privacy: unknown): PrivacySettings => {
  * Validate API key references
  */
 const validateAPIKeyReferences = (apiKeys: unknown): APIKeyReferences => {
-  const a = (apiKeys && typeof apiKeys === 'object' ? apiKeys : {}) as Partial<APIKeyReferences> &
+  const a = (apiKeys && typeof apiKeys === 'object' ? apiKeys : {}) as Partial<APIKeyReferences & { openrouter?: string }> &
     Record<string, unknown>;
+  
+  // Log if legacy openrouter key is being removed  
+  if ('openrouter' in a) {
+    console.debug('Migrating API keys, removing openrouter');
+  }
+  
   return {
     openai:
       typeof a.openai === 'string' || a.openai === null
@@ -244,10 +238,6 @@ const validateAPIKeyReferences = (apiKeys: unknown): APIKeyReferences => {
       typeof a.google === 'string' || a.google === null
         ? (a.google as string | null)
         : DEFAULT_SETTINGS.apiKeys.google,
-    openrouter:
-      typeof a.openrouter === 'string' || a.openrouter === null
-        ? (a.openrouter as string | null)
-        : DEFAULT_SETTINGS.apiKeys.openrouter,
   };
 };
 
@@ -526,6 +516,7 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
           defaultProvider: newProvider,
         },
       };
+
       set({ settings: updatedSettings });
 
       // Save to storage

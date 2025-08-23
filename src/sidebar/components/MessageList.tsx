@@ -120,13 +120,14 @@ export const MessageList: React.FC<MessageListProps> = ({
 }) => {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const virtualListRef = useRef<List>(null);
-  const lastMessageRef = useRef<HTMLDivElement>(null);
+  const bottomAnchorRef = useRef<HTMLDivElement>(null);
   const [showScrollToBottom, setShowScrollToBottom] = useState(false);
-  const [isUserScrolling, setIsUserScrolling] = useState(false);
-  const [isAtBottomByObserver, setIsAtBottomByObserver] = useState(true);
+  const [autoScrollEnabled, setAutoScrollEnabled] = useState(true); // Auto-scroll is ON by default
   const scrollTimeout = useRef<NodeJS.Timeout | null>(null);
   const itemHeights = useRef<number[]>([]);
   const [isVirtualized, setIsVirtualized] = useState(false);
+  const lastMessageCount = useRef(messages.length);
+  const isScrollingProgrammatically = useRef(false);
 
   /**
    * Determine if virtualization should be used based on message count
@@ -162,69 +163,49 @@ export const MessageList: React.FC<MessageListProps> = ({
   // }, []);
 
   /**
-   * Check if the user is at the bottom of the scroll container
+   * Simple, aggressive scroll to bottom function
    */
-  const isAtBottom = useCallback((): boolean => {
-    if (isVirtualized && virtualListRef.current) {
-      // For virtualized list, check if scrolled to bottom
-      // Access the outer element through the ref's state
-      const listState = virtualListRef.current.state as unknown as {
-        scrollOffset?: number;
-        scrollHeight?: number;
-      };
-      if (!listState || listState.scrollOffset === undefined) return true;
-      const totalHeight = messages.length * DEFAULT_ITEM_HEIGHT;
-      const scrollOffset = listState.scrollOffset;
-      const viewportHeight = listState.scrollHeight || 500;
-      return Math.abs(totalHeight - viewportHeight - scrollOffset) <= SCROLL_THRESHOLD;
-    } else {
-      const container = scrollContainerRef.current;
-      if (!container) return true;
-      const { scrollTop, scrollHeight, clientHeight } = container;
-      return Math.abs(scrollHeight - clientHeight - scrollTop) <= SCROLL_THRESHOLD;
+  const forceScrollToBottom = useCallback(() => {
+    if (bottomAnchorRef.current) {
+      // Method 1: Scroll the anchor into view
+      bottomAnchorRef.current.scrollIntoView({ behavior: 'auto', block: 'end' });
     }
-  }, [isVirtualized, messages.length]);
+    
+    const container = scrollContainerRef.current;
+    if (container) {
+      // Method 2: Direct scroll to bottom
+      const maxScroll = container.scrollHeight - container.clientHeight;
+      container.scrollTop = maxScroll + 100; // Add extra to ensure we're at bottom
+    }
+  }, []);
+
 
   /**
    * Scroll to the bottom of the container
    */
   const scrollToBottom = useCallback(
     (smooth = true) => {
-      if (isVirtualized && virtualListRef.current) {
-        // For virtualized list, scroll to last item
-        virtualListRef.current.scrollToItem(messages.length - 1, 'end');
-      } else {
-        const container = scrollContainerRef.current;
-        if (!container) return;
-        container.scrollTo({
-          top: container.scrollHeight,
-          behavior: smooth ? 'smooth' : 'auto',
+      forceScrollToBottom();
+      
+      if (smooth && scrollContainerRef.current) {
+        scrollContainerRef.current.scrollTo({
+          top: scrollContainerRef.current.scrollHeight,
+          behavior: 'smooth',
         });
       }
     },
-    [isVirtualized, messages.length]
+    [forceScrollToBottom]
   );
 
   /**
-   * Handle scroll events with throttling for performance
+   * Handle scroll events
    */
   const handleScroll = useCallback(
     (event: React.UIEvent<HTMLDivElement>) => {
-      // Throttle scroll events for better performance
-      if (scrollTimeout.current) {
-        clearTimeout(scrollTimeout.current);
-      }
-
-      scrollTimeout.current = setTimeout(() => {
-        const atBottom = isAtBottom();
-        setShowScrollToBottom(!atBottom);
-        setIsUserScrolling(!atBottom);
-      }, 50); // 50ms throttle
-
-      // Call onScroll immediately for external handlers
+      // Call onScroll for external handlers
       onScroll?.(event);
     },
-    [isAtBottom, onScroll]
+    [onScroll]
   );
 
   /**
@@ -239,20 +220,27 @@ export const MessageList: React.FC<MessageListProps> = ({
       const atBottom = Math.abs(totalHeight - viewportHeight - scrollOffset) <= SCROLL_THRESHOLD;
 
       if (!atBottom) {
-        setIsUserScrolling(true);
-      } else if (isUserScrolling) {
-        setIsUserScrolling(false);
+        setAutoScrollEnabled(false);
+        setShowScrollToBottom(true);
+      } else {
+        setAutoScrollEnabled(true);
+        setShowScrollToBottom(false);
       }
     },
-    [messages.length, height, isUserScrolling]
+    [messages.length, height]
   );
 
   /**
    * Handle scroll to bottom button click
    */
   const handleScrollToBottomClick = useCallback(() => {
+    // Re-enable auto-scroll when user clicks scroll to bottom
+    setAutoScrollEnabled(true);
+    isScrollingProgrammatically.current = true;
     scrollToBottom(true);
-    setIsUserScrolling(false);
+    setTimeout(() => {
+      isScrollingProgrammatically.current = false;
+    }, 100);
   }, [scrollToBottom]);
 
   /**
@@ -262,76 +250,104 @@ export const MessageList: React.FC<MessageListProps> = ({
     () => ({
       messages,
       isLastMessage: (index: number) => index === messages.length - 1,
-      lastMessageRef,
+      lastMessageRef: bottomAnchorRef,
     }),
     [messages]
   );
 
   /**
-   * Set up intersection observer for last message
+   * Detect when user sends a new message and re-enable auto-scroll
    */
   useEffect(() => {
-    const lastMessage = lastMessageRef.current;
-    if (!lastMessage) return;
-
-    const observer = new IntersectionObserver(
-      entries => {
-        const entry = entries[0];
-        if (entry) {
-          setIsAtBottomByObserver(entry.isIntersecting);
-          if (entry.isIntersecting) {
-            setIsUserScrolling(false);
-          }
-        }
-      },
-      {
-        root: isVirtualized
-          ? null // Use viewport for virtualized list
-          : scrollContainerRef.current,
-        rootMargin: '0px 0px -10px 0px', // 10px threshold
-        threshold: 0,
+    // Check if message count increased
+    if (messages.length > lastMessageCount.current) {
+      const lastMessage = messages[messages.length - 1];
+      // If the new message is from the user, re-enable auto-scroll
+      if (lastMessage && lastMessage.role === 'user') {
+        setAutoScrollEnabled(true);
+        // Immediately scroll to bottom for user's message
+        isScrollingProgrammatically.current = true;
+        forceScrollToBottom();
+        setTimeout(() => {
+          isScrollingProgrammatically.current = false;
+        }, 100);
       }
-    );
-
-    observer.observe(lastMessage);
-
-    return () => {
-      observer.disconnect();
-    };
-  }, [messages.length, isVirtualized]);
-
-  /**
-   * Auto-scroll to bottom when new messages arrive
-   */
-  useEffect(() => {
-    if (!autoScroll || preserveScrollPosition || (isUserScrolling && !isAtBottomByObserver)) return;
-
-    // Small delay to ensure DOM is updated
-    const timer = setTimeout(() => {
-      scrollToBottom(false);
-    }, 0);
-
-    return () => clearTimeout(timer);
-  }, [
-    messages.length,
-    autoScroll,
-    preserveScrollPosition,
-    isUserScrolling,
-    isAtBottomByObserver,
-    scrollToBottom,
-  ]);
-
-  /**
-   * Reset user scrolling state when auto-scroll is re-enabled
-   */
-  useEffect(() => {
-    if (!autoScroll) {
-      setIsUserScrolling(false);
     }
-  }, [autoScroll]);
+    lastMessageCount.current = messages.length;
+  }, [messages, forceScrollToBottom]);
 
   /**
-   * Cleanup scroll timeout on unmount
+   * Detect user manual scrolling and disable auto-scroll
+   */
+  useEffect(() => {
+    const container = scrollContainerRef.current;
+    if (!container) return;
+    
+    const handleScroll = () => {
+      // Skip if we're scrolling programmatically
+      if (isScrollingProgrammatically.current) return;
+      
+      const { scrollTop, scrollHeight, clientHeight } = container;
+      const distanceFromBottom = scrollHeight - scrollTop - clientHeight;
+      const isNearBottom = distanceFromBottom < 50;
+      
+      // If user scrolled away from bottom, disable auto-scroll
+      if (!isNearBottom) {
+        setAutoScrollEnabled(false);
+        setShowScrollToBottom(true);
+      } else {
+        setShowScrollToBottom(false);
+      }
+    };
+    
+    container.addEventListener('scroll', handleScroll, { passive: true });
+    
+    return () => {
+      container.removeEventListener('scroll', handleScroll);
+    };
+  }, []);
+
+  /**
+   * Track message content changes
+   */
+  const messageContentString = useMemo(() => {
+    return messages.map(m => `${m.id}:${m.content?.length || 0}`).join('|');
+  }, [messages]);
+
+  /**
+   * Auto-scroll when content changes IF auto-scroll is enabled
+   */
+  useEffect(() => {
+    if (!autoScroll || preserveScrollPosition || !autoScrollEnabled) return;
+    
+    // Mark that we're scrolling programmatically
+    isScrollingProgrammatically.current = true;
+    
+    // Scroll to bottom immediately
+    forceScrollToBottom();
+    
+    // Additional delayed scrolls to catch DOM updates during streaming
+    const timer1 = setTimeout(() => {
+      if (autoScrollEnabled) {
+        forceScrollToBottom();
+      }
+    }, 50);
+    
+    const timer2 = setTimeout(() => {
+      if (autoScrollEnabled) {
+        forceScrollToBottom();
+      }
+      isScrollingProgrammatically.current = false;
+    }, 150);
+    
+    return () => {
+      clearTimeout(timer1);
+      clearTimeout(timer2);
+    };
+  }, [messageContentString, autoScroll, preserveScrollPosition, autoScrollEnabled, forceScrollToBottom]);
+
+  /**
+   * Cleanup on unmount
    */
   useEffect(() => {
     return () => {
@@ -395,8 +411,8 @@ export const MessageList: React.FC<MessageListProps> = ({
   const memoizedMessages = useMemo(() => {
     if (isVirtualized) return [];
 
-    return messages.map((message, index) => (
-      <div key={message.id} ref={index === messages.length - 1 ? lastMessageRef : null}>
+    return messages.map((message) => (
+      <div key={message.id}>
         <MessageBubble message={message} className="message-list-item" />
       </div>
     ));
@@ -475,6 +491,9 @@ export const MessageList: React.FC<MessageListProps> = ({
 
           {/* Messages */}
           {messages.length > 0 && renderMessages()}
+          
+          {/* Invisible anchor at the bottom for scrolling */}
+          <div ref={bottomAnchorRef} style={{ height: '1px', width: '100%' }} />
         </div>
       )}
 

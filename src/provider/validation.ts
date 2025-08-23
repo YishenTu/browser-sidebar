@@ -2,20 +2,18 @@
  * @file API Key Validation Service
  *
  * Service for validating AI provider API keys with live testing capabilities.
- * Supports OpenAI, Gemini, and OpenRouter providers with comprehensive validation
- * including format checking, live API testing, and error handling.
+ * Supports OpenAI and Gemini providers with comprehensive validation
+ * through live API testing and error handling.
  *
  * Features:
- * - Format validation for provider-specific key patterns
  * - Live API validation with minimal test calls
  * - Comprehensive error handling and network timeout support
- * - Caching and rate limiting for performance
+ * - Caching for performance
  * - Batch validation with concurrency control
  * - Clear validation results with detailed error messages
  */
 
-import { ProviderFactory } from './ProviderFactory';
-import type { ProviderType, OpenAIConfig, GeminiConfig, AIProvider } from '../types/providers';
+import type { ProviderType } from '../types/providers';
 
 // ============================================================================
 // Types and Interfaces
@@ -128,15 +126,8 @@ const DEFAULT_CONFIG: Required<ValidationServiceConfig> = {
 const VALIDATION_ENDPOINTS = {
   openai: 'https://api.openai.com/v1/models',
   gemini: 'https://generativelanguage.googleapis.com/v1beta/models',
-  openrouter: 'https://openrouter.ai/api/v1/models',
 } as const;
 
-/** Key format patterns */
-const KEY_PATTERNS = {
-  openai: /^sk-(?:proj-)?[a-zA-Z0-9_-]{20,}$/,  // Updated to support both sk- and sk-proj- formats with hyphens/underscores
-  gemini: /^AIza[a-zA-Z0-9_-]{35,}$/,
-  openrouter: /^sk-or-v1-[a-zA-Z0-9]{48,}$/,
-} as const;
 
 // ============================================================================
 // Cache Implementation
@@ -218,12 +209,10 @@ class ValidationCache<T> {
  */
 export class APIKeyValidationService {
   private config: Required<ValidationServiceConfig>;
-  private providerFactory: ProviderFactory;
   private cache: ValidationCache<ValidationResult>;
 
   constructor(config: ValidationServiceConfig = {}) {
     this.config = { ...DEFAULT_CONFIG, ...config };
-    this.providerFactory = new ProviderFactory();
     this.cache = new ValidationCache(this.config.maxCacheSize, this.config.cacheTTL);
   }
 
@@ -268,18 +257,13 @@ export class APIKeyValidationService {
         }
       }
 
-      // Format validation
-      const formatValidation = this.validateKeyFormat(key, provider);
-      if (!formatValidation.isValid) {
-        const result = {
-          ...formatValidation,
-          performance: {
-            totalTime: performance.now() - startTime,
-          },
-        };
-        this.cache.set(cacheKey, result);
-        return result;
-      }
+      // Initialize base validation result
+      const baseValidation: ValidationResult = {
+        isValid: true,
+        provider,
+        errors: [],
+        warnings: [],
+      };
 
       // Live validation (if not skipped)
       let liveValidation: LiveValidationResult | undefined;
@@ -289,32 +273,33 @@ export class APIKeyValidationService {
           liveValidation = await this.validateKeyLive(key, provider, options);
 
           if (!liveValidation.isValid) {
-            formatValidation.isValid = false;
-            formatValidation.errors.push(`Live validation failed: ${liveValidation.error}`);
+            baseValidation.isValid = false;
+            baseValidation.errors.push(`Live validation failed: ${liveValidation.error}`);
           }
         } catch (error) {
           // Handle provider creation failures
-          formatValidation.isValid = false;
+          baseValidation.isValid = false;
           const errorMessage = error instanceof Error ? error.message : 'Unknown error';
           if (errorMessage.includes('Failed to create provider')) {
-            formatValidation.errors.push(errorMessage);
+            baseValidation.errors.push(errorMessage);
           } else {
-            formatValidation.errors.push(`Live validation failed: ${errorMessage}`);
+            baseValidation.errors.push(`Live validation failed: ${errorMessage}`);
           }
         }
 
-        formatValidation.performance = {
+        baseValidation.performance = {
           totalTime: performance.now() - startTime,
           liveValidationTime: performance.now() - liveStartTime,
         };
       } else {
-        formatValidation.performance = {
+        baseValidation.warnings.push('Live validation was skipped');
+        baseValidation.performance = {
           totalTime: performance.now() - startTime,
         };
       }
 
       const result: ValidationResult = {
-        ...formatValidation,
+        ...baseValidation,
         liveValidation,
       };
 
@@ -407,25 +392,6 @@ export class APIKeyValidationService {
     };
   }
 
-  /**
-   * Validate API key format
-   */
-  private validateKeyFormat(key: string, provider: ProviderType): ValidationResult {
-    const sanitizedKey = key.trim();
-    const pattern = KEY_PATTERNS[provider];
-    const errors: string[] = [];
-
-    if (!pattern.test(sanitizedKey)) {
-      errors.push(`Invalid ${this.getProviderName(provider)} API key format`);
-    }
-
-    return {
-      isValid: errors.length === 0,
-      provider,
-      errors,
-      warnings: [],
-    };
-  }
 
   /**
    * Validate API key with live API call
@@ -437,13 +403,13 @@ export class APIKeyValidationService {
   ): Promise<LiveValidationResult> {
     const timeout = options.timeout || this.config.timeout;
     const startTime = performance.now();
+    let endpoint: string = '';
 
     try {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), timeout);
 
       let response: Response;
-      let endpoint: string;
 
       // Use different validation methods for different providers
       if (provider === 'openai') {
@@ -456,7 +422,7 @@ export class APIKeyValidationService {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            model: 'gpt-3.5-turbo',
+            model: 'gpt-3.5-turbo', // Using stable model for API key validation only
             messages: [{ role: 'user', content: 'Hi' }],
             max_tokens: 1,
             temperature: 0,
@@ -471,14 +437,7 @@ export class APIKeyValidationService {
           signal: controller.signal,
         });
       } else {
-        // Default validation for other providers
-        endpoint = VALIDATION_ENDPOINTS[provider];
-        const headers = this.createHeaders(key, provider);
-        response = await fetch(endpoint, {
-          method: 'GET',
-          headers,
-          signal: controller.signal,
-        });
+        throw new Error(`Unsupported provider: ${provider}`);
       }
 
       clearTimeout(timeoutId);
@@ -547,80 +506,13 @@ export class APIKeyValidationService {
       return {
         isValid: false,
         responseTime,
-        endpoint,
+        endpoint: endpoint || VALIDATION_ENDPOINTS[provider as keyof typeof VALIDATION_ENDPOINTS] || '',
         error: errorMessage,
       };
     }
   }
 
-  /**
-   * Create provider instance for testing connection
-   */
-  private async createProviderForTesting(key: string, provider: ProviderType): Promise<AIProvider> {
-    switch (provider) {
-      case 'openai': {
-        const config: OpenAIConfig = {
-          apiKey: key,
-          temperature: 0.7,
-          reasoningEffort: 'medium',
-          model: 'gpt-4o',
-          maxTokens: 100, // Minimal for testing
-          topP: 1.0,
-          frequencyPenalty: 0.0,
-          presencePenalty: 0.0,
-        };
-        return await this.providerFactory.createOpenAIProvider(config);
-      }
 
-      case 'gemini': {
-        const config: GeminiConfig = {
-          apiKey: key,
-          temperature: 0.7,
-          thinkingMode: 'off',
-          showThoughts: false,
-          model: 'gemini-2.0-flash-thinking-exp',
-          maxTokens: 100, // Minimal for testing
-          topP: 0.95,
-          topK: 40,
-        };
-        return await this.providerFactory.createGeminiProvider(config);
-      }
-
-      case 'openrouter': {
-        // OpenRouter provider not implemented; skip provider creation
-        throw new Error('OpenRouter provider not supported');
-      }
-
-      default:
-        throw new Error(`Unsupported provider: ${provider}`);
-    }
-  }
-
-  /**
-   * Create HTTP headers for API requests
-   */
-  private createHeaders(key: string, provider: ProviderType): Record<string, string> {
-    const headers: Record<string, string> = {
-      'Content-Type': 'application/json',
-      'User-Agent': 'BrowserSidebar/1.0',
-    };
-
-    switch (provider) {
-      case 'openai':
-        headers['Authorization'] = `Bearer ${key}`;
-        break;
-      case 'gemini':
-        headers['x-goog-api-key'] = key;
-        break;
-      case 'openrouter':
-        headers['Authorization'] = `Bearer ${key}`;
-        headers['HTTP-Referer'] = 'https://browser-sidebar.example.com';
-        headers['X-Title'] = 'Browser Sidebar Extension';
-        break;
-    }
-
-    return headers;
-  }
 
   /**
    * Get cache key for a validation request
@@ -647,24 +539,9 @@ export class APIKeyValidationService {
    * Check if provider type is valid
    */
   private isValidProvider(provider: string): provider is ProviderType {
-    return ['openai', 'gemini', 'openrouter'].includes(provider);
+    return ['openai', 'gemini'].includes(provider);
   }
 
-  /**
-   * Get human-readable provider name
-   */
-  private getProviderName(provider: ProviderType): string {
-    switch (provider) {
-      case 'openai':
-        return 'OpenAI';
-      case 'gemini':
-        return 'Gemini';
-      case 'openrouter':
-        return 'OpenRouter';
-      default:
-        return provider;
-    }
-  }
 
   /**
    * Limit concurrency of promises

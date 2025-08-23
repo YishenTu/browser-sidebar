@@ -30,7 +30,7 @@ export interface OpenAIClientOptions {
 /**
  * Extended OpenAI configuration with client options
  */
-export interface ExtendedOpenAIConfig extends OpenAIConfig {
+export interface ExtendedOpenAIConfig extends Omit<OpenAIConfig, 'customOptions'> {
   customOptions?: OpenAIClientOptions;
 }
 

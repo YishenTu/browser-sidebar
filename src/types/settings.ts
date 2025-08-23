@@ -18,7 +18,7 @@ export type FontSize = 'small' | 'medium' | 'large';
 /**
  * Supported AI providers - matches ProviderType from providers.ts
  */
-export type AIProvider = 'openai' | 'gemini' | 'openrouter' | null;
+export type AIProvider = 'openai' | 'gemini' | null;
 
 /**
  * AI model definition with provider and availability information
@@ -56,10 +56,6 @@ export interface UIPreferences {
 export interface AISettings {
   /** Default AI provider to use */
   defaultProvider: AIProvider;
-  /** Temperature for AI responses (0.0 - 1.0) */
-  temperature: number;
-  /** Maximum tokens for AI responses */
-  maxTokens: number;
   /** Enable streaming responses */
   streamResponse: boolean;
 }
@@ -84,8 +80,6 @@ export interface APIKeyReferences {
   openai: string | null;
   /** Google/Gemini API key reference */
   google: string | null;
-  /** OpenRouter API key reference */
-  openrouter: string | null;
 }
 
 /**
@@ -145,7 +139,7 @@ export interface SettingsState {
   /** Get available models (optionally filter by availability) */
   getAvailableModels: (availableOnly?: boolean) => Model[];
   /** Get provider type for a given model ID */
-  getProviderTypeForModel: (modelId: string) => 'openai' | 'gemini' | 'openrouter' | null;
+  getProviderTypeForModel: (modelId: string) => 'openai' | 'gemini' | null;
 }
 
 /**
@@ -155,5 +149,9 @@ export interface LegacySettings {
   theme?: string;
   fontSize?: string;
   compactMode?: boolean;
+  temperature?: number;
+  maxTokens?: number;
+  topP?: number;
+  topK?: number;
   // Add other legacy fields as needed for migration
 }

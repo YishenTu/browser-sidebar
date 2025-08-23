@@ -7,6 +7,7 @@
 
 import type { StorageArea, StorageSchema, MigrationScript } from '../types/storage';
 import { serialize, deserialize, getCurrentVersion, applyMigrations } from '../types/storage';
+import { DEFAULT_MODEL_ID } from '../config/models';
 
 // =============================================================================
 // Configuration
@@ -291,7 +292,7 @@ export async function migrate(migrations: MigrationScript[]): Promise<StorageSch
         settings: {
           version: getCurrentVersion(),
           theme: 'system',
-          defaultModel: 'gpt-4',
+          defaultModel: DEFAULT_MODEL_ID,
           encrypted: false,
           lastModified: Date.now(),
           storageVersion: getCurrentVersion(),

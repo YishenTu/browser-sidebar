@@ -381,7 +381,7 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({
         pre: ({ children, ...props }: any) => {
           // Extract the code element from children
           if (React.isValidElement(children)) {
-            const codeElement = children;
+            const codeElement = children as any;
             // Check if it's a code element with language
             if (codeElement.type === 'code' || codeElement.props?.className) {
               const match = /language-(\w+)/.exec(codeElement.props?.className || '');

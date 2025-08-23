@@ -7,9 +7,8 @@
  * Features:
  * - Provider selection (OpenAI, Gemini)
  * - Model selection based on provider
- * - Temperature slider (0.0-2.0)
  * - OpenAI: reasoning_effort dropdown
- * - Gemini: thinking_mode toggle, thought visibility checkbox
+ * - Gemini: thinking_budget toggle, thought visibility checkbox
  * - Parameter validation per model
  * - Configuration persistence to settings store
  * - Provider status display
@@ -18,10 +17,9 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useSettingsStore } from '@store/settings';
 import { Button } from '@ui/Button';
-import { Input } from '@ui/Input';
 import { Card } from '@ui/Card';
 import { cn } from '@utils/cn';
-import type { ProviderType, ReasoningEffort, ThinkingMode } from '@/types/providers';
+import type { ProviderType, ReasoningEffort, ThinkingBudget } from '@/types/providers';
 import type { AISettings, AIProvider } from '@/types/settings';
 
 // ============================================================================
@@ -37,7 +35,6 @@ interface ProviderOption {
 interface ModelOption {
   value: string;
   label: string;
-  maxTokens: number;
   description: string;
 }
 
@@ -51,7 +48,7 @@ interface ExtendedAISettings extends Omit<AISettings, 'defaultProvider'> {
   defaultProvider: AIProvider;
   selectedModel?: string | null;
   reasoningEffort?: ReasoningEffort;
-  thinkingMode?: ThinkingMode;
+  thinkingBudget?: ThinkingBudget;
   showThoughts?: boolean;
   maxThinkingTokens?: number;
 }
@@ -76,7 +73,6 @@ const PROVIDER_MODELS: Partial<Record<ProviderType, ModelOption[]>> = {
     {
       value: 'gpt-5-nano',
       label: 'GPT-5 Nano',
-      maxTokens: 4096,
       description: 'Fast and efficient nano model',
     },
   ],
@@ -84,7 +80,6 @@ const PROVIDER_MODELS: Partial<Record<ProviderType, ModelOption[]>> = {
     {
       value: 'gemini-2.5-flash-lite',
       label: 'Gemini 2.5 Flash Lite',
-      maxTokens: 8192,
       description: 'Lightweight flash model',
     },
   ],
@@ -97,10 +92,10 @@ const REASONING_EFFORTS: { value: ReasoningEffort; label: string; description: s
   { value: 'high', label: 'High', description: 'Slower responses, more thorough reasoning' },
 ];
 
-// Thinking mode options
-const THINKING_MODES: { value: ThinkingMode; label: string; description: string }[] = [
-  { value: 'off', label: 'Off', description: 'No visible thinking process' },
-  { value: 'dynamic', label: 'Dynamic', description: 'Shows thinking process when beneficial' },
+// Thinking budget options
+const THINKING_BUDGETS: { value: ThinkingBudget; label: string; description: string }[] = [
+  { value: '0', label: 'Off', description: 'No visible thinking process' },
+  { value: '-1', label: 'Dynamic', description: 'Shows thinking process when beneficial' },
 ];
 
 // Debounce delay for saving changes (ms)
@@ -149,11 +144,9 @@ export function ProviderSettings() {
     const aiSettings = settings.ai as any; // Type assertion for extended properties
     const initialState: Partial<ExtendedAISettings> = {
       defaultProvider: settings.ai.defaultProvider,
-      temperature: settings.ai.temperature,
-      maxTokens: settings.ai.maxTokens,
       streamResponse: settings.ai.streamResponse,
       reasoningEffort: aiSettings.reasoningEffort || 'medium',
-      thinkingMode: aiSettings.thinkingMode || 'off',
+      thinkingBudget: aiSettings.thinkingBudget || '0',
       showThoughts: aiSettings.showThoughts || false,
       maxThinkingTokens: aiSettings.maxThinkingTokens || 25000,
       selectedModel: settings.selectedModel || null,
@@ -177,58 +170,18 @@ export function ProviderSettings() {
   }, [currentModels, formState.selectedModel]);
 
   // Feature support flags (UI-only; mirrors provider capabilities)
-  const temperatureSupported = useMemo(() => {
-    // gpt-5-nano does not accept temperature in the OpenAI Responses API
-    if (formState.defaultProvider === 'openai' && formState.selectedModel === 'gpt-5-nano') {
-      return false;
-    }
-    return true;
-  }, [formState.defaultProvider, formState.selectedModel]);
 
   // ============================================================================
   // Validation Functions
   // ============================================================================
 
-  const validateTemperature = useCallback((temp: number): string | null => {
-    if (temp < 0.0 || temp > 2.0) {
-      return 'Temperature must be between 0.0 and 2.0';
-    }
-    return null;
-  }, []);
-
-  const validateMaxTokens = useCallback((tokens: number, modelMaxTokens: number): string | null => {
-    if (tokens > modelMaxTokens) {
-      return `Exceeds model limit of ${modelMaxTokens.toLocaleString()} tokens`;
-    }
-    if (tokens < 1) {
-      return 'Max tokens must be at least 1';
-    }
-    return null;
-  }, []);
 
   const validateForm = useCallback(
-    (state: Partial<ExtendedAISettings>): ValidationError[] => {
+    (): ValidationError[] => {
       const errors: ValidationError[] = [];
-
-      // Validate temperature
-      if (typeof state.temperature === 'number') {
-        const tempError = validateTemperature(state.temperature);
-        if (tempError) {
-          errors.push({ field: 'temperature', message: tempError });
-        }
-      }
-
-      // Validate max tokens
-      if (typeof state.maxTokens === 'number' && currentModel) {
-        const tokensError = validateMaxTokens(state.maxTokens, currentModel.maxTokens);
-        if (tokensError) {
-          errors.push({ field: 'maxTokens', message: tokensError });
-        }
-      }
-
       return errors;
     },
-    [validateTemperature, validateMaxTokens, currentModel]
+    []
   );
 
   // ============================================================================
@@ -237,7 +190,7 @@ export function ProviderSettings() {
 
   const saveSettings = useCallback(
     async (newSettings: Partial<ExtendedAISettings>) => {
-      const errors = validateForm(newSettings);
+      const errors = validateForm();
 
       if (errors.length > 0) {
         setValidationErrors(errors);
@@ -250,8 +203,6 @@ export function ProviderSettings() {
         // Extract only AISettings properties
         const coreAISettings: AISettings = {
           defaultProvider: newSettings.defaultProvider ?? settings.ai.defaultProvider,
-          temperature: newSettings.temperature ?? settings.ai.temperature,
-          maxTokens: newSettings.maxTokens ?? settings.ai.maxTokens,
           streamResponse: newSettings.streamResponse ?? settings.ai.streamResponse,
         };
 
@@ -308,7 +259,7 @@ export function ProviderSettings() {
       if (actualProvider === 'openai') {
         newState.reasoningEffort = 'medium';
       } else if (actualProvider === 'gemini') {
-        newState.thinkingMode = 'off';
+        newState.thinkingBudget = '0';
         newState.showThoughts = false;
       }
 
@@ -324,19 +275,6 @@ export function ProviderSettings() {
     }));
   }, []);
 
-  const handleTemperatureChange = useCallback((temperature: number) => {
-    setFormState(prev => ({
-      ...prev,
-      temperature,
-    }));
-  }, []);
-
-  const handleMaxTokensChange = useCallback((maxTokens: number) => {
-    setFormState(prev => ({
-      ...prev,
-      maxTokens,
-    }));
-  }, []);
 
   const handleReasoningEffortChange = useCallback((reasoningEffort: ReasoningEffort) => {
     setFormState(prev => ({
@@ -345,11 +283,11 @@ export function ProviderSettings() {
     }));
   }, []);
 
-  const handleThinkingModeChange = useCallback((thinkingMode: ThinkingMode) => {
+  const handleThinkingBudgetChange = useCallback((thinkingBudget: ThinkingBudget) => {
     setFormState(prev => ({
       ...prev,
-      thinkingMode,
-      showThoughts: thinkingMode === 'off' ? false : prev.showThoughts,
+      thinkingBudget,
+      showThoughts: thinkingBudget === '0' ? false : prev.showThoughts,
     }));
   }, []);
 
@@ -461,79 +399,12 @@ export function ProviderSettings() {
       </select>
       {currentModel && (
         <p className="provider-settings__description">
-          {currentModel.description} (Max: {currentModel.maxTokens.toLocaleString()} tokens)
+          {currentModel.description}
         </p>
       )}
     </div>
   );
 
-  const renderTemperatureSlider = () => (
-    <div className="provider-settings__field">
-      <label htmlFor="temperature-slider" className="provider-settings__label">
-        Temperature
-        <span className="provider-settings__value" aria-live="polite">
-          {formState.temperature?.toFixed(1) || '0.7'}
-        </span>
-      </label>
-      <input
-        id="temperature-slider"
-        type="range"
-        role="slider"
-        aria-label="Temperature (controls randomness)"
-        min="0"
-        max="2"
-        step="0.1"
-        value={formState.temperature || 0.7}
-        onChange={e => handleTemperatureChange(parseFloat(e.target.value))}
-        disabled={!temperatureSupported}
-        className={cn('provider-settings__slider', {
-          'provider-settings__slider--error': getValidationError('temperature'),
-          'provider-settings__slider--disabled': !temperatureSupported,
-        })}
-      />
-      <div className="provider-settings__slider-labels">
-        <span>0.0 (Focused)</span>
-        <span>2.0 (Creative)</span>
-      </div>
-      {temperatureSupported ? (
-        <p className="provider-settings__description">
-          Controls randomness in responses. Higher values make output more creative.
-        </p>
-      ) : (
-        <p className="provider-settings__description">
-          Not applicable for this model; outputs are deterministic and ignore temperature.
-        </p>
-      )}
-      {getValidationError('temperature') && (
-        <p className="provider-settings__error">{getValidationError('temperature')}</p>
-      )}
-    </div>
-  );
-
-  const renderMaxTokensInput = () => (
-    <div className="provider-settings__field">
-      <label htmlFor="max-tokens" className="provider-settings__label">
-        Max Tokens
-      </label>
-      <Input
-        id="max-tokens"
-        type="number"
-        role="spinbutton"
-        aria-label="Max tokens"
-        min="1"
-        max={currentModel?.maxTokens || 4096}
-        value={
-          formState.maxTokens ||
-          (currentModel?.maxTokens ? Math.min(2048, currentModel.maxTokens) : 2048)
-        }
-        onChange={e => handleMaxTokensChange(parseInt(e.target.value))}
-        error={!!getValidationError('maxTokens')}
-        errorMessage={getValidationError('maxTokens')}
-        helperText="Maximum number of tokens to generate"
-        className="provider-settings__input"
-      />
-    </div>
-  );
 
   const renderOpenAISettings = () => {
     if (formState.defaultProvider !== 'openai') return null;
@@ -581,28 +452,28 @@ export function ProviderSettings() {
         <h3 className="provider-settings__section-title">Gemini Settings</h3>
 
         <div className="provider-settings__field">
-          <label htmlFor="thinking-mode" className="provider-settings__label">
-            Thinking Mode
+          <label htmlFor="thinking-budget" className="provider-settings__label">
+            Thinking Budget
           </label>
           <select
-            id="thinking-mode"
+            id="thinking-budget"
             role="combobox"
-            aria-label="Thinking mode"
-            value={formState.thinkingMode || 'off'}
-            onChange={e => handleThinkingModeChange(e.target.value as ThinkingMode)}
+            aria-label="Thinking budget"
+            value={formState.thinkingBudget || '0'}
+            onChange={e => handleThinkingBudgetChange(e.target.value as ThinkingBudget)}
             className="provider-settings__select"
           >
-            {THINKING_MODES.map(mode => (
-              <option key={mode.value} value={mode.value}>
-                {mode.label}
+            {THINKING_BUDGETS.map(budget => (
+              <option key={budget.value} value={budget.value}>
+                {budget.label}
               </option>
             ))}
           </select>
-          {THINKING_MODES.map(
-            mode =>
-              formState.thinkingMode === mode.value && (
-                <p key={mode.value} className="provider-settings__description">
-                  {mode.description}
+          {THINKING_BUDGETS.map(
+            budget =>
+              formState.thinkingBudget === budget.value && (
+                <p key={budget.value} className="provider-settings__description">
+                  {budget.description}
                 </p>
               )
           )}
@@ -615,7 +486,7 @@ export function ProviderSettings() {
               role="checkbox"
               aria-label="Show thoughts in responses"
               checked={formState.showThoughts || false}
-              disabled={formState.thinkingMode === 'off'}
+              disabled={formState.thinkingBudget === '0'}
               onChange={e => handleShowThoughtsChange(e.target.checked)}
               className="provider-settings__checkbox"
             />
@@ -717,8 +588,6 @@ export function ProviderSettings() {
           <div className="provider-settings__form">
             {renderProviderSelect()}
             {renderModelSelect()}
-            {renderTemperatureSlider()}
-            {renderMaxTokensInput()}
             {renderOpenAISettings()}
             {renderGeminiSettings()}
             {/* OpenRouter settings removed */}

@@ -2,12 +2,11 @@
  * @file Gemini Provider Implementation
  *
  * Google Gemini AI provider implementation extending BaseProvider.
- * Supports chat generation with temperature control, thinking modes,
- * thought visibility, streaming responses, and multimodal capabilities.
+ * Supports chat generation with thinking budgets, thought visibility,
+ * streaming responses, and multimodal capabilities.
  *
  * Features:
- * - Temperature parameter support (0.0-2.0)
- * - Thinking modes ('off', 'dynamic')
+ * - Thinking budgets ('0'=off, '-1'=dynamic)
  * - Thought visibility control
  * - Streaming with TokenBuffer integration
  * - Multimodal support (text and images)
@@ -18,6 +17,9 @@
 import { GeminiClient } from './GeminiClient';
 import { StreamParser } from '../streamParser';
 import { TokenBuffer, FlushStrategy } from '../tokenBuffer';
+import { 
+  supportsThinking 
+} from '../../config/models';
 import type {
   ProviderChatMessage,
   ProviderResponse,
@@ -25,7 +27,7 @@ import type {
   GeminiConfig,
   Usage,
   FinishReason,
-  ThinkingMode,
+  ThinkingBudget,
 } from '../../types/providers';
 
 /**
@@ -46,12 +48,12 @@ interface GeminiContent {
 }
 
 interface GeminiGenerationConfig {
-  temperature?: number;
-  topP?: number;
-  topK?: number;
   maxOutputTokens?: number;
   stopSequences?: string[];
   responseModalities?: string[];
+  thinkingConfig?: {
+    thinkingBudget: number;
+  };
 }
 
 interface GeminiRequest {
@@ -94,8 +96,7 @@ interface GeminiResponse {
  * Chat configuration interface
  */
 interface ChatConfig {
-  temperature?: number;
-  thinkingMode?: ThinkingMode;
+  thinkingBudget?: ThinkingBudget;
   showThoughts?: boolean;
   signal?: AbortSignal;
 }
@@ -104,6 +105,8 @@ interface ChatConfig {
  * Google Gemini provider extending GeminiClient
  */
 export class GeminiProvider extends GeminiClient {
+  // Stream parser instance for handling streaming responses
+  // @ts-expect-error - Preserved for future streaming implementation
   private streamParser = new StreamParser();
 
   constructor() {
@@ -150,6 +153,7 @@ export class GeminiProvider extends GeminiClient {
     const request = this.buildRequest(messages, config);
     const url = this.buildGeminiApiUrl(`/models/${this.getCurrentModel()}:generateContent`);
 
+
     try {
       const response = await fetch(url, {
         method: 'POST',
@@ -163,6 +167,8 @@ export class GeminiProvider extends GeminiClient {
       }
 
       const data: GeminiResponse = await response.json();
+      
+      // Log the response to verify what model actually responded
       return this.parseResponse(data, config);
     } catch (error) {
       if (error instanceof Error && error.name === 'AbortError') {
@@ -242,7 +248,9 @@ export class GeminiProvider extends GeminiClient {
 
       const reader = response.body.getReader();
       const decoder = new TextDecoder();
-      let accumulator = '';
+      let buffer = '';
+      let isArrayFormat = false;
+      let arrayStarted = false;
 
       try {
         while (true) {
@@ -253,44 +261,93 @@ export class GeminiProvider extends GeminiClient {
 
           const { done, value } = await reader.read();
 
-          if (done) break;
+          if (done) {
+            break;
+          }
 
           const chunk = decoder.decode(value, { stream: true });
-          accumulator += chunk;
+          buffer += chunk;
           
-          // Check if we have a complete JSON array
-          if (accumulator.includes(']')) {
-            try {
-              // Parse the complete JSON array
-              const responseArray = JSON.parse(accumulator);
-              
-              // Process each item in the array
-              for (const geminiChunk of responseArray) {
-                // Convert Gemini format to StreamChunk format
-                const streamChunk = this.convertGeminiToStreamChunk(geminiChunk);
-                const processedChunk = this.processStreamChunk(streamChunk, config);
-
-                // Track finish reason
-                if (processedChunk.choices[0]?.finishReason) {
-                  lastFinishReason = processedChunk.choices[0].finishReason;
+          // Detect if this is JSON array format (starts with '[')
+          if (!arrayStarted && buffer.trimStart().startsWith('[')) {
+            isArrayFormat = true;
+            arrayStarted = true;
+          }
+          
+          if (isArrayFormat) {
+            // For array format, we need to wait for the complete array then process chunks with delays
+            // Check if we have a complete JSON array by counting brackets
+            const openBrackets = (buffer.match(/\[/g) || []).length;
+            const closeBrackets = (buffer.match(/\]/g) || []).length;
+            
+            if (openBrackets === closeBrackets && openBrackets > 0) {
+              try {
+                const fullResponse = JSON.parse(buffer);
+                
+                if (Array.isArray(fullResponse)) {
+                  // Process each chunk with a small delay to simulate streaming
+                  for (let i = 0; i < fullResponse.length; i++) {
+                    const item = fullResponse[i];
+                    const streamChunk = this.convertGeminiToStreamChunk(item);
+                    const processedChunk = this.processStreamChunk(streamChunk, config);
+                    
+                    if (processedChunk.choices[0]?.finishReason) {
+                      lastFinishReason = processedChunk.choices[0].finishReason;
+                    }
+                    
+                    const hasContent = processedChunk.choices[0]?.delta?.content;
+                    const hasThinking = processedChunk.choices[0]?.delta?.thinking;
+                    const isCompletion = processedChunk.choices[0]?.finishReason;
+                    
+                    if (hasContent || hasThinking || isCompletion) {
+                      yield processedChunk;
+                      
+                      // Add a small delay between chunks for better UX (except for the last chunk)
+                      if (i < fullResponse.length - 1 && hasContent) {
+                        await new Promise(resolve => setTimeout(resolve, 30));
+                      }
+                    }
+                  }
                 }
-
-                // Check if this chunk has content to buffer
-                const hasContent = processedChunk.choices[0]?.delta?.content;
-                const hasThinking = processedChunk.choices[0]?.delta?.thinking;
-                const isCompletion = processedChunk.choices[0]?.finishReason;
-
-                // Yield chunks with content
-                if (hasContent || hasThinking || isCompletion) {
-                  yield processedChunk;
+                
+                // Clear buffer after processing
+                buffer = '';
+                break; // Exit the loop
+              } catch (e) {
+                // Not complete yet, continue accumulating
+              }
+            }
+          } else {
+            // Try line-by-line processing for SSE or NDJSON format
+            const lines = buffer.split('\n');
+            buffer = lines.pop() || ''; // Keep incomplete line in buffer
+            
+            for (const line of lines) {
+              const trimmed = line.trim();
+              if (!trimmed) continue;
+              
+              // Handle SSE format
+              if (trimmed.startsWith('data: ')) {
+                const jsonStr = trimmed.slice(6);
+                if (jsonStr === '[DONE]') break;
+                
+                try {
+                  const data = JSON.parse(jsonStr);
+                  const streamChunk = this.convertGeminiToStreamChunk(data);
+                  const processedChunk = this.processStreamChunk(streamChunk, config);
+                  
+                  if (processedChunk.choices[0]?.finishReason) {
+                    lastFinishReason = processedChunk.choices[0].finishReason;
+                  }
+                  
+                  const hasContent = processedChunk.choices[0]?.delta?.content;
+                  if (hasContent) {
+                    yield processedChunk;
+                  }
+                } catch (e) {
+                  // Failed to parse, continue
                 }
               }
-              
-              // Clear accumulator after successful parse and break since we have the complete response
-              accumulator = '';
-              break; // Exit the loop since we have the complete response
-            } catch (e) {
-              // Continue accumulating - not a complete JSON yet
             }
           }
         }
@@ -428,33 +485,26 @@ export class GeminiProvider extends GeminiClient {
     geminiConfig: GeminiConfig,
     chatConfig?: ChatConfig
   ): GeminiGenerationConfig {
+    // Use a reasonable default for max output tokens
     const config: GeminiGenerationConfig = {
-      temperature: chatConfig?.temperature ?? geminiConfig.temperature,
-      topP: geminiConfig.topP,
-      topK: geminiConfig.topK,
-      maxOutputTokens: geminiConfig.maxTokens,
+      maxOutputTokens: 8192, // Default max output tokens
     };
-
-    // Validate temperature
-    if (config.temperature !== undefined) {
-      if (
-        typeof config.temperature !== 'number' ||
-        isNaN(config.temperature) ||
-        config.temperature < 0.0 ||
-        config.temperature > 2.0
-      ) {
-        throw new Error('Temperature must be between 0.0 and 2.0');
-      }
-    }
 
     // Add stop sequences
     if (geminiConfig.stopSequences && geminiConfig.stopSequences.length > 0) {
       config.stopSequences = geminiConfig.stopSequences;
     }
 
-    // Configure thinking mode
-    const thinkingMode = chatConfig?.thinkingMode ?? geminiConfig.thinkingMode;
-    if (thinkingMode === 'dynamic') {
+    // Configure thinking budget if model supports it
+    const thinkingBudget = chatConfig?.thinkingBudget ?? geminiConfig.thinkingBudget;
+    if (supportsThinking(geminiConfig.model)) {
+      // Convert string budget to number for the API
+      const budgetNum = parseInt(thinkingBudget || '0', 10);
+      if (!isNaN(budgetNum)) {
+        config.thinkingConfig = {
+          thinkingBudget: budgetNum
+        };
+      }
       config.responseModalities = ['TEXT'];
     }
 
@@ -487,7 +537,10 @@ export class GeminiProvider extends GeminiClient {
     const baseUrl = geminiConfig.endpoint || 'https://generativelanguage.googleapis.com';
     const fullUrl = `${baseUrl}/v1beta${endpoint}`;
     
-    return fullUrl;
+    // Add API key as query parameter
+    const urlWithKey = `${fullUrl}?key=${geminiConfig.apiKey}`;
+    
+    return urlWithKey;
   }
 
   // ============================================================================

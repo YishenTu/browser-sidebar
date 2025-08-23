@@ -4,6 +4,29 @@
 import { createMessage, isValidMessage, Message } from '@/types/messages';
 import { MessageBus } from '@core/messaging';
 
+// Patch Vite's dynamic import helper to use chrome.runtime.getURL
+// This fixes the issue where dynamic imports try to load from the current page's domain
+declare global {
+  var __vite__mapDeps: any;
+}
+
+if (typeof globalThis.__vite__mapDeps === 'function') {
+  const originalMapDeps = globalThis.__vite__mapDeps;
+  globalThis.__vite__mapDeps = function(indexes: number[], mapDepsParam?: any, filePaths?: any) {
+    // Override the path resolution function
+    if (mapDepsParam && mapDepsParam.f && Array.isArray(mapDepsParam.f)) {
+      mapDepsParam.f = mapDepsParam.f.map((path: string) => {
+        // Convert relative paths to extension URLs
+        if (path.startsWith('assets/')) {
+          return chrome.runtime.getURL(path);
+        }
+        return path;
+      });
+    }
+    return originalMapDeps.call(this, indexes, mapDepsParam, filePaths);
+  };
+}
+
 let sidebarModule: { mountSidebar: () => void; unmountSidebar: () => void } | null = null;
 let sidebarOpen = false;
 
@@ -14,6 +37,7 @@ const messageBus = MessageBus.getInstance('content');
 async function injectSidebar() {
   // Load the module if not already loaded
   if (!sidebarModule) {
+    // Dynamic import with proper URL resolution will be handled by Vite/CRXJS
     sidebarModule = await import('../sidebar/index');
   }
 
@@ -142,13 +166,10 @@ chrome.runtime.onMessage.addListener((message: Message, _sender, sendResponse) =
 });
 
 // Subscribe to specific message types using MessageBus
-messageBus.subscribe('EXTRACT_CONTENT', async () => {
+messageBus.subscribe('EXTRACT_CONTENT', async (): Promise<void> => {
   // Future: Implement content extraction logic
-  return {
-    content: document.body.innerText.substring(0, 1000), // Sample extraction
-    url: window.location.href,
-    title: document.title,
-  };
+  // For now, just log the event
+  console.log('Content extraction requested');
 });
 
 // Notify background that content script is ready using typed message

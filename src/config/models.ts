@@ -6,28 +6,38 @@
 export interface ModelConfig {
   id: string;
   name: string;
-  provider: 'OpenAI' | 'Google';
-  providerType: 'openai' | 'gemini';
-  maxTokens: number;
-  available: boolean;
+  provider: 'openai' | 'gemini';
+  // OpenAI specific
+  reasoningEffort?: 'minimal' | 'low' | 'medium' | 'high';
+  // Gemini specific - '0' for off, '-1' for dynamic
+  thinkingBudget?: '0' | '-1';
 }
 
 export const SUPPORTED_MODELS: ModelConfig[] = [
   {
     id: 'gpt-5-nano',
     name: 'GPT-5 Nano',
-    provider: 'OpenAI',
-    providerType: 'openai',
-    maxTokens: 4096,
-    available: true,
+    provider: 'openai',
+    reasoningEffort: 'minimal', // Default reasoning effort
   },
   {
     id: 'gemini-2.5-flash-lite',
     name: 'Gemini 2.5 Flash Lite',
-    provider: 'Google',
-    providerType: 'gemini',
-    maxTokens: 8192,
-    available: true,
+    provider: 'gemini',
+    thinkingBudget: '0', // Default to off
+  },
+  // Append more models as needed
+  {
+    id: 'gemini-2.5-pro',
+    name: 'Gemini 2.5 Pro',
+    provider: 'gemini',
+    thinkingBudget: '-1',
+  },
+  {
+    id: 'gpt-5',
+    name: 'GPT 5',
+    provider: 'openai',
+    reasoningEffort: 'medium',
   },
 ];
 
@@ -45,13 +55,36 @@ export function getModelById(id: string): ModelConfig | undefined {
  */
 export function getProviderTypeForModelId(modelId: string): 'openai' | 'gemini' | undefined {
   const model = getModelById(modelId);
-  return model?.providerType;
+  return model?.provider;
+}
+
+
+/**
+ * Check if a model supports reasoning (OpenAI feature)
+ */
+export function supportsReasoning(modelId: string): boolean {
+  const model = getModelById(modelId);
+  return model?.provider === 'openai';
 }
 
 /**
- * Get max tokens for a given model ID
+ * Check if a model supports thinking budget (Gemini feature)
  */
-export function getMaxTokensForModelId(modelId: string): number {
+export function supportsThinking(modelId: string): boolean {
   const model = getModelById(modelId);
-  return model?.maxTokens ?? 4096; // Default to 4096 if model not found
+  return model?.provider === 'gemini';
+}
+
+/**
+ * Get all models for a specific provider
+ */
+export function getModelsByProvider(providerType: 'openai' | 'gemini'): ModelConfig[] {
+  return SUPPORTED_MODELS.filter(model => model.provider === providerType);
+}
+
+/**
+ * Check if a model exists
+ */
+export function modelExists(modelId: string): boolean {
+  return SUPPORTED_MODELS.some(model => model.id === modelId);
 }
