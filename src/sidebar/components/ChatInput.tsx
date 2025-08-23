@@ -33,7 +33,7 @@ export interface ChatInputProps extends Omit<TextAreaProps, 'onKeyDown' | 'value
 
 // Icon components (simple SVGs for now)
 const SendIcon: React.FC = () => (
-  <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
     <path
       d="M7 11L12 6L17 11M12 18V7"
       stroke="currentColor"
@@ -45,7 +45,7 @@ const SendIcon: React.FC = () => (
 );
 
 const CancelIcon: React.FC = () => (
-  <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
     <path
       d="M6 18L18 6M6 6l12 12"
       stroke="currentColor"
@@ -293,12 +293,12 @@ export const ChatInput = React.forwardRef<HTMLTextAreaElement, ChatInputProps>(
                   className="chat-input__cancel-button"
                   aria-label={cancelButtonLabel}
                   style={{
-                    background: '#dc2626',
+                    background: '#b85651', // Reduced saturation red (muted/desaturated)
                     cursor: 'pointer',
                     border: 'none',
                     borderRadius: '50%',
-                    width: '32px',
-                    height: '32px',
+                    width: '28px',
+                    height: '28px',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',

@@ -283,12 +283,10 @@
   background: #10b981 !important; /* Green color matching reference */
   border: none !important;
   border-radius: 50% !important; /* Perfect circle */
-  width: 36px !important;
-  height: 36px !important;
-  min-width: 36px !important;
-  min-height: 36px !important;
-  width: 2.5rem !important;
-  height: 2.5rem !important;
+  width: 28px !important;
+  height: 28px !important;
+  min-width: 28px !important;
+  min-height: 28px !important;
   padding: 0 !important;
   color: white !important;
   transition: all var(--transition-fast) !important;
@@ -305,8 +303,8 @@
 
 /* Send button icon styling */
 .chat-input__send-button svg {
-  width: 1.25rem !important;
-  height: 1.25rem !important;
+  width: 1rem !important;  /* 16px - smaller icon */
+  height: 1rem !important; /* 16px - smaller icon */
   transform: rotate(0deg);
 }
 
@@ -374,26 +372,56 @@
 .message-bubble--user {
   background: #2563eb !important; /* Blue for user messages */
   color: white !important;
-  padding: 0 12px !important; /* No vertical padding */
+  padding: 12px !important; /* 12px padding in all directions */
   border-radius: 16px !important;
   display: inline-block !important;
-  max-width: 75% !important; /* Limit width to prevent edge touching */
+  max-width: calc(100% - 16px) !important; /* Ensure 16px gap from container edge */
   word-wrap: break-word !important;
-  text-align: left !important; /* Text aligned left within bubble */
+  text-align: justify !important; /* Justify text within bubble */
+  margin-right: 16px !important; /* Force 16px margin from right edge */
+  line-height: 1.2 !important; /* Tight line height */
+  font-size: 14px !important; /* Fixed font size */
+}
+
+/* Target all child elements inside user bubble to remove vertical spacing */
+.message-bubble--user * {
+  margin: 0 !important;
+  padding-top: 0 !important;
+  padding-bottom: 0 !important;
+  line-height: 1.2 !important;
+}
+
+/* Specifically target paragraphs in user bubbles */
+.message-bubble--user p {
+  margin: 0 !important;
+  padding: 0 !important;
+  line-height: 1.2 !important;
+}
+
+/* First and last children get no spacing */
+.message-bubble--user > *:first-child {
+  margin-top: 0 !important;
+  padding-top: 0 !important;
+}
+
+.message-bubble--user > *:last-child {
+  margin-bottom: 0 !important;
+  padding-bottom: 0 !important;
 }
 
 .message-bubble--assistant {
   background: transparent !important; /* Transparent background for AI */
   color: #e5e7eb !important;
-  padding: 8px 20px 8px 12px !important; /* Some padding for readability */
+  padding: 0 8px 0 8px !important; /* Added 4px more to left padding */
   border-radius: 16px !important;
   display: block !important; /* Block for full width */
-  max-width: 100% !important; /* Full width */
-  width: 100% !important; /* Full width */
+  max-width: calc(100% - 32px) !important; /* Full width minus margins (16px * 2) */
+  width: calc(100% - 32px) !important; /* Full width minus margins (16px * 2) */
   word-wrap: break-word !important;
-  margin: 0 !important;
-  text-align: left !important;
+  margin: 0 16px !important; /* 16px margins on both sides */
+  text-align: justify !important; /* Justify text within bubble */
   box-sizing: border-box !important;
+  font-size: 14px !important; /* Fixed font size */
 }
 
 .message-bubble--system {
@@ -412,17 +440,17 @@
 .message-row {
   display: flex !important;
   width: 100% !important;
-  margin-bottom: 16px !important;
+  margin-bottom: 8px !important; /* Reduced from 16px to 8px */
 }
 
 .message-row--user {
   justify-content: flex-end !important;
-  padding: 0 !important; /* Remove row padding */
+  padding: 0 !important; /* Padding handled by bubble margin */
 }
 
 .message-row--assistant {
   justify-content: flex-start !important;
-  padding: 0 !important; /* No padding needed for full-width AI messages */
+  padding: 0 !important; /* Padding handled by bubble margin */
 }
 
 .message-row--system {
@@ -645,7 +673,7 @@
   width: auto;
   min-width: 120px;
   padding: var(--spacing-sm) var(--spacing-md);
-  background: rgba(26, 26, 26, 0.8); /* Match sidebar background - 20% transparent */
+  background: transparent; /* Fully transparent like chat panel */
   border: none; /* Remove border */
   border-radius: var(--radius-md);
   color: #e5e7eb; /* Match sidebar text color */
@@ -658,12 +686,12 @@
 }
 
 .model-selector__trigger:hover:not(:disabled) {
-  background: rgba(26, 26, 26, 0.9); /* Slightly less transparent on hover */
+  background: rgba(75, 85, 99, 0.2); /* Subtle hover background */
 }
 
 .model-selector__trigger:focus {
   outline: none;
-  background: rgba(26, 26, 26, 0.9);
+  background: rgba(75, 85, 99, 0.2); /* Subtle focus background */
 }
 
 .model-selector__trigger--open {
@@ -692,12 +720,13 @@
   left: 0;
   min-width: 100%;
   width: max-content;
-  background: rgba(26, 26, 26, 0.8); /* Match sidebar background - 20% transparent */
+  background: transparent; /* Fully transparent like chat panel */
+  backdrop-filter: blur(12px); /* Add blur effect for better readability */
   border: none; /* Remove border */
   border-radius: 0 0 var(--radius-md) var(--radius-md);
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3); /* Subtle shadow */
   z-index: 2147483647; /* Match overlay z-index to ensure dropdown is on top */
-  max-height: 200px;
+  max-height: 500px; /* Increased to show all models */
   overflow-y: auto;
   list-style: none;
   margin: 0;
@@ -706,11 +735,11 @@
 }
 
 .model-selector__option {
-  padding: var(--spacing-sm) var(--spacing-md);
+  padding: 6px var(--spacing-md); /* Reduced vertical padding */
   cursor: pointer;
   transition: var(--transition-fast);
   color: #e5e7eb; /* Match sidebar text color */
-  font-size: var(--font-size-sm);
+  font-size: 12px; /* Smaller font size */
   pointer-events: auto !important; /* Ensure clicks work */
 }
 
@@ -730,8 +759,8 @@
 }
 
 .model-selector__group-header {
-  padding: var(--spacing-xs) var(--spacing-md);
-  font-size: 11px;
+  padding: 4px var(--spacing-md); /* Reduced vertical padding */
+  font-size: 10px; /* Smaller font size */
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.5px;

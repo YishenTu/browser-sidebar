@@ -268,7 +268,7 @@ export const MessageList: React.FC<MessageListProps> = ({
         <div
           ref={scrollContainerRef}
           className="h-full overflow-y-auto overscroll-behavior-contain"
-          style={{ height }}
+          style={{ height, paddingRight: '0px' }}
           onScroll={handleScroll}
           data-testid="message-list-container"
         >

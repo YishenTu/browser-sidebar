@@ -118,20 +118,20 @@ const HeadingRenderer = ({ level, children }: HeadingProps) => {
       case 1:
         return cn(
           baseClasses,
-          'text-2xl mb-4 mt-6 first:mt-0 border-b border-gray-200 dark:border-gray-700 pb-2'
+          'text-2xl m-0 p-0 leading-tight'
         );
       case 2:
-        return cn(baseClasses, 'text-xl mb-3 mt-5 first:mt-0');
+        return cn(baseClasses, 'text-xl m-0 p-0 leading-tight');
       case 3:
-        return cn(baseClasses, 'text-lg mb-3 mt-4 first:mt-0');
+        return cn(baseClasses, 'text-lg m-0 p-0 leading-tight');
       case 4:
-        return cn(baseClasses, 'text-base mb-2 mt-3 first:mt-0');
+        return cn(baseClasses, 'text-base m-0 p-0 leading-tight');
       case 5:
-        return cn(baseClasses, 'text-sm mb-2 mt-3 first:mt-0');
+        return cn(baseClasses, 'text-sm m-0 p-0 leading-tight');
       case 6:
-        return cn(baseClasses, 'text-xs mb-2 mt-3 first:mt-0');
+        return cn(baseClasses, 'text-xs m-0 p-0 leading-tight');
       default:
-        return cn(baseClasses, 'text-base mb-2 mt-3 first:mt-0');
+        return cn(baseClasses, 'text-base m-0 p-0 leading-tight');
     }
   };
 
@@ -142,7 +142,7 @@ const HeadingRenderer = ({ level, children }: HeadingProps) => {
  * Custom paragraph renderer
  */
 const ParagraphRenderer = ({ children, ...props }: React.ComponentProps<'p'>) => (
-  <p className="leading-normal text-gray-800 dark:text-gray-200 only:mb-0 mb-2 last:mb-0" {...props}>
+  <p className="text-gray-800 dark:text-gray-200 m-0 p-0 leading-tight" style={{ textAlign: 'inherit' }} {...props}>
     {children}
   </p>
 );
@@ -162,14 +162,15 @@ const ListRenderer = ({
   
   // Force minimal indentation with inline styles that override everything
   const listStyle: React.CSSProperties = {
-    paddingLeft: '16px', // Minimal space for bullets/numbers
+    paddingLeft: '12px', // Ultra minimal space for bullets/numbers
     marginLeft: '0',
+    margin: '0',
     listStylePosition: 'outside',
   };
   
   const listClasses = ordered
-    ? 'list-decimal mb-4 space-y-2'
-    : 'list-disc mb-4 space-y-2';
+    ? 'list-decimal m-0 p-0'
+    : 'list-disc m-0 p-0';
 
   return (
     <Tag className={listClasses} style={listStyle} {...props}>
@@ -182,7 +183,7 @@ const ListRenderer = ({
  * Custom list item renderer
  */
 const ListItemRenderer = ({ children, ...props }: React.ComponentProps<'li'>) => (
-  <li className="text-gray-800 dark:text-gray-200" {...props}>
+  <li className="text-gray-800 dark:text-gray-200 m-0 p-0" {...props}>
     {children}
   </li>
 );
@@ -192,7 +193,8 @@ const ListItemRenderer = ({ children, ...props }: React.ComponentProps<'li'>) =>
  */
 const BlockquoteRenderer = ({ children, ...props }: React.ComponentProps<'blockquote'>) => (
   <blockquote
-    className="border-l-4 border-blue-500 pl-4 py-2 mb-4 bg-blue-50 dark:bg-blue-900/20 italic text-gray-700 dark:text-gray-300"
+    className="border-l-2 border-blue-500 bg-blue-50 dark:bg-blue-900/20 italic text-gray-700 dark:text-gray-300"
+    style={{ margin: 0, paddingLeft: '4px', paddingTop: 0, paddingBottom: 0, paddingRight: 0 }}
     {...props}
   >
     {children}
@@ -243,7 +245,7 @@ const LinkRenderer = ({
  */
 const InlineCodeRenderer = ({ children, ...props }: React.ComponentProps<'code'>) => (
   <code
-    className="bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100 px-1.5 py-0.5 rounded text-sm font-mono"
+    className="bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100 px-1 rounded text-sm font-mono"
     {...props}
   >
     {children}
@@ -256,14 +258,14 @@ const InlineCodeRenderer = ({ children, ...props }: React.ComponentProps<'code'>
  * Custom horizontal rule renderer
  */
 const HrRenderer = (props: React.ComponentProps<'hr'>) => (
-  <hr className="border-gray-300 dark:border-gray-600 my-6" {...props} />
+  <hr className="border-gray-300 dark:border-gray-600 my-1" {...props} />
 );
 
 /**
  * Custom table renderer
  */
 const TableRenderer = ({ children, ...props }: React.ComponentProps<'table'>) => (
-  <div className="overflow-x-auto mb-4">
+  <div className="overflow-x-auto">
     <table
       className="min-w-full border-collapse border border-gray-300 dark:border-gray-600"
       {...props}
@@ -305,7 +307,7 @@ const TrRenderer = ({ children, ...props }: React.ComponentProps<'tr'>) => (
  */
 const ThRenderer = ({ children, ...props }: React.ComponentProps<'th'>) => (
   <th
-    className="border border-gray-300 dark:border-gray-600 px-4 py-2 bg-gray-100 dark:bg-gray-800 font-semibold text-left"
+    className="border border-gray-300 dark:border-gray-600 px-2 py-1 bg-gray-100 dark:bg-gray-800 font-semibold text-left"
     {...props}
   >
     {children}
@@ -313,7 +315,7 @@ const ThRenderer = ({ children, ...props }: React.ComponentProps<'th'>) => (
 );
 
 const TdRenderer = ({ children, ...props }: React.ComponentProps<'td'>) => (
-  <td className="border border-gray-300 dark:border-gray-600 px-4 py-2 text-gray-800 dark:text-gray-200" {...props}>
+  <td className="border border-gray-300 dark:border-gray-600 px-2 py-1 text-gray-800 dark:text-gray-200" {...props}>
     {children}
   </td>
 );
@@ -401,7 +403,7 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({
                 <CodeBlock
                   code={codeText}
                   language={language}
-                  className="mb-4"
+                  className="m-0"
                 />
               );
             }
@@ -443,8 +445,9 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({
       <div
         data-testid="markdown-renderer"
         role="article"
-        className={cn('prose prose-sm max-w-none', className)}
+        className={cn('max-w-none', className)}
         aria-label="Empty content"
+        style={{ padding: 0, margin: 0 }}
       />
     );
   }
@@ -454,17 +457,15 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({
       data-testid="markdown-renderer"
       role="article"
       className={cn(
-        'prose prose-sm max-w-none',
-        'prose-headings:text-gray-900 dark:prose-headings:text-gray-100',
-        'prose-p:text-gray-800 dark:prose-p:text-gray-200',
-        'prose-strong:text-gray-900 dark:prose-strong:text-gray-100',
-        'prose-em:text-gray-800 dark:prose-em:text-gray-200',
-        'prose-code:text-gray-900 dark:prose-code:text-gray-100',
-        'prose-pre:bg-gray-900 prose-pre:text-gray-100',
-        'prose-a:text-blue-600 dark:prose-a:text-blue-400',
+        'max-w-none',
+        'text-inherit', // Inherit text color from parent
         className
       )}
       aria-label="Markdown content"
+      style={{
+        padding: 0,
+        margin: 0,
+      }}
     >
       <ReactMarkdown {...markdownOptions}>{sanitizedContent}</ReactMarkdown>
     </div>

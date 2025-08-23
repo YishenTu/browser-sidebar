@@ -107,8 +107,6 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
               : message.role === 'assistant'
                 ? 'flex-start'
                 : 'center',
-          paddingRight: message.role === 'user' ? '20px' : '0',
-          paddingLeft: '0', // No padding for AI messages
           width: '100%',
         }}
       >
@@ -141,8 +139,11 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
                 alignItems: 'baseline',
                 gap: '6px',
                 marginTop: '4px',
-                paddingLeft: message.role === 'assistant' ? '12px' : '0',
-                paddingRight: message.role === 'user' ? '4px' : '0',
+                // Align with bubble edges
+                marginLeft: message.role === 'assistant' ? '16px' : '0', // Match AI's 16px margin
+                marginRight: message.role === 'user' ? '16px' : '0',
+                paddingLeft: message.role === 'assistant' ? '8px' : '0', // Match bubble's left padding
+                paddingRight: message.role === 'user' ? '12px' : '0', // Match user bubble's 12px horizontal padding
               }}
             >
               {message.role === 'assistant' && (
