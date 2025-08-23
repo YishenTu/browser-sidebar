@@ -1,0 +1,139 @@
+/* ============================================================================
+ * Model Selector Component
+ * Dropdown interface for selecting AI models
+ * ============================================================================ */
+
+.model-selector {
+  position: relative;
+  display: inline-block;
+  font-family: inherit;
+  z-index: 1000; /* Ensure selector is above other elements */
+}
+
+.model-selector--header {
+  display: inline-flex;
+  margin-right: 8px;
+  flex-shrink: 0;
+}
+
+.model-selector__trigger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  width: auto;
+  min-width: 120px;
+  padding: var(--spacing-sm) var(--spacing-md);
+  background: transparent; /* Fully transparent like chat panel */
+  border: none; /* Remove border */
+  border-radius: var(--radius-md);
+  color: #e5e7eb; /* Match sidebar text color */
+  font-size: var(--font-size-sm);
+  cursor: pointer;
+  transition: var(--transition-fast);
+  min-height: 40px;
+  pointer-events: auto !important; /* Ensure button is clickable */
+  position: relative; /* For proper z-index stacking */
+}
+
+.model-selector__trigger:hover:not(:disabled) {
+  background: rgba(75, 85, 99, 0.2); /* Subtle hover background */
+}
+
+.model-selector__trigger:focus {
+  outline: none;
+  background: rgba(75, 85, 99, 0.2); /* Subtle focus background */
+}
+
+.model-selector__trigger--open {
+  border-bottom-left-radius: 0;
+  border-bottom-right-radius: 0;
+}
+
+.model-selector__trigger--disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  background: var(--background-disabled);
+}
+
+.model-selector__value {
+  text-align: left;
+  white-space: nowrap;
+}
+
+.model-selector__icon {
+  display: none; /* Hide the chevron icon */
+}
+
+.model-selector__dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  min-width: 100%;
+  width: max-content;
+  background: transparent; /* Fully transparent like chat panel */
+  backdrop-filter: blur(12px); /* Add blur effect for better readability */
+  border: none; /* Remove border */
+  border-radius: 0 0 var(--radius-md) var(--radius-md);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3); /* Subtle shadow */
+  z-index: 2147483647; /* Match overlay z-index to ensure dropdown is on top */
+  max-height: 500px; /* Increased to show all models */
+  overflow-y: auto;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  pointer-events: auto !important; /* Ensure clicks work */
+}
+
+.model-selector__option {
+  padding: 6px var(--spacing-md); /* Reduced vertical padding */
+  cursor: pointer;
+  transition: var(--transition-fast);
+  color: #e5e7eb; /* Match sidebar text color */
+  font-size: 12px; /* Smaller font size */
+  pointer-events: auto !important; /* Ensure clicks work */
+}
+
+.model-selector__option:hover,
+.model-selector__option--highlighted {
+  background: rgba(75, 85, 99, 0.3); /* Subtle hover background */
+}
+
+.model-selector__option--selected {
+  background: rgba(75, 85, 99, 0.5); /* Slightly more prominent for selected */
+  color: #ffffff; /* Brighter text for selected */
+  font-weight: var(--font-weight-medium);
+}
+
+.model-selector__option--selected.model-selector__option--highlighted {
+  background: rgba(75, 85, 99, 0.6); /* Combined selected + hover */
+}
+
+.model-selector__group-header {
+  padding: 4px var(--spacing-md); /* Reduced vertical padding */
+  font-size: 10px; /* Smaller font size */
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: rgba(156, 163, 175, 0.8); /* Muted gray */
+  background: transparent; /* Same as dropdown background */
+  cursor: default;
+  pointer-events: none; /* Not clickable */
+}
+
+.model-selector__divider {
+  height: 1px;
+  background: rgba(107, 114, 128, 0.2); /* Subtle divider line */
+  margin: 2px 0;
+  list-style: none;
+  pointer-events: none;
+}
+
+.model-selector__option-content {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.model-selector__option-name {
+  font-weight: 500;
+}

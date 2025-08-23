@@ -1,0 +1,64 @@
+/* ============================================================================
+ * Markdown Content Styles
+ * Code blocks and table rendering for markdown content
+ * ============================================================================ */
+
+/* Code blocks will be handled by the new minimal component */
+
+/* ============================================================================
+ * Markdown Table Styles
+ * ============================================================================ */
+
+.ai-sidebar-body table {
+  display: table !important;
+  width: auto !important;
+  min-width: 50% !important;
+  max-width: 100% !important;
+  border-collapse: collapse !important;
+  margin: 1em 0 !important;
+  font-size: 14px !important;
+}
+
+.ai-sidebar-body thead {
+  background-color: rgba(75, 85, 99, 0.2) !important;
+}
+
+.ai-sidebar-body th {
+  padding: 8px 12px !important;
+  text-align: left !important;
+  border: 1px solid rgba(107, 114, 128, 0.3) !important;
+  font-weight: 600 !important;
+  color: #e5e7eb !important;
+  background-color: rgba(75, 85, 99, 0.3) !important;
+}
+
+.ai-sidebar-body td {
+  padding: 8px 12px !important;
+  text-align: left !important;
+  border: 1px solid rgba(107, 114, 128, 0.3) !important;
+  color: #d1d5db !important;
+}
+
+.ai-sidebar-body tbody tr:hover {
+  background-color: rgba(75, 85, 99, 0.1) !important;
+}
+
+/* Ensure table container allows scrolling */
+.ai-sidebar-body .overflow-x-auto {
+  overflow-x: auto !important;
+  max-width: 100% !important;
+}
+
+/* Markdown prose table overrides */
+.prose table {
+  display: table !important;
+  table-layout: auto !important;
+}
+
+.prose thead th {
+  color: #e5e7eb !important;
+}
+
+.prose tbody td {
+  color: #d1d5db !important;
+}

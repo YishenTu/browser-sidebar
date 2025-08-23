@@ -1,0 +1,156 @@
+/* ============================================================================
+ * Chat Input Component
+ * Message input area with send button and utilities
+ * ============================================================================ */
+
+.chat-input {
+  /* Remove all borders and backgrounds */
+  border: none !important;
+  border-radius: 0;
+  background: transparent !important;
+  padding: 0;
+  box-shadow: none !important;
+  width: 100%;
+  box-sizing: border-box;
+  position: relative;
+}
+
+.chat-input__main {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  position: relative;
+}
+
+.chat-input__textarea-container {
+  flex: 1;
+}
+
+/* Override textarea styles - completely transparent */
+.chat-input__textarea-container .textarea,
+.chat-input__textarea-container textarea,
+.chat-input textarea {
+  width: 100% !important;
+  border: none !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  background-color: transparent !important;
+  padding: 12px 50px 12px 12px !important; /* Right padding for send button */
+  color: #e5e7eb !important;
+  box-shadow: none !important;
+  outline: none !important;
+  -webkit-appearance: none !important;
+  resize: none !important; /* Disable resize handle */
+  box-sizing: border-box !important;
+  font-size: 14px !important;
+  font-family: inherit !important;
+}
+
+.chat-input__textarea-container .textarea::placeholder,
+.chat-input__textarea-container textarea::placeholder {
+  color: #6b7280 !important;
+  opacity: 1 !important;
+}
+
+/* Focus styles for textarea - keep transparent */
+.chat-input__textarea-container .textarea:focus,
+.chat-input__textarea-container textarea:focus,
+.chat-input textarea:focus {
+  border: none !important;
+  outline: none !important;
+  outline-width: 0 !important;
+  box-shadow: none !important;
+  background: transparent !important;
+  background-color: transparent !important;
+}
+
+.chat-input__actions {
+  position: absolute;
+  right: 8px;
+  bottom: 8px;
+  display: flex;
+  align-items: center;
+  background: transparent;
+}
+
+/* Reverse the visual order to match the expected layout */
+.chat-input__controls {
+  order: 2;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.chat-input__utilities {
+  order: 1;
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.chat-input__counter {
+  display: flex;
+  align-items: center;
+  font-family: monospace;
+}
+
+.chat-input__send-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+  background: #10b981 !important; /* Green color matching reference */
+  border: none !important;
+  border-radius: 50% !important; /* Perfect circle */
+  width: 28px !important;
+  height: 28px !important;
+  min-width: 28px !important;
+  min-height: 28px !important;
+  padding: 0 !important;
+  color: white !important;
+  transition: all var(--transition-fast) !important;
+}
+
+.chat-input__send-button:hover {
+  background: var(--success-700) !important;
+  transform: translateY(-1px);
+}
+
+.chat-input__send-button:active {
+  transform: translateY(0);
+}
+
+/* Send button icon styling */
+.chat-input__send-button svg {
+  width: 1rem !important; /* 16px - smaller icon */
+  height: 1rem !important; /* 16px - smaller icon */
+  transform: rotate(0deg);
+}
+
+/* Loading state */
+.chat-input--loading {
+  opacity: 0.7;
+  pointer-events: none;
+}
+
+/* Screen reader only text */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* Counter color classes */
+.chat-input__counter .warning {
+  color: #d97706;
+}
+
+.chat-input__counter .error {
+  color: #dc2626;
+}

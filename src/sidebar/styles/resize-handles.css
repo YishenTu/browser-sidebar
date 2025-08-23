@@ -1,0 +1,76 @@
+/* ============================================================================
+ * Resize Handles
+ * Draggable handles for resizing the sidebar
+ * ============================================================================ */
+
+.ai-sidebar-resize-handle {
+  position: absolute;
+  background: transparent;
+}
+
+/* West (left) */
+.ai-sidebar-resize-handle--w {
+  left: -4px;
+  top: 0;
+  width: 8px;
+  height: 100%;
+  cursor: ew-resize;
+}
+
+/* East (right) */
+.ai-sidebar-resize-handle--e {
+  right: -4px;
+  top: 0;
+  width: 8px;
+  height: 100%;
+  cursor: ew-resize;
+}
+
+/* North (top) */
+.ai-sidebar-resize-handle--n {
+  top: -4px;
+  left: 0;
+  width: 100%;
+  height: 8px;
+  cursor: ns-resize;
+}
+
+/* South (bottom) */
+.ai-sidebar-resize-handle--s {
+  bottom: -4px;
+  left: 0;
+  width: 100%;
+  height: 8px;
+  cursor: ns-resize;
+}
+
+.ai-sidebar-resize-handle:hover {
+  background: var(--primary-500);
+  opacity: 0.3;
+}
+
+/* Corner handles */
+.ai-sidebar-resize-handle--nw {
+  top: -6px;
+  left: -6px;
+  width: 12px;
+  height: 12px;
+}
+.ai-sidebar-resize-handle--ne {
+  top: -6px;
+  right: -6px;
+  width: 12px;
+  height: 12px;
+}
+.ai-sidebar-resize-handle--sw {
+  bottom: -6px;
+  left: -6px;
+  width: 12px;
+  height: 12px;
+}
+.ai-sidebar-resize-handle--se {
+  bottom: -6px;
+  right: -6px;
+  width: 12px;
+  height: 12px;
+}

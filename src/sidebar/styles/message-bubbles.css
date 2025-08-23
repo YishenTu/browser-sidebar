@@ -1,0 +1,111 @@
+/* ============================================================================
+ * Message Bubbles
+ * Chat message display styles for user, assistant, and system messages
+ * ============================================================================ */
+
+/* Message bubble styling for modern dark chat interface */
+.message-bubble {
+  background: var(--background-secondary);
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius-lg);
+  padding: var(--spacing-md);
+  margin: var(--spacing-sm) 0;
+  color: var(--text-primary);
+  box-shadow: var(--shadow-sm);
+}
+
+.message-bubble--user {
+  background: #2563eb !important; /* Blue for user messages */
+  color: white !important;
+  padding: 12px !important; /* 12px padding in all directions */
+  border-radius: 16px !important;
+  display: block !important; /* Block for proper layout */
+  max-width: calc(100% - 16px) !important; /* Leave space for right margin */
+  margin-left: auto !important; /* Push to right */
+  margin-right: 16px !important; /* Explicit right margin */
+  word-wrap: break-word !important;
+  text-align: justify !important; /* Justify text within bubble */
+  line-height: 1.2 !important; /* Tight line height */
+  font-size: 14px !important; /* Fixed font size */
+}
+
+/* Target all child elements inside user bubble to remove vertical spacing */
+.message-bubble--user * {
+  margin: 0 !important;
+  padding-top: 0 !important;
+  padding-bottom: 0 !important;
+  line-height: 1.2 !important;
+}
+
+/* Specifically target paragraphs in user bubbles */
+.message-bubble--user p {
+  margin: 0 !important;
+  padding: 0 !important;
+  line-height: 1.2 !important;
+}
+
+/* First and last children get no spacing */
+.message-bubble--user > *:first-child {
+  margin-top: 0 !important;
+  padding-top: 0 !important;
+}
+
+.message-bubble--user > *:last-child {
+  margin-bottom: 0 !important;
+  padding-bottom: 0 !important;
+}
+
+.message-bubble--assistant {
+  background: transparent !important; /* Transparent background for AI */
+  color: #e5e7eb !important;
+  padding: 0 8px 0 8px !important; /* Added 4px more to left padding */
+  border-radius: 16px !important;
+  display: block !important; /* Block for full width */
+  max-width: calc(100% - 32px) !important; /* Full width minus margins (16px * 2) */
+  width: calc(100% - 32px) !important; /* Full width minus margins (16px * 2) */
+  word-wrap: break-word !important;
+  margin: 0 16px !important; /* 16px margins on both sides */
+  text-align: justify !important; /* Justify text within bubble */
+  box-sizing: border-box !important;
+  font-size: 14px !important; /* Fixed font size */
+}
+
+.message-bubble--system {
+  background: rgba(217, 119, 6, 0.2) !important; /* Yellow for system messages */
+  color: #fde047 !important;
+  padding: 8px 16px !important;
+  border-radius: 16px !important;
+  display: inline-block !important;
+  max-width: 90% !important;
+  text-align: center !important;
+  word-wrap: break-word !important;
+  margin: 0 auto !important;
+}
+
+/* Message row alignment */
+.message-row {
+  display: flex !important;
+  width: 100% !important;
+  margin-bottom: 8px !important; /* Reduced from 16px to 8px */
+}
+
+.message-row--user {
+  justify-content: flex-end !important;
+  padding: 0 0 0 100px !important; /* 100px left padding, right handled by bubble margin */
+  box-sizing: border-box !important; /* Ensure proper box model */
+}
+
+.message-row--assistant {
+  justify-content: flex-start !important;
+  padding: 0 !important; /* Padding handled by bubble margin */
+}
+
+.message-row--system {
+  justify-content: center !important;
+  padding: 0 12px !important;
+}
+
+/* Custom scrollbar for dark theme */
+/* Removed .message-list scrollbar styling (unused) */
+
+/* Removed responsive/animation blocks for unused .chat-panel* selectors */

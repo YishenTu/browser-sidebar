@@ -1,0 +1,191 @@
+/* ============================================================================
+ * Icon Button Component
+ * Reusable icon button with variants, sizes, and states
+ * ============================================================================ */
+
+.icon-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  cursor: pointer;
+  transition: all 0.2s ease-in-out;
+  outline: none;
+  position: relative;
+}
+
+.icon-button:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.5);
+}
+
+.icon-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+/* Sizes */
+.icon-button--sm {
+  width: 2rem;
+  height: 2rem;
+  font-size: 0.875rem;
+}
+
+.icon-button--md {
+  width: 2.5rem;
+  height: 2.5rem;
+  font-size: 1rem;
+}
+
+.icon-button--lg {
+  width: 3rem;
+  height: 3rem;
+  font-size: 1.125rem;
+}
+
+/* Shapes */
+.icon-button--circular {
+  border-radius: 9999px;
+}
+
+.icon-button--square {
+  border-radius: 0.375rem;
+}
+
+/* Variants */
+.icon-button--primary {
+  background-color: var(--primary-600);
+  color: white;
+}
+
+.icon-button--primary:hover {
+  background-color: var(--primary-700);
+}
+
+.icon-button--primary:active {
+  background-color: var(--primary-800);
+}
+
+.icon-button--secondary {
+  background-color: var(--background-secondary);
+  color: var(--text-primary);
+  border: 1px solid var(--border-primary);
+}
+
+.icon-button--secondary:hover {
+  background-color: var(--background-elevated);
+}
+
+.icon-button--secondary:active {
+  background-color: var(--background-muted);
+}
+
+.icon-button--ghost {
+  background-color: transparent;
+  color: var(--text-secondary);
+}
+
+.icon-button--ghost:hover {
+  background-color: var(--hover-overlay);
+}
+
+.icon-button--ghost:active {
+  background-color: var(--active-overlay);
+}
+
+/* States */
+.icon-button--disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.icon-button--loading {
+  cursor: not-allowed;
+}
+
+/* Spinner animation */
+.icon-button__spinner {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Tooltip */
+.icon-button__tooltip-container {
+  position: relative;
+  display: inline-block;
+}
+
+.icon-button__tooltip {
+  position: absolute;
+  z-index: 50;
+  padding: 0.25rem 0.5rem;
+  font-size: 0.75rem;
+  color: white;
+  background-color: #111827;
+  border-radius: 0.25rem;
+  pointer-events: none;
+  opacity: 1;
+
+  /* Position tooltip above button */
+  bottom: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.icon-button__tooltip::after {
+  content: '';
+  position: absolute;
+  width: 0;
+  height: 0;
+  border-left: 4px solid transparent;
+  border-right: 4px solid transparent;
+  border-top: 4px solid #111827;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+/* Dark mode tooltip */
+.dark .icon-button__tooltip {
+  background-color: #374151;
+  color: #e5e7eb;
+}
+
+.dark .icon-button__tooltip::after {
+  border-top-color: #374151;
+}
+
+/* Additional modern styling for the chat interface */
+/* Removed .chat-message* (unused) */
+
+/* Scroll styling for webkit browsers */
+/* Removed .chat-panel__body scrollbar styling (unused) */
+
+/* Ensure icons are centered */
+.icon-button svg {
+  flex-shrink: 0;
+}
+
+/* Handle different icon sizes based on button size */
+.icon-button--sm svg {
+  width: 16px;
+  height: 16px;
+}
+
+.icon-button--md svg {
+  width: 20px;
+  height: 20px;
+}
+
+.icon-button--lg svg {
+  width: 24px;
+  height: 24px;
+}
