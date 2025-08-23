@@ -96,8 +96,9 @@ export function useAIChat(options: UseAIChatOptions = {}): UseAIChatReturn {
   const currentRequestRef = useRef<Promise<any> | null>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
   
-  // Track the last initialized API keys to prevent re-initialization on every settings change
+  // Track the last initialized API keys and model to prevent re-initialization on every settings change
   const lastInitializedKeysRef = useRef<{ openai?: string; google?: string }>({});
+  const lastInitializedModelRef = useRef<string | null>(null);
   // Track if we're currently initializing to prevent concurrent initialization
   const isInitializingRef = useRef<boolean>(false);
 
@@ -140,22 +141,25 @@ export function useAIChat(options: UseAIChatOptions = {}): UseAIChatReturn {
         const { apiKeys, ai } = settings;
         const defaultProvider = ai?.defaultProvider;
 
-        // Check if API keys have actually changed - if not, skip re-initialization
+        // Check if API keys or selected model have actually changed - if not, skip re-initialization
         const keysChanged = 
           apiKeys.openai !== lastInitializedKeysRef.current.openai ||
           apiKeys.google !== lastInitializedKeysRef.current.google;
         
-        if (!keysChanged && registryRef.current && registryRef.current.getRegisteredProviders().length > 0) {
-          // Keys haven't changed and we already have providers initialized
+        const modelChanged = settings.selectedModel !== lastInitializedModelRef.current;
+        
+        if (!keysChanged && !modelChanged && registryRef.current && registryRef.current.getRegisteredProviders().length > 0) {
+          // Neither keys nor model have changed and we already have providers initialized
           isInitializingRef.current = false;
           return;
         }
 
-        // Update the last initialized keys
+        // Update the last initialized keys and model
         lastInitializedKeysRef.current = {
           openai: apiKeys.openai || undefined,
           google: apiKeys.google || undefined,
         };
+        lastInitializedModelRef.current = settings.selectedModel;
 
         if (!registryRef.current || !factoryRef.current) {
           isInitializingRef.current = false;
@@ -171,34 +175,46 @@ export function useAIChat(options: UseAIChatOptions = {}): UseAIChatReturn {
         }
 
         // Create provider configurations for each available API key
-        // Use the first available model for each provider from config
+        // Use the stored selectedModel from settings instead of defaults
         const providerConfigs: ProviderConfig[] = [];
         
-        // Find default models for each provider from SUPPORTED_MODELS
+        // Get the selected model from settings
+        const selectedModelId = settings.selectedModel;
+        const selectedModel = SUPPORTED_MODELS.find(m => m.id === selectedModelId);
+        
+        // Find fallback models for each provider from SUPPORTED_MODELS
         const defaultOpenAIModel = SUPPORTED_MODELS.find(m => m.provider === 'openai');
         const defaultGeminiModel = SUPPORTED_MODELS.find(m => m.provider === 'gemini');
 
-        if (apiKeys.openai && defaultOpenAIModel) {
-          providerConfigs.push({
-            type: 'openai',
-            config: {
-              apiKey: apiKeys.openai,
-              model: defaultOpenAIModel.id,
-              reasoningEffort: defaultOpenAIModel.reasoningEffort || 'low',
-            },
-          });
+        if (apiKeys.openai) {
+          // Use selected model if it's an OpenAI model, otherwise use default
+          const openAIModel = (selectedModel?.provider === 'openai' ? selectedModel : defaultOpenAIModel);
+          if (openAIModel) {
+            providerConfigs.push({
+              type: 'openai',
+              config: {
+                apiKey: apiKeys.openai,
+                model: openAIModel.id,
+                reasoningEffort: openAIModel.reasoningEffort || 'low',
+              },
+            });
+          }
         }
 
-        if (apiKeys.google && defaultGeminiModel) {
-          providerConfigs.push({
-            type: 'gemini',
-            config: {
-              apiKey: apiKeys.google,
-              model: defaultGeminiModel.id,
-              thinkingBudget: defaultGeminiModel.thinkingBudget || '0',
-              showThoughts: false,
-            },
-          });
+        if (apiKeys.google) {
+          // Use selected model if it's a Gemini model, otherwise use default
+          const geminiModel = (selectedModel?.provider === 'gemini' ? selectedModel : defaultGeminiModel);
+          if (geminiModel) {
+            providerConfigs.push({
+              type: 'gemini',
+              config: {
+                apiKey: apiKeys.google,
+                model: geminiModel.id,
+                thinkingBudget: geminiModel.thinkingBudget || '0',
+                showThoughts: false,
+              },
+            });
+          }
         }
 
         // Note: OpenRouter intentionally excluded for Phase 1
@@ -213,8 +229,19 @@ export function useAIChat(options: UseAIChatOptions = {}): UseAIChatReturn {
           }
         }
 
-        // Set active provider if specified and available
-        if (
+        // Set active provider based on the selected model's provider
+        if (selectedModel && registryRef.current) {
+          const targetProvider = selectedModel.provider === 'openai' ? 'openai' : 'gemini';
+          if (registryRef.current.hasProvider(targetProvider)) {
+            registryRef.current.setActiveProvider(targetProvider);
+          } else if (defaultProvider && registryRef.current.hasProvider(defaultProvider)) {
+            // Fallback to default provider from settings
+            registryRef.current.setActiveProvider(defaultProvider);
+          } else if (providerConfigs.length > 0 && providerConfigs[0]) {
+            // Fallback to first available provider
+            registryRef.current.setActiveProvider(providerConfigs[0].type);
+          }
+        } else if (
           defaultProvider &&
           registryRef.current &&
           registryRef.current.hasProvider(defaultProvider)
@@ -233,8 +260,8 @@ export function useAIChat(options: UseAIChatOptions = {}): UseAIChatReturn {
     };
 
     initializeProviders();
-    // Only initialize on API key changes, not model changes
-  }, [enabled, autoInitialize, settings?.apiKeys?.openai, settings?.apiKeys?.google, chatStore]);
+    // Initialize on API key changes and selected model changes
+  }, [enabled, autoInitialize, settings?.apiKeys?.openai, settings?.apiKeys?.google, settings?.selectedModel, chatStore]);
 
   // React to settings changes: register/unregister providers and select active
   useEffect(() => {
@@ -326,9 +353,10 @@ export function useAIChat(options: UseAIChatOptions = {}): UseAIChatReturn {
       }
     };
 
-    // Debounce to prevent rapid re-initialization
-    const timeoutId = setTimeout(syncProviders, 300);
-    return () => clearTimeout(timeoutId);
+    // Apply immediately to ensure model switches reflect in the next request
+    // Removing debounce avoids race conditions where a message could use the previous model
+    syncProviders();
+    return () => {};
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [enabled, settings.ai?.defaultProvider, settings.apiKeys?.openai, settings.apiKeys?.google, settings.selectedModel]);
 
@@ -428,25 +456,54 @@ export function useAIChat(options: UseAIChatOptions = {}): UseAIChatReturn {
           signal: abortControllerRef.current?.signal,
         });
 
-        for await (const chunk of stream) {
-          // Check if cancelled
-          if (abortControllerRef.current?.signal.aborted) {
-            break;
-          }
+        let lastSuccessfulContent = '';
+        let streamInterrupted = false;
+        
+        try {
+          for await (const chunk of stream) {
+            // Check if cancelled
+            if (abortControllerRef.current?.signal.aborted) {
+              streamInterrupted = true;
+              break;
+            }
 
-          // Extract text content from streaming chunk
-          const piece = (chunk as any)?.choices?.[0]?.delta?.content || '';
+            // Extract text content from streaming chunk
+            const piece = (chunk as any)?.choices?.[0]?.delta?.content || '';
+            
+            if (piece) {
+              // Append chunk to message
+              chatStore.appendToMessage(assistantMessage.id, piece);
+              lastSuccessfulContent = assistantMessage.content + piece;
+            }
+          }
+        } catch (streamError) {
+          // Streaming was interrupted - mark as partial
+          streamInterrupted = true;
+          console.warn('Stream interrupted:', streamError);
           
-          if (piece) {
-            // Append chunk to message
-            chatStore.appendToMessage(assistantMessage.id, piece);
+          // Append recovery message if we got partial content
+          if (lastSuccessfulContent && lastSuccessfulContent.length > 0) {
+            chatStore.appendToMessage(
+              assistantMessage.id, 
+              '\n\n[Stream interrupted. Message may be incomplete.]'
+            );
           }
         }
 
-        // Mark streaming complete
-        chatStore.updateMessage(assistantMessage.id, {
-          status: 'received',
-        });
+        // Mark streaming complete or partial based on interruption
+        if (streamInterrupted && lastSuccessfulContent.length > 0) {
+          chatStore.updateMessage(assistantMessage.id, {
+            status: 'received',
+            metadata: { partial: true, interrupted: true },
+          });
+        } else if (!streamInterrupted) {
+          chatStore.updateMessage(assistantMessage.id, {
+            status: 'received',
+          });
+        } else {
+          // No content received and interrupted
+          throw new Error('Stream interrupted before receiving any content');
+        }
       } catch (error) {
         // Handle streaming error
         let errorMessage = 'An unexpected error occurred';
@@ -459,6 +516,15 @@ export function useAIChat(options: UseAIChatOptions = {}): UseAIChatReturn {
         const providerError = provider.formatError?.(error as Error);
         if (providerError) {
           errorMessage = providerError.message;
+        }
+
+        // Check if this is a recoverable network error
+        const isNetworkError = errorMessage.toLowerCase().includes('network') ||
+                              errorMessage.toLowerCase().includes('timeout') ||
+                              errorMessage.toLowerCase().includes('connection');
+        
+        if (isNetworkError) {
+          errorMessage += ' (You can try sending the message again)';
         }
 
         chatStore.updateMessage(assistantMessage.id, {

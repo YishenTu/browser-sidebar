@@ -10,9 +10,9 @@ declare global {
   var __vite__mapDeps: any;
 }
 
-if (typeof globalThis.__vite__mapDeps === 'function') {
-  const originalMapDeps = globalThis.__vite__mapDeps;
-  globalThis.__vite__mapDeps = function(indexes: number[], mapDepsParam?: any, filePaths?: any) {
+if (typeof (globalThis as any).__vite__mapDeps === 'function') {
+  const originalMapDeps = (globalThis as any).__vite__mapDeps;
+  (globalThis as any).__vite__mapDeps = function(indexes: number[], mapDepsParam?: any, filePaths?: any) {
     // Override the path resolution function
     if (mapDepsParam && mapDepsParam.f && Array.isArray(mapDepsParam.f)) {
       mapDepsParam.f = mapDepsParam.f.map((path: string) => {

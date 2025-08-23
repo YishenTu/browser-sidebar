@@ -1,6 +1,6 @@
-import React, { useState, useRef, useEffect, useId } from 'react';
+import React, { useState, useRef, useEffect, useId, useMemo } from 'react';
 import { cn } from '@utils/cn';
-import { SUPPORTED_MODELS } from '../../config/models';
+import { getModelsByProvider } from '../../config/models';
 
 export interface ModelSelectorProps {
   /** Current selected model ID */
@@ -39,6 +39,21 @@ export function ModelSelector({
 }: ModelSelectorProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [highlightedIndex, setHighlightedIndex] = useState(-1);
+  
+  // Group models by provider
+  const groupedModels = useMemo(() => {
+    const openaiModels = getModelsByProvider('openai');
+    const geminiModels = getModelsByProvider('gemini');
+    return [
+      { provider: 'OpenAI', models: openaiModels },
+      { provider: 'Google Gemini', models: geminiModels },
+    ].filter(group => group.models.length > 0);
+  }, []);
+  
+  // Flatten models for keyboard navigation
+  const flatModels = useMemo(() => {
+    return groupedModels.flatMap(group => group.models);
+  }, [groupedModels]);
 
   const containerRef = useRef<HTMLDivElement>(null);
   const comboboxRef = useRef<HTMLButtonElement>(null);
@@ -49,8 +64,8 @@ export function ModelSelector({
   const listboxId = useId();
 
   // Find current value index by model ID
-  const selectedIndex = SUPPORTED_MODELS.findIndex(model => model.id === value);
-  const selectedModel = SUPPORTED_MODELS.find(model => model.id === value);
+  const selectedIndex = flatModels.findIndex(model => model.id === value);
+  const selectedModel = flatModels.find(model => model.id === value);
 
   const handleSelectModel = React.useCallback(
     (modelId: string) => {
@@ -95,18 +110,18 @@ export function ModelSelector({
       switch (keyboardEvent.key) {
         case 'ArrowDown':
           keyboardEvent.preventDefault();
-          setHighlightedIndex(prev => (prev < SUPPORTED_MODELS.length - 1 ? prev + 1 : 0));
+          setHighlightedIndex(prev => (prev < flatModels.length - 1 ? prev + 1 : 0));
           break;
 
         case 'ArrowUp':
           keyboardEvent.preventDefault();
-          setHighlightedIndex(prev => (prev > 0 ? prev - 1 : SUPPORTED_MODELS.length - 1));
+          setHighlightedIndex(prev => (prev > 0 ? prev - 1 : flatModels.length - 1));
           break;
 
         case 'Enter':
           keyboardEvent.preventDefault();
-          if (highlightedIndex >= 0 && highlightedIndex < SUPPORTED_MODELS.length) {
-            const model = SUPPORTED_MODELS[highlightedIndex];
+          if (highlightedIndex >= 0 && highlightedIndex < flatModels.length) {
+            const model = flatModels[highlightedIndex];
             if (model) {
               handleSelectModel(model.id);
             }
@@ -138,7 +153,7 @@ export function ModelSelector({
       return () => rootNode.removeEventListener('keydown', handleKeyDown);
     }
     return undefined;
-  }, [isOpen, highlightedIndex, disabled, handleSelectModel]);
+  }, [isOpen, highlightedIndex, disabled, handleSelectModel, flatModels]);
 
   // Scroll highlighted option into view
   useEffect(() => {
@@ -250,25 +265,35 @@ export function ModelSelector({
           aria-label="Available AI models"
           className="model-selector__dropdown"
         >
-          {SUPPORTED_MODELS.map((model, index) => (
-            <li
-              key={model.id}
-              ref={el => (optionRefs.current[index] = el)}
-              id={`${listboxId}-option-${index}`}
-              role="option"
-              aria-selected={model.id === value}
-              className={cn('model-selector__option', {
-                'model-selector__option--selected': model.id === value,
-                'model-selector__option--highlighted': index === highlightedIndex,
+          {groupedModels.map((group, groupIndex) => (
+            <React.Fragment key={group.provider}>
+              {groupIndex > 0 && <li className="model-selector__divider" role="separator" />}
+              <li className="model-selector__group-header" role="presentation">
+                {group.provider}
+              </li>
+              {group.models.map((model) => {
+                const index = flatModels.findIndex(m => m.id === model.id);
+                return (
+                  <li
+                    key={model.id}
+                    ref={el => (optionRefs.current[index] = el)}
+                    id={`${listboxId}-option-${index}`}
+                    role="option"
+                    aria-selected={model.id === value}
+                    className={cn('model-selector__option', {
+                      'model-selector__option--selected': model.id === value,
+                      'model-selector__option--highlighted': index === highlightedIndex,
+                    })}
+                    onClick={e => handleOptionClick(model.id, index, e)}
+                    onMouseEnter={() => handleOptionMouseEnter(index)}
+                  >
+                    <div className="model-selector__option-content">
+                      <div className="model-selector__option-name">{model.name}</div>
+                    </div>
+                  </li>
+                );
               })}
-              onClick={e => handleOptionClick(model.id, index, e)}
-              onMouseEnter={() => handleOptionMouseEnter(index)}
-            >
-              <div className="model-selector__option-content">
-                <div className="model-selector__option-name">{model.name}</div>
-                <div className="model-selector__option-provider">{model.provider}</div>
-              </div>
-            </li>
+            </React.Fragment>
           ))}
         </ul>
       )}

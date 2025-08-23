@@ -327,8 +327,21 @@ const saveToStorage = async (settings: Settings): Promise<void> => {
  * Load settings from Chrome storage
  */
 const loadFromStorage = async (): Promise<{ settings: Settings; migrated: boolean }> => {
+  // Check if chrome.storage is available
+  if (typeof chrome === 'undefined' || !chrome.storage) {
+    console.warn('Chrome storage API not available, using defaults');
+    return { settings: { ...DEFAULT_SETTINGS }, migrated: false };
+  }
+
   try {
-    const result = await chrome.storage.sync.get([STORAGE_KEY]);
+    // Try sync storage first with a timeout
+    const result = await Promise.race([
+      chrome.storage.sync.get([STORAGE_KEY]),
+      new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Storage timeout')), 2000)
+      )
+    ]) as { [key: string]: any };
+    
     const rawSettings = result[STORAGE_KEY];
     if (rawSettings !== undefined && (typeof rawSettings !== 'object' || rawSettings === null)) {
       throw new Error('Invalid settings format');
@@ -336,9 +349,21 @@ const loadFromStorage = async (): Promise<{ settings: Settings; migrated: boolea
     const migrated =
       !rawSettings || (rawSettings as Partial<Settings> | undefined)?.version !== SETTINGS_VERSION;
     return { settings: migrateSettings(rawSettings), migrated };
-  } catch (_error) {
-    // Surface loading errors to caller; tests expect error propagation
-    throw new Error('Failed to load settings from storage');
+  } catch (error) {
+    console.warn('Failed to load from sync storage, trying local storage:', error);
+    
+    // Fallback to local storage
+    try {
+      const result = await chrome.storage.local.get([STORAGE_KEY]);
+      const rawSettings = result[STORAGE_KEY];
+      const migrated =
+        !rawSettings || (rawSettings as Partial<Settings> | undefined)?.version !== SETTINGS_VERSION;
+      return { settings: migrateSettings(rawSettings), migrated };
+    } catch (localError) {
+      console.warn('Failed to load from local storage, using defaults:', localError);
+      // Return defaults if all storage options fail
+      return { settings: { ...DEFAULT_SETTINGS }, migrated: false };
+    }
   }
 };
 

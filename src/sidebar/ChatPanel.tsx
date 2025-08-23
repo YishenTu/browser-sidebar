@@ -9,8 +9,9 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { unmountSidebar } from './index';
 import { useSettingsStore } from '@store/settings';
-import { setTheme } from '@utils/theme';
 import { ThemeProvider } from '@contexts/ThemeContext';
+import { ErrorProvider, useError, getErrorSource } from '@contexts/ErrorContext';
+import { ErrorBanner } from '@components/ErrorBanner';
 import { MessageList } from '@components/MessageList';
 import { ChatInput } from '@components/ChatInput';
 import { ModelSelector } from '@components/ModelSelector';
@@ -34,26 +35,9 @@ export interface ChatPanelProps {
 }
 
 /**
- * Unified ChatPanel Component
- *
- * A complete chat interface that combines overlay positioning, resize/drag functionality,
- * and chat components into a single unified component. Features:
- *
- * - Fixed overlay positioning with high z-index
- * - Resizable width (300-800px) with left edge drag handle
- * - Draggable positioning by header
- * - 85% viewport height, vertically centered
- * - Shadow DOM isolation
- * - Theme support
- * - Keyboard accessibility (Escape to close)
- * - Chat functionality with message history and AI responses
- *
- * @example
- * ```tsx
- * <ChatPanel onClose={() => unmountSidebar()} />
- * ```
+ * Inner ChatPanel Component that uses the error context
  */
-export const ChatPanel: React.FC<ChatPanelProps> = ({ className, onClose }) => {
+const ChatPanelInner: React.FC<ChatPanelProps> = ({ className, onClose }) => {
   // Positioning and sizing state
   const [width, setWidth] = useState(DEFAULT_WIDTH);
   const [height, setHeight] = useState(Math.round(window.innerHeight * SIDEBAR_HEIGHT_RATIO));
@@ -78,23 +62,43 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ className, onClose }) => {
   const updateSelectedModel = useSettingsStore(state => state.updateSelectedModel);
   const getProviderTypeForModel = useSettingsStore(state => state.getProviderTypeForModel);
   const loadSettings = useSettingsStore(state => state.loadSettings);
+  const settingsLoading = useSettingsStore(state => state.isLoading);
+  const [settingsInitialized, setSettingsInitialized] = useState(false);
 
-  // Load settings on mount
+  // Load settings on mount and track when they're ready
   useEffect(() => {
-    loadSettings();
+    loadSettings()
+      .then(() => {
+        setSettingsInitialized(true);
+      })
+      .catch((error) => {
+        console.error('Failed to load settings:', error);
+        // Still initialize even if settings fail to load
+        // This allows the app to work with default settings
+        setSettingsInitialized(true);
+      });
+    
+    // Fallback timeout to ensure we don't get stuck on loading screen
+    const timeout = setTimeout(() => {
+      // Silently proceed with defaults after timeout
+      setSettingsInitialized(true);
+    }, 3000); // 3 second timeout
+    
+    return () => clearTimeout(timeout);
   }, [loadSettings]);
 
-  // Apply theme when it changes
-  useEffect(() => {
-    setTheme(theme);
-  }, [theme]);
+  // Theme is now handled by ThemeContext, no need to apply it here
+  // This prevents duplicate theme application and potential flickering
 
   // Chat store and AI chat integration
-  const { messages, isLoading, error, clearConversation, hasMessages, clearError } = useChatStore();
+  const { messages, isLoading, clearConversation, hasMessages } = useChatStore();
   const { sendMessage, switchProvider, cancelMessage } = useAIChat({
     enabled: true,
     autoInitialize: true, // Auto-initialize providers from settings
   });
+  
+  // Centralized error management
+  const { addError } = useError();
 
   // API key state for temporary settings
   const [showSettings, setShowSettings] = useState(false);
@@ -167,11 +171,22 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ className, onClose }) => {
   // Handle sending messages
   const handleSendMessage = useCallback(
     async (content: string) => {
-      await sendMessage(content, {
-        streaming: true,
-      });
+      try {
+        await sendMessage(content, {
+          streaming: true,
+        });
+      } catch (error) {
+        // Add error to centralized error context
+        const errorMessage = error instanceof Error ? error.message : 'Failed to send message';
+        addError({
+          message: errorMessage,
+          type: 'error',
+          source: getErrorSource(error instanceof Error ? error : errorMessage),
+          dismissible: true,
+        });
+      }
     },
-    [sendMessage]
+    [sendMessage, addError]
   );
 
   // Handle clear conversation
@@ -324,6 +339,33 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ className, onClose }) => {
     [height, width, position, isDragging]
   );
 
+  // Show loading spinner while settings are being loaded
+  if (!settingsInitialized) {
+    return (
+      <div
+        className={`ai-sidebar-overlay ${className || ''}`}
+        role="dialog"
+        aria-label="AI Browser Sidebar Loading"
+        aria-modal="false"
+        style={{
+          left: `${position.x}px`,
+          top: `${position.y}px`,
+          width: `${width}px`,
+          height: `${sidebarHeight}px`,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
+        data-testid="chat-panel-loading"
+      >
+        <div style={{ textAlign: 'center' }}>
+          <div style={{ fontSize: '24px', marginBottom: '10px' }}>⌛</div>
+          <div>Loading settings...</div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div
       className={`ai-sidebar-overlay ${className || ''}`}
@@ -350,6 +392,9 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ className, onClose }) => {
               className="model-selector--header"
               value={selectedModel}
               onChange={async modelId => {
+                // Store the previous model for potential rollback
+                const previousModel = selectedModel;
+                
                 try {
                   // Get the provider type for this model
                   const providerType = getProviderTypeForModel(modelId);
@@ -372,15 +417,28 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ className, onClose }) => {
                     return;
                   }
                   
-                  // API key exists, proceed with model switch
-                  await updateSelectedModel(modelId);
-
-                  // Switch to the corresponding provider in the AI chat system
-                  if (providerType) {
-                    await switchProvider(providerType);
+                  // Atomic operation: Try to switch both model and provider
+                  // If either fails, rollback both
+                  try {
+                    // First update the model in settings
+                    await updateSelectedModel(modelId);
+                    
+                    // Then switch the provider
+                    if (providerType) {
+                      await switchProvider(providerType);
+                    }
+                  } catch (switchError) {
+                    // Rollback: Restore previous model if provider switch failed
+                    console.error('Provider switch failed, rolling back model selection:', switchError);
+                    await updateSelectedModel(previousModel);
+                    
+                    // Show error to user
+                    const errorMsg = switchError instanceof Error ? switchError.message : 'Failed to switch provider';
+                    alert(`Failed to switch to ${modelId}: ${errorMsg}`);
+                    throw switchError; // Re-throw to be caught by outer catch
                   }
                 } catch (err) {
-                  // Gracefully ignore here; store already set error
+                  // Log error but don't show additional alert if we already showed one
                   console.warn('Failed to switch model/provider:', err);
                 }
               }}
@@ -454,63 +512,8 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ className, onClose }) => {
           </div>
         </div>
 
-        {/* Error Banner */}
-        {error && (
-          <div
-            className="ai-sidebar-error-banner"
-            style={{
-              backgroundColor: '#fee',
-              borderBottom: '1px solid #fcc',
-              padding: '12px 16px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              color: '#c00',
-              fontSize: '14px',
-            }}
-            role="alert"
-            aria-live="assertive"
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: 1 }}>
-              <svg
-                width="16"
-                height="16"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                aria-hidden="true"
-              >
-                <circle cx="12" cy="12" r="10" />
-                <line x1="12" y1="8" x2="12" y2="12" />
-                <line x1="12" y1="16" x2="12.01" y2="16" />
-              </svg>
-              <span>{error}</span>
-            </div>
-            <button
-              onClick={clearError}
-              style={{
-                background: 'none',
-                border: 'none',
-                color: '#c00',
-                cursor: 'pointer',
-                padding: '4px',
-                fontSize: '18px',
-                lineHeight: '1',
-                opacity: 0.7,
-                transition: 'opacity 0.2s',
-              }}
-              onMouseEnter={e => (e.currentTarget.style.opacity = '1')}
-              onMouseLeave={e => (e.currentTarget.style.opacity = '0.7')}
-              aria-label="Dismiss error"
-              title="Dismiss"
-            >
-              ×
-            </button>
-          </div>
-        )}
+        {/* Centralized Error Banner */}
+        <ErrorBanner />
 
         <ThemeProvider>
           {showSettings ? (
@@ -519,7 +522,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ className, onClose }) => {
               style={{
                 padding: '20px',
                 overflowY: 'auto',
-                height: error ? 'calc(100% - 60px - 70px - 50px)' : 'calc(100% - 60px - 70px)',
+                height: 'calc(100% - 60px - 70px)',
               }}
             >
               <h3 style={{ marginBottom: '20px', fontSize: '16px', fontWeight: 'bold' }}>
@@ -613,7 +616,15 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ className, onClose }) => {
                         openrouter: null
                       };
                       await updateAPIKeyReferences(keysToSave);
-                      alert('API keys saved! Select a model from the dropdown to start chatting.');
+                      
+                      // Reinitialize providers with new API keys
+                      // This ensures the AI chat system immediately uses the new keys
+                      const currentProvider = getProviderTypeForModel(selectedModel);
+                      if (currentProvider) {
+                        await switchProvider(currentProvider);
+                      }
+                      
+                      alert('API keys saved and providers updated! You can start chatting now.');
                       // Clear the input fields after saving
                       setApiKeys({ openai: '', google: '' });
                       setTestResults({});
@@ -663,14 +674,13 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ className, onClose }) => {
               className="ai-sidebar-body" 
               data-testid="sidebar-body"
               style={{
-                height: error ? 'calc(100% - 60px - 70px - 50px)' : 'calc(100% - 60px - 70px)',
+                height: 'calc(100% - 60px - 70px)',
               }}
             >
               <MessageList
                 messages={messages}
                 isLoading={isLoading}
                 emptyMessage=""
-                autoScroll={true}
                 height="100%"
               />
             </div>
@@ -740,6 +750,35 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ className, onClose }) => {
         style={{ cursor: 'nwse-resize' }}
       />
     </div>
+  );
+};
+
+/**
+ * Unified ChatPanel Component
+ *
+ * A complete chat interface that combines overlay positioning, resize/drag functionality,
+ * and chat components into a single unified component. Features:
+ *
+ * - Fixed overlay positioning with high z-index
+ * - Resizable width (300-800px) with left edge drag handle
+ * - Draggable positioning by header
+ * - 85% viewport height, vertically centered
+ * - Shadow DOM isolation
+ * - Theme support
+ * - Keyboard accessibility (Escape to close)
+ * - Chat functionality with message history and AI responses
+ * - Centralized error management
+ *
+ * @example
+ * ```tsx
+ * <ChatPanel onClose={() => unmountSidebar()} />
+ * ```
+ */
+export const ChatPanel: React.FC<ChatPanelProps> = (props) => {
+  return (
+    <ErrorProvider>
+      <ChatPanelInner {...props} />
+    </ErrorProvider>
   );
 };
 

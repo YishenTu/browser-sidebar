@@ -15,7 +15,6 @@
 
 import { BaseProvider } from '../BaseProvider';
 import { OpenAIClient } from './OpenAIClient';
-import { TokenBuffer, FlushStrategy } from '../tokenBuffer';
 import { 
   getModelsByProvider, 
   getModelById, 
@@ -40,7 +39,6 @@ import type {
  */
 export class OpenAIProvider extends BaseProvider {
   private openaiClient: OpenAIClient;
-  private tokenBuffer: TokenBuffer | null = null;
 
 
   constructor() {
@@ -113,10 +111,7 @@ export class OpenAIProvider extends BaseProvider {
       }
     }
 
-    // Log if legacy parameters are provided (but don't fail)
-    if (config.temperature !== undefined || config.topP !== undefined || 
-        config.frequencyPenalty !== undefined || config.presencePenalty !== undefined) {
-    }
+    // Legacy parameters are ignored silently
 
     return {
       isValid: errors.length === 0,
@@ -194,22 +189,22 @@ export class OpenAIProvider extends BaseProvider {
    * Stream chat messages using OpenAI Response API
    */
   async *streamChat(messages: ProviderChatMessage[], config?: any): AsyncIterable<StreamChunk> {
-    const self = this;
+    const provider = this;
     yield* this.performStreamChat(
       messages,
       async function* (msgs: ProviderChatMessage[], cfg?: any) {
-        const openaiInstance = self.openaiClient.getOpenAIInstance();
+        const openaiInstance = provider.openaiClient.getOpenAIInstance();
         if (!openaiInstance) {
           throw new Error('OpenAI client not initialized');
         }
 
-        const currentConfig = self.getConfig()?.config as OpenAIConfig;
+        const currentConfig = provider.getConfig()?.config as OpenAIConfig;
         if (!currentConfig) {
           throw new Error('Provider configuration not found');
         }
 
         // Convert messages to Responses API input
-        const input = self.convertMessagesToResponsesInput(msgs);
+        const input = provider.convertMessagesToResponsesInput(msgs);
 
         // Build request parameters for streaming - minimal set only
         const requestParams: any = {
@@ -221,18 +216,6 @@ export class OpenAIProvider extends BaseProvider {
         // Add reasoning effort for supported models
         if (currentConfig.reasoningEffort && supportsReasoning(currentConfig.model)) {
           requestParams.reasoning = { effort: currentConfig.reasoningEffort };
-        }
-
-        // Initialize token buffer if not exists
-        if (!self.tokenBuffer) {
-          self.tokenBuffer = new TokenBuffer({
-            strategy: FlushStrategy.HYBRID,
-            maxTokens: 50,
-            flushIntervalMs: 200,
-            onFlush: (_content: string, _metadata: any) => {
-              // Token buffer flush callback - handled by the consumer
-            },
-          });
         }
 
         try {
@@ -254,22 +237,16 @@ export class OpenAIProvider extends BaseProvider {
 
           for await (const event of asyncIterable as any) {
             try {
-              const streamChunk = self.convertResponsesEventToStreamChunk(event);
+              const streamChunk = provider.convertResponsesEventToStreamChunk(event);
               if (streamChunk) {
-                self.tokenBuffer!.addStreamChunk(streamChunk);
                 yield streamChunk;
               }
             } catch (parseError) {
               continue;
             }
           }
-
-          // Force flush any remaining tokens
-          if (self.tokenBuffer) {
-            self.tokenBuffer.forceFlush();
-          }
         } catch (error) {
-          const formatted = self.formatError(error);
+          const formatted = provider.formatError(error);
           const providerError = new Error(formatted.message) as Error & typeof formatted;
           Object.assign(providerError, formatted);
           throw providerError;
@@ -448,6 +425,7 @@ export class OpenAIProvider extends BaseProvider {
 
   /**
    * Convert OpenAI chunk to StreamChunk format
+   * @internal Used by streaming implementation
    */
   private convertResponsesEventToStreamChunk(event: any): StreamChunk | null {
     if (!event) return null;

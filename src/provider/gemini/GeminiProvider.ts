@@ -8,7 +8,7 @@
  * Features:
  * - Thinking budgets ('0'=off, '-1'=dynamic)
  * - Thought visibility control
- * - Streaming with TokenBuffer integration
+ * - Streaming responses
  * - Multimodal support (text and images)
  * - Request cancellation via AbortController
  * - Comprehensive error handling
@@ -16,7 +16,7 @@
 
 import { GeminiClient } from './GeminiClient';
 import { StreamParser } from '../streamParser';
-import { TokenBuffer, FlushStrategy } from '../tokenBuffer';
+import { GeminiStreamProcessor } from './streamProcessor';
 import { 
   supportsThinking 
 } from '../../config/models';
@@ -199,8 +199,6 @@ export class GeminiProvider extends GeminiClient {
     const request = this.buildRequest(messages, config);
     const url = this.buildGeminiApiUrl(`/models/${this.getCurrentModel()}:streamGenerateContent`);
 
-    let tokenBuffer: TokenBuffer | null = null;
-    const bufferedChunks: StreamChunk[] = [];
     let lastFinishReason: FinishReason = null;
 
     try {
@@ -219,38 +217,9 @@ export class GeminiProvider extends GeminiClient {
         throw new Error('No response body for streaming');
       }
 
-      // Initialize token buffer for smooth streaming
-      tokenBuffer = new TokenBuffer({
-        strategy: FlushStrategy.SIZE_BASED,
-        maxTokens: 3, // Small buffer for test compatibility
-        flushIntervalMs: 100,
-        onFlush: (content, metadata) => {
-          const chunk: StreamChunk = {
-            id: `gemini-buffered-${Date.now()}`,
-            object: 'response.chunk',
-            created: Math.floor(Date.now() / 1000),
-            model: this.getCurrentModel(),
-            choices: [
-              {
-                index: 0,
-                delta: {
-                  content,
-                  thinking: metadata.thinking,
-                },
-                finishReason: metadata.finishReason || lastFinishReason,
-              },
-            ],
-            usage: metadata.usage,
-          };
-          bufferedChunks.push(chunk);
-        },
-      });
-
       const reader = response.body.getReader();
       const decoder = new TextDecoder();
-      let buffer = '';
-      let isArrayFormat = false;
-      let arrayStarted = false;
+      const processor = new GeminiStreamProcessor();
 
       try {
         while (true) {
@@ -266,103 +235,44 @@ export class GeminiProvider extends GeminiClient {
           }
 
           const chunk = decoder.decode(value, { stream: true });
-          buffer += chunk;
           
-          // Detect if this is JSON array format (starts with '[')
-          if (!arrayStarted && buffer.trimStart().startsWith('[')) {
-            isArrayFormat = true;
-            arrayStarted = true;
-          }
+          // Process chunk to extract complete JSON objects
+          const objects = processor.processChunk(chunk);
           
-          if (isArrayFormat) {
-            // For array format, we need to wait for the complete array then process chunks with delays
-            // Check if we have a complete JSON array by counting brackets
-            const openBrackets = (buffer.match(/\[/g) || []).length;
-            const closeBrackets = (buffer.match(/\]/g) || []).length;
+          // Yield each complete object as it arrives
+          for (const item of objects) {
+            const streamChunk = this.convertGeminiToStreamChunk(item);
+            const processedChunk = this.processStreamChunk(streamChunk, config);
             
-            if (openBrackets === closeBrackets && openBrackets > 0) {
-              try {
-                const fullResponse = JSON.parse(buffer);
-                
-                if (Array.isArray(fullResponse)) {
-                  // Process each chunk with a small delay to simulate streaming
-                  for (let i = 0; i < fullResponse.length; i++) {
-                    const item = fullResponse[i];
-                    const streamChunk = this.convertGeminiToStreamChunk(item);
-                    const processedChunk = this.processStreamChunk(streamChunk, config);
-                    
-                    if (processedChunk.choices[0]?.finishReason) {
-                      lastFinishReason = processedChunk.choices[0].finishReason;
-                    }
-                    
-                    const hasContent = processedChunk.choices[0]?.delta?.content;
-                    const hasThinking = processedChunk.choices[0]?.delta?.thinking;
-                    const isCompletion = processedChunk.choices[0]?.finishReason;
-                    
-                    if (hasContent || hasThinking || isCompletion) {
-                      yield processedChunk;
-                      
-                      // Add a small delay between chunks for better UX (except for the last chunk)
-                      if (i < fullResponse.length - 1 && hasContent) {
-                        await new Promise(resolve => setTimeout(resolve, 30));
-                      }
-                    }
-                  }
-                }
-                
-                // Clear buffer after processing
-                buffer = '';
-                break; // Exit the loop
-              } catch (e) {
-                // Not complete yet, continue accumulating
-              }
+            if (processedChunk.choices[0]?.finishReason) {
+              lastFinishReason = processedChunk.choices[0].finishReason;
             }
-          } else {
-            // Try line-by-line processing for SSE or NDJSON format
-            const lines = buffer.split('\n');
-            buffer = lines.pop() || ''; // Keep incomplete line in buffer
             
-            for (const line of lines) {
-              const trimmed = line.trim();
-              if (!trimmed) continue;
-              
-              // Handle SSE format
-              if (trimmed.startsWith('data: ')) {
-                const jsonStr = trimmed.slice(6);
-                if (jsonStr === '[DONE]') break;
-                
-                try {
-                  const data = JSON.parse(jsonStr);
-                  const streamChunk = this.convertGeminiToStreamChunk(data);
-                  const processedChunk = this.processStreamChunk(streamChunk, config);
-                  
-                  if (processedChunk.choices[0]?.finishReason) {
-                    lastFinishReason = processedChunk.choices[0].finishReason;
-                  }
-                  
-                  const hasContent = processedChunk.choices[0]?.delta?.content;
-                  if (hasContent) {
-                    yield processedChunk;
-                  }
-                } catch (e) {
-                  // Failed to parse, continue
-                }
-              }
+            const hasContent = processedChunk.choices[0]?.delta?.content;
+            const hasThinking = processedChunk.choices[0]?.delta?.thinking;
+            const isCompletion = processedChunk.choices[0]?.finishReason;
+            
+            if (hasContent || hasThinking || isCompletion) {
+              yield processedChunk;
             }
           }
         }
 
-        // Force flush any remaining content
-        if (tokenBuffer) {
-          tokenBuffer.forceFlush();
-          while (bufferedChunks.length > 0) {
-            const chunk = bufferedChunks.shift()!;
-            // Ensure final chunk has completion status
-            if (lastFinishReason && bufferedChunks.length === 0 && chunk.choices[0]) {
-              chunk.choices[0].finishReason = lastFinishReason;
-            }
-            yield chunk;
-          }
+        // Yield final completion chunk if needed
+        if (lastFinishReason) {
+          yield {
+            id: `gemini-complete-${Date.now()}`,
+            object: 'response.chunk',
+            created: Math.floor(Date.now() / 1000),
+            model: this.getCurrentModel(),
+            choices: [
+              {
+                index: 0,
+                delta: {},
+                finishReason: lastFinishReason,
+              },
+            ],
+          };
         }
 
         // Ensure we yield a final completion chunk if we haven't already

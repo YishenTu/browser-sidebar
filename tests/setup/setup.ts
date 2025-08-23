@@ -94,6 +94,13 @@ beforeAll(() => {
       // no-op polyfill for jsdom
     } as any;
   }
+
+  // Polyfill Element.scrollIntoView used by MessageList in jsdom environment
+  if (!('scrollIntoView' in Element.prototype)) {
+    (Element.prototype as any).scrollIntoView = function scrollIntoView() {
+      // no-op polyfill for jsdom
+    } as any;
+  }
 });
 
 // Clean up after each test
