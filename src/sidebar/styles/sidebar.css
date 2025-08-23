@@ -303,7 +303,7 @@
 
 /* Send button icon styling */
 .chat-input__send-button svg {
-  width: 1rem !important;  /* 16px - smaller icon */
+  width: 1rem !important; /* 16px - smaller icon */
   height: 1rem !important; /* 16px - smaller icon */
   transform: rotate(0deg);
 }
@@ -374,11 +374,12 @@
   color: white !important;
   padding: 12px !important; /* 12px padding in all directions */
   border-radius: 16px !important;
-  display: inline-block !important;
-  max-width: calc(100% - 16px) !important; /* Ensure 16px gap from container edge */
+  display: block !important; /* Block for proper layout */
+  max-width: calc(100% - 16px) !important; /* Leave space for right margin */
+  margin-left: auto !important; /* Push to right */
+  margin-right: 16px !important; /* Explicit right margin */
   word-wrap: break-word !important;
   text-align: justify !important; /* Justify text within bubble */
-  margin-right: 16px !important; /* Force 16px margin from right edge */
   line-height: 1.2 !important; /* Tight line height */
   font-size: 14px !important; /* Fixed font size */
 }
@@ -445,7 +446,8 @@
 
 .message-row--user {
   justify-content: flex-end !important;
-  padding: 0 !important; /* Padding handled by bubble margin */
+  padding: 0 0 0 100px !important; /* 100px left padding, right handled by bubble margin */
+  box-sizing: border-box !important; /* Ensure proper box model */
 }
 
 .message-row--assistant {
@@ -1114,10 +1116,138 @@
     max-width: none;
     padding: var(--spacing-md);
   }
-  
+
   .provider-settings__status-item {
     flex-direction: column;
     align-items: flex-start;
     gap: var(--spacing-xs);
   }
+}
+
+/* =============================================================================
+   KaTeX Math Rendering Styles
+   ============================================================================= */
+
+/* Override KaTeX colors for dark theme compatibility */
+.katex {
+  font-size: 1.1em;
+  color: inherit;
+}
+
+/* Ensure display math is properly centered and spaced */
+.katex-display {
+  margin: 1em auto;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 0.5em 0;
+  text-align: center;
+  display: block;
+  width: 100%;
+}
+
+/* Fix consecutive display math blocks alignment */
+.katex-display + .katex-display {
+  margin-top: 0.5em;
+}
+
+/* Ensure display math content is centered */
+.katex-display > .katex {
+  display: inline-block;
+  text-align: left;
+}
+
+/* Fix for multiline equations in paragraphs */
+p + p > .katex-display:first-child {
+  margin-top: 0;
+}
+
+/* Ensure proper centering for all display math */
+.katex-display .katex-html {
+  text-align: left;
+  display: inline-block;
+}
+
+/* Reset any potential float or position issues */
+.katex-display {
+  float: none !important;
+  position: relative !important;
+  left: auto !important;
+  right: auto !important;
+}
+
+/* Ensure markdown renderer doesn't interfere with math layout */
+[data-testid='markdown-renderer'] .katex-display {
+  margin-left: auto;
+  margin-right: auto;
+}
+
+/* Fix alignment when display math is inside a paragraph */
+p > .katex-display {
+  margin: 0.5em auto;
+}
+
+/* Style inline math to blend with text */
+.katex-inline {
+  vertical-align: middle;
+}
+
+/* Dark theme overrides for KaTeX */
+.dark .katex,
+.dark .katex-html {
+  color: var(--text-primary);
+}
+
+/* Ensure math symbols inherit the correct color */
+.dark .katex .mord,
+.dark .katex .mbin,
+.dark .katex .mrel,
+.dark .katex .mopen,
+.dark .katex .mclose,
+.dark .katex .mpunct,
+.dark .katex .minner,
+.dark .katex .mop,
+.dark .katex .msupsub {
+  color: inherit;
+}
+
+/* Style for math in user messages */
+.message-bubble--user .katex {
+  color: inherit;
+}
+
+/* Style for math in assistant messages */
+.message-bubble--assistant .katex {
+  color: inherit;
+}
+
+/* Ensure fractions and other complex structures are visible */
+.dark .katex .frac-line,
+.dark .katex .overline,
+.dark .katex .underline {
+  background-color: currentColor;
+}
+
+/* Scrollbar styling for long equations */
+.katex-display::-webkit-scrollbar {
+  height: 6px;
+}
+
+.katex-display::-webkit-scrollbar-track {
+  background: var(--bg-secondary);
+  border-radius: 3px;
+}
+
+.katex-display::-webkit-scrollbar-thumb {
+  background: var(--border-color);
+  border-radius: 3px;
+}
+
+.katex-display::-webkit-scrollbar-thumb:hover {
+  background: var(--text-secondary);
+}
+
+/* Error handling for invalid LaTeX */
+.katex-error {
+  color: var(--error-color, #ef4444);
+  font-size: 0.9em;
 }
