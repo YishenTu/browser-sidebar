@@ -1,6 +1,8 @@
 import React from 'react';
 import { cn } from '@utils/cn';
 import { ChatMessage, MessageRole, MessageStatus } from '@store/chat';
+import { MarkdownRenderer } from './MarkdownRenderer';
+import { StreamingText } from './StreamingText';
 
 /**
  * MessageBubble Props Interface
@@ -29,7 +31,6 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
   showTimestamp = true,
   showFullDate = false,
   className,
-  onRetry,
   ...props
 }) => {
   // Format timestamp based on options
@@ -70,24 +71,7 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
       case 'streaming':
         return null; // Removed streaming dots indicator
       case 'error':
-        return (
-          <div data-testid="message-status" className="text-red-500 text-sm">
-            <div>{message.error}</div>
-            {onRetry && (
-              <button
-                onClick={() => onRetry(message.id)}
-                onKeyDown={e => {
-                  if (e.key === 'Enter') {
-                    onRetry(message.id);
-                  }
-                }}
-                className="mt-1 px-2 py-1 bg-red-500 text-white rounded text-xs hover:bg-red-600 focus:outline-none focus:ring-2 focus:ring-red-500"
-              >
-                Retry
-              </button>
-            )}
-          </div>
-        );
+        return null; // Errors are now displayed in the banner at the top
       default:
         return null;
     }
@@ -130,7 +114,20 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
         }}
       >
         <div className={cn(getMessageClasses(message.role))}>
-          <span data-testid="message-content">{message.content}</span>
+          {message.status === 'streaming' ? (
+            <StreamingText
+              text={message.content}
+              isStreaming={true}
+              speed={20}
+              tokenizeBy="word"
+              preserveMarkdown={false}
+              data-testid="message-content"
+            />
+          ) : (
+            <div data-testid="message-content">
+              <MarkdownRenderer content={message.content} />
+            </div>
+          )}
         </div>
 
         {/* Timestamp and model name (for assistant) - same row under bubble */}
@@ -157,7 +154,7 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
                   }}
                   aria-label="model-name"
                 >
-                  AI Assistant
+                  {(message.metadata?.model as string) || 'AI Assistant'}
                 </span>
               )}
               <time

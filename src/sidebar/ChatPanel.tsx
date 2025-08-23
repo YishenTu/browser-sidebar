@@ -90,7 +90,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ className, onClose }) => {
   }, [theme]);
 
   // Chat store and AI chat integration
-  const { messages, isLoading, clearConversation, hasMessages } = useChatStore();
+  const { messages, isLoading, error, clearConversation, hasMessages, clearError } = useChatStore();
   const { sendMessage, switchProvider, cancelMessage } = useAIChat({
     enabled: true,
     autoInitialize: true, // Auto-initialize providers from settings
@@ -99,8 +99,70 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ className, onClose }) => {
   // API key state for temporary settings
   const [showSettings, setShowSettings] = useState(false);
   const [apiKeys, setApiKeys] = useState({ openai: '', google: '' });
+  const [testingKeys, setTestingKeys] = useState({ openai: false, google: false });
+  const [testResults, setTestResults] = useState<{openai?: boolean; google?: boolean}>({});
+  const storedApiKeys = useSettingsStore(state => state.settings.apiKeys);
   const updateAPIKeyReferences = useSettingsStore(state => state.updateAPIKeyReferences);
   const resetToDefaults = useSettingsStore(state => state.resetToDefaults);
+  
+  // Clear API key inputs when settings panel opens (show only placeholders)
+  useEffect(() => {
+    if (showSettings) {
+      setApiKeys({
+        openai: '',
+        google: ''
+      });
+      setTestResults({});
+    }
+  }, [showSettings]);
+  
+  // Function to mask API key
+  const maskApiKey = (key: string | null): string => {
+    if (!key || key.length < 8) return '';
+    const start = key.substring(0, 4);
+    const end = key.substring(key.length - 4);
+    return `${start}...${end}`;
+  };
+  
+  // Function to test API key
+  const testApiKey = async (provider: 'openai' | 'google', key: string) => {
+    // Use the entered key if available, otherwise use the stored key
+    const keyToTest = key || (provider === 'openai' ? storedApiKeys.openai : storedApiKeys.google);
+    
+    if (!keyToTest) {
+      alert('Please enter an API key first');
+      return;
+    }
+    
+    setTestingKeys(prev => ({ ...prev, [provider]: true }));
+    setTestResults(prev => ({ ...prev, [provider]: undefined }));
+    
+    try {
+      // Dynamically import validation service
+      const { APIKeyValidationService } = await import('@provider/validation');
+      const validator = new APIKeyValidationService();
+      
+      const providerType = provider === 'openai' ? 'openai' : 'gemini';
+      const result = await validator.validateAPIKey(keyToTest, providerType, {
+        skipLiveValidation: false,
+        timeout: 10000
+      });
+      
+      setTestResults(prev => ({ ...prev, [provider]: result.isValid }));
+      
+      if (result.isValid) {
+        alert(`✅ ${provider === 'openai' ? 'OpenAI' : 'Google'} API key is valid!`);
+      } else {
+        const errorMsg = result.errors.join(', ') || 'Invalid API key';
+        alert(`❌ ${provider === 'openai' ? 'OpenAI' : 'Google'} API key validation failed: ${errorMsg}`);
+      }
+    } catch (error) {
+      setTestResults(prev => ({ ...prev, [provider]: false }));
+      alert(`❌ Failed to test ${provider === 'openai' ? 'OpenAI' : 'Google'} API key: ${error}`);
+    } finally {
+      setTestingKeys(prev => ({ ...prev, [provider]: false }));
+    }
+  };
 
   // Handle sending messages
   const handleSendMessage = useCallback(
@@ -290,11 +352,31 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ className, onClose }) => {
               value={selectedModel}
               onChange={async modelId => {
                 try {
-                  // Update the selected model in settings (this also updates the provider)
+                  // Get the provider type for this model
+                  const providerType = getProviderTypeForModel(modelId);
+                  
+                  // Check if the API key exists for this provider
+                  const settings = useSettingsStore.getState();
+                  const apiKeys = settings.settings.apiKeys;
+                  
+                  let hasApiKey = false;
+                  if (providerType === 'openai') {
+                    hasApiKey = !!apiKeys?.openai;
+                  } else if (providerType === 'gemini') {
+                    hasApiKey = !!apiKeys?.google;
+                  }
+                  
+                  if (!hasApiKey) {
+                    // Show settings panel if API key is missing
+                    setShowSettings(true);
+                    // User will see the settings panel to add API key
+                    return;
+                  }
+                  
+                  // API key exists, proceed with model switch
                   await updateSelectedModel(modelId);
 
                   // Switch to the corresponding provider in the AI chat system
-                  const providerType = getProviderTypeForModel(modelId);
                   if (providerType) {
                     await switchProvider(providerType);
                   }
@@ -309,34 +391,6 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ className, onClose }) => {
             <h2></h2>
           </div>
           <div className="ai-sidebar-header-actions">
-            <button
-              onClick={() => setShowSettings(!showSettings)}
-              className="ai-sidebar-settings"
-              aria-label="Settings"
-              title="API Settings"
-              style={{
-                marginRight: '8px',
-                background: 'none',
-                border: 'none',
-                color: 'inherit',
-                cursor: 'pointer',
-                padding: '4px',
-              }}
-            >
-              <svg
-                width="16"
-                height="16"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <circle cx="12" cy="12" r="3" />
-                <path d="M12 1v6M12 17v6M4.22 4.22l4.24 4.24M15.54 15.54l4.24 4.24M1 12h6M17 12h6M4.22 19.78l4.24-4.24M15.54 8.46l4.24-4.24" />
-              </svg>
-            </button>
             {hasMessages() && (
               <button
                 onClick={handleClearConversation}
@@ -363,6 +417,34 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ className, onClose }) => {
               </button>
             )}
             <button
+              onClick={() => setShowSettings(!showSettings)}
+              className="ai-sidebar-settings"
+              aria-label="Settings"
+              title="API Settings"
+              style={{
+                marginRight: '8px',
+                background: 'none',
+                border: 'none',
+                color: 'inherit',
+                cursor: 'pointer',
+                padding: '4px',
+              }}
+            >
+              <svg
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z" />
+                <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
+              </svg>
+            </button>
+            <button
               onClick={handleClose}
               className="ai-sidebar-close"
               aria-label="Close sidebar"
@@ -373,6 +455,64 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ className, onClose }) => {
           </div>
         </div>
 
+        {/* Error Banner */}
+        {error && (
+          <div
+            className="ai-sidebar-error-banner"
+            style={{
+              backgroundColor: '#fee',
+              borderBottom: '1px solid #fcc',
+              padding: '12px 16px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              color: '#c00',
+              fontSize: '14px',
+            }}
+            role="alert"
+            aria-live="assertive"
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: 1 }}>
+              <svg
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden="true"
+              >
+                <circle cx="12" cy="12" r="10" />
+                <line x1="12" y1="8" x2="12" y2="12" />
+                <line x1="12" y1="16" x2="12.01" y2="16" />
+              </svg>
+              <span>{error}</span>
+            </div>
+            <button
+              onClick={clearError}
+              style={{
+                background: 'none',
+                border: 'none',
+                color: '#c00',
+                cursor: 'pointer',
+                padding: '4px',
+                fontSize: '18px',
+                lineHeight: '1',
+                opacity: 0.7,
+                transition: 'opacity 0.2s',
+              }}
+              onMouseEnter={e => (e.currentTarget.style.opacity = '1')}
+              onMouseLeave={e => (e.currentTarget.style.opacity = '0.7')}
+              aria-label="Dismiss error"
+              title="Dismiss"
+            >
+              ×
+            </button>
+          </div>
+        )}
+
         <ThemeProvider>
           {showSettings ? (
             <div
@@ -380,7 +520,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ className, onClose }) => {
               style={{
                 padding: '20px',
                 overflowY: 'auto',
-                height: 'calc(100% - 60px - 70px)',
+                height: error ? 'calc(100% - 60px - 70px - 50px)' : 'calc(100% - 60px - 70px)',
               }}
             >
               <h3 style={{ marginBottom: '20px', fontSize: '16px', fontWeight: 'bold' }}>
@@ -391,45 +531,93 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ className, onClose }) => {
                 <label style={{ display: 'block', marginBottom: '5px', fontSize: '14px' }}>
                   OpenAI API Key (for GPT-5 Nano)
                 </label>
-                <input
-                  type="password"
-                  placeholder="sk-..."
-                  style={{
-                    width: '100%',
-                    padding: '8px',
-                    border: '1px solid #ccc',
-                    borderRadius: '4px',
-                    fontSize: '14px',
-                  }}
-                  onChange={e => setApiKeys(prev => ({ ...prev, openai: e.target.value }))}
-                />
+                <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                  <input
+                    type="text"
+                    placeholder={storedApiKeys.openai ? maskApiKey(storedApiKeys.openai) : "sk-..."}
+                    value={apiKeys.openai}
+                    style={{
+                      flex: 1,
+                      padding: '8px',
+                      border: testResults.openai === true ? '1px solid #4CAF50' : testResults.openai === false ? '1px solid #f44336' : '1px solid #ccc',
+                      borderRadius: '4px',
+                      fontSize: '14px',
+                      fontFamily: 'monospace',
+                    }}
+                    onChange={e => setApiKeys(prev => ({ ...prev, openai: e.target.value }))}
+                  />
+                  <button
+                    onClick={() => testApiKey('openai', apiKeys.openai)}
+                    disabled={testingKeys.openai}
+                    style={{
+                      padding: '8px 12px',
+                      backgroundColor: testingKeys.openai ? '#ccc' : '#2196F3',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '4px',
+                      cursor: testingKeys.openai ? 'not-allowed' : 'pointer',
+                      fontSize: '14px',
+                      minWidth: '60px',
+                    }}
+                  >
+                    {testingKeys.openai ? '...' : 'Test'}
+                  </button>
+                </div>
               </div>
 
               <div style={{ marginBottom: '20px' }}>
                 <label style={{ display: 'block', marginBottom: '5px', fontSize: '14px' }}>
                   Google API Key (for Gemini 2.5 Flash Lite)
                 </label>
-                <input
-                  type="password"
-                  placeholder="AIza..."
-                  style={{
-                    width: '100%',
-                    padding: '8px',
-                    border: '1px solid #ccc',
-                    borderRadius: '4px',
-                    fontSize: '14px',
-                  }}
-                  onChange={e => setApiKeys(prev => ({ ...prev, google: e.target.value }))}
-                />
+                <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                  <input
+                    type="text"
+                    placeholder={storedApiKeys.google ? maskApiKey(storedApiKeys.google) : "AIza..."}
+                    value={apiKeys.google}
+                    style={{
+                      flex: 1,
+                      padding: '8px',
+                      border: testResults.google === true ? '1px solid #4CAF50' : testResults.google === false ? '1px solid #f44336' : '1px solid #ccc',
+                      borderRadius: '4px',
+                      fontSize: '14px',
+                      fontFamily: 'monospace',
+                    }}
+                    onChange={e => setApiKeys(prev => ({ ...prev, google: e.target.value }))}
+                  />
+                  <button
+                    onClick={() => testApiKey('google', apiKeys.google)}
+                    disabled={testingKeys.google}
+                    style={{
+                      padding: '8px 12px',
+                      backgroundColor: testingKeys.google ? '#ccc' : '#2196F3',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '4px',
+                      cursor: testingKeys.google ? 'not-allowed' : 'pointer',
+                      fontSize: '14px',
+                      minWidth: '60px',
+                    }}
+                  >
+                    {testingKeys.google ? '...' : 'Test'}
+                  </button>
+                </div>
               </div>
 
               <div style={{ display: 'flex', gap: '10px' }}>
                 <button
                   onClick={async () => {
                     try {
-                      await updateAPIKeyReferences({ ...apiKeys, openrouter: null });
+                      // Only save non-empty keys, keep existing ones if input is empty
+                      const keysToSave = {
+                        openai: apiKeys.openai || storedApiKeys.openai,
+                        google: apiKeys.google || storedApiKeys.google,
+                        openrouter: null
+                      };
+                      await updateAPIKeyReferences(keysToSave);
                       alert('API keys saved! Select a model from the dropdown to start chatting.');
-                      setShowSettings(false);
+                      // Clear the input fields after saving
+                      setApiKeys({ openai: '', google: '' });
+                      setTestResults({});
                     } catch (error) {
                       alert('Failed to save API keys: ' + error);
                     }
@@ -470,34 +658,15 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ className, onClose }) => {
                   Reset Settings
                 </button>
               </div>
-
-              <div style={{ marginTop: '20px', fontSize: '12px', color: '#666' }}>
-                <p>
-                  • Get OpenAI API key from:{' '}
-                  <a
-                    href="https://platform.openai.com/api-keys"
-                    target="_blank"
-                    style={{ color: '#0066cc' }}
-                    rel="noreferrer"
-                  >
-                    platform.openai.com
-                  </a>
-                </p>
-                <p>
-                  • Get Google API key from:{' '}
-                  <a
-                    href="https://makersuite.google.com/app/apikey"
-                    target="_blank"
-                    style={{ color: '#0066cc' }}
-                    rel="noreferrer"
-                  >
-                    makersuite.google.com
-                  </a>
-                </p>
-              </div>
             </div>
           ) : (
-            <div className="ai-sidebar-body" data-testid="sidebar-body">
+            <div 
+              className="ai-sidebar-body" 
+              data-testid="sidebar-body"
+              style={{
+                height: error ? 'calc(100% - 60px - 70px - 50px)' : 'calc(100% - 60px - 70px)',
+              }}
+            >
               <MessageList
                 messages={messages}
                 isLoading={isLoading}

@@ -1,240 +1,203 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { cn } from '@utils/cn';
+import React, { useState, useMemo } from 'react';
 
-// Lazy load Prism.js to avoid SSR issues
-const loadPrism = async () => {
-  if (typeof window === 'undefined') return null;
-
-  const Prism = await import('prismjs');
-
-  // Load common languages (with type assertions to avoid TS errors)
-  await Promise.all([
-    import('prismjs/components/prism-typescript'),
-    import('prismjs/components/prism-python'),
-    import('prismjs/components/prism-java'),
-    import('prismjs/components/prism-css'),
-  ]);
-
-  return Prism.default;
-};
-
-// CodeBlock props interface
-export interface CodeBlockProps extends React.HTMLAttributes<HTMLDivElement> {
-  /** The code content to display */
+interface CodeBlockProps {
   code: string;
-  /** Programming language for syntax highlighting */
   language?: string;
-  /** Whether to show line numbers */
-  showLineNumbers?: boolean;
-  /** Whether to show word wrap toggle */
-  showWordWrapToggle?: boolean;
-  /** Optional filename to display in header */
-  filename?: string;
-  /** Custom CSS classes */
   className?: string;
 }
 
-/**
- * CodeBlock component with syntax highlighting and copy functionality
- *
- * Features:
- * - Syntax highlighting using Prism.js
- * - Copy-to-clipboard with visual feedback
- * - Language badge display
- * - Optional line numbers
- * - Theme support (light/dark)
- * - Word wrap toggle
- * - Filename display
- * - Scrollable for long code
- * - Full accessibility support
- *
- * @example
- * ```tsx
- * <CodeBlock
- *   code="const hello = 'world';"
- *   language="javascript"
- *   showLineNumbers
- *   filename="example.js"
- * />
- * ```
- */
-export const CodeBlock: React.FC<CodeBlockProps> = ({
-  code,
-  language,
-  showLineNumbers = false,
-  showWordWrapToggle = false,
-  filename,
-  className,
-  ...props
-}) => {
+// VS Code dark theme-like syntax highlighting using React elements
+const applySyntaxHighlight = (code: string, language?: string): React.ReactNode => {
+  // First, handle any HTML entities that might be in the original code
+  const textarea = document.createElement('textarea');
+  textarea.innerHTML = code;
+  let processedCode = textarea.value;
+  
+  if (!language) {
+    return processedCode;
+  }
+
+  const langs: Record<string, Array<{pattern: RegExp, style: React.CSSProperties}>> = {
+    python: [
+      {pattern: /\b(def|class|if|elif|else|for|while|return|import|from|as|try|except|finally|with|lambda|pass|break|continue|raise|yield|assert|del|is|not|and|or|in)\b/g, style: {color: '#C586C0'}}, // Keywords
+      {pattern: /(#.*$)/gm, style: {color: '#6A9955'}}, // Comments
+      {pattern: /("""[\s\S]*?"""|'''[\s\S]*?''')/g, style: {color: '#6A9955'}}, // Docstrings
+      {pattern: /("(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*')/g, style: {color: '#CE9178'}}, // Strings
+      {pattern: /\b(\d+\.?\d*)\b/g, style: {color: '#B5CEA8'}}, // Numbers
+      {pattern: /\b(True|False|None)\b/g, style: {color: '#569CD6'}}, // Literals
+      {pattern: /\b(print|len|range|int|str|float|list|dict|set|tuple|open|input|__name__|__main__|self)\b/g, style: {color: '#DCDCAA'}}, // Built-ins
+      {pattern: /\b([A-Z][a-zA-Z0-9_]*)\b/g, style: {color: '#4EC9B0'}}, // Classes
+    ],
+    javascript: [
+      {pattern: /\b(const|let|var|function|return|if|else|for|while|do|break|continue|switch|case|default|try|catch|finally|throw|new|typeof|instanceof|this|class|extends|import|export|from|async|await|static|get|set)\b/g, style: {color: '#C586C0'}},
+      {pattern: /(\/\/.*$)/gm, style: {color: '#6A9955'}}, // Comments
+      {pattern: /(\/\*[\s\S]*?\*\/)/g, style: {color: '#6A9955'}}, // Block comments
+      {pattern: /("(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*'|`(?:[^`\\]|\\.)*`)/g, style: {color: '#CE9178'}}, // Strings
+      {pattern: /\b(\d+\.?\d*)\b/g, style: {color: '#B5CEA8'}}, // Numbers
+      {pattern: /\b(true|false|null|undefined|NaN|Infinity)\b/g, style: {color: '#569CD6'}}, // Literals
+      {pattern: /\b(console|window|document|Math|Date|Array|Object|String|Number|Boolean|JSON|Promise)\b/g, style: {color: '#DCDCAA'}}, // Built-ins
+      {pattern: /\b([A-Z][a-zA-Z0-9_]*)\b/g, style: {color: '#4EC9B0'}}, // Classes
+    ],
+    typescript: [
+      {pattern: /\b(const|let|var|function|return|if|else|for|while|do|break|continue|switch|case|default|try|catch|finally|throw|new|typeof|instanceof|this|class|extends|import|export|from|async|await|interface|type|enum|namespace|declare|abstract|implements|private|protected|public|static|readonly|as|keyof|typeof)\b/g, style: {color: '#C586C0'}},
+      {pattern: /(\/\/.*$)/gm, style: {color: '#6A9955'}},
+      {pattern: /(\/\*[\s\S]*?\*\/)/g, style: {color: '#6A9955'}},
+      {pattern: /("(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*'|`(?:[^`\\]|\\.)*`)/g, style: {color: '#CE9178'}},
+      {pattern: /\b(\d+\.?\d*)\b/g, style: {color: '#B5CEA8'}},
+      {pattern: /\b(true|false|null|undefined|NaN|Infinity)\b/g, style: {color: '#569CD6'}},
+      {pattern: /\b(string|number|boolean|void|any|never|unknown|object)\b/g, style: {color: '#4EC9B0'}}, // Types
+      {pattern: /\b([A-Z][a-zA-Z0-9_]*)\b/g, style: {color: '#4EC9B0'}},
+    ],
+  };
+
+  // Add aliases
+  langs.js = langs.javascript;
+  langs.ts = langs.typescript;
+  langs.jsx = langs.javascript;
+  langs.tsx = langs.typescript;
+  langs.py = langs.python;
+
+  const rules = langs[language.toLowerCase()];
+  if (!rules) {
+    return processedCode;
+  }
+
+  // Create tokens with their styles
+  const tokens: Array<{text: string, style?: React.CSSProperties}> = [];
+  let lastIndex = 0;
+  const matches: Array<{start: number, end: number, style: React.CSSProperties, text: string}> = [];
+
+  // Collect all matches
+  rules.forEach(({pattern, style}) => {
+    // Create a new regex instance to avoid stale lastIndex
+    const regex = new RegExp(pattern.source, pattern.flags);
+    let match;
+    while ((match = regex.exec(processedCode)) !== null) {
+      matches.push({
+        start: match.index,
+        end: match.index + match[0].length,
+        style,
+        text: match[0]
+      });
+    }
+  });
+
+  // Sort matches by start position
+  matches.sort((a, b) => a.start - b.start);
+
+  // Process matches and create tokens (skip overlapping matches)
+  matches.forEach((match) => {
+    // Skip if this match overlaps with previous processed text
+    if (match.start < lastIndex) {
+      return;
+    }
+    // Add plain text before this match
+    if (lastIndex < match.start) {
+      tokens.push({text: processedCode.slice(lastIndex, match.start)});
+    }
+    // Add the highlighted match
+    tokens.push({text: match.text, style: match.style});
+    lastIndex = match.end;
+  });
+
+  // Add any remaining plain text
+  if (lastIndex < processedCode.length) {
+    tokens.push({text: processedCode.slice(lastIndex)});
+  }
+
+  // Convert tokens to React elements
+  return tokens.map((token, index) => {
+    if (token.style) {
+      return <span key={index} style={token.style}>{token.text}</span>;
+    }
+    return <React.Fragment key={index}>{token.text}</React.Fragment>;
+  });
+};
+
+export const CodeBlock: React.FC<CodeBlockProps> = ({ code, language, className }) => {
   const [copied, setCopied] = useState(false);
-  const [wordWrap, setWordWrap] = useState(false);
-  const [highlightedCode, setHighlightedCode] = useState<string>('');
-
-  // Generate line numbers for the code
-  const lineCount = code.split('\n').length;
-  const lineNumbers = Array.from({ length: lineCount }, (_, i) => i + 1);
-
-  // Handle syntax highlighting
-  useEffect(() => {
-    const highlightCode = async () => {
-      if (!language) {
-        setHighlightedCode(code);
-        return;
-      }
-
-      try {
-        const Prism = await loadPrism();
-        if (Prism && Prism.languages[language]) {
-          const highlighted = Prism.highlight(code, Prism.languages[language], language);
-          setHighlightedCode(highlighted);
-        } else {
-          setHighlightedCode(code);
-        }
-      } catch (error) {
-        // Fallback to plain text if highlighting fails
-        setHighlightedCode(code);
-      }
-    };
-
-    highlightCode();
-  }, [code, language]);
-
-  // Handle copy to clipboard
-  const handleCopy = useCallback(async () => {
+  
+  const handleCopy = async () => {
     try {
-      await navigator.clipboard.writeText(code);
+      // Decode HTML entities if present in the original code
+      const textarea = document.createElement('textarea');
+      textarea.innerHTML = code;
+      const decodedCode = textarea.value.trim();
+      await navigator.clipboard.writeText(decodedCode);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
-    } catch (error) {
-      // Handle copy failure silently
-      console.warn('Failed to copy to clipboard:', error);
-    }
-  }, [code]);
-
-  // Handle word wrap toggle
-  const handleWordWrapToggle = useCallback(() => {
-    setWordWrap(prev => !prev);
-  }, []);
-
-  // Handle keyboard events for copy button
-  const handleCopyKeyDown = (event: React.KeyboardEvent) => {
-    if (event.key === 'Enter' || event.key === ' ') {
-      event.preventDefault();
-      handleCopy();
+    } catch {
+      // Silently fail
     }
   };
 
+  const highlightedCode = useMemo(() => {
+    return applySyntaxHighlight(code.trim(), language);
+  }, [code, language]);
+
+  // Use inline styles to ensure they're applied
+  const containerStyle: React.CSSProperties = {
+    position: 'relative',
+    backgroundColor: '#1E1E1E', // VS Code dark background
+    border: '1px solid #3E3E42', // Subtle border
+    borderRadius: '6px',
+    margin: '16px 0',
+    overflow: 'hidden',
+  };
+
+  const buttonStyle: React.CSSProperties = {
+    position: 'absolute',
+    top: '8px',
+    right: '8px',
+    padding: '4px 10px',
+    fontSize: '11px',
+    backgroundColor: 'transparent', // No background color
+    color: '#808080', // Dimmed gray color
+    border: 'none', // No border
+    borderRadius: '4px',
+    cursor: 'pointer',
+    zIndex: 10,
+    transition: 'all 0.2s',
+    fontFamily: 'monospace',
+  };
+
+  const preStyle: React.CSSProperties = {
+    padding: '20px 16px', // Added top/bottom padding
+    paddingRight: '80px', // Space for button
+    overflowX: 'auto',
+    margin: 0,
+    backgroundColor: 'transparent',
+  };
+
+  const codeStyle: React.CSSProperties = {
+    color: '#D4D4D4', // Default text color (VS Code)
+    fontFamily: 'Consolas, "Courier New", monospace',
+    fontSize: '14px',
+    lineHeight: '1.6',
+    display: 'block',
+  };
+
   return (
-    <div
-      data-testid="code-block"
-      className={cn(
-        'relative rounded-lg border bg-gray-50 border-gray-200 overflow-hidden max-h-96 overflow-y-auto',
-        'dark:bg-gray-800 dark:border-gray-600',
-        className
-      )}
-      {...props}
-    >
-      {/* Header with filename, language badge, and controls */}
-      <div
-        data-testid="code-header"
-        className="flex items-center justify-between px-4 py-2 bg-gray-100 border-b border-gray-200 dark:bg-gray-700 dark:border-gray-600"
+    <div style={containerStyle} className={className}>
+      <button
+        onClick={handleCopy}
+        style={buttonStyle}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.2)';
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.1)';
+        }}
+        aria-label={copied ? 'Code copied' : 'Copy code'}
       >
-        <div className="flex items-center gap-2">
-          {filename && (
-            <span
-              data-testid="filename"
-              className="text-sm font-medium text-gray-700 dark:text-gray-300"
-            >
-              {filename}
-            </span>
-          )}
-          {language && (
-            <span
-              data-testid="language-badge"
-              className="px-2 py-1 text-xs font-medium text-gray-600 bg-gray-200 rounded dark:text-gray-400 dark:bg-gray-600"
-              aria-label={`Code language: ${language}`}
-            >
-              {language}
-            </span>
-          )}
-        </div>
-        <div className="flex items-center gap-2">
-          {showWordWrapToggle && (
-            <button
-              data-testid="word-wrap-toggle"
-              onClick={handleWordWrapToggle}
-              className="p-1 text-gray-600 hover:text-gray-800 hover:bg-gray-200 rounded dark:text-gray-400 dark:hover:text-gray-200 dark:hover:bg-gray-600"
-              aria-label={wordWrap ? 'Disable word wrap' : 'Enable word wrap'}
-              title={wordWrap ? 'Disable word wrap' : 'Enable word wrap'}
-            >
-              <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M4 6h16v2H4zm0 5h16v2H4zm0 5h16v2H4z" />
-              </svg>
-            </button>
-          )}
-          <button
-            data-testid="copy-button"
-            onClick={handleCopy}
-            onKeyDown={handleCopyKeyDown}
-            className="p-1 text-gray-600 hover:text-gray-800 hover:bg-gray-200 rounded dark:text-gray-400 dark:hover:text-gray-200 dark:hover:bg-gray-600"
-            aria-label={copied ? 'Code copied to clipboard' : 'Copy code to clipboard'}
-            title={copied ? 'Copied!' : 'Copy to clipboard'}
-          >
-            {copied ? (
-              <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z" />
-              </svg>
-            ) : (
-              <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z" />
-              </svg>
-            )}
-          </button>
-        </div>
-      </div>
-
-      {/* Code content area */}
-      <div className="relative flex">
-        {/* Line numbers */}
-        {showLineNumbers && (
-          <div
-            data-testid="line-numbers"
-            className="flex-shrink-0 px-2 py-3 text-sm text-gray-500 bg-gray-100 border-r border-gray-200 select-none dark:bg-gray-700 dark:border-gray-600 dark:text-gray-400"
-          >
-            {lineNumbers.map(num => (
-              <div key={num} className="text-right leading-5">
-                {num}
-              </div>
-            ))}
-          </div>
-        )}
-
-        {/* Code content */}
-        <div className="flex-1 overflow-x-auto">
-          <pre
-            data-testid="code-content"
-            className={cn(
-              'p-3 text-sm font-mono leading-5 text-gray-900 bg-transparent dark:text-gray-100',
-              wordWrap ? 'whitespace-pre-wrap break-all' : 'whitespace-pre',
-              'overflow-x-auto'
-            )}
-            role="textbox"
-            aria-label="Code block"
-            aria-readonly="true"
-            tabIndex={0}
-          >
-            {language && highlightedCode ? (
-              <code
-                dangerouslySetInnerHTML={{ __html: highlightedCode }}
-                className={`language-${language}`}
-              />
-            ) : (
-              <code>{code}</code>
-            )}
-          </pre>
-        </div>
-      </div>
+        {copied ? '✓ Copied' : (language || 'copy')}
+      </button>
+      
+      <pre style={preStyle}>
+        <code style={codeStyle}>
+          {highlightedCode}
+        </code>
+      </pre>
     </div>
   );
 };

@@ -76,12 +76,8 @@ export class OpenAIProvider extends BaseProvider {
       },
     };
 
-    try {
-      await this.openaiClient.initialize(extendedConfig);
-      this.setConfig(config);
-    } catch (error) {
-      throw error;
-    }
+    await this.openaiClient.initialize(extendedConfig);
+    this.setConfig(config);
   }
 
   /**
@@ -113,8 +109,15 @@ export class OpenAIProvider extends BaseProvider {
 
     // General parameter validation (fallback if model validation fails)
     if (config.temperature !== undefined) {
-      if (typeof config.temperature !== 'number' || isNaN(config.temperature) || 
-          config.temperature < 0.0 || config.temperature > 2.0) {
+      const model = this.getModel(config.model);
+      if (model && !model.capabilities.temperature) {
+        errors.push('Temperature is not supported for the selected model');
+      } else if (
+        typeof config.temperature !== 'number' ||
+        isNaN(config.temperature) ||
+        config.temperature < 0.0 ||
+        config.temperature > 2.0
+      ) {
         errors.push('Invalid temperature');
       }
     }
@@ -199,25 +202,18 @@ export class OpenAIProvider extends BaseProvider {
         const requestParams: any = {
           model: currentConfig.model,
           input,
-          temperature: currentConfig.temperature,
-          max_output_tokens: currentConfig.maxTokens,
-          top_p: currentConfig.topP,
-          frequency_penalty: currentConfig.frequencyPenalty,
-          presence_penalty: currentConfig.presencePenalty,
         };
+
+        // Only include temperature if the model supports it
+        if (OpenAIModelUtils.supportsParameter(currentConfig.model, 'temperature')) {
+          requestParams.temperature = currentConfig.temperature;
+        }
 
         // Add reasoning effort for supported models (Responses API schema)
         if (currentConfig.reasoningEffort && this.supportsReasoning(currentConfig.model)) {
           requestParams.reasoning = { effort: currentConfig.reasoningEffort };
         }
 
-        // Add optional parameters
-        if (currentConfig.seed !== undefined) {
-          requestParams.seed = currentConfig.seed;
-        }
-        if (currentConfig.user) {
-          requestParams.user = currentConfig.user;
-        }
         try {
           // Use Responses API with AbortSignal passed via RequestOptions
           const response = await (openaiInstance as any).responses.create(
@@ -241,47 +237,39 @@ export class OpenAIProvider extends BaseProvider {
    * Stream chat messages using OpenAI Response API
    */
   async *streamChat(messages: ProviderChatMessage[], config?: any): AsyncIterable<StreamChunk> {
-    const self = this;
     yield* this.performStreamChat(
       messages,
-      async function* (msgs: ProviderChatMessage[], cfg?: any): AsyncIterable<StreamChunk> {
-        const openaiInstance = self.openaiClient.getOpenAIInstance();
+      async (msgs: ProviderChatMessage[], cfg?: any) => {
+        const openaiInstance = this.openaiClient.getOpenAIInstance();
         if (!openaiInstance) {
           throw new Error('OpenAI client not initialized');
         }
 
-        const currentConfig = self.getConfig()?.config as OpenAIConfig;
+        const currentConfig = this.getConfig()?.config as OpenAIConfig;
         if (!currentConfig) {
           throw new Error('Provider configuration not found');
         }
 
         // Convert messages to Responses API input
-        const input = self.convertMessagesToResponsesInput(msgs);
+        const input = this.convertMessagesToResponsesInput(msgs);
 
         // Build request parameters for streaming
         const requestParams: any = {
           model: currentConfig.model,
           input,
           stream: true,
-          temperature: currentConfig.temperature,
-          max_output_tokens: currentConfig.maxTokens,
-          top_p: currentConfig.topP,
-          frequency_penalty: currentConfig.frequencyPenalty,
-          presence_penalty: currentConfig.presencePenalty,
         };
 
+        // Only include temperature if the model supports it
+        if (OpenAIModelUtils.supportsParameter(currentConfig.model, 'temperature')) {
+          (requestParams as any).temperature = currentConfig.temperature;
+        }
+
         // Add reasoning effort for supported models
-        if (currentConfig.reasoningEffort && self.supportsReasoning(currentConfig.model)) {
+        if (currentConfig.reasoningEffort && this.supportsReasoning(currentConfig.model)) {
           requestParams.reasoning = { effort: currentConfig.reasoningEffort };
         }
 
-        // Add optional parameters
-        if (currentConfig.seed !== undefined) {
-          requestParams.seed = currentConfig.seed;
-        }
-        if (currentConfig.user) {
-          requestParams.user = currentConfig.user;
-        }
         // Initialize token buffer if not exists
         if (!self.tokenBuffer) {
           self.tokenBuffer = new TokenBuffer({
@@ -371,7 +359,8 @@ export class OpenAIProvider extends BaseProvider {
     const specialCharCount = (text.match(specialCharRegex) || []).length;
 
     // Unicode characters typically use more tokens
-    const unicodeRegex = /[^\x00-\x7F]/g;
+    // eslint-disable-next-line no-control-regex
+    const unicodeRegex = /[^\u0000-\u007F]/g;
     const unicodeCharCount = (text.match(unicodeRegex) || []).length;
 
     // Adjust estimation

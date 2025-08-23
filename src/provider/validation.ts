@@ -133,7 +133,7 @@ const VALIDATION_ENDPOINTS = {
 
 /** Key format patterns */
 const KEY_PATTERNS = {
-  openai: /^sk-[a-zA-Z0-9]{48,}$/,
+  openai: /^sk-(?:proj-)?[a-zA-Z0-9_-]{20,}$/,  // Updated to support both sk- and sk-proj- formats with hyphens/underscores
   gemini: /^AIza[a-zA-Z0-9_-]{35,}$/,
   openrouter: /^sk-or-v1-[a-zA-Z0-9]{48,}$/,
 } as const;
@@ -436,29 +436,50 @@ export class APIKeyValidationService {
     options: ValidationOptions = {}
   ): Promise<LiveValidationResult> {
     const timeout = options.timeout || this.config.timeout;
-    const endpoint = VALIDATION_ENDPOINTS[provider];
     const startTime = performance.now();
 
     try {
-      // Try to create provider instance for testing (this may fail due to mocking)
-      try {
-        await this.createProviderForTesting(key, provider);
-      } catch (providerError) {
-        // If provider creation fails, it may indicate invalid configuration or system issues
-        // For this validation service, we'll continue with direct API testing
-        // as provider creation might fail due to test mocking
-      }
-
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), timeout);
 
-      const headers = this.createHeaders(key, provider);
+      let response: Response;
+      let endpoint: string;
 
-      const response = await fetch(endpoint, {
-        method: 'GET',
-        headers,
-        signal: controller.signal,
-      });
+      // Use different validation methods for different providers
+      if (provider === 'openai') {
+        // For OpenAI, make a minimal chat completion request
+        endpoint = 'https://api.openai.com/v1/chat/completions';
+        response = await fetch(endpoint, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${key}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            model: 'gpt-3.5-turbo',
+            messages: [{ role: 'user', content: 'Hi' }],
+            max_tokens: 1,
+            temperature: 0,
+          }),
+          signal: controller.signal,
+        });
+      } else if (provider === 'gemini') {
+        // For Gemini, list models endpoint works fine
+        endpoint = `${VALIDATION_ENDPOINTS[provider]}?key=${key}`;
+        response = await fetch(endpoint, {
+          method: 'GET',
+          signal: controller.signal,
+        });
+      } else {
+        // Default validation for other providers
+        endpoint = VALIDATION_ENDPOINTS[provider];
+        const headers = this.createHeaders(key, provider);
+        response = await fetch(endpoint, {
+          method: 'GET',
+          headers,
+          signal: controller.signal,
+        });
+      }
 
       clearTimeout(timeoutId);
       const responseTime = performance.now() - startTime;

@@ -36,8 +36,6 @@ export interface MarkdownRendererProps {
   className?: string;
   /** Custom react-markdown options */
   options?: Partial<Options>;
-  /** Whether to enable syntax highlighting (default: true) */
-  enableSyntaxHighlighting?: boolean;
   /** Whether to sanitize HTML content (default: true) */
   sanitizeHtml?: boolean;
   /** Custom link click handler */
@@ -144,7 +142,7 @@ const HeadingRenderer = ({ level, children }: HeadingProps) => {
  * Custom paragraph renderer
  */
 const ParagraphRenderer = ({ children, ...props }: React.ComponentProps<'p'>) => (
-  <p className="mb-4 leading-relaxed text-gray-800 dark:text-gray-200 last:mb-0" {...props}>
+  <p className="leading-normal text-gray-800 dark:text-gray-200 only:mb-0 mb-2 last:mb-0" {...props}>
     {children}
   </p>
 );
@@ -161,12 +159,20 @@ const ListRenderer = ({
   children?: React.ReactNode;
 }) => {
   const Tag = ordered ? 'ol' : 'ul';
+  
+  // Force minimal indentation with inline styles that override everything
+  const listStyle: React.CSSProperties = {
+    paddingLeft: '16px', // Minimal space for bullets/numbers
+    marginLeft: '0',
+    listStylePosition: 'outside',
+  };
+  
   const listClasses = ordered
-    ? 'list-decimal ml-6 mb-4 space-y-1'
-    : 'list-disc ml-6 mb-4 space-y-1';
+    ? 'list-decimal mb-4 space-y-2'
+    : 'list-disc mb-4 space-y-2';
 
   return (
-    <Tag className={listClasses} {...props}>
+    <Tag className={listClasses} style={listStyle} {...props}>
       {children}
     </Tag>
   );
@@ -244,35 +250,7 @@ const InlineCodeRenderer = ({ children, ...props }: React.ComponentProps<'code'>
   </code>
 );
 
-/**
- * Custom pre renderer (code blocks) - uses CodeBlock component
- */
-const PreRenderer = ({
-  children,
-  enableSyntaxHighlighting = true,
-}: React.ComponentProps<'pre'> & { enableSyntaxHighlighting?: boolean }) => {
-  // Extract code content and language from children
-  const child = React.Children.only(children) as React.ReactElement | string | number | boolean;
-  let code = '' as string;
-  let className = '' as string;
-  if (React.isValidElement(child)) {
-    code = (child.props as { children?: string }).children || '';
-    className = (child.props as { className?: string }).className || '';
-  }
-  const language = enableSyntaxHighlighting
-    ? className.replace('language-', '') || undefined
-    : undefined;
-
-  return (
-    <CodeBlock
-      code={code}
-      language={language}
-      showLineNumbers={false}
-      showWordWrapToggle={false}
-      className="mb-4"
-    />
-  );
-};
+// We will render both inline and block code via the `code` component mapping below.
 
 /**
  * Custom horizontal rule renderer
@@ -296,6 +274,33 @@ const TableRenderer = ({ children, ...props }: React.ComponentProps<'table'>) =>
 );
 
 /**
+ * Custom table head renderer
+ */
+const TheadRenderer = ({ children, ...props }: React.ComponentProps<'thead'>) => (
+  <thead className="bg-gray-50 dark:bg-gray-800" {...props}>
+    {children}
+  </thead>
+);
+
+/**
+ * Custom table body renderer
+ */
+const TbodyRenderer = ({ children, ...props }: React.ComponentProps<'tbody'>) => (
+  <tbody className="divide-y divide-gray-200 dark:divide-gray-700" {...props}>
+    {children}
+  </tbody>
+);
+
+/**
+ * Custom table row renderer
+ */
+const TrRenderer = ({ children, ...props }: React.ComponentProps<'tr'>) => (
+  <tr className="hover:bg-gray-50 dark:hover:bg-gray-800" {...props}>
+    {children}
+  </tr>
+);
+
+/**
  * Custom table cell renderers
  */
 const ThRenderer = ({ children, ...props }: React.ComponentProps<'th'>) => (
@@ -308,7 +313,7 @@ const ThRenderer = ({ children, ...props }: React.ComponentProps<'th'>) => (
 );
 
 const TdRenderer = ({ children, ...props }: React.ComponentProps<'td'>) => (
-  <td className="border border-gray-300 dark:border-gray-600 px-4 py-2" {...props}>
+  <td className="border border-gray-300 dark:border-gray-600 px-4 py-2 text-gray-800 dark:text-gray-200" {...props}>
     {children}
   </td>
 );
@@ -327,19 +332,23 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({
   content,
   className,
   options = {},
-  enableSyntaxHighlighting = true,
   sanitizeHtml = true,
   onLinkClick,
 }) => {
+
   // Memoize sanitized content for performance
   const sanitizedContent = useMemo(() => {
-    if (!content) return '';
-
-    if (sanitizeHtml) {
-      return DOMPurify.sanitize(content, SANITIZE_CONFIG);
+    if (!content) {
+      return '';
     }
 
-    return content;
+    let result = content;
+    
+    if (sanitizeHtml) {
+      result = DOMPurify.sanitize(result, SANITIZE_CONFIG);
+    }
+
+    return result;
   }, [content, sanitizeHtml]);
 
   // Memoize react-markdown options for performance
@@ -348,6 +357,7 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({
       remarkPlugins: [remarkGfm, ...(options.remarkPlugins || [])],
       rehypePlugins: options.rehypePlugins || [],
       components: {
+        p: ParagraphRenderer,
         // Headings
         h1: props => <HeadingRenderer level={1} {...props} />,
         h2: props => <HeadingRenderer level={2} {...props} />,
@@ -355,9 +365,6 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({
         h4: props => <HeadingRenderer level={4} {...props} />,
         h5: props => <HeadingRenderer level={5} {...props} />,
         h6: props => <HeadingRenderer level={6} {...props} />,
-
-        // Text elements
-        p: ParagraphRenderer,
 
         // Lists
         ul: props => <ListRenderer ordered={false} {...props} />,
@@ -370,17 +377,54 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({
         // Links
         a: props => <LinkRenderer onLinkClick={onLinkClick} {...props} />,
 
-        // Code
-        code: InlineCodeRenderer,
-        pre: props => (
-          <PreRenderer enableSyntaxHighlighting={enableSyntaxHighlighting} {...props} />
-        ),
+        // Pre element renderer to prevent double wrapping
+        pre: ({ children, ...props }: any) => {
+          // Extract the code element from children
+          if (React.isValidElement(children)) {
+            const codeElement = children;
+            // Check if it's a code element with language
+            if (codeElement.type === 'code' || codeElement.props?.className) {
+              const match = /language-(\w+)/.exec(codeElement.props?.className || '');
+              const language = match?.[1];
+              
+              // Extract the actual code text - it might be nested in various ways
+              let codeText = '';
+              if (typeof codeElement.props?.children === 'string') {
+                codeText = codeElement.props.children;
+              } else if (Array.isArray(codeElement.props?.children)) {
+                codeText = codeElement.props.children.join('');
+              } else if (codeElement.props?.children) {
+                codeText = String(codeElement.props.children);
+              }
+              
+              return (
+                <CodeBlock
+                  code={codeText}
+                  language={language}
+                  className="mb-4"
+                />
+              );
+            }
+          }
+          
+          // Fallback for non-language code blocks
+          return <pre {...props}>{children}</pre>;
+        },
+        
+        // Code renderer for inline code only
+        code: ({ children, ...props }: any) => {
+          // Only handle inline code here, block code is handled by pre
+          return <InlineCodeRenderer {...props}>{children}</InlineCodeRenderer>;
+        },
 
         // Horizontal rule
         hr: HrRenderer,
 
         // Tables
         table: TableRenderer,
+        thead: TheadRenderer,
+        tbody: TbodyRenderer,
+        tr: TrRenderer,
         th: ThRenderer,
         td: TdRenderer,
 
@@ -391,7 +435,7 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({
     };
 
     return baseOptions;
-  }, [options, enableSyntaxHighlighting, onLinkClick]);
+  }, [options, onLinkClick]);
 
   // Handle empty content
   if (!sanitizedContent) {

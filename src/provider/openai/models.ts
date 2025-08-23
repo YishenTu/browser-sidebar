@@ -8,7 +8,7 @@
  * - GPT-5 series: Latest generation models with reasoning capabilities
  *
  * Parameter Support Matrix:
- * - Temperature: All models (0.0-2.0)
+ * - Temperature: Only on models that support sampling (0.0-2.0)
  * - Reasoning Effort: GPT-5 nano (low/medium/high)
  * - Multimodal: GPT-5 nano (text and image input)
  * - Function Calling: Not supported by current models
@@ -36,7 +36,9 @@ export const OPENAI_MODELS: ModelConfig[] = [
     costPer1kTokens: { input: 0.05, output: 0.4 }, // $0.05 input, $0.40 output per documentation
     capabilities: {
       streaming: true,
-      temperature: true,
+      // gpt-5-nano behaves like a deterministic reasoning model in Responses API
+      // and does not accept temperature/top_p. Keep config value but do not send.
+      temperature: false,
       reasoning: true, // Reasoning token support per documentation
       thinking: false,
       multimodal: true, // Supports text and image input per documentation
@@ -56,8 +58,8 @@ export const OPENAI_MODELS: ModelConfig[] = [
  * enabling proper validation and UI configuration.
  */
 export const OPENAI_PARAMETER_SUPPORT_MATRIX = {
-  // Temperature support (all models)
-  temperature: OPENAI_MODELS.map(m => m.id),
+  // Temperature support (only models that explicitly support it)
+  temperature: OPENAI_MODELS.filter(m => m.capabilities.temperature).map(m => m.id),
 
   // Reasoning effort support (gpt-5-nano)
   reasoningEffort: OPENAI_MODELS.filter(m => m.capabilities.reasoning).map(m => m.id),
@@ -139,14 +141,18 @@ export const OpenAIModelUtils = {
 
     const errors: string[] = [];
 
-    // Validate temperature (all models support temperature)
+    // Validate temperature only if the model supports it; otherwise flag unsupported usage
     if (parameters['temperature'] !== undefined) {
-      const temp = parameters['temperature'];
-      const tempConfig = model.parameters.temperature;
-      if (typeof temp !== 'number' || temp < tempConfig.min || temp > tempConfig.max) {
-        errors.push(
-          `Temperature must be between ${tempConfig.min} and ${tempConfig.max} for model ${modelId}`
-        );
+      if (!model.capabilities.temperature) {
+        errors.push(`Temperature is not supported for model ${modelId}`);
+      } else {
+        const temp = parameters['temperature'];
+        const tempConfig = model.parameters.temperature;
+        if (typeof temp !== 'number' || temp < tempConfig.min || temp > tempConfig.max) {
+          errors.push(
+            `Temperature must be between ${tempConfig.min} and ${tempConfig.max} for model ${modelId}`
+          );
+        }
       }
     }
 

@@ -242,6 +242,7 @@ export class GeminiProvider extends GeminiClient {
 
       const reader = response.body.getReader();
       const decoder = new TextDecoder();
+      let accumulator = '';
 
       try {
         while (true) {
@@ -255,26 +256,42 @@ export class GeminiProvider extends GeminiClient {
           if (done) break;
 
           const chunk = decoder.decode(value, { stream: true });
-          const parsedChunks = this.streamParser.parse(chunk);
+          accumulator += chunk;
+          
+          // Check if we have a complete JSON array
+          if (accumulator.includes(']')) {
+            try {
+              // Parse the complete JSON array
+              const responseArray = JSON.parse(accumulator);
+              
+              // Process each item in the array
+              for (const geminiChunk of responseArray) {
+                // Convert Gemini format to StreamChunk format
+                const streamChunk = this.convertGeminiToStreamChunk(geminiChunk);
+                const processedChunk = this.processStreamChunk(streamChunk, config);
 
-          for (const parsedChunk of parsedChunks) {
-            const processedChunk = this.processStreamChunk(parsedChunk, config);
+                // Track finish reason
+                if (processedChunk.choices[0]?.finishReason) {
+                  lastFinishReason = processedChunk.choices[0].finishReason;
+                }
 
-            // Track finish reason
-            if (processedChunk.choices[0]?.finishReason) {
-              lastFinishReason = processedChunk.choices[0].finishReason;
+                // Check if this chunk has content to buffer
+                const hasContent = processedChunk.choices[0]?.delta?.content;
+                const hasThinking = processedChunk.choices[0]?.delta?.thinking;
+                const isCompletion = processedChunk.choices[0]?.finishReason;
+
+                // Yield chunks with content
+                if (hasContent || hasThinking || isCompletion) {
+                  yield processedChunk;
+                }
+              }
+              
+              // Clear accumulator after successful parse and break since we have the complete response
+              accumulator = '';
+              break; // Exit the loop since we have the complete response
+            } catch (e) {
+              // Continue accumulating - not a complete JSON yet
             }
-
-            // Check if this chunk has content to buffer
-            const hasContent = processedChunk.choices[0]?.delta?.content;
-            const hasThinking = processedChunk.choices[0]?.delta?.thinking;
-            const isCompletion = processedChunk.choices[0]?.finishReason;
-
-            // For now, prioritize functionality over TokenBuffer optimization
-            if (hasContent || hasThinking || isCompletion) {
-              yield processedChunk;
-            }
-            // Skip empty chunks without content, thinking, or completion
           }
         }
 
@@ -468,7 +485,9 @@ export class GeminiProvider extends GeminiClient {
   private buildGeminiApiUrl(endpoint: string): string {
     const geminiConfig = this.getConfig()?.config as GeminiConfig;
     const baseUrl = geminiConfig.endpoint || 'https://generativelanguage.googleapis.com';
-    return `${baseUrl}/v1beta${endpoint}`;
+    const fullUrl = `${baseUrl}/v1beta${endpoint}`;
+    
+    return fullUrl;
   }
 
   // ============================================================================
@@ -531,6 +550,38 @@ export class GeminiProvider extends GeminiClient {
     }
 
     return response;
+  }
+
+  /**
+   * Convert Gemini response to StreamChunk format
+   */
+  private convertGeminiToStreamChunk(geminiResponse: any): StreamChunk {
+    const candidate = geminiResponse.candidates?.[0];
+    const text = candidate?.content?.parts?.[0]?.text || '';
+    const thinking = candidate?.content?.parts?.[0]?.thinking || '';
+    const finishReason = this.normalizeFinishReason(candidate?.finishReason);
+    
+    return {
+      id: `gemini-${Date.now()}`,
+      object: 'response.chunk',
+      created: Math.floor(Date.now() / 1000),
+      model: this.getCurrentModel(),
+      choices: [
+        {
+          index: 0,
+          delta: {
+            content: text,
+            thinking: thinking || undefined,
+          },
+          finishReason: candidate?.finishReason ? finishReason : null,
+        },
+      ],
+      usage: geminiResponse.usageMetadata ? {
+        promptTokens: geminiResponse.usageMetadata.promptTokenCount,
+        completionTokens: geminiResponse.usageMetadata.candidatesTokenCount,
+        totalTokens: geminiResponse.usageMetadata.totalTokenCount,
+      } : undefined,
+    };
   }
 
   /**
@@ -602,6 +653,7 @@ export class GeminiProvider extends GeminiClient {
       };
     }
 
+
     // Extract retry-after header for rate limiting
     const retryAfter = response.headers?.get?.('retry-after');
     if (retryAfter) {
@@ -611,13 +663,27 @@ export class GeminiProvider extends GeminiClient {
       errorData.error.retry_after = parseInt(retryAfter, 10);
     }
 
+    // Create more specific error messages based on status
+    let specificMessage = '';
+    if (response.status === 401) {
+      specificMessage = 'Authentication failed. Please check your Google API key is valid and has Gemini API enabled.';
+    } else if (response.status === 403) {
+      specificMessage = 'Access denied. Make sure your Google API key has access to Gemini API. You may need to enable it at console.cloud.google.com';
+    } else if (response.status === 404) {
+      specificMessage = 'Model not found. The selected Gemini model may not be available in your region or with your API key.';
+    } else if (response.status === 400) {
+      const details = errorData.error?.details?.map((d: any) => d.reason || d.message).join(', ');
+      specificMessage = details ? `Invalid request: ${details}` : `Bad request: ${errorData.error?.message || errorData.message || 'Unknown error'}`;
+    }
+
     const formattedError = this.formatError({
       ...errorData,
       status: response.status,
+      message: specificMessage || errorData.error?.message || errorData.message || 'Unknown error'
     });
 
     // Create error with provider error properties
-    const error = new Error(formattedError.message) as Error & typeof formattedError;
+    const error = new Error(specificMessage || formattedError.message) as Error & typeof formattedError;
     Object.assign(error, formattedError);
 
     throw error;

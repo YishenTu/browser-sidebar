@@ -2,12 +2,13 @@
 // Content script - handles sidebar injection and communication with background
 
 import { createMessage, isValidMessage, Message } from '@/types/messages';
-import { subscribeWithResponse } from '@core/messaging';
+import { MessageBus } from '@core/messaging';
 
 let sidebarModule: { mountSidebar: () => void; unmountSidebar: () => void } | null = null;
 let sidebarOpen = false;
 
-// Initialize message bus for content script (handled lazily by helpers)
+// Initialize message bus for content script explicitly
+const messageBus = MessageBus.getInstance('content');
 
 // Function to inject or show sidebar
 async function injectSidebar() {
@@ -141,7 +142,7 @@ chrome.runtime.onMessage.addListener((message: Message, _sender, sendResponse) =
 });
 
 // Subscribe to specific message types using MessageBus
-subscribeWithResponse('EXTRACT_CONTENT', async () => {
+messageBus.subscribe('EXTRACT_CONTENT', async () => {
   // Future: Implement content extraction logic
   return {
     content: document.body.innerText.substring(0, 1000), // Sample extraction

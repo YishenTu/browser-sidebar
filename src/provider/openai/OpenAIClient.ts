@@ -97,6 +97,9 @@ export class OpenAIClient {
         timeout: config.customOptions?.timeout || 60000, // 60 seconds
         maxRetries: config.customOptions?.maxRetries || 3,
         defaultHeaders: config.customOptions?.headers || {},
+        // Required for browser environments - we accept the security implications
+        // since this is a browser extension where users provide their own API keys
+        dangerouslyAllowBrowser: true,
       };
 
       // Initialize OpenAI SDK

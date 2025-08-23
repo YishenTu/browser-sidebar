@@ -117,17 +117,21 @@ export class GeminiClient extends BaseProvider {
       errors.push('Invalid temperature');
     }
 
-    // Thinking mode validation
-    if (
-      typeof config.thinkingMode !== 'string' ||
-      !['off', 'dynamic'].includes(config.thinkingMode)
-    ) {
-      errors.push('Invalid thinking mode');
+    // Thinking mode validation (optional, defaults to 'off')
+    if (config.thinkingMode !== undefined) {
+      if (
+        typeof config.thinkingMode !== 'string' ||
+        !['off', 'dynamic'].includes(config.thinkingMode)
+      ) {
+        errors.push('Invalid thinking mode');
+      }
     }
 
-    // Show thoughts validation
-    if (typeof config.showThoughts !== 'boolean') {
-      errors.push('Invalid show thoughts setting');
+    // Show thoughts validation (optional, defaults to false)
+    if (config.showThoughts !== undefined) {
+      if (typeof config.showThoughts !== 'boolean') {
+        errors.push('Invalid show thoughts setting');
+      }
     }
 
     // Model validation
@@ -135,24 +139,30 @@ export class GeminiClient extends BaseProvider {
       errors.push('Invalid model');
     }
 
-    // Max tokens validation
-    if (typeof config.maxTokens !== 'number' || config.maxTokens <= 0) {
-      errors.push('Invalid max tokens');
+    // Max tokens validation (optional)
+    if (config.maxTokens !== undefined) {
+      if (typeof config.maxTokens !== 'number' || config.maxTokens <= 0) {
+        errors.push('Invalid max tokens');
+      }
     }
 
-    // Top P validation (0 < topP <= 1)
-    if (
-      typeof config.topP !== 'number' ||
-      isNaN(config.topP) ||
-      config.topP <= 0 ||
-      config.topP > 1
-    ) {
-      errors.push('Invalid top P');
+    // Top P validation (optional, 0 < topP <= 1)
+    if (config.topP !== undefined) {
+      if (
+        typeof config.topP !== 'number' ||
+        isNaN(config.topP) ||
+        config.topP <= 0 ||
+        config.topP > 1
+      ) {
+        errors.push('Invalid top P');
+      }
     }
 
-    // Top K validation (> 0)
-    if (typeof config.topK !== 'number' || config.topK <= 0) {
-      errors.push('Invalid top K');
+    // Top K validation (optional, > 0)
+    if (config.topK !== undefined) {
+      if (typeof config.topK !== 'number' || config.topK <= 0) {
+        errors.push('Invalid top K');
+      }
     }
 
     // Safety settings validation (optional)

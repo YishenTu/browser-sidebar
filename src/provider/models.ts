@@ -28,9 +28,9 @@ export const ALL_MODELS: ModelConfig[] = [
  * Model capability matrix for quick lookups
  */
 export const MODEL_CAPABILITIES = {
-  // Temperature support (all models)
+  // Temperature support (only models that support sampling params)
   temperature: {
-    supported: ALL_MODELS.map(m => m.id),
+    supported: ALL_MODELS.filter(m => m.capabilities.temperature).map(m => m.id),
     ranges: Object.fromEntries(
       ALL_MODELS.map(m => [m.id, m.parameters.temperature])
     ),
@@ -119,7 +119,11 @@ export const ModelValidator = {
     if (!model) {
       return { valid: false, error: `Unknown model: ${modelId}` };
     }
-    
+    // If the model doesn't support temperature, surface that explicitly
+    if (!model.capabilities.temperature) {
+      return { valid: false, error: `Model ${modelId} does not support temperature` };
+    }
+
     const range = model.parameters.temperature;
     if (temperature < range.min || temperature > range.max) {
       return { 

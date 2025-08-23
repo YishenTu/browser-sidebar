@@ -176,6 +176,15 @@ export function ProviderSettings() {
     return currentModels.find(model => model.value === formState.selectedModel);
   }, [currentModels, formState.selectedModel]);
 
+  // Feature support flags (UI-only; mirrors provider capabilities)
+  const temperatureSupported = useMemo(() => {
+    // gpt-5-nano does not accept temperature in the OpenAI Responses API
+    if (formState.defaultProvider === 'openai' && formState.selectedModel === 'gpt-5-nano') {
+      return false;
+    }
+    return true;
+  }, [formState.defaultProvider, formState.selectedModel]);
+
   // ============================================================================
   // Validation Functions
   // ============================================================================
@@ -476,17 +485,25 @@ export function ProviderSettings() {
         step="0.1"
         value={formState.temperature || 0.7}
         onChange={e => handleTemperatureChange(parseFloat(e.target.value))}
+        disabled={!temperatureSupported}
         className={cn('provider-settings__slider', {
           'provider-settings__slider--error': getValidationError('temperature'),
+          'provider-settings__slider--disabled': !temperatureSupported,
         })}
       />
       <div className="provider-settings__slider-labels">
         <span>0.0 (Focused)</span>
         <span>2.0 (Creative)</span>
       </div>
-      <p className="provider-settings__description">
-        Controls randomness in responses. Higher values make output more creative.
-      </p>
+      {temperatureSupported ? (
+        <p className="provider-settings__description">
+          Controls randomness in responses. Higher values make output more creative.
+        </p>
+      ) : (
+        <p className="provider-settings__description">
+          Not applicable for this model; outputs are deterministic and ignore temperature.
+        </p>
+      )}
       {getValidationError('temperature') && (
         <p className="provider-settings__error">{getValidationError('temperature')}</p>
       )}
