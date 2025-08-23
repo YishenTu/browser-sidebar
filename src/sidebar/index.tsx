@@ -1,4 +1,3 @@
-import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { flushSync } from 'react-dom';
 import { ChatPanel } from './ChatPanel';
@@ -105,11 +104,7 @@ export function mountSidebar() {
   // Create React root and render synchronously for deterministic tests
   root = ReactDOM.createRoot(container);
   flushSync(() => {
-    root!.render(
-      <React.StrictMode>
-        <ChatPanel onClose={() => {}} />
-      </React.StrictMode>
-    );
+    root!.render(<ChatPanel onClose={() => {}} />);
   });
 
   // Attach a global Escape key handler to support tests that assert listener wiring

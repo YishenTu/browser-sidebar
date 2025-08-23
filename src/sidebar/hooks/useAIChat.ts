@@ -95,7 +95,7 @@ export function useAIChat(options: UseAIChatOptions = {}): UseAIChatReturn {
   const factoryRef = useRef<ProviderFactory | null>(null);
   const currentRequestRef = useRef<Promise<any> | null>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
-  
+
   // Track the last initialized API keys and model to prevent re-initialization on every settings change
   const lastInitializedKeysRef = useRef<{ openai?: string; google?: string }>({});
   const lastInitializedModelRef = useRef<string | null>(null);
@@ -128,10 +128,10 @@ export function useAIChat(options: UseAIChatOptions = {}): UseAIChatReturn {
       if (isInitializingRef.current) {
         return;
       }
-      
+
       try {
         isInitializingRef.current = true;
-        
+
         const { settings } = settingsStore;
         if (!settings || !settings.apiKeys) {
           console.warn('No settings or API keys available for provider initialization');
@@ -142,13 +142,18 @@ export function useAIChat(options: UseAIChatOptions = {}): UseAIChatReturn {
         const defaultProvider = ai?.defaultProvider;
 
         // Check if API keys or selected model have actually changed - if not, skip re-initialization
-        const keysChanged = 
+        const keysChanged =
           apiKeys.openai !== lastInitializedKeysRef.current.openai ||
           apiKeys.google !== lastInitializedKeysRef.current.google;
-        
+
         const modelChanged = settings.selectedModel !== lastInitializedModelRef.current;
-        
-        if (!keysChanged && !modelChanged && registryRef.current && registryRef.current.getRegisteredProviders().length > 0) {
+
+        if (
+          !keysChanged &&
+          !modelChanged &&
+          registryRef.current &&
+          registryRef.current.getRegisteredProviders().length > 0
+        ) {
           // Neither keys nor model have changed and we already have providers initialized
           isInitializingRef.current = false;
           return;
@@ -177,18 +182,19 @@ export function useAIChat(options: UseAIChatOptions = {}): UseAIChatReturn {
         // Create provider configurations for each available API key
         // Use the stored selectedModel from settings instead of defaults
         const providerConfigs: ProviderConfig[] = [];
-        
+
         // Get the selected model from settings
         const selectedModelId = settings.selectedModel;
         const selectedModel = SUPPORTED_MODELS.find(m => m.id === selectedModelId);
-        
+
         // Find fallback models for each provider from SUPPORTED_MODELS
         const defaultOpenAIModel = SUPPORTED_MODELS.find(m => m.provider === 'openai');
         const defaultGeminiModel = SUPPORTED_MODELS.find(m => m.provider === 'gemini');
 
         if (apiKeys.openai) {
           // Use selected model if it's an OpenAI model, otherwise use default
-          const openAIModel = (selectedModel?.provider === 'openai' ? selectedModel : defaultOpenAIModel);
+          const openAIModel =
+            selectedModel?.provider === 'openai' ? selectedModel : defaultOpenAIModel;
           if (openAIModel) {
             providerConfigs.push({
               type: 'openai',
@@ -203,7 +209,8 @@ export function useAIChat(options: UseAIChatOptions = {}): UseAIChatReturn {
 
         if (apiKeys.google) {
           // Use selected model if it's a Gemini model, otherwise use default
-          const geminiModel = (selectedModel?.provider === 'gemini' ? selectedModel : defaultGeminiModel);
+          const geminiModel =
+            selectedModel?.provider === 'gemini' ? selectedModel : defaultGeminiModel;
           if (geminiModel) {
             providerConfigs.push({
               type: 'gemini',
@@ -261,7 +268,14 @@ export function useAIChat(options: UseAIChatOptions = {}): UseAIChatReturn {
 
     initializeProviders();
     // Initialize on API key changes and selected model changes
-  }, [enabled, autoInitialize, settings?.apiKeys?.openai, settings?.apiKeys?.google, settings?.selectedModel, chatStore]);
+  }, [
+    enabled,
+    autoInitialize,
+    settings?.apiKeys?.openai,
+    settings?.apiKeys?.google,
+    settings?.selectedModel,
+    chatStore,
+  ]);
 
   // React to settings changes: register/unregister providers and select active
   useEffect(() => {
@@ -269,7 +283,7 @@ export function useAIChat(options: UseAIChatOptions = {}): UseAIChatReturn {
     const registry = registryRef.current;
     const factory = factoryRef.current;
     if (!registry || !factory) return;
-    
+
     // Don't sync if we're still initializing
     if (isInitializingRef.current) return;
 
@@ -304,7 +318,7 @@ export function useAIChat(options: UseAIChatOptions = {}): UseAIChatReturn {
         // Get selected model from settings
         const selectedModelId = settings.selectedModel;
         const selectedModel = SUPPORTED_MODELS.find(m => m.id === selectedModelId);
-        
+
         if (!selectedModel) {
           console.warn(`Selected model not found: ${selectedModelId}`);
           return;
@@ -319,7 +333,7 @@ export function useAIChat(options: UseAIChatOptions = {}): UseAIChatReturn {
             reasoningEffort: selectedModel.reasoningEffort || 'low',
           } as any;
           await ensureProvider('openai', true, openAIConfig);
-          
+
           // Set OpenAI as active provider
           if (registry.hasProvider('openai')) {
             try {
@@ -329,7 +343,7 @@ export function useAIChat(options: UseAIChatOptions = {}): UseAIChatReturn {
             }
           }
         }
-        
+
         if (selectedModel.provider === 'gemini' && apiKeys.google) {
           const geminiConfig: ProviderConfig['config'] = {
             apiKey: apiKeys.google as string,
@@ -338,7 +352,7 @@ export function useAIChat(options: UseAIChatOptions = {}): UseAIChatReturn {
             showThoughts: false,
           } as any;
           await ensureProvider('gemini', true, geminiConfig);
-          
+
           // Set Gemini as active provider
           if (registry.hasProvider('gemini')) {
             try {
@@ -358,7 +372,13 @@ export function useAIChat(options: UseAIChatOptions = {}): UseAIChatReturn {
     syncProviders();
     return () => {};
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [enabled, settings.ai?.defaultProvider, settings.apiKeys?.openai, settings.apiKeys?.google, settings.selectedModel]);
+  }, [
+    enabled,
+    settings.ai?.defaultProvider,
+    settings.apiKeys?.openai,
+    settings.apiKeys?.google,
+    settings.selectedModel,
+  ]);
 
   // Cleanup on unmount
   useEffect(() => {
@@ -410,20 +430,27 @@ export function useAIChat(options: UseAIChatOptions = {}): UseAIChatReturn {
         // Get all messages from store including the new user message
         // We need to get a fresh copy of messages from the store
         const currentMessages = useChatStore.getState().messages;
-        
-        
+
         // If userMessage was just created and is the only real message, use it directly
         // This handles the case where the store might not have updated yet
         let messages;
-        
-        if (userMessage && currentMessages.filter(m => m.role === 'user' && m.content).length === 1) {
+
+        if (
+          userMessage &&
+          currentMessages.filter(m => m.role === 'user' && m.content).length === 1
+        ) {
           // First message case - use the userMessage directly
-          messages = [{
-            id: userMessage.id,
-            role: userMessage.role,
-            content: userMessage.content,
-            timestamp: userMessage.timestamp instanceof Date ? userMessage.timestamp : new Date(userMessage.timestamp),
-          }];
+          messages = [
+            {
+              id: userMessage.id,
+              role: userMessage.role,
+              content: userMessage.content,
+              timestamp:
+                userMessage.timestamp instanceof Date
+                  ? userMessage.timestamp
+                  : new Date(userMessage.timestamp),
+            },
+          ];
         } else {
           // Get messages from store for follow-up messages
           messages = currentMessages
@@ -458,7 +485,7 @@ export function useAIChat(options: UseAIChatOptions = {}): UseAIChatReturn {
 
         let lastSuccessfulContent = '';
         let streamInterrupted = false;
-        
+
         try {
           for await (const chunk of stream) {
             // Check if cancelled
@@ -469,22 +496,30 @@ export function useAIChat(options: UseAIChatOptions = {}): UseAIChatReturn {
 
             // Extract text content from streaming chunk
             const piece = (chunk as any)?.choices?.[0]?.delta?.content || '';
-            
+
             if (piece) {
-              // Append chunk to message
+              // Simply append the chunk - duplication should be handled at provider level
               chatStore.appendToMessage(assistantMessage.id, piece);
-              lastSuccessfulContent = assistantMessage.content + piece;
+              lastSuccessfulContent += piece;
+
+              // Log for debugging if it contains table content
+              if (piece.includes('|') || piece.includes('---')) {
+                console.log('[useAIChat] Table chunk received:', {
+                  length: piece.length,
+                  preview: piece.substring(0, 100),
+                });
+              }
             }
           }
         } catch (streamError) {
           // Streaming was interrupted - mark as partial
           streamInterrupted = true;
           console.warn('Stream interrupted:', streamError);
-          
+
           // Append recovery message if we got partial content
           if (lastSuccessfulContent && lastSuccessfulContent.length > 0) {
             chatStore.appendToMessage(
-              assistantMessage.id, 
+              assistantMessage.id,
               '\n\n[Stream interrupted. Message may be incomplete.]'
             );
           }
@@ -519,10 +554,11 @@ export function useAIChat(options: UseAIChatOptions = {}): UseAIChatReturn {
         }
 
         // Check if this is a recoverable network error
-        const isNetworkError = errorMessage.toLowerCase().includes('network') ||
-                              errorMessage.toLowerCase().includes('timeout') ||
-                              errorMessage.toLowerCase().includes('connection');
-        
+        const isNetworkError =
+          errorMessage.toLowerCase().includes('network') ||
+          errorMessage.toLowerCase().includes('timeout') ||
+          errorMessage.toLowerCase().includes('connection');
+
         if (isNetworkError) {
           errorMessage += ' (You can try sending the message again)';
         }
@@ -562,15 +598,15 @@ export function useAIChat(options: UseAIChatOptions = {}): UseAIChatReturn {
       // Get the selected model from settings
       const selectedModel = settingsStore.settings.selectedModel;
       const modelInfo = settingsStore.settings.availableModels.find(m => m.id === selectedModel);
-      
+
       // Add assistant message to store with model metadata
       chatStore.addMessage({
         role: 'assistant',
         content: response.content,
         status: 'received',
         metadata: {
-          model: modelInfo?.name || selectedModel || 'Unknown Model'
-        }
+          model: modelInfo?.name || selectedModel || 'Unknown Model',
+        },
       });
     },
     [chatStore, settingsStore]
@@ -589,9 +625,7 @@ export function useAIChat(options: UseAIChatOptions = {}): UseAIChatReturn {
         return; // Don't send empty messages
       }
 
-      const {
-        streaming = true,
-      } = options;
+      const { streaming = true } = options;
 
       try {
         // Clear any previous errors
@@ -614,7 +648,6 @@ export function useAIChat(options: UseAIChatOptions = {}): UseAIChatReturn {
           status: 'sending',
         });
 
-
         // Create request function
         const requestFn = async () => {
           // Create abort controller for this request
@@ -624,17 +657,18 @@ export function useAIChat(options: UseAIChatOptions = {}): UseAIChatReturn {
             if (streaming && typeof provider.streamChat === 'function') {
               // Get the selected model from settings
               const selectedModel = settingsStore.settings.selectedModel;
-              const modelInfo = settingsStore.settings.availableModels.find(m => m.id === selectedModel);
-              
-              
+              const modelInfo = settingsStore.settings.availableModels.find(
+                m => m.id === selectedModel
+              );
+
               // Create assistant message for streaming with model metadata
               const assistantMessage = chatStore.addMessage({
                 role: 'assistant',
                 content: '',
                 status: 'streaming',
                 metadata: {
-                  model: modelInfo?.name || selectedModel || 'Unknown Model'
-                }
+                  model: modelInfo?.name || selectedModel || 'Unknown Model',
+                },
               });
 
               await handleStreamingResponse(provider, assistantMessage, userMessage);

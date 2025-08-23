@@ -47,26 +47,32 @@ export interface MarkdownRendererProps {
 }
 
 /**
- * Create sanitization schema that allows KaTeX elements
+ * Create sanitization schema that allows KaTeX output safely
  */
 const createSanitizeSchema = () => {
-  const schema = { ...defaultSchema };
+  const schema: any = { ...defaultSchema };
 
-  // Allow KaTeX classes
   if (!schema.attributes) schema.attributes = {};
-  if (!schema.attributes['*']) schema.attributes['*'] = [];
-
-  // Allow class attribute on all elements for KaTeX
-  const allowedAttrs = schema.attributes['*'] as string[];
-  if (!allowedAttrs.includes('className')) {
-    allowedAttrs.push('className');
-  }
-  if (!allowedAttrs.includes('style')) {
-    allowedAttrs.push('style');
-  }
-
-  // Allow math-related elements
   if (!schema.tagNames) schema.tagNames = [];
+
+  // Allow global basic attributes
+  const starAttrs: string[] = Array.isArray(schema.attributes['*'])
+    ? [...schema.attributes['*']]
+    : [];
+  for (const attr of ['className', 'aria-hidden', 'role']) {
+    if (!starAttrs.includes(attr)) starAttrs.push(attr);
+  }
+  schema.attributes['*'] = starAttrs;
+
+  // Allow inline style only on span/div for KaTeX spacing
+  for (const tag of ['span', 'div']) {
+    const attrs = Array.isArray(schema.attributes[tag]) ? [...schema.attributes[tag]] : [];
+    if (!attrs.includes('style')) attrs.push('style');
+    if (!attrs.includes('className')) attrs.push('className');
+    schema.attributes[tag] = attrs;
+  }
+
+  // Allow MathML tags used by KaTeX
   const mathTags = [
     'math',
     'semantics',
@@ -87,13 +93,120 @@ const createSanitizeSchema = () => {
     'munderover',
     'annotation',
   ];
-  mathTags.forEach(tag => {
-    if (!schema.tagNames!.includes(tag)) {
-      schema.tagNames!.push(tag);
-    }
-  });
+  for (const tag of mathTags) {
+    if (!schema.tagNames.includes(tag)) schema.tagNames.push(tag);
+  }
+
+  // Minimal attributes for MathML
+  const mathAttrs = Array.isArray(schema.attributes['math']) ? [...schema.attributes['math']] : [];
+  for (const attr of ['display', 'xmlns']) {
+    if (!mathAttrs.includes(attr)) mathAttrs.push(attr);
+  }
+  schema.attributes['math'] = mathAttrs;
+
+  const annotationAttrs = Array.isArray(schema.attributes['annotation'])
+    ? [...schema.attributes['annotation']]
+    : [];
+  if (!annotationAttrs.includes('encoding')) annotationAttrs.push('encoding');
+  schema.attributes['annotation'] = annotationAttrs;
 
   return schema;
+};
+
+/**
+ * Normalize display math $$...$$ outside of code segments safely
+ */
+const normalizeDisplayMathSafely = (input: string): string => {
+  if (!input) return '';
+  let text = input;
+
+  // Protect fenced code blocks (```/~~~)
+  const blockPlaceholders: string[] = [];
+  text = text.replace(/(```[\s\S]*?```|~~~[\s\S]*?~~~)/g, m => {
+    const idx = blockPlaceholders.push(m) - 1;
+    return `__MD_CODE_BLOCK_${idx}__`;
+  });
+
+  // Protect inline code (single backticks, no newline)
+  const inlinePlaceholders: string[] = [];
+  text = text.replace(/`[^`\n]*`/g, m => {
+    const idx = inlinePlaceholders.push(m) - 1;
+    return `__MD_CODE_INLINE_${idx}__`;
+  });
+
+  // Normalize display math: safely convert $$...$$ to block form without lookbehind
+  {
+    let i = 0;
+    let result = '';
+    const len = text.length;
+    const ensureTwoNewlines = () => {
+      if (result.endsWith('\n\n')) return '';
+      if (result.endsWith('\n')) return '\n';
+      return '\n\n';
+    };
+
+    while (i < len) {
+      const ch = text[i];
+      const next = i + 1 < len ? text[i + 1] : '';
+
+      // Handle escapes
+      if (ch === '\\') {
+        result += ch;
+        if (i + 1 < len) {
+          result += text[i + 1];
+          i += 2;
+        } else {
+          i += 1;
+        }
+        continue;
+      }
+
+      // Detect opening $$
+      if (ch === '$' && next === '$') {
+        // Find closing $$
+        let j = i + 2;
+        let found = false;
+        while (j < len) {
+          if (text[j] === '\\') {
+            j += 2;
+            continue;
+          }
+          if (text[j] === '$' && j + 1 < len && text[j + 1] === '$') {
+            found = true;
+            break;
+          }
+          j += 1;
+        }
+
+        if (!found) {
+          // No closing $$, treat literally
+          result += ch;
+          i += 1;
+          continue;
+        }
+
+        const body = text.slice(i + 2, j).trim();
+        result += ensureTwoNewlines() + '$$\n' + body + '\n$$\n\n';
+        i = j + 2;
+        continue;
+      }
+
+      // Default: copy char
+      result += ch;
+      i += 1;
+    }
+
+    text = result;
+  }
+
+  // Collapse excessive newlines
+  text = text.replace(/\n{3,}/g, '\n\n');
+
+  // Restore placeholders
+  text = text.replace(/__MD_CODE_INLINE_(\d+)__/g, (_m, i) => inlinePlaceholders[Number(i)] || '');
+  text = text.replace(/__MD_CODE_BLOCK_(\d+)__/g, (_m, i) => blockPlaceholders[Number(i)] || '');
+
+  return text;
 };
 
 // =============================================================================
@@ -341,36 +454,8 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({
   // Don't sanitize before markdown processing - it removes math delimiters!
   // We'll handle sanitization through rehype plugins instead
   const processedContent = useMemo(() => {
-    if (!content) {
-      return '';
-    }
-
-    // Ensure display math blocks are on their own lines for proper rendering
-    // remark-math requires display math to be on separate lines with blank lines around it
-    let processed = content;
-
-    // Handle ONLY display math ($$...$$), not inline math ($...$)
-    // Use a more specific regex that won't interfere with single dollar signs
-    // This regex specifically looks for double dollars, not single ones
-    processed = processed.replace(/(?<!\$)\$\$(?!\$)([^$]*?)\$\$(?!\$)/g, (match, math) => {
-      // Check if it already has newlines (multiline format)
-      if (math.includes('\n')) {
-        // Already formatted as multiline, just ensure spacing
-        return `\n\n$$\n${math.trim()}\n$$\n\n`;
-      }
-      // Format display math with $$ on separate lines
-      // This ensures remark-math recognizes it as display math
-      return `\n\n$$\n${math.trim()}\n$$\n\n`;
-    });
-
-    // Clean up any excessive newlines (more than 2 consecutive)
-    processed = processed.replace(/\n{3,}/g, '\n\n');
-
-    // Don't remove the newlines at start/end as they might be needed for display math
-    // Just trim to at most 2 newlines
-    processed = processed.replace(/^\n{3,}/, '\n\n').replace(/\n{3,}$/, '\n\n');
-
-    return processed;
+    if (!content) return '';
+    return normalizeDisplayMathSafely(content);
   }, [content]);
 
   // Memoize sanitize schema
@@ -379,11 +464,19 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({
   // Memoize react-markdown options for performance
   const markdownOptions = useMemo((): Options => {
     const baseOptions: Options = {
-      remarkPlugins: [remarkGfm, remarkMath, ...(options.remarkPlugins || [])],
+      // Keep inline $...$ enabled for now to preserve behavior
+      remarkPlugins: [
+        remarkGfm,
+        [remarkMath, { singleDollarTextMath: true }] as any,
+        ...(options.remarkPlugins || []),
+      ],
       rehypePlugins: [
-        // Order is important: sanitize first (if enabled), then katex
-        ...(sanitizeHtml ? [[rehypeSanitize, sanitizeSchema]] : []),
-        rehypeKatex,
+        // Render KaTeX first, then sanitize its output
+        [
+          rehypeKatex as any,
+          { throwOnError: false, strict: 'ignore', trust: false, errorColor: '#ef4444' },
+        ],
+        ...(sanitizeHtml ? [[rehypeSanitize, sanitizeSchema] as any] : []),
         ...(options.rehypePlugins || []),
       ],
       components: {

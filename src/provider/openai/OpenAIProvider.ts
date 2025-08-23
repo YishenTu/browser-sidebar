@@ -15,12 +15,12 @@
 
 import { BaseProvider } from '../BaseProvider';
 import { OpenAIClient } from './OpenAIClient';
-import { 
-  getModelsByProvider, 
-  getModelById, 
+import {
+  getModelsByProvider,
+  getModelById,
   supportsReasoning,
   modelExists,
-  type ModelConfig 
+  type ModelConfig,
 } from '../../config/models';
 import type {
   ProviderConfig,
@@ -39,7 +39,6 @@ import type {
  */
 export class OpenAIProvider extends BaseProvider {
   private openaiClient: OpenAIClient;
-
 
   constructor() {
     const openaiModels = getModelsByProvider('openai');
@@ -105,8 +104,10 @@ export class OpenAIProvider extends BaseProvider {
 
     // Validate reasoning effort (only valid parameter for OpenAI)
     if (config.reasoningEffort !== undefined) {
-      if (typeof config.reasoningEffort !== 'string' || 
-          !['minimal', 'low', 'medium', 'high'].includes(config.reasoningEffort)) {
+      if (
+        typeof config.reasoningEffort !== 'string' ||
+        !['minimal', 'low', 'medium', 'high'].includes(config.reasoningEffort)
+      ) {
         errors.push('Invalid reasoning effort');
       }
     }
@@ -166,11 +167,10 @@ export class OpenAIProvider extends BaseProvider {
 
         try {
           // Use Responses API with AbortSignal passed via RequestOptions
-          const response = await (openaiInstance as any).responses.create(
-            requestParams,
-            { signal: cfg?.signal }
-          );
-          
+          const response = await (openaiInstance as any).responses.create(requestParams, {
+            signal: cfg?.signal,
+          });
+
           // Log the response model to verify what model actually responded
           return this.convertResponsesToProviderFormat(response);
         } catch (error) {
@@ -189,6 +189,7 @@ export class OpenAIProvider extends BaseProvider {
    * Stream chat messages using OpenAI Response API
    */
   async *streamChat(messages: ProviderChatMessage[], config?: any): AsyncIterable<StreamChunk> {
+    // eslint-disable-next-line @typescript-eslint/no-this-alias
     const provider = this;
     yield* this.performStreamChat(
       messages,
@@ -235,13 +236,97 @@ export class OpenAIProvider extends BaseProvider {
             );
           }
 
+          // Track the last seen cumulative content to extract deltas
+          let lastSeenContent = '';
+
           for await (const event of asyncIterable as any) {
             try {
-              const streamChunk = provider.convertResponsesEventToStreamChunk(event);
-              if (streamChunk) {
+              // Log the raw event structure for debugging
+              if (event && (event.output_text || event.delta)) {
+                console.log('[OpenAI Stream] Raw event:', {
+                  hasOutputText: event.output_text !== undefined,
+                  outputTextLength: event.output_text?.length,
+                  hasDelta: event.delta !== undefined,
+                  deltaType: typeof event.delta,
+                  preview: event.output_text
+                    ? event.output_text.substring(0, 100)
+                    : event.delta?.substring?.(0, 100),
+                });
+              }
+
+              // Extract the actual delta content
+              let deltaContent: string | undefined;
+
+              // Check if this event contains cumulative content (Responses API pattern)
+              if (event.output_text !== undefined && typeof event.output_text === 'string') {
+                const currentFullText = event.output_text;
+
+                // Extract only the new portion
+                if (currentFullText.length > lastSeenContent.length) {
+                  deltaContent = currentFullText.substring(lastSeenContent.length);
+                  lastSeenContent = currentFullText;
+                  console.log(
+                    `[OpenAI Stream] Extracted delta: ${deltaContent.length} new chars from cumulative`
+                  );
+                }
+              }
+              // Otherwise check for incremental delta
+              else if (event.delta) {
+                if (typeof event.delta === 'object' && event.delta.output_text !== undefined) {
+                  deltaContent = event.delta.output_text;
+                } else if (typeof event.delta === 'string') {
+                  deltaContent = event.delta;
+                }
+              }
+
+              // Create and yield the chunk if we have content
+              if (deltaContent) {
+                const finishReason = provider.normalizeFinishReason(
+                  event.finish_reason || event.status || null
+                );
+
+                const streamChunk: StreamChunk = {
+                  id: event.id || event.response_id || `resp-chunk-${Date.now()}`,
+                  object: 'response.chunk',
+                  created: event.created || Math.floor(Date.now() / 1000),
+                  model: event.model || provider.getConfig()?.config?.model || 'unknown',
+                  choices: [
+                    {
+                      index: 0,
+                      delta: { content: deltaContent },
+                      finishReason: finishReason,
+                    },
+                  ],
+                  usage: event.usage ? provider.convertUsage(event.usage) : undefined,
+                };
+
+                yield streamChunk;
+              }
+              // Handle finish events without content
+              else if (event.finish_reason || event.status === 'completed') {
+                const finishReason = provider.normalizeFinishReason(
+                  event.finish_reason || event.status || null
+                );
+
+                const streamChunk: StreamChunk = {
+                  id: event.id || event.response_id || `resp-chunk-${Date.now()}`,
+                  object: 'response.chunk',
+                  created: event.created || Math.floor(Date.now() / 1000),
+                  model: event.model || provider.getConfig()?.config?.model || 'unknown',
+                  choices: [
+                    {
+                      index: 0,
+                      delta: {},
+                      finishReason: finishReason,
+                    },
+                  ],
+                  usage: event.usage ? provider.convertUsage(event.usage) : undefined,
+                };
+
                 yield streamChunk;
               }
             } catch (parseError) {
+              console.warn('Error parsing stream chunk:', parseError);
               continue;
             }
           }
@@ -326,7 +411,7 @@ export class OpenAIProvider extends BaseProvider {
       }
     } else if (error instanceof Error) {
       message = error.message;
-      
+
       // Handle common JavaScript/network errors
       if (error.name === 'NetworkError' || error.message.includes('network')) {
         errorType = 'network';
@@ -400,9 +485,11 @@ export class OpenAIProvider extends BaseProvider {
     return {
       promptTokens: usage?.prompt_tokens ?? usage?.input_tokens ?? 0,
       completionTokens: usage?.completion_tokens ?? usage?.output_tokens ?? 0,
-      totalTokens: usage?.total_tokens ?? (usage?.input_tokens && usage?.output_tokens
-        ? usage.input_tokens + usage.output_tokens
-        : 0),
+      totalTokens:
+        usage?.total_tokens ??
+        (usage?.input_tokens && usage?.output_tokens
+          ? usage.input_tokens + usage.output_tokens
+          : 0),
       thinkingTokens: usage?.reasoning_tokens || usage?.thinking_tokens,
     };
   }
@@ -412,30 +499,78 @@ export class OpenAIProvider extends BaseProvider {
    */
   private normalizeFinishReason(reason: any): any {
     if (!reason) return null;
-    
+
     const normalized = String(reason).toLowerCase();
     if (normalized.includes('stop')) return 'stop';
     if (normalized.includes('length')) return 'length';
     if (normalized.includes('filter')) return 'content_filter';
     if (normalized.includes('tool')) return 'tool_calls';
-    
+
     return 'stop';
   }
-
 
   /**
    * Convert OpenAI chunk to StreamChunk format
    * @internal Used by streaming implementation
+   * @param event - The streaming event from OpenAI API
+   * @param lastCumulativeLength - Length of content already received (for cumulative APIs)
    */
-  private convertResponsesEventToStreamChunk(event: any): StreamChunk | null {
+  private convertResponsesEventToStreamChunk(
+    event: any,
+    lastCumulativeLength: number = 0
+  ): StreamChunk | null {
     if (!event) return null;
 
+    // Debug logging for table duplication issue
+    if (typeof event === 'object') {
+      const hasTable = (text: string) => text && (text.includes('|') || text.includes('---'));
+      const eventInfo: any = {};
+
+      if (event.delta?.output_text)
+        eventInfo['delta.output_text'] = event.delta.output_text.substring(0, 100);
+      if (event.output_text) eventInfo['output_text'] = event.output_text.substring(0, 100);
+      if (event.delta && typeof event.delta === 'string')
+        eventInfo['delta'] = event.delta.substring(0, 100);
+      if (event.text) eventInfo['text'] = event.text.substring(0, 100);
+
+      // Log if any field contains table-like content
+      const hasTableContent = Object.values(eventInfo).some((v: any) => hasTable(String(v)));
+      if (hasTableContent) {
+        console.log('[OpenAI Stream Debug] Table detected in event:', eventInfo);
+      }
+    }
+
     // Handle common Responses API streaming shapes
-    // Attempt to read delta text
-    const deltaText = event.delta?.output_text ?? event.output_text ?? event.delta ?? event.text;
-    const finishReason = this.normalizeFinishReason(
-      event.finish_reason || event.status || null
-    );
+    // Prefer incremental deltas when present to avoid duplicating cumulative text
+    let deltaText: string | undefined;
+
+    // 1) Incremental delta in nested object (most precise)
+    if (event.delta && typeof event.delta === 'object' && event.delta.output_text !== undefined) {
+      deltaText = event.delta.output_text;
+    }
+    // 2) Incremental delta as string
+    else if (event.delta && typeof event.delta === 'string') {
+      deltaText = event.delta;
+    }
+    // 3) Cumulative content in output_text — extract only new portion
+    else if (event.output_text !== undefined && typeof event.output_text === 'string') {
+      const fullText = event.output_text;
+      if (fullText.length > lastCumulativeLength) {
+        deltaText = fullText.substring(lastCumulativeLength);
+        console.log(
+          `[OpenAI Stream] Cumulative mode: extracting chars ${lastCumulativeLength}-${fullText.length}`
+        );
+      }
+    }
+    // 4) Legacy format using `text` (may be cumulative)
+    else if (event.text !== undefined) {
+      const fullText = String(event.text);
+      if (fullText.length > lastCumulativeLength) {
+        deltaText = fullText.substring(lastCumulativeLength);
+      }
+    }
+
+    const finishReason = this.normalizeFinishReason(event.finish_reason || event.status || null);
 
     const model = event.model || this.getConfig()?.config?.model || 'unknown';
     const id = event.id || event.response_id || `resp-chunk-${Date.now()}`;

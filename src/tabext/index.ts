@@ -4,28 +4,84 @@
 import { createMessage, isValidMessage, Message } from '@/types/messages';
 import { MessageBus } from '@core/messaging';
 
-// Patch Vite's dynamic import helper to use chrome.runtime.getURL
-// This fixes the issue where dynamic imports try to load from the current page's domain
-declare global {
-  var __vite__mapDeps: any;
-}
+// Early injection: Patch document.querySelector to intercept link lookups
+const originalQuerySelector = document.querySelector;
+document.querySelector = function (selector: string) {
+  // If looking for a link with an assets path, convert to extension URL
+  if (selector && selector.includes('link[href=') && selector.includes('/assets/')) {
+    const match = selector.match(/link\[href="([^"]+)"\]/);
+    if (match && match[1]) {
+      const path = match[1];
+      if (path.startsWith('/assets/')) {
+        const extensionUrl = chrome.runtime.getURL(path.substring(1));
+        selector = selector.replace(path, extensionUrl);
+      }
+    }
+  }
+  return originalQuerySelector.call(document, selector);
+} as typeof document.querySelector;
 
-if (typeof (globalThis as any).__vite__mapDeps === 'function') {
-  const originalMapDeps = (globalThis as any).__vite__mapDeps;
-  (globalThis as any).__vite__mapDeps = function(indexes: number[], mapDepsParam?: any, filePaths?: any) {
-    // Override the path resolution function
-    if (mapDepsParam && mapDepsParam.f && Array.isArray(mapDepsParam.f)) {
-      mapDepsParam.f = mapDepsParam.f.map((path: string) => {
-        // Convert relative paths to extension URLs
-        if (path.startsWith('assets/')) {
-          return chrome.runtime.getURL(path);
-        }
-        return path;
+// Override createElement to intercept dynamic link/script creation
+const originalCreateElement = document.createElement;
+document.createElement = function (tagName: string) {
+  const element = originalCreateElement.call(document, tagName);
+
+  // Intercept dynamic link/script elements
+  if (tagName === 'link' || tagName === 'script') {
+    // Override the href/src property directly
+    if (tagName === 'link') {
+      let hrefValue = '';
+      Object.defineProperty(element, 'href', {
+        set: function (value: string) {
+          hrefValue = value;
+          // Convert to extension URL if it's an asset path
+          if (value && value.startsWith('/assets/')) {
+            value = chrome.runtime.getURL(value.substring(1));
+          } else if (
+            value &&
+            value.includes('assets/') &&
+            !value.startsWith('chrome-extension://') &&
+            !value.startsWith('http')
+          ) {
+            const assetPath = value.startsWith('/') ? value.substring(1) : value;
+            value = chrome.runtime.getURL(assetPath);
+          }
+          (element as HTMLLinkElement).setAttribute('href', value);
+        },
+        get: function () {
+          return hrefValue;
+        },
+        configurable: true,
+      });
+    } else if (tagName === 'script') {
+      let srcValue = '';
+      Object.defineProperty(element, 'src', {
+        set: function (value: string) {
+          srcValue = value;
+          // Convert to extension URL if it's an asset path
+          if (value && value.startsWith('/assets/')) {
+            value = chrome.runtime.getURL(value.substring(1));
+          } else if (
+            value &&
+            value.includes('assets/') &&
+            !value.startsWith('chrome-extension://') &&
+            !value.startsWith('http')
+          ) {
+            const assetPath = value.startsWith('/') ? value.substring(1) : value;
+            value = chrome.runtime.getURL(assetPath);
+          }
+          (element as HTMLScriptElement).setAttribute('src', value);
+        },
+        get: function () {
+          return srcValue;
+        },
+        configurable: true,
       });
     }
-    return originalMapDeps.call(this, indexes, mapDepsParam, filePaths);
-  };
-}
+  }
+
+  return element;
+};
 
 let sidebarModule: { mountSidebar: () => void; unmountSidebar: () => void } | null = null;
 let sidebarOpen = false;

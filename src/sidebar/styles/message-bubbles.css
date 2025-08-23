@@ -19,12 +19,12 @@
   color: white !important;
   padding: 12px !important; /* 12px padding in all directions */
   border-radius: 16px !important;
-  display: block !important; /* Block for proper layout */
+  display: inline-block !important; /* Inline-block for dynamic width */
   max-width: calc(100% - 16px) !important; /* Leave space for right margin */
   margin-left: auto !important; /* Push to right */
   margin-right: 16px !important; /* Explicit right margin */
   word-wrap: break-word !important;
-  text-align: justify !important; /* Justify text within bubble */
+  text-align: left !important; /* Left align for natural text flow */
   line-height: 1.2 !important; /* Tight line height */
   font-size: 14px !important; /* Fixed font size */
 }

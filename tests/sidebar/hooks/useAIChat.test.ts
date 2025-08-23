@@ -18,16 +18,12 @@ import { useChatStore } from '../../../src/store/chat';
 import { useSettingsStore } from '../../../src/store/settings';
 import { ProviderRegistry } from '../../../src/provider/ProviderRegistry';
 import { ProviderFactory } from '../../../src/provider/ProviderFactory';
-import { RateLimiter } from '../../../src/provider/RateLimiter';
-import { RequestQueue } from '../../../src/provider/RequestQueue';
 
 // Mock all dependencies
 vi.mock('../../../src/store/chat');
 vi.mock('../../../src/store/settings');
 vi.mock('../../../src/provider/ProviderRegistry');
 vi.mock('../../../src/provider/ProviderFactory');
-vi.mock('../../../src/provider/RateLimiter');
-vi.mock('../../../src/provider/RequestQueue');
 
 // Mock Chrome runtime API
 global.chrome = {
@@ -42,8 +38,6 @@ describe('useAIChat Hook', () => {
   let mockSettingsStore: any;
   let mockRegistry: any;
   let mockFactory: any;
-  let mockRateLimiter: any;
-  let mockRequestQueue: any;
   let mockProvider: any;
 
   beforeEach(() => {
