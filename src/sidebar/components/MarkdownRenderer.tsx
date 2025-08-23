@@ -1,12 +1,13 @@
 /**
  * @file MarkdownRenderer Component
  *
- * A comprehensive markdown renderer with syntax highlighting, XSS protection,
- * and custom styling for chat messages. Built on react-markdown with
- * rehype-highlight for syntax highlighting and DOMPurify for sanitization.
+ * A comprehensive markdown renderer with syntax highlighting, LaTeX math rendering,
+ * XSS protection, and custom styling for chat messages. Built on react-markdown with
+ * KaTeX for math, rehype-highlight for syntax highlighting, and DOMPurify for sanitization.
  *
  * Features:
  * - Safe markdown rendering with XSS protection
+ * - LaTeX math rendering (inline $ and display $$)
  * - Syntax highlighting for code blocks
  * - Custom styled components matching chat UI
  * - External link security (opens in new tab)
@@ -18,9 +19,12 @@
 import React, { useMemo, useCallback } from 'react';
 import ReactMarkdown, { Options } from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import DOMPurify from 'dompurify';
+import remarkMath from 'remark-math';
+import rehypeSanitize, { defaultSchema } from 'rehype-sanitize';
+import rehypeKatex from 'rehype-katex';
 import { cn } from '@utils/cn';
 import { CodeBlock } from './CodeBlock';
+import 'katex/dist/katex.min.css';
 
 // =============================================================================
 // Types and Interfaces
@@ -43,58 +47,53 @@ export interface MarkdownRendererProps {
 }
 
 /**
- * Sanitization configuration for DOMPurify
+ * Create sanitization schema that allows KaTeX elements
  */
-const SANITIZE_CONFIG = {
-  ALLOWED_TAGS: [
-    'h1',
-    'h2',
-    'h3',
-    'h4',
-    'h5',
-    'h6',
-    'p',
-    'div',
-    'span',
-    'strong',
-    'b',
-    'em',
-    'i',
-    'u',
-    's',
-    'ul',
-    'ol',
-    'li',
-    'blockquote',
-    'code',
-    'pre',
-    'a',
-    'br',
-    'hr',
-    'table',
-    'thead',
-    'tbody',
-    'tr',
-    'th',
-    'td',
-    'img',
-  ],
-  ALLOWED_ATTR: [
-    'href',
-    'title',
-    'alt',
-    'src',
-    'class',
-    'id',
-    'target',
-    'rel',
-    'aria-label',
-    'role',
-  ],
-  ALLOW_DATA_ATTR: false,
-  ALLOW_UNKNOWN_PROTOCOLS: false,
-  ALLOWED_URI_REGEXP:
-    /^(?:(?:(?:f|ht)tps?|mailto|tel|callto|cid|xmpp|xxx):|[^a-z]|[a-z+.-]+(?:[^a-z+.-:]|$))/i,
+const createSanitizeSchema = () => {
+  const schema = { ...defaultSchema };
+
+  // Allow KaTeX classes
+  if (!schema.attributes) schema.attributes = {};
+  if (!schema.attributes['*']) schema.attributes['*'] = [];
+
+  // Allow class attribute on all elements for KaTeX
+  const allowedAttrs = schema.attributes['*'] as string[];
+  if (!allowedAttrs.includes('className')) {
+    allowedAttrs.push('className');
+  }
+  if (!allowedAttrs.includes('style')) {
+    allowedAttrs.push('style');
+  }
+
+  // Allow math-related elements
+  if (!schema.tagNames) schema.tagNames = [];
+  const mathTags = [
+    'math',
+    'semantics',
+    'mrow',
+    'mi',
+    'mo',
+    'mn',
+    'msup',
+    'msub',
+    'mfrac',
+    'mroot',
+    'msqrt',
+    'mtable',
+    'mtr',
+    'mtd',
+    'munder',
+    'mover',
+    'munderover',
+    'annotation',
+  ];
+  mathTags.forEach(tag => {
+    if (!schema.tagNames!.includes(tag)) {
+      schema.tagNames!.push(tag);
+    }
+  });
+
+  return schema;
 };
 
 // =============================================================================
@@ -116,10 +115,7 @@ const HeadingRenderer = ({ level, children }: HeadingProps) => {
 
     switch (level) {
       case 1:
-        return cn(
-          baseClasses,
-          'text-2xl m-0 p-0 leading-tight'
-        );
+        return cn(baseClasses, 'text-2xl m-0 p-0 leading-tight');
       case 2:
         return cn(baseClasses, 'text-xl m-0 p-0 leading-tight');
       case 3:
@@ -142,7 +138,11 @@ const HeadingRenderer = ({ level, children }: HeadingProps) => {
  * Custom paragraph renderer
  */
 const ParagraphRenderer = ({ children, ...props }: React.ComponentProps<'p'>) => (
-  <p className="text-gray-800 dark:text-gray-200 m-0 p-0 leading-tight" style={{ textAlign: 'inherit' }} {...props}>
+  <p
+    className="text-gray-800 dark:text-gray-200 m-0 p-0 leading-tight"
+    style={{ textAlign: 'inherit' }}
+    {...props}
+  >
     {children}
   </p>
 );
@@ -159,7 +159,7 @@ const ListRenderer = ({
   children?: React.ReactNode;
 }) => {
   const Tag = ordered ? 'ol' : 'ul';
-  
+
   // Force minimal indentation with inline styles that override everything
   const listStyle: React.CSSProperties = {
     paddingLeft: '12px', // Ultra minimal space for bullets/numbers
@@ -167,10 +167,8 @@ const ListRenderer = ({
     margin: '0',
     listStylePosition: 'outside',
   };
-  
-  const listClasses = ordered
-    ? 'list-decimal m-0 p-0'
-    : 'list-disc m-0 p-0';
+
+  const listClasses = ordered ? 'list-decimal m-0 p-0' : 'list-disc m-0 p-0';
 
   return (
     <Tag className={listClasses} style={listStyle} {...props}>
@@ -315,7 +313,10 @@ const ThRenderer = ({ children, ...props }: React.ComponentProps<'th'>) => (
 );
 
 const TdRenderer = ({ children, ...props }: React.ComponentProps<'td'>) => (
-  <td className="border border-gray-300 dark:border-gray-600 px-2 py-1 text-gray-800 dark:text-gray-200" {...props}>
+  <td
+    className="border border-gray-300 dark:border-gray-600 px-2 py-1 text-gray-800 dark:text-gray-200"
+    {...props}
+  >
     {children}
   </td>
 );
@@ -337,27 +338,54 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({
   sanitizeHtml = true,
   onLinkClick,
 }) => {
-
-  // Memoize sanitized content for performance
-  const sanitizedContent = useMemo(() => {
+  // Don't sanitize before markdown processing - it removes math delimiters!
+  // We'll handle sanitization through rehype plugins instead
+  const processedContent = useMemo(() => {
     if (!content) {
       return '';
     }
 
-    let result = content;
-    
-    if (sanitizeHtml) {
-      result = DOMPurify.sanitize(result, SANITIZE_CONFIG);
-    }
+    // Ensure display math blocks are on their own lines for proper rendering
+    // remark-math requires display math to be on separate lines with blank lines around it
+    let processed = content;
 
-    return result;
-  }, [content, sanitizeHtml]);
+    // Handle ONLY display math ($$...$$), not inline math ($...$)
+    // Use a more specific regex that won't interfere with single dollar signs
+    // This regex specifically looks for double dollars, not single ones
+    processed = processed.replace(/(?<!\$)\$\$(?!\$)([^$]*?)\$\$(?!\$)/g, (match, math) => {
+      // Check if it already has newlines (multiline format)
+      if (math.includes('\n')) {
+        // Already formatted as multiline, just ensure spacing
+        return `\n\n$$\n${math.trim()}\n$$\n\n`;
+      }
+      // Format display math with $$ on separate lines
+      // This ensures remark-math recognizes it as display math
+      return `\n\n$$\n${math.trim()}\n$$\n\n`;
+    });
+
+    // Clean up any excessive newlines (more than 2 consecutive)
+    processed = processed.replace(/\n{3,}/g, '\n\n');
+
+    // Don't remove the newlines at start/end as they might be needed for display math
+    // Just trim to at most 2 newlines
+    processed = processed.replace(/^\n{3,}/, '\n\n').replace(/\n{3,}$/, '\n\n');
+
+    return processed;
+  }, [content]);
+
+  // Memoize sanitize schema
+  const sanitizeSchema = useMemo(() => createSanitizeSchema(), []);
 
   // Memoize react-markdown options for performance
   const markdownOptions = useMemo((): Options => {
     const baseOptions: Options = {
-      remarkPlugins: [remarkGfm, ...(options.remarkPlugins || [])],
-      rehypePlugins: options.rehypePlugins || [],
+      remarkPlugins: [remarkGfm, remarkMath, ...(options.remarkPlugins || [])],
+      rehypePlugins: [
+        // Order is important: sanitize first (if enabled), then katex
+        ...(sanitizeHtml ? [[rehypeSanitize, sanitizeSchema]] : []),
+        rehypeKatex,
+        ...(options.rehypePlugins || []),
+      ],
       components: {
         p: ParagraphRenderer,
         // Headings
@@ -388,7 +416,7 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({
             if (codeElement.type === 'code' || codeElement.props?.className) {
               const match = /language-(\w+)/.exec(codeElement.props?.className || '');
               const language = match?.[1];
-              
+
               // Extract the actual code text - it might be nested in various ways
               let codeText = '';
               if (typeof codeElement.props?.children === 'string') {
@@ -398,21 +426,15 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({
               } else if (codeElement.props?.children) {
                 codeText = String(codeElement.props.children);
               }
-              
-              return (
-                <CodeBlock
-                  code={codeText}
-                  language={language}
-                  className="m-0"
-                />
-              );
+
+              return <CodeBlock code={codeText} language={language} className="m-0" />;
             }
           }
-          
+
           // Fallback for non-language code blocks
           return <pre {...props}>{children}</pre>;
         },
-        
+
         // Code renderer for inline code only
         code: ({ children, ...props }: any) => {
           // Only handle inline code here, block code is handled by pre
@@ -437,10 +459,10 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({
     };
 
     return baseOptions;
-  }, [options, onLinkClick]);
+  }, [options, onLinkClick, sanitizeHtml, sanitizeSchema]);
 
   // Handle empty content
-  if (!sanitizedContent) {
+  if (!processedContent) {
     return (
       <div
         data-testid="markdown-renderer"
@@ -467,7 +489,7 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({
         margin: 0,
       }}
     >
-      <ReactMarkdown {...markdownOptions}>{sanitizedContent}</ReactMarkdown>
+      <ReactMarkdown {...markdownOptions}>{processedContent}</ReactMarkdown>
     </div>
   );
 };
