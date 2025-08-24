@@ -86,15 +86,11 @@ const isValidFontSize = (fontSize: unknown): fontSize is 'small' | 'medium' | 'l
 /**
  * Validate AI provider value
  */
-const isValidProvider = (
-  provider: unknown
-): provider is 'openai' | 'gemini' | null => {
+const isValidProvider = (provider: unknown): provider is 'openai' | 'gemini' | null => {
   return (
-    provider === null ||
-    (typeof provider === 'string' && ['openai', 'gemini'].includes(provider))
+    provider === null || (typeof provider === 'string' && ['openai', 'gemini'].includes(provider))
   );
 };
-
 
 /**
  * Validate selected model against available models
@@ -179,8 +175,10 @@ const validateUIPreferences = (ui: unknown): UIPreferences => {
  * Validate AI settings
  */
 const validateAISettings = (ai: unknown): AISettings => {
-  const a = (ai && typeof ai === 'object' ? ai : {}) as Partial<AISettings & { temperature?: number; maxTokens?: number }>;
-  
+  const a = (ai && typeof ai === 'object' ? ai : {}) as Partial<
+    AISettings & { temperature?: number; maxTokens?: number }
+  >;
+
   // Log if legacy parameters are being migrated
   if ('temperature' in a || 'maxTokens' in a) {
     console.debug('Migrating legacy AI settings, removing:', {
@@ -188,7 +186,7 @@ const validateAISettings = (ai: unknown): AISettings => {
       maxTokens: a.maxTokens,
     });
   }
-  
+
   return {
     defaultProvider: isValidProvider(a.defaultProvider)
       ? a.defaultProvider
@@ -221,14 +219,16 @@ const validatePrivacySettings = (privacy: unknown): PrivacySettings => {
  * Validate API key references
  */
 const validateAPIKeyReferences = (apiKeys: unknown): APIKeyReferences => {
-  const a = (apiKeys && typeof apiKeys === 'object' ? apiKeys : {}) as Partial<APIKeyReferences & { openrouter?: string }> &
+  const a = (apiKeys && typeof apiKeys === 'object' ? apiKeys : {}) as Partial<
+    APIKeyReferences & { openrouter?: string }
+  > &
     Record<string, unknown>;
-  
-  // Log if legacy openrouter key is being removed  
+
+  // Log if legacy openrouter key is being removed
   if ('openrouter' in a) {
     console.debug('Migrating API keys, removing openrouter');
   }
-  
+
   return {
     openai:
       typeof a.openai === 'string' || a.openai === null
@@ -335,13 +335,11 @@ const loadFromStorage = async (): Promise<{ settings: Settings; migrated: boolea
 
   try {
     // Try sync storage first with a timeout
-    const result = await Promise.race([
+    const result = (await Promise.race([
       chrome.storage.sync.get([STORAGE_KEY]),
-      new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Storage timeout')), 2000)
-      )
-    ]) as { [key: string]: any };
-    
+      new Promise((_, reject) => setTimeout(() => reject(new Error('Storage timeout')), 2000)),
+    ])) as { [key: string]: any };
+
     const rawSettings = result[STORAGE_KEY];
     if (rawSettings !== undefined && (typeof rawSettings !== 'object' || rawSettings === null)) {
       throw new Error('Invalid settings format');
@@ -351,13 +349,14 @@ const loadFromStorage = async (): Promise<{ settings: Settings; migrated: boolea
     return { settings: migrateSettings(rawSettings), migrated };
   } catch (error) {
     console.warn('Failed to load from sync storage, trying local storage:', error);
-    
+
     // Fallback to local storage
     try {
       const result = await chrome.storage.local.get([STORAGE_KEY]);
       const rawSettings = result[STORAGE_KEY];
       const migrated =
-        !rawSettings || (rawSettings as Partial<Settings> | undefined)?.version !== SETTINGS_VERSION;
+        !rawSettings ||
+        (rawSettings as Partial<Settings> | undefined)?.version !== SETTINGS_VERSION;
       return { settings: migrateSettings(rawSettings), migrated };
     } catch (localError) {
       console.warn('Failed to load from local storage, using defaults:', localError);

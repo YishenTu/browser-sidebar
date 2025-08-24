@@ -2,7 +2,7 @@
 // Content script - handles sidebar injection and communication with background
 
 import { createMessage, isValidMessage, Message } from '@/types/messages';
-import { MessageBus } from '@core/messaging';
+import { MessageBus } from '@extension/messaging';
 
 // Early injection: Patch document.querySelector to intercept link lookups
 const originalQuerySelector = document.querySelector;

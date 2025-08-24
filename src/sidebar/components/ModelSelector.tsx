@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useId, useMemo } from 'react';
-import { cn } from '@utils/cn';
+import { cn } from '@sidebar/lib/cn';
 import { getModelsByProvider } from '../../config/models';
 
 export interface ModelSelectorProps {
@@ -39,7 +39,7 @@ export function ModelSelector({
 }: ModelSelectorProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [highlightedIndex, setHighlightedIndex] = useState(-1);
-  
+
   // Group models by provider
   const groupedModels = useMemo(() => {
     const openaiModels = getModelsByProvider('openai');
@@ -49,7 +49,7 @@ export function ModelSelector({
       { provider: 'Google Gemini', models: geminiModels },
     ].filter(group => group.models.length > 0);
   }, []);
-  
+
   // Flatten models for keyboard navigation
   const flatModels = useMemo(() => {
     return groupedModels.flatMap(group => group.models);
@@ -271,7 +271,7 @@ export function ModelSelector({
               <li className="model-selector__group-header" role="presentation">
                 {group.provider}
               </li>
-              {group.models.map((model) => {
+              {group.models.map(model => {
                 const index = flatModels.findIndex(m => m.id === model.id);
                 return (
                   <li

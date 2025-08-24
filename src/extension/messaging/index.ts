@@ -5,7 +5,13 @@
  * components with timeout, retry, and error handling support.
  */
 
-import { Message, MessageType, MessageSource, createMessage, isValidMessage } from '../types/messages';
+import {
+  Message,
+  MessageType,
+  MessageSource,
+  createMessage,
+  isValidMessage,
+} from '../../types/messages';
 
 /**
  * Inlined error/response helpers to simplify dependencies
@@ -108,10 +114,12 @@ function handleChromeError(operation: string, source?: string): ExtensionError |
   const chromeError = chrome.runtime.lastError;
   if (!chromeError) return null;
   const msg = chromeError.message ?? '';
-  return new ExtensionError(`Chrome API error during ${operation}: ${msg}`,
+  return new ExtensionError(
+    `Chrome API error during ${operation}: ${msg}`,
     ErrorCode.CHROME_RUNTIME_ERROR,
     { operation, originalError: msg },
-    source);
+    source
+  );
 }
 
 function logError(error: ExtensionError | Error, context?: string): void {
@@ -130,8 +138,14 @@ function logError(error: ExtensionError | Error, context?: string): void {
 }
 
 function isRetriableError(error: ExtensionError | Error): boolean {
-  return error instanceof ExtensionError &&
-    [ErrorCode.MESSAGE_TIMEOUT, ErrorCode.MESSAGE_SEND_FAILED, ErrorCode.CHROME_RUNTIME_ERROR].includes(error.code);
+  return (
+    error instanceof ExtensionError &&
+    [
+      ErrorCode.MESSAGE_TIMEOUT,
+      ErrorCode.MESSAGE_SEND_FAILED,
+      ErrorCode.CHROME_RUNTIME_ERROR,
+    ].includes(error.code)
+  );
 }
 
 // Minimal validation: ensure basic message structure via type guard

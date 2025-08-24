@@ -1,22 +1,22 @@
 /**
  * @file API Key Input Component
- * 
+ *
  * A secure, accessible component for inputting and validating AI provider API keys.
  * Features masked input, live validation, secure storage integration, and comprehensive
  * error handling with support for multiple providers.
- * 
+ *
  * Security Features:
  * - Password-type input by default (masked)
- * - No API key logging to console  
+ * - No API key logging to console
  * - Secure memory cleanup on unmount
  * - Encrypted storage integration
- * 
+ *
  * Validation Features:
  * - Format validation per provider
  * - Live API endpoint testing
  * - Debounced validation to prevent spam
  * - Clear success/error states
- * 
+ *
  * Accessibility Features:
  * - ARIA labels and announcements
  * - Keyboard navigation support
@@ -28,7 +28,7 @@ import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import { Button } from '@ui/Button';
 import { Input } from '@ui/Input';
 import { Card } from '@ui/Card';
-import { cn } from '@utils/cn';
+import { cn } from '@sidebar/lib/cn';
 
 // Services and types
 import { APIKeyValidationService } from '../../../provider/validation';
@@ -100,7 +100,7 @@ const PROVIDER_CONFIG = {
     maxLength: 100,
   },
   gemini: {
-    label: 'Google Gemini API Key', 
+    label: 'Google Gemini API Key',
     hint: 'Starts with "AIza" followed by 35 characters',
     placeholder: 'AIza1234567890...',
     maxLength: 100,
@@ -154,35 +154,38 @@ function useValidationService() {
     return serviceRef.current;
   }, []);
 
-  const validate = useCallback(async (
-    key: string, 
-    provider: ProviderType,
-    options?: { skipLiveValidation?: boolean }
-  ): Promise<ValidationServiceResult> => {
-    const currentValidationId = ++validationIdRef.current;
-    const service = getService();
-    
-    try {
-      const result = await service.validateAPIKey(key, provider, {
-        skipLiveValidation: options?.skipLiveValidation || false,
-        timeout: 10000,
-        enableCache: true,
-      });
+  const validate = useCallback(
+    async (
+      key: string,
+      provider: ProviderType,
+      options?: { skipLiveValidation?: boolean }
+    ): Promise<ValidationServiceResult> => {
+      const currentValidationId = ++validationIdRef.current;
+      const service = getService();
 
-      // Check if this validation is still current (not cancelled by newer request)
-      if (currentValidationId === validationIdRef.current) {
-        return result;
-      }
+      try {
+        const result = await service.validateAPIKey(key, provider, {
+          skipLiveValidation: options?.skipLiveValidation || false,
+          timeout: 10000,
+          enableCache: true,
+        });
 
-      // Return a cancelled result if validation was superseded
-      throw new Error('Validation cancelled');
-    } catch (error) {
-      if (currentValidationId === validationIdRef.current) {
-        throw error;
+        // Check if this validation is still current (not cancelled by newer request)
+        if (currentValidationId === validationIdRef.current) {
+          return result;
+        }
+
+        // Return a cancelled result if validation was superseded
+        throw new Error('Validation cancelled');
+      } catch (error) {
+        if (currentValidationId === validationIdRef.current) {
+          throw error;
+        }
+        throw new Error('Validation cancelled');
       }
-      throw new Error('Validation cancelled');
-    }
-  }, [getService]);
+    },
+    [getService]
+  );
 
   return { validate };
 }
@@ -231,12 +234,14 @@ export function ApiKeyInput({
 
   // Provider configuration
   const config = useMemo(() => {
-    return PROVIDER_CONFIG[provider as keyof typeof PROVIDER_CONFIG] || {
-      label: 'API Key',
-      hint: 'Enter your API key',
-      placeholder: 'Enter API key...',
-      maxLength: 100,
-    };
+    return (
+      PROVIDER_CONFIG[provider as keyof typeof PROVIDER_CONFIG] || {
+        label: 'API Key',
+        hint: 'Enter your API key',
+        placeholder: 'Enter API key...',
+        maxLength: 100,
+      }
+    );
   }, [provider]);
 
   // ============================================================================
@@ -273,53 +278,62 @@ export function ApiKeyInput({
   // Event Handlers
   // ============================================================================
 
-  const handleInputChange = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
-    let newValue = event.target.value;
-    
-    // Trim whitespace and limit length
-    if (newValue.length > config.maxLength) {
-      newValue = newValue.substring(0, config.maxLength);
-    }
-    
-    setInputValue(newValue);
-    onChange?.(newValue);
+  const handleInputChange = useCallback(
+    (event: React.ChangeEvent<HTMLInputElement>) => {
+      let newValue = event.target.value;
 
-    // Reset validation and save states when input changes
-    if (validation.result) {
-      setValidation({
-        isValidating: false,
-        isValid: null,
-        result: null,
-        error: null,
-      });
-    }
-    if (saveState.success || saveState.error) {
-      setSaveState({
-        isSaving: false,
-        success: false,
-        error: null,
-      });
-    }
-  }, [config.maxLength, onChange, validation.result, saveState]);
+      // Trim whitespace and limit length
+      if (newValue.length > config.maxLength) {
+        newValue = newValue.substring(0, config.maxLength);
+      }
 
-  const handleInputBlur = useCallback((event: React.FocusEvent<HTMLInputElement>) => {
-    const trimmedValue = event.target.value.trim();
-    if (trimmedValue !== inputValue) {
-      setInputValue(trimmedValue);
-      onChange?.(trimmedValue);
-    }
+      setInputValue(newValue);
+      onChange?.(newValue);
 
-    if (validateOnBlur && trimmedValue) {
-      handleValidation(trimmedValue);
-    }
-  }, [inputValue, onChange, validateOnBlur]);
+      // Reset validation and save states when input changes
+      if (validation.result) {
+        setValidation({
+          isValidating: false,
+          isValid: null,
+          result: null,
+          error: null,
+        });
+      }
+      if (saveState.success || saveState.error) {
+        setSaveState({
+          isSaving: false,
+          success: false,
+          error: null,
+        });
+      }
+    },
+    [config.maxLength, onChange, validation.result, saveState]
+  );
 
-  const handleKeyDown = useCallback((event: React.KeyboardEvent<HTMLInputElement>) => {
-    if (event.key === 'Enter' && inputValue.trim()) {
-      event.preventDefault();
-      handleValidation(inputValue.trim());
-    }
-  }, [inputValue]);
+  const handleInputBlur = useCallback(
+    (event: React.FocusEvent<HTMLInputElement>) => {
+      const trimmedValue = event.target.value.trim();
+      if (trimmedValue !== inputValue) {
+        setInputValue(trimmedValue);
+        onChange?.(trimmedValue);
+      }
+
+      if (validateOnBlur && trimmedValue) {
+        handleValidation(trimmedValue);
+      }
+    },
+    [inputValue, onChange, validateOnBlur]
+  );
+
+  const handleKeyDown = useCallback(
+    (event: React.KeyboardEvent<HTMLInputElement>) => {
+      if (event.key === 'Enter' && inputValue.trim()) {
+        event.preventDefault();
+        handleValidation(inputValue.trim());
+      }
+    },
+    [inputValue]
+  );
 
   const handleToggleVisibility = useCallback(() => {
     setIsVisible(prev => !prev);
@@ -339,59 +353,63 @@ export function ApiKeyInput({
       success: false,
       error: null,
     });
-    
+
     // Focus input after clearing
     if (inputRef.current) {
       inputRef.current.focus();
     }
   }, [onChange]);
 
-  const handleValidation = useCallback(async (keyToValidate?: string) => {
-    const key = keyToValidate || inputValue.trim();
-    
-    if (!key) return;
+  const handleValidation = useCallback(
+    async (keyToValidate?: string) => {
+      const key = keyToValidate || inputValue.trim();
 
-    setValidation({
-      isValidating: true,
-      isValid: null,
-      result: null,
-      error: null,
-    });
+      if (!key) return;
 
-    try {
-      const result = await validate(key, provider);
-      
-      // Only update state if component is still mounted
-      if (componentMountedRef.current) {
-        setValidation({
-          isValidating: false,
-          isValid: result.isValid,
-          result,
-          error: result.isValid ? null : (result.errors[0] || 'Validation failed'),
-        });
+      setValidation({
+        isValidating: true,
+        isValid: null,
+        result: null,
+        error: null,
+      });
 
-        // Call validation callback
-        onValidation?.({
-          isValid: result.isValid,
-          key,
-          result,
-        });
+      try {
+        const result = await validate(key, provider);
+
+        // Only update state if component is still mounted
+        if (componentMountedRef.current) {
+          setValidation({
+            isValidating: false,
+            isValid: result.isValid,
+            result,
+            error: result.isValid ? null : result.errors[0] || 'Validation failed',
+          });
+
+          // Call validation callback
+          onValidation?.({
+            isValid: result.isValid,
+            key,
+            result,
+          });
+        }
+      } catch (error) {
+        if (componentMountedRef.current) {
+          const errorMessage =
+            error instanceof Error && !error.message.includes('cancelled')
+              ? error.message
+              : 'Validation failed';
+
+          setValidation({
+            isValidating: false,
+            isValid: false,
+            result: null,
+            error: errorMessage,
+          });
+        }
       }
-    } catch (error) {
-      if (componentMountedRef.current) {
-        const errorMessage = error instanceof Error && !error.message.includes('cancelled') 
-          ? error.message 
-          : 'Validation failed';
-          
-        setValidation({
-          isValidating: false,
-          isValid: false,
-          result: null,
-          error: errorMessage,
-        });
-      }
-    }
-  }, [inputValue, provider, validate, onValidation]);
+    },
+    [inputValue, provider, validate, onValidation]
+  );
 
   const handleSave = useCallback(async () => {
     const key = inputValue.trim();
@@ -446,55 +464,41 @@ export function ApiKeyInput({
   const getValidationStatusIcon = () => {
     if (validation.isValidating) {
       return (
-        <svg 
-          className="animate-spin h-4 w-4 text-blue-500" 
-          fill="none" 
-          viewBox="0 0 24 24"
-        >
-          <circle 
-            className="opacity-25" 
-            cx="12" 
-            cy="12" 
-            r="10" 
-            stroke="currentColor" 
+        <svg className="animate-spin h-4 w-4 text-blue-500" fill="none" viewBox="0 0 24 24">
+          <circle
+            className="opacity-25"
+            cx="12"
+            cy="12"
+            r="10"
+            stroke="currentColor"
             strokeWidth="4"
           />
-          <path 
-            className="opacity-75" 
-            fill="currentColor" 
+          <path
+            className="opacity-75"
+            fill="currentColor"
             d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
           />
         </svg>
       );
     } else if (validation.isValid === true) {
       return (
-        <svg 
-          className="h-4 w-4 text-green-500" 
-          fill="none" 
-          stroke="currentColor" 
+        <svg
+          className="h-4 w-4 text-green-500"
+          fill="none"
+          stroke="currentColor"
           viewBox="0 0 24 24"
         >
-          <path 
-            strokeLinecap="round" 
-            strokeLinejoin="round" 
-            strokeWidth={2} 
-            d="M5 13l4 4L19 7" 
-          />
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
         </svg>
       );
     } else if (validation.isValid === false) {
       return (
-        <svg 
-          className="h-4 w-4 text-red-500" 
-          fill="none" 
-          stroke="currentColor" 
-          viewBox="0 0 24 24"
-        >
-          <path 
-            strokeLinecap="round" 
-            strokeLinejoin="round" 
-            strokeWidth={2} 
-            d="M6 18L18 6M6 6l12 12" 
+        <svg className="h-4 w-4 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M6 18L18 6M6 6l12 12"
           />
         </svg>
       );
@@ -505,39 +509,29 @@ export function ApiKeyInput({
   const getToggleIcon = () => {
     if (isVisible) {
       return (
-        <svg 
-          className="h-4 w-4" 
-          fill="none" 
-          stroke="currentColor" 
-          viewBox="0 0 24 24"
-        >
-          <path 
-            strokeLinecap="round" 
-            strokeLinejoin="round" 
-            strokeWidth={2} 
-            d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.878 9.878L3 3m6.878 6.878L12 12m6.121-6.121A2.99 2.99 0 0019 12a2.99 2.99 0 00-.879 2.121m-6.242-6.242L21 21" 
+        <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.878 9.878L3 3m6.878 6.878L12 12m6.121-6.121A2.99 2.99 0 0019 12a2.99 2.99 0 00-.879 2.121m-6.242-6.242L21 21"
           />
         </svg>
       );
     } else {
       return (
-        <svg 
-          className="h-4 w-4" 
-          fill="none" 
-          stroke="currentColor" 
-          viewBox="0 0 24 24"
-        >
-          <path 
-            strokeLinecap="round" 
-            strokeLinejoin="round" 
-            strokeWidth={2} 
-            d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" 
+        <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
           />
-          <path 
-            strokeLinecap="round" 
-            strokeLinejoin="round" 
-            strokeWidth={2} 
-            d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" 
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
           />
         </svg>
       );
@@ -556,7 +550,11 @@ export function ApiKeyInput({
 
     if (validation.isValid === true && validation.result) {
       return (
-        <div className="flex items-center space-x-2 text-green-600" role="status" aria-live="polite">
+        <div
+          className="flex items-center space-x-2 text-green-600"
+          role="status"
+          aria-live="polite"
+        >
           {getValidationStatusIcon()}
           <div className="text-sm">
             <span className="font-medium">Valid</span>
@@ -587,8 +585,19 @@ export function ApiKeyInput({
       return (
         <div className="flex items-center space-x-2 text-blue-600" role="status" aria-live="polite">
           <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
-            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
-            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/>
+            <circle
+              className="opacity-25"
+              cx="12"
+              cy="12"
+              r="10"
+              stroke="currentColor"
+              strokeWidth="4"
+            />
+            <path
+              className="opacity-75"
+              fill="currentColor"
+              d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+            />
           </svg>
           <span className="text-sm">Saving...</span>
         </div>
@@ -597,7 +606,11 @@ export function ApiKeyInput({
 
     if (saveState.success) {
       return (
-        <div className="flex items-center space-x-2 text-green-600" role="status" aria-live="polite">
+        <div
+          className="flex items-center space-x-2 text-green-600"
+          role="status"
+          aria-live="polite"
+        >
           <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
           </svg>
@@ -610,7 +623,12 @@ export function ApiKeyInput({
       return (
         <div className="flex items-center space-x-2 text-red-600" role="alert">
           <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M6 18L18 6M6 6l12 12"
+            />
           </svg>
           <span className="text-sm">Failed to save: {saveState.error}</span>
         </div>
@@ -653,11 +671,16 @@ export function ApiKeyInput({
                     aria-label="Clear key"
                   >
                     <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M6 18L18 6M6 6l12 12"
+                      />
                     </svg>
                   </button>
                 )}
-                
+
                 {/* Toggle visibility button */}
                 <button
                   type="button"
@@ -670,7 +693,7 @@ export function ApiKeyInput({
               </div>
             }
           />
-          
+
           <p className="text-sm text-gray-500">{config.hint}</p>
         </div>
 

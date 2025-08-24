@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { TextArea, TextAreaProps } from '@ui/TextArea';
-import { cn } from '@utils/cn';
+import { cn } from '@sidebar/lib/cn';
 
 export interface ChatInputProps extends Omit<TextAreaProps, 'onKeyDown' | 'value' | 'onChange'> {
   /** Callback fired when message is sent */

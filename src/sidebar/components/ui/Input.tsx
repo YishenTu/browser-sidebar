@@ -1,5 +1,5 @@
 import React, { forwardRef, useId } from 'react';
-import { cn } from '@utils/cn';
+import { cn } from '@sidebar/lib/cn';
 
 export interface InputProps extends Omit<React.InputHTMLAttributes<HTMLInputElement>, 'size'> {
   /** Input size variant */

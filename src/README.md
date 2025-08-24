@@ -1,6 +1,6 @@
 # Source Code Structure
 
-This layout groups code by the three major functions: sidebar (frontend UI), provider (AI provider config), and tabext (tab extraction). Shared infra lives in core; backend logic runs in the service worker.
+This layout groups code by major functions: sidebar (frontend UI), tabext (tab content extraction), provider (AI integration), with shared infrastructure in extension and data modules.
 
 ## Modules
 
@@ -14,72 +14,90 @@ React UI for the sidebar (Shadow DOM overlay).
 - `hooks/` – Sidebar-specific hooks
 - `styles/` – Unified sidebar stylesheet + theme variables
 - `contexts/` – UI contexts (e.g., theme)
+- `lib/` – UI utilities (cn.ts for className merging)
 - `index.tsx` – Shadow DOM mount/unmount logic
 
 ### `/tabext`
 
-Content script injected into pages. This module owns the Tab Content Capture System described in the PRD — collecting content from the current tab (and later multiple tabs) and sending it into the chat context so the user can ask AI questions about it.
+Content extraction system for capturing web page content. This module owns the Tab Content Capture System — collecting content from the current tab (and later multiple tabs) and sending it into the chat context so users can ask AI questions about it.
 
-- `index.ts` – Sidebar injection and message handling
+- `index.ts` – Content script injection and message handling
 - Future (planned):
   - `services/extraction/` – Readability-based main content, code blocks, tables, selection markers, images
   - `services/aggregation/` – Multi-tab selection, parallel extraction, deduplication, relevance ranking
   - `format/` – Markdown/structured output with links and image handling
-  - `bridge/` – Packaging content into typed messages for backend/provider
+  - `bridge/` – Packaging content into typed messages for provider
 
 ### `/provider`
 
-AI provider configuration and clients (BYOK).
+AI provider configuration and clients (BYOK - Bring Your Own Key).
 
-- Provider abstraction, per-provider clients (OpenAI/Gemini/Anthropic), settings schema (future)
+- Provider abstraction, per-provider clients (OpenAI/Gemini/Anthropic)
+- API key validation utilities
+- Provider-specific settings and configuration
 
-### `/backend`
+### `/extension`
 
-Background/service worker and backend services.
+Chrome extension infrastructure components.
 
-- `index.ts` – Service worker entry
-- `keepAlive.ts`, `messageHandler.ts`, `sidebarManager.ts`
-- Storage and backend services (future: `storage/`, `services/`)
+- `background/` – Service worker (background script)
+  - `index.ts` – Service worker entry point
+  - `keepAlive.ts` – Service worker keep-alive mechanism
+  - `messageHandler.ts` – Message routing and handling
+  - `sidebarManager.ts` – Sidebar state management
+- `messaging/` – Chrome extension message passing utilities
+  - `index.ts` – High-level message bus and helpers
 
-### `/core`
+### `/data`
 
-Shared protocol/infra used across modules.
+Unified data management layer.
 
-- `messaging.ts` – High-level message bus and helpers
-- `types/` (in `src/types`) – Message and configuration types used by all modules
-- Shared constants/utilities (future)
+- `store/` – Zustand stores for application state
+  - `index.ts` – Base store setup
+  - `chat.ts` – Chat conversation state
+  - `settings.ts` – User settings and preferences
+- `storage/` – Persistence layer (simplified)
+  - `chrome.ts` – Chrome storage API wrapper
+  - `keys.ts` – API key storage management
+- `security/` – Essential security utilities
+  - `crypto.ts` – Encryption/decryption
+  - `masking.ts` – Data masking for sensitive info
 
-### Other
+### `/types`
 
-- `/types` – TypeScript definitions (messages, settings, manifest, etc.)
-- `/utils` – Cross-cutting utilities (e.g., theme utils)
-- `/styles` – Global theme tokens (CSS variables) consumed by sidebar
-- `/store` – Zustand stores for UI state (sidebar):
-  - `index.ts` app store (loading/error)
-  - `chat.ts` conversation state (messages, statuses)
-  - `settings.ts` UI/AI settings (includes `selectedModel`, `availableModels`) with chrome.storage persistence
+TypeScript type definitions shared across modules.
+
+- `messages.ts` – Extension message types
+- `settings.ts` – Settings and configuration types
+- `providers.ts` – AI provider types
+- `chat.ts` – Chat-related types
+- `apiKeys.ts` – API key management types
 
 ## Module Dependencies
 
 ```
-backend (service worker)
+extension/background (service worker)
     ↑                ↑
     │                │
-tabext (content capture) ←→ sidebar (UI)
+tabext (content extraction) ←→ sidebar (UI)
     │          │            └── components / hooks / styles / contexts
-    │          └── uses core messaging / types
-    └── sends structured tab content → backend/provider
+    │          └── uses extension/messaging / types
+    └── sends structured content → provider
 
 sidebar → provider (BYOK)
-backend → storage/services (future)
+data/store ← sidebar (state management)
+data/storage ← provider (API keys)
+data/security ← storage (encryption)
 ```
 
 ## Development Guidelines
 
-1. Single responsibility per module; keep UI and backend separate
-2. Strict TypeScript; shared types under `types/`
-3. Tests live under `/tests` mirroring module structure
-4. Communicate via typed messages in `core`/`types`
+1. **Module Separation**: Keep UI (sidebar), content extraction (tabext), and extension infrastructure separate
+2. **Type Safety**: Strict TypeScript with shared types in `/types`
+3. **Testing**: Tests live under `/tests` mirroring module structure
+4. **Message Passing**: Communicate via typed messages in `extension/messaging`
+5. **State Management**: Use Zustand stores in `data/store` for UI state
+6. **Security**: Always encrypt sensitive data using `data/security`
 
 ## Import Aliases
 
@@ -88,14 +106,31 @@ Configured in `vite.config.ts` and `tsconfig.json`:
 - `@/` – `src/`
 - `@sidebar` – `src/sidebar`
 - `@components` – `src/sidebar/components`
-- `@hooks` – `src/sidebar/hooks`
-- `@provider` – `src/provider`
-- `@backend` – `src/backend`
-- `@tabext` – `src/tabext`
-- `@core` – `src/core`
-- `@storage` – `src/storage`
-- `@services` – `src/services`
-- `@types` – `src/types`
-- `@utils` – `src/utils`
 - `@ui` – `src/sidebar/components/ui`
-- `@store` – `src/store`
+- `@hooks` – `src/sidebar/hooks`
+- `@contexts` – `src/sidebar/contexts`
+- `@tabext` – `src/tabext`
+- `@provider` – `src/provider`
+- `@extension` – `src/extension`
+- `@data` – `src/data`
+- `@store` – `src/data/store`
+- `@storage` – `src/data/storage`
+- `@security` – `src/data/security`
+- `@types` – `src/types`
+
+## Architecture Decisions
+
+### Why This Structure?
+
+1. **Feature-Based Organization**: Major features (sidebar, tabext, provider) get top-level directories
+2. **Infrastructure Grouping**: Extension-specific code grouped under `/extension`
+3. **Data Layer Consolidation**: All data management (state, storage, security) under `/data`
+4. **Simplified Storage**: Removed complex IndexedDB/migration system in favor of Chrome storage API
+5. **Security Focus**: Essential encryption utilities without over-engineering
+
+### Future Scalability
+
+- `tabext/` will expand with extraction services as the feature develops
+- `provider/` will add more AI providers and streaming capabilities
+- `data/storage/` can add IndexedDB later if needed
+- Extension messaging remains centralized for easy debugging

@@ -4,7 +4,7 @@
  * ============================================================================ */
 
 /* Import CSS variables for theming */
-@import '../../styles/variables.css';
+@import './variables.css';
 
 /* Import modular component styles */
 @import './base.css'; /* Core sidebar layout and structure */

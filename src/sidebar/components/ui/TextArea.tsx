@@ -6,7 +6,7 @@ import React, {
   useCallback,
   useImperativeHandle,
 } from 'react';
-import { cn } from '@utils/cn';
+import { cn } from '@sidebar/lib/cn';
 
 export interface TextAreaProps
   extends Omit<React.TextareaHTMLAttributes<HTMLTextAreaElement>, 'size'> {

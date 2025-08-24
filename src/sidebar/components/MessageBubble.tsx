@@ -1,5 +1,5 @@
 import React from 'react';
-import { cn } from '@utils/cn';
+import { cn } from '@sidebar/lib/cn';
 import { ChatMessage, MessageRole, MessageStatus } from '@store/chat';
 import { MarkdownRenderer } from './MarkdownRenderer';
 
@@ -118,7 +118,7 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
                 className="inline-block w-2 h-5 bg-current animate-pulse ml-1"
                 style={{
                   animation: 'pulse 1s cubic-bezier(0.4, 0, 0.6, 1) infinite',
-                  verticalAlign: 'text-bottom'
+                  verticalAlign: 'text-bottom',
                 }}
                 aria-hidden="true"
               >

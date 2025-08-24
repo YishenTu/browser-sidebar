@@ -1,8 +1,8 @@
 import React, { useRef, useEffect, useState, useCallback, useMemo } from 'react';
-import { VariableSizeList as List, ListOnScrollProps } from 'react-window';
+import { VariableSizeList as List } from 'react-window';
 import { ChatMessage } from '@store/chat';
 import { MessageBubble } from './MessageBubble';
-import { cn } from '@utils/cn';
+import { cn } from '@sidebar/lib/cn';
 
 /**
  * Props for the MessageList component
@@ -36,11 +36,6 @@ interface VirtualListItemProps {
     messages: ChatMessage[];
   };
 }
-
-/**
- * Threshold for determining if user is "at bottom" (in pixels)
- */
-const SCROLL_THRESHOLD = 10;
 
 /**
  * Default threshold for enabling virtualization
@@ -148,7 +143,6 @@ export const MessageList: React.FC<MessageListProps> = ({
   //   }
   // }, []);
 
-
   /**
    * Handle scroll events
    */
@@ -160,8 +154,6 @@ export const MessageList: React.FC<MessageListProps> = ({
     [onScroll]
   );
 
-
-
   /**
    * Create data object for virtualized list
    */
@@ -171,9 +163,6 @@ export const MessageList: React.FC<MessageListProps> = ({
     }),
     [messages]
   );
-
-
-
 
   /**
    * Render empty state
@@ -191,14 +180,13 @@ export const MessageList: React.FC<MessageListProps> = ({
     </div>
   );
 
-
   /**
    * Memoized message rendering for performance optimization (non-virtualized)
    */
   const memoizedMessages = useMemo(() => {
     if (isVirtualized) return [];
 
-    return messages.map((message) => (
+    return messages.map(message => (
       <div key={message.id}>
         <MessageBubble message={message} className="message-list-item" />
       </div>
@@ -279,7 +267,6 @@ export const MessageList: React.FC<MessageListProps> = ({
           {messages.length > 0 && renderMessages()}
         </div>
       )}
-
     </div>
   );
 };

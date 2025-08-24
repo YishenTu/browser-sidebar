@@ -1,5 +1,5 @@
 import React from 'react';
-import { cn } from '@utils/cn';
+import { cn } from '@sidebar/lib/cn';
 
 // Button variant types
 export type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'danger' | 'outline';

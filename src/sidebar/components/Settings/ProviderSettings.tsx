@@ -18,7 +18,7 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useSettingsStore } from '@store/settings';
 import { Button } from '@ui/Button';
 import { Card } from '@ui/Card';
-import { cn } from '@utils/cn';
+import { cn } from '@sidebar/lib/cn';
 import type { ProviderType, ReasoningEffort, ThinkingBudget } from '@/types/providers';
 import type { AISettings, AIProvider } from '@/types/settings';
 
@@ -175,14 +175,10 @@ export function ProviderSettings() {
   // Validation Functions
   // ============================================================================
 
-
-  const validateForm = useCallback(
-    (): ValidationError[] => {
-      const errors: ValidationError[] = [];
-      return errors;
-    },
-    []
-  );
+  const validateForm = useCallback((): ValidationError[] => {
+    const errors: ValidationError[] = [];
+    return errors;
+  }, []);
 
   // ============================================================================
   // Save Logic
@@ -274,7 +270,6 @@ export function ProviderSettings() {
       selectedModel: modelId,
     }));
   }, []);
-
 
   const handleReasoningEffortChange = useCallback((reasoningEffort: ReasoningEffort) => {
     setFormState(prev => ({
@@ -397,14 +392,9 @@ export function ProviderSettings() {
           </>
         )}
       </select>
-      {currentModel && (
-        <p className="provider-settings__description">
-          {currentModel.description}
-        </p>
-      )}
+      {currentModel && <p className="provider-settings__description">{currentModel.description}</p>}
     </div>
   );
-
 
   const renderOpenAISettings = () => {
     if (formState.defaultProvider !== 'openai') return null;

@@ -13,7 +13,7 @@
   ],
 
   "background": {
-    "service_worker": "src/backend/index.ts",
+    "service_worker": "src/extension/background/index.ts",
     "type": "module"
   },
 

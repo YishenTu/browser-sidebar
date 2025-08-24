@@ -22,7 +22,7 @@ import remarkGfm from 'remark-gfm';
 import remarkMath from 'remark-math';
 import rehypeSanitize, { defaultSchema } from 'rehype-sanitize';
 import rehypeKatex from 'rehype-katex';
-import { cn } from '@utils/cn';
+import { cn } from '@sidebar/lib/cn';
 import { CodeBlock } from './CodeBlock';
 import 'katex/dist/katex.min.css';
 
