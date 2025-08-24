@@ -31,11 +31,11 @@ import { Card } from '@ui/Card';
 import { cn } from '@sidebar/lib/cn';
 
 // Services and types
-import { APIKeyValidationService } from '../../../provider/validation';
-import { addAPIKey } from '../../../storage/apiKeys';
-import type { ProviderType } from '../../../types/providers';
-import type { ValidationResult as ValidationServiceResult } from '../../../provider/validation';
-import type { EncryptedAPIKey } from '../../../types/apiKeys';
+import { APIKeyValidationService } from '@provider/validation';
+import { addAPIKey } from '@/data/storage/keys';
+import type { ProviderType } from '@/types/providers';
+import type { ValidationResult as ValidationServiceResult } from '@provider/validation';
+import type { EncryptedAPIKey } from '@/types/apiKeys';
 
 // ============================================================================
 // Types and Interfaces

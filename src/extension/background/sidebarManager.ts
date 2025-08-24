@@ -6,7 +6,7 @@
  * message routing between background script and content scripts.
  */
 
-import { Message, createMessage, ToggleSidebarPayload, ErrorPayload } from '@types/messages';
+import { Message, createMessage, ToggleSidebarPayload, ErrorPayload } from '@/types/messages';
 
 /**
  * Sidebar state information for a tab

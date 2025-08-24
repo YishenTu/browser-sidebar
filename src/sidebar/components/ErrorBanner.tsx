@@ -1,10 +1,9 @@
 /**
  * @file Error Banner Component
- * 
+ *
  * Unified error banner that displays errors from the centralized error context.
  */
 
-import React from 'react';
 import { useError } from '@contexts/ErrorContext';
 
 export interface ErrorBannerProps {
@@ -14,7 +13,7 @@ export interface ErrorBannerProps {
 
 /**
  * Error Banner Component
- * 
+ *
  * Displays the current error from the error context with consistent styling
  * and dismissal functionality.
  */
@@ -157,7 +156,7 @@ export function ErrorBanner({ className = '' }: ErrorBannerProps) {
           </span>
         )}
       </div>
-      
+
       <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
         {currentError.action && (
           <button
@@ -179,7 +178,7 @@ export function ErrorBanner({ className = '' }: ErrorBannerProps) {
             {currentError.action.label}
           </button>
         )}
-        
+
         {currentError.dismissible && (
           <button
             onClick={() => dismissError(currentError.id)}

@@ -6,11 +6,11 @@
 
 import React from 'react';
 import { MessageList } from '@components/MessageList';
-import type { Message } from '@types/index';
+import type { ChatMessage } from '@store/chat';
 
 export interface BodyProps {
   /** Chat messages to display */
-  messages: Message[];
+  messages: ChatMessage[];
   /** Whether currently loading */
   isLoading: boolean;
   /** Height for the body (CSS value) */

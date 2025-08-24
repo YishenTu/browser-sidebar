@@ -176,10 +176,6 @@
 }
 
 /* Auto Theme - Uses system preference, dark theme by default */
-.ai-sidebar-container[data-theme='auto'] {
-  /* Dark theme variables by default */
-}
-
 @media (prefers-color-scheme: light) {
   .ai-sidebar-container[data-theme='auto'] {
     /* Apply light theme variables when system prefers light mode */

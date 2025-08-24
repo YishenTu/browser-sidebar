@@ -29,17 +29,19 @@
 /* Override textarea styles - completely transparent */
 .chat-input__textarea-container .textarea,
 .chat-input__textarea-container textarea,
-.chat-input textarea {
+.chat-input textarea,
+textarea {
   width: 100% !important;
   border: none !important;
   border-radius: 0 !important;
   background: transparent !important;
   background-color: transparent !important;
   padding: 12px 50px 12px 12px !important; /* Right padding for send button */
-  color: #e5e7eb !important;
+  color: #ffffff !important; /* White text */
   box-shadow: none !important;
   outline: none !important;
   -webkit-appearance: none !important;
+  appearance: none !important;
   resize: none !important; /* Disable resize handle */
   box-sizing: border-box !important;
   font-size: 14px !important;
@@ -55,13 +57,38 @@
 /* Focus styles for textarea - keep transparent */
 .chat-input__textarea-container .textarea:focus,
 .chat-input__textarea-container textarea:focus,
-.chat-input textarea:focus {
-  border: none !important;
+.chat-input textarea:focus,
+textarea:focus {
   outline: none !important;
   outline-width: 0 !important;
   box-shadow: none !important;
   background: transparent !important;
   background-color: transparent !important;
+  border: none !important;
+  color: #ffffff !important; /* White text on focus */
+}
+
+/* Dark mode textarea styles */
+.dark textarea,
+[data-theme='dark'] textarea,
+.dark .textarea,
+[data-theme='dark'] .textarea {
+  background: transparent !important;
+  background-color: transparent !important;
+  color: #ffffff !important; /* White text in dark mode */
+  border: none !important;
+}
+
+.dark textarea:focus,
+[data-theme='dark'] textarea:focus {
+  border: none !important;
+  color: #ffffff !important;
+}
+
+/* Ultimate override for dark mode text color */
+[data-theme='dark'] * textarea,
+.dark * textarea {
+  color: #ffffff !important;
 }
 
 .chat-input__actions {

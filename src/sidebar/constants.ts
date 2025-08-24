@@ -5,12 +5,12 @@
  */
 
 // Width constraints
-export const MIN_WIDTH = 300;
-export const MAX_WIDTH = 800;
+export const MIN_WIDTH = 400;
+export const MAX_WIDTH = 600;
 export const DEFAULT_WIDTH = 400;
 
 // Height constraints
-export const MIN_HEIGHT = 200;
+export const MIN_HEIGHT = 500;
 export const MAX_HEIGHT = typeof window !== 'undefined' ? Math.round(window.innerHeight) : 1000;
 export const SIDEBAR_HEIGHT_RATIO = 0.85;
 

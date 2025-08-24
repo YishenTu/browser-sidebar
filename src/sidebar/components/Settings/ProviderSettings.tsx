@@ -138,22 +138,29 @@ export function ProviderSettings() {
   const [formState, setFormState] = useState<Partial<ExtendedAISettings>>({});
   const [validationErrors, setValidationErrors] = useState<ValidationError[]>([]);
   const [isInitialized, setIsInitialized] = useState(false);
+  const [lastSavedState, setLastSavedState] = useState<Partial<ExtendedAISettings>>({});
 
   // Initialize form state from settings
   useEffect(() => {
-    const aiSettings = settings.ai as any; // Type assertion for extended properties
-    const initialState: Partial<ExtendedAISettings> = {
-      defaultProvider: settings.ai.defaultProvider,
-      streamResponse: settings.ai.streamResponse,
-      reasoningEffort: aiSettings.reasoningEffort || 'medium',
-      thinkingBudget: aiSettings.thinkingBudget || '0',
-      showThoughts: aiSettings.showThoughts || false,
-      maxThinkingTokens: aiSettings.maxThinkingTokens || 25000,
-      selectedModel: settings.selectedModel || null,
-    };
+    // Defer state updates to avoid updating during render
+    const timeoutId = setTimeout(() => {
+      const aiSettings = settings.ai as any; // Type assertion for extended properties
+      const initialState: Partial<ExtendedAISettings> = {
+        defaultProvider: settings.ai.defaultProvider,
+        streamResponse: settings.ai.streamResponse,
+        reasoningEffort: aiSettings.reasoningEffort || 'medium',
+        thinkingBudget: aiSettings.thinkingBudget || '0',
+        showThoughts: aiSettings.showThoughts || false,
+        maxThinkingTokens: aiSettings.maxThinkingTokens || 25000,
+        selectedModel: settings.selectedModel || null,
+      };
 
-    setFormState(initialState);
-    setIsInitialized(true);
+      setFormState(initialState);
+      setLastSavedState(initialState); // Track what we initialized with
+      setIsInitialized(true);
+    }, 0);
+
+    return () => clearTimeout(timeoutId);
   }, [settings.ai, settings.selectedModel]);
 
   // Debounce form state changes for saving
@@ -225,17 +232,28 @@ export function ProviderSettings() {
   useEffect(() => {
     if (!isInitialized || Object.keys(debouncedFormState).length === 0) return;
 
-    // Check if form state is different from current settings
+    // Check if form state is different from last saved state
     const hasChanges = Object.keys(debouncedFormState).some(key => {
       const formValue = debouncedFormState[key as keyof typeof debouncedFormState];
-      const settingsValue = (settings.ai as any)[key];
-      return formValue !== settingsValue;
+      const savedValue = lastSavedState[key as keyof typeof lastSavedState];
+
+      // Deep comparison for objects/arrays, simple comparison for primitives
+      if (typeof formValue === 'object' && formValue !== null && savedValue !== null) {
+        return JSON.stringify(formValue) !== JSON.stringify(savedValue);
+      }
+      return formValue !== savedValue;
     });
 
     if (hasChanges) {
-      saveSettings(debouncedFormState);
+      // Use setTimeout to defer the state update to avoid updating during render
+      const timeoutId = setTimeout(() => {
+        saveSettings(debouncedFormState);
+        setLastSavedState(debouncedFormState); // Update last saved state after saving
+      }, 0);
+
+      return () => clearTimeout(timeoutId);
     }
-  }, [debouncedFormState, saveSettings, settings.ai, isInitialized]);
+  }, [debouncedFormState, lastSavedState, saveSettings, isInitialized]);
 
   // ============================================================================
   // Event Handlers

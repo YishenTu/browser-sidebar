@@ -9,7 +9,7 @@
 import { createDefaultMessageHandler } from './messageHandler';
 import { startKeepAlive } from './keepAlive';
 import { getSidebarManager } from './sidebarManager';
-import { createMessage, Message, ToggleSidebarPayload } from '@types/messages';
+import { createMessage, Message, ToggleSidebarPayload } from '@/types/messages';
 
 console.log('Background service worker initialized');
 

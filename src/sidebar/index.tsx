@@ -31,66 +31,7 @@ export function mountSidebar() {
 
   // Inject styles into Shadow DOM
   const style = document.createElement('style');
-  style.textContent = `
-    ${unifiedStyles}
-    /* Ensure the React root container doesn't interfere */
-    #ai-browser-sidebar-root {
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      pointer-events: none;
-    }
-    
-    /* Force override all textarea styles */
-    textarea {
-      width: 100% !important;
-      background: transparent !important;
-      background-color: transparent !important;
-      color: #4b5563 !important; /* Gray-600 - lighter text */
-      border: 1px solid #e5e7eb !important;
-      outline: none !important;
-      box-shadow: none !important;
-      resize: none !important;
-      box-sizing: border-box !important;
-    }
-    
-    .dark textarea,
-    [data-theme="dark"] textarea,
-    .dark .textarea,
-    [data-theme="dark"] .textarea {
-      background: transparent !important;
-      background-color: transparent !important;
-      color: #ffffff !important; /* White text in dark mode */
-      border-color: #4b5563 !important;
-    }
-    
-    textarea:focus {
-      outline: none !important;
-      outline-width: 0 !important;
-      box-shadow: none !important;
-      border-color: #9ca3af !important;
-    }
-    
-    .dark textarea:focus,
-    [data-theme="dark"] textarea:focus {
-      border-color: #6b7280 !important;
-      color: #ffffff !important;
-    }
-    
-    /* Remove any white backgrounds from chat components */
-    .chat-input {
-      background: transparent !important;
-      border: none !important;
-    }
-    
-    /* Ultimate override for dark mode text color */
-    [data-theme="dark"] * textarea,
-    .dark * textarea {
-      color: #ffffff !important;
-    }
-  `;
+  style.textContent = unifiedStyles;
   shadowRoot.appendChild(style);
 
   // Create container element inside Shadow DOM

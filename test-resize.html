@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Resize Hook</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: system-ui, -apple-system, sans-serif;
+            background: #f5f5f5;
+        }
+        
+        .test-panel {
+            position: fixed;
+            background: white;
+            border: 2px solid #333;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+        }
+        
+        .resize-handle {
+            position: absolute;
+            background: rgba(0, 100, 255, 0.3);
+        }
+        
+        .resize-handle:hover {
+            background: rgba(0, 100, 255, 0.5);
+        }
+        
+        /* Edge handles */
+        .resize-handle--n { top: 0; left: 10px; right: 10px; height: 5px; cursor: ns-resize; }
+        .resize-handle--s { bottom: 0; left: 10px; right: 10px; height: 5px; cursor: ns-resize; }
+        .resize-handle--e { right: 0; top: 10px; bottom: 10px; width: 5px; cursor: ew-resize; }
+        .resize-handle--w { left: 0; top: 10px; bottom: 10px; width: 5px; cursor: ew-resize; }
+        
+        /* Corner handles */
+        .resize-handle--nw { top: 0; left: 0; width: 10px; height: 10px; cursor: nwse-resize; }
+        .resize-handle--ne { top: 0; right: 0; width: 10px; height: 10px; cursor: nesw-resize; }
+        .resize-handle--sw { bottom: 0; left: 0; width: 10px; height: 10px; cursor: nesw-resize; }
+        .resize-handle--se { bottom: 0; right: 0; width: 10px; height: 10px; cursor: nwse-resize; }
+        
+        .info {
+            text-align: center;
+            padding: 20px;
+        }
+        
+        .instructions {
+            margin-top: 20px;
+            padding: 20px;
+            background: white;
+            border-radius: 8px;
+            max-width: 600px;
+        }
+        
+        h3 {
+            margin-top: 0;
+        }
+        
+        ul {
+            text-align: left;
+        }
+    </style>
+</head>
+<body>
+    <div class="instructions">
+        <h3>Resize Test</h3>
+        <p>Test the resize functionality from all edges and corners:</p>
+        <ul>
+            <li><strong>Blue edges/corners:</strong> Drag to resize</li>
+            <li><strong>Expected behavior:</strong>
+                <ul>
+                    <li>Right edge: Panel grows/shrinks to the right</li>
+                    <li>Bottom edge: Panel grows/shrinks downward</li>
+                    <li>Left edge: Panel grows/shrinks, right edge stays fixed</li>
+                    <li>Top edge: Panel grows/shrinks, bottom edge stays fixed</li>
+                    <li>Corners: Resize in both directions</li>
+                </ul>
+            </li>
+        </ul>
+    </div>
+    
+    <div id="panel" class="test-panel">
+        <div class="info">
+            <h2>Resizable Panel</h2>
+            <p>Size: <span id="size">300x400</span></p>
+            <p>Position: <span id="position">200, 100</span></p>
+            <p>Drag edges or corners to resize</p>
+        </div>
+        
+        <!-- Resize handles -->
+        <div class="resize-handle resize-handle--n" data-handle="n"></div>
+        <div class="resize-handle resize-handle--s" data-handle="s"></div>
+        <div class="resize-handle resize-handle--e" data-handle="e"></div>
+        <div class="resize-handle resize-handle--w" data-handle="w"></div>
+        <div class="resize-handle resize-handle--nw" data-handle="nw"></div>
+        <div class="resize-handle resize-handle--ne" data-handle="ne"></div>
+        <div class="resize-handle resize-handle--sw" data-handle="sw"></div>
+        <div class="resize-handle resize-handle--se" data-handle="se"></div>
+    </div>
+    
+    <script>
+        const panel = document.getElementById('panel');
+        const sizeDisplay = document.getElementById('size');
+        const positionDisplay = document.getElementById('position');
+        
+        let size = { width: 300, height: 400 };
+        let position = { x: 200, y: 100 };
+        let resizeState = null;
+        
+        // Initial panel setup
+        updatePanel();
+        
+        function updatePanel() {
+            panel.style.width = size.width + 'px';
+            panel.style.height = size.height + 'px';
+            panel.style.left = position.x + 'px';
+            panel.style.top = position.y + 'px';
+            
+            sizeDisplay.textContent = `${size.width}x${size.height}`;
+            positionDisplay.textContent = `${position.x}, ${position.y}`;
+        }
+        
+        // Add resize handlers
+        document.querySelectorAll('.resize-handle').forEach(handle => {
+            handle.addEventListener('mousedown', startResize);
+        });
+        
+        function startResize(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            const handle = e.target.dataset.handle;
+            
+            resizeState = {
+                handle: handle,
+                startSize: { ...size },
+                startPosition: { ...position },
+                startMouse: { x: e.clientX, y: e.clientY }
+            };
+            
+            document.addEventListener('mousemove', handleResize);
+            document.addEventListener('mouseup', stopResize);
+            document.body.style.userSelect = 'none';
+        }
+        
+        function handleResize(e) {
+            if (!resizeState) return;
+            
+            const deltaX = e.clientX - resizeState.startMouse.x;
+            const deltaY = e.clientY - resizeState.startMouse.y;
+            
+            let newSize = { ...resizeState.startSize };
+            let newPosition = { ...resizeState.startPosition };
+            
+            // Handle horizontal resizing
+            if (resizeState.handle.includes('e')) {
+                newSize.width = Math.max(200, Math.min(800, resizeState.startSize.width + deltaX));
+            } else if (resizeState.handle.includes('w')) {
+                // Resize from left: adjust both size and position
+                const proposedWidth = resizeState.startSize.width - deltaX;
+                newSize.width = Math.max(200, Math.min(800, proposedWidth));
+                const actualDelta = resizeState.startSize.width - newSize.width;
+                newPosition.x = resizeState.startPosition.x + actualDelta;
+            }
+            
+            // Handle vertical resizing
+            if (resizeState.handle.includes('s')) {
+                newSize.height = Math.max(200, Math.min(600, resizeState.startSize.height + deltaY));
+            } else if (resizeState.handle.includes('n')) {
+                // Resize from top: adjust both size and position
+                const proposedHeight = resizeState.startSize.height - deltaY;
+                newSize.height = Math.max(200, Math.min(600, proposedHeight));
+                const actualDelta = resizeState.startSize.height - newSize.height;
+                newPosition.y = resizeState.startPosition.y + actualDelta;
+            }
+            
+            size = newSize;
+            position = newPosition;
+            updatePanel();
+        }
+        
+        function stopResize() {
+            resizeState = null;
+            document.removeEventListener('mousemove', handleResize);
+            document.removeEventListener('mouseup', stopResize);
+            document.body.style.userSelect = '';
+        }
+    </script>
+</body>
+</html>

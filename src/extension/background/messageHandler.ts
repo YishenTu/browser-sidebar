@@ -6,7 +6,13 @@
  * Routes messages to appropriate handlers and manages error handling.
  */
 
-import { Message, MessageType, isValidMessage, createMessage, ErrorPayload } from '@types/messages';
+import {
+  Message,
+  MessageType,
+  isValidMessage,
+  createMessage,
+  ErrorPayload,
+} from '@/types/messages';
 
 /**
  * Type for message handler functions

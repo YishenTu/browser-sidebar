@@ -10,7 +10,7 @@
  * and storage systems.
  */
 
-import type { EncryptedData } from '../security/crypto';
+import type { EncryptedData } from '@/data/security/crypto';
 import type { StorageVersion } from './storage';
 
 // =============================================================================
@@ -30,21 +30,21 @@ export type APIKeyType = 'standard' | 'pro' | 'enterprise';
 /**
  * Current status of an API key
  */
-export type APIKeyStatus = 
-  | 'active'      // Key is active and usable
-  | 'inactive'    // Key is disabled but not revoked
-  | 'expired'     // Key has expired
-  | 'revoked'     // Key has been permanently revoked
-  | 'rotating';   // Key is in the process of rotation
+export type APIKeyStatus =
+  | 'active' // Key is active and usable
+  | 'inactive' // Key is disabled but not revoked
+  | 'expired' // Key has expired
+  | 'revoked' // Key has been permanently revoked
+  | 'rotating'; // Key is in the process of rotation
 
 /**
  * Permissions that can be granted to an API key
  */
-export type APIKeyPermissions = 
-  | 'read'        // Read-only access
-  | 'write'       // Write access (create/modify)
-  | 'delete'      // Delete access
-  | 'admin';      // Administrative access
+export type APIKeyPermissions =
+  | 'read' // Read-only access
+  | 'write' // Write access (create/modify)
+  | 'delete' // Delete access
+  | 'admin'; // Administrative access
 
 /**
  * Encryption levels for API key security
@@ -54,12 +54,12 @@ export type EncryptionLevel = 'standard' | 'high' | 'maximum';
 /**
  * Rotation status for key rotation management
  */
-export type RotationStatus = 
-  | 'none'        // No rotation scheduled
-  | 'scheduled'   // Rotation is scheduled
+export type RotationStatus =
+  | 'none' // No rotation scheduled
+  | 'scheduled' // Rotation is scheduled
   | 'in_progress' // Rotation is currently happening
-  | 'completed'   // Rotation completed successfully
-  | 'failed';     // Rotation failed
+  | 'completed' // Rotation completed successfully
+  | 'failed'; // Rotation failed
 
 // =============================================================================
 // Configuration Types
@@ -521,7 +521,7 @@ export interface APIKeyManager {
   // Create operations
   /** Create a new API key */
   createKey: (input: CreateAPIKeyInput) => Promise<EncryptedAPIKey>;
-  
+
   // Read operations
   /** Get a specific API key by ID */
   getKey: (id: string) => Promise<EncryptedAPIKey | null>;
@@ -529,36 +529,39 @@ export interface APIKeyManager {
   listKeys: (options?: APIKeyQueryOptions) => Promise<APIKeyListResult>;
   /** Find keys matching criteria */
   findKeys: (query: Partial<APIKeyMetadata>) => Promise<EncryptedAPIKey[]>;
-  
+
   // Update operations
   /** Update an API key */
   updateKey: (id: string, updates: UpdateAPIKeyInput) => Promise<EncryptedAPIKey>;
   /** Update key status */
   updateKeyStatus: (id: string, status: APIKeyStatus) => Promise<EncryptedAPIKey>;
-  
+
   // Delete operations
   /** Delete an API key permanently */
   deleteKey: (id: string) => Promise<boolean>;
   /** Revoke an API key (soft delete) */
   revokeKey: (id: string) => Promise<boolean>;
-  
+
   // Validation operations
   /** Validate an API key */
   validateKey: (key: string, provider: APIProvider) => Promise<ValidationResult>;
   /** Test API key connection */
   testKeyConnection: (id: string) => Promise<ConnectionTestResult>;
-  
+
   // Usage tracking
   /** Record API key usage */
-  recordUsage: (id: string, usage: {
-    requests: number;
-    tokens: number;
-    cost: number;
-    responseTime: number;
-  }) => Promise<void>;
+  recordUsage: (
+    id: string,
+    usage: {
+      requests: number;
+      tokens: number;
+      cost: number;
+      responseTime: number;
+    }
+  ) => Promise<void>;
   /** Get usage statistics */
   getUsageStats: (id: string, period?: string) => Promise<APIKeyUsageStats>;
-  
+
   // Rotation operations
   /** Rotate an API key */
   rotateKey: (id: string) => Promise<KeyRotationResult>;
@@ -566,7 +569,7 @@ export interface APIKeyManager {
   scheduleRotation: (id: string, config: RotationConfig) => Promise<void>;
   /** Cancel scheduled rotation */
   cancelRotation: (id: string) => Promise<boolean>;
-  
+
   // Utility operations
   /** Export keys (optionally including secrets) */
   exportKeys: (includeSecrets?: boolean) => Promise<Record<string, unknown>>;
@@ -591,28 +594,30 @@ export const DEFAULT_PROVIDER_RULES: ProviderValidationRules = {
     minLength: 51,
     maxLength: 51,
     requiredPrefix: 'sk-',
-    description: 'OpenAI API keys start with "sk-" followed by 48 alphanumeric characters'
+    description: 'OpenAI API keys start with "sk-" followed by 48 alphanumeric characters',
   },
   anthropic: {
     pattern: /^sk-ant-[A-Za-z0-9]{40,52}$/,
     minLength: 47,
     maxLength: 59,
     requiredPrefix: 'sk-ant-',
-    description: 'Anthropic API keys start with "sk-ant-" followed by 40-52 alphanumeric characters'
+    description:
+      'Anthropic API keys start with "sk-ant-" followed by 40-52 alphanumeric characters',
   },
   google: {
     pattern: /^AIza[A-Za-z0-9_-]{35}$/,
     minLength: 39,
     maxLength: 39,
     requiredPrefix: 'AIza',
-    description: 'Google API keys start with "AIza" followed by 35 alphanumeric, underscore, or dash characters'
+    description:
+      'Google API keys start with "AIza" followed by 35 alphanumeric, underscore, or dash characters',
   },
   custom: {
     pattern: /^.{1,1000}$/,
     minLength: 1,
     maxLength: 1000,
-    description: 'Custom provider keys can be any format between 1-1000 characters'
-  }
+    description: 'Custom provider keys can be any format between 1-1000 characters',
+  },
 };
 
 /**
@@ -633,7 +638,7 @@ export const DEFAULT_KEY_TYPE_DETECTION: Record<APIProvider, (key: string) => AP
   },
   custom: (_key: string) => {
     return 'standard';
-  }
+  },
 };
 
 // =============================================================================
@@ -647,7 +652,7 @@ export function maskAPIKey(key: string, visibleChars: number = 4): string {
   if (key.length <= visibleChars * 2) {
     return '***';
   }
-  
+
   const start = key.slice(0, Math.min(visibleChars, 8));
   const end = key.slice(-Math.min(visibleChars, 8));
   return `${start}...${end}`;
@@ -703,7 +708,7 @@ export function validateKeyFormat(key: string, provider: APIProvider): Validatio
     warnings,
     provider: detectedProvider || provider,
     keyType: DEFAULT_KEY_TYPE_DETECTION[provider](key),
-    estimatedTier: DEFAULT_KEY_TYPE_DETECTION[provider](key)
+    estimatedTier: DEFAULT_KEY_TYPE_DETECTION[provider](key),
   };
 }
 
@@ -730,17 +735,14 @@ export function isKeyExpired(metadata: APIKeyMetadata): boolean {
 /**
  * Check if an API key needs rotation
  */
-export function needsRotation(
-  metadata: APIKeyMetadata, 
-  rotationConfig: RotationConfig
-): boolean {
+export function needsRotation(metadata: APIKeyMetadata, rotationConfig: RotationConfig): boolean {
   if (!rotationConfig.enabled || !rotationConfig.intervalDays) {
     return false;
   }
 
   const rotationIntervalMs = rotationConfig.intervalDays * 24 * 60 * 60 * 1000;
   const timeSinceCreation = Date.now() - metadata.createdAt;
-  
+
   return timeSinceCreation >= rotationIntervalMs;
 }
 
@@ -751,7 +753,7 @@ export function getDaysUntilExpiration(metadata: APIKeyMetadata): number | null 
   if (!metadata.expiresAt) {
     return null;
   }
-  
+
   const msUntilExpiration = metadata.expiresAt - Date.now();
   return Math.ceil(msUntilExpiration / (24 * 60 * 60 * 1000));
 }
@@ -827,7 +829,7 @@ export default {
   // Validation rules
   DEFAULT_PROVIDER_RULES,
   DEFAULT_KEY_TYPE_DETECTION,
-  
+
   // Utility functions
   maskAPIKey,
   detectProvider,
@@ -836,7 +838,7 @@ export default {
   isKeyExpired,
   needsRotation,
   getDaysUntilExpiration,
-  
+
   // Type guards
   isAPIKeyMetadata,
   isEncryptedAPIKey,

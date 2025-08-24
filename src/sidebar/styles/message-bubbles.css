@@ -24,8 +24,14 @@
   margin-left: auto !important; /* Push to right */
   margin-right: 16px !important; /* Explicit right margin */
   word-wrap: break-word !important;
-  text-align: left !important; /* Left align for natural text flow */
-  line-height: 1.2 !important; /* Tight line height */
+  text-align: justify !important; /* Justified text with better spacing */
+  text-justify: inter-word !important; /* Better word spacing algorithm */
+  hyphens: auto !important; /* Enable automatic hyphenation */
+  -webkit-hyphens: auto !important; /* Safari support */
+  word-break: break-word !important; /* Break long words if needed */
+  line-height: 1.4 !important; /* Slightly more line height for better readability */
+  letter-spacing: 0.01em !important; /* Tiny letter spacing to help distribution */
+  word-spacing: -0.05em !important; /* Slightly reduce word spacing */
   font-size: 14px !important; /* Fixed font size */
 }
 
@@ -65,7 +71,14 @@
   width: calc(100% - 32px) !important; /* Full width minus margins (16px * 2) */
   word-wrap: break-word !important;
   margin: 0 16px !important; /* 16px margins on both sides */
-  text-align: justify !important; /* Justify text within bubble */
+  text-align: justify !important; /* Justified text with better spacing */
+  text-justify: inter-word !important; /* Better word spacing algorithm */
+  text-align-last: left !important; /* Last line stays left-aligned */
+  hyphens: auto !important; /* Enable automatic hyphenation */
+  -webkit-hyphens: auto !important; /* Safari support */
+  word-break: break-word !important; /* Break long words if needed */
+  letter-spacing: 0.01em !important; /* Tiny letter spacing to help distribution */
+  word-spacing: -0.05em !important; /* Slightly reduce word spacing */
   box-sizing: border-box !important;
   font-size: 14px !important; /* Fixed font size */
 }

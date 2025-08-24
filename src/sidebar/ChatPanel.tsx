@@ -7,6 +7,8 @@
  */
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { useDragPosition } from '@hooks/useDragPosition';
+import { useResize } from '@hooks/useResize';
 import { unmountSidebar } from './index';
 import { useSettingsStore } from '@store/settings';
 import { ThemeProvider } from '@contexts/ThemeContext';
@@ -20,6 +22,9 @@ import { Header } from '@components/layout/Header';
 import { Body } from '@components/layout/Body';
 import { Footer } from '@components/layout/Footer';
 import { ResizeHandles } from '@components/layout/ResizeHandles';
+
+// Settings components
+import { Settings } from '@components/Settings/Settings';
 
 // Import sizing constants
 import {
@@ -44,22 +49,83 @@ export interface ChatPanelProps {
  * Inner ChatPanel Component that uses the error context
  */
 const ChatPanelInner: React.FC<ChatPanelProps> = ({ className, onClose }) => {
-  // Positioning and sizing state
-  const [width, setWidth] = useState(DEFAULT_WIDTH);
-  const [height, setHeight] = useState(getSidebarHeight());
-  const [isResizing, setIsResizing] = useState(false);
-  const resizeDirRef = useRef<null | 'n' | 's' | 'e' | 'w' | 'ne' | 'nw' | 'se' | 'sw'>(null);
-  const startRef = useRef<{ x: number; y: number } | null>(null);
-  const initialRectRef = useRef<{ x: number; y: number; width: number; height: number } | null>(
-    null
+  const { addError } = useError();
+
+  // Helper function to show errors/warnings/info using the error context
+  const showError = useCallback(
+    (message: string, type: 'error' | 'warning' | 'info' = 'error') => {
+      addError({ message, type, source: 'chat' as const, dismissible: true });
+    },
+    [addError]
   );
-  const sidebarHeight = height;
-  const [position, setPosition] = useState({
-    x: getInitialX(),
-    y: getInitialY(),
+
+  // First, create state for size to use in drag bounds
+  const [currentSize, setCurrentSize] = useState({
+    width: DEFAULT_WIDTH,
+    height: getSidebarHeight(),
   });
-  const [isDragging, setIsDragging] = useState(false);
-  const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
+
+  // Use drag hook for header dragging with DYNAMIC bounds based on current size
+  const {
+    position,
+    isDragging,
+    onMouseDown: handleDragMouseDown,
+    setPosition,
+  } = useDragPosition({
+    initialPosition: { x: getInitialX(), y: getInitialY() },
+    bounds: {
+      minX: 0,
+      maxX: window.innerWidth - currentSize.width, // Use current size, not DEFAULT_WIDTH
+      minY: 0,
+      maxY: window.innerHeight - currentSize.height, // Use current size, not getSidebarHeight()
+    },
+  });
+
+  // Track the starting position AND size for resize operations
+  const resizeStartPositionRef = useRef(position);
+  const resizeStartSizeRef = useRef(currentSize);
+
+  // Use resize hook for edge/corner resizing
+  const {
+    size,
+    onMouseDown: createResizeHandler,
+    setSize,
+  } = useResize({
+    initialSize: { width: DEFAULT_WIDTH, height: getSidebarHeight() },
+    minSize: { width: MIN_WIDTH, height: MIN_HEIGHT },
+    maxSize: { width: MAX_WIDTH, height: MAX_HEIGHT },
+    onResizeStart: () => {
+      // Save the starting position AND size when resize begins
+      resizeStartPositionRef.current = { ...position };
+      resizeStartSizeRef.current = { ...size };
+    },
+    onResize: (newSize, _handle, deltaPosition) => {
+      // Update current size for drag bounds
+      setCurrentSize(newSize);
+
+      // When resizing from left or top edges, update position to keep opposite edge fixed
+      if (deltaPosition) {
+        const newPosition = {
+          x: resizeStartPositionRef.current.x + deltaPosition.x,
+          y: resizeStartPositionRef.current.y + deltaPosition.y,
+        };
+
+        // IMPORTANT: Bypass drag bounds during resize by setting position directly
+        // The drag bounds are meant for dragging, not resizing
+        setPosition(newPosition);
+      }
+    },
+  });
+
+  // Sync size state
+  useEffect(() => {
+    setCurrentSize(size);
+  }, [size]);
+
+  // For compatibility with existing code
+  const width = size.width;
+  const height = size.height;
+  const sidebarHeight = height;
 
   // Settings store integration
   const selectedModel = useSettingsStore(state => state.settings.selectedModel);
@@ -100,78 +166,10 @@ const ChatPanelInner: React.FC<ChatPanelProps> = ({ className, onClose }) => {
     autoInitialize: true, // Auto-initialize providers from settings
   });
 
-  // Centralized error management
-  const { addError } = useError();
-
-  // API key state for temporary settings
+  // Settings panel state
   const [showSettings, setShowSettings] = useState(false);
-  const [apiKeys, setApiKeys] = useState({ openai: '', google: '' });
-  const [testingKeys, setTestingKeys] = useState({ openai: false, google: false });
-  const [testResults, setTestResults] = useState<{ openai?: boolean; google?: boolean }>({});
-  const storedApiKeys = useSettingsStore(state => state.settings.apiKeys);
-  const updateAPIKeyReferences = useSettingsStore(state => state.updateAPIKeyReferences);
-  const resetToDefaults = useSettingsStore(state => state.resetToDefaults);
 
-  // Clear API key inputs when settings panel opens (show only placeholders)
-  useEffect(() => {
-    if (showSettings) {
-      setApiKeys({
-        openai: '',
-        google: '',
-      });
-      setTestResults({});
-    }
-  }, [showSettings]);
-
-  // Function to mask API key
-  const maskApiKey = (key: string | null): string => {
-    if (!key || key.length < 8) return '';
-    const start = key.substring(0, 4);
-    const end = key.substring(key.length - 4);
-    return `${start}...${end}`;
-  };
-
-  // Function to test API key
-  const testApiKey = async (provider: 'openai' | 'google', key: string) => {
-    // Use the entered key if available, otherwise use the stored key
-    const keyToTest = key || (provider === 'openai' ? storedApiKeys.openai : storedApiKeys.google);
-
-    if (!keyToTest) {
-      alert('Please enter an API key first');
-      return;
-    }
-
-    setTestingKeys(prev => ({ ...prev, [provider]: true }));
-    setTestResults(prev => ({ ...prev, [provider]: undefined }));
-
-    try {
-      // Dynamically import validation service
-      const { APIKeyValidationService } = await import('@provider/validation');
-      const validator = new APIKeyValidationService();
-
-      const providerType = provider === 'openai' ? 'openai' : 'gemini';
-      const result = await validator.validateAPIKey(keyToTest, providerType, {
-        skipLiveValidation: false,
-        timeout: 10000,
-      });
-
-      setTestResults(prev => ({ ...prev, [provider]: result.isValid }));
-
-      if (result.isValid) {
-        alert(`✅ ${provider === 'openai' ? 'OpenAI' : 'Google'} API key is valid!`);
-      } else {
-        const errorMsg = result.errors.join(', ') || 'Invalid API key';
-        alert(
-          `❌ ${provider === 'openai' ? 'OpenAI' : 'Google'} API key validation failed: ${errorMsg}`
-        );
-      }
-    } catch (error) {
-      setTestResults(prev => ({ ...prev, [provider]: false }));
-      alert(`❌ Failed to test ${provider === 'openai' ? 'OpenAI' : 'Google'} API key: ${error}`);
-    } finally {
-      setTestingKeys(prev => ({ ...prev, [provider]: false }));
-    }
-  };
+  // API key validation is now handled by the ApiKeyInput component
 
   // Handle sending messages
   const handleSendMessage = useCallback(
@@ -247,7 +245,7 @@ const ChatPanelInner: React.FC<ChatPanelProps> = ({ className, onClose }) => {
           // Show error to user
           const errorMsg =
             switchError instanceof Error ? switchError.message : 'Failed to switch provider';
-          alert(`Failed to switch to ${modelId}: ${errorMsg}`);
+          showError(`Failed to switch to ${modelId}: ${errorMsg}`, 'error');
           throw switchError; // Re-throw to be caught by outer catch
         }
       } catch (err) {
@@ -258,83 +256,25 @@ const ChatPanelInner: React.FC<ChatPanelProps> = ({ className, onClose }) => {
     [selectedModel, getProviderTypeForModel, updateSelectedModel, switchProvider]
   );
 
-  // Handle resize and drag mouse events
+  // Update bounds when window resizes
   useEffect(() => {
-    const handleMouseMove = (e: MouseEvent) => {
-      if (isResizing) {
-        const dir = resizeDirRef.current;
-        const start = startRef.current;
-        const initial = initialRectRef.current;
-        if (!dir || !start || !initial) return;
+    const handleWindowResize = () => {
+      // Update position bounds
+      setPosition({
+        x: Math.min(position.x, window.innerWidth - size.width),
+        y: Math.min(position.y, window.innerHeight - size.height),
+      });
 
-        const initialRight = initial.x + initial.width;
-        const initialBottom = initial.y + initial.height;
-
-        let nextX = initial.x;
-        let nextY = initial.y;
-        let nextW = initial.width;
-        let nextH = initial.height;
-
-        // Horizontal edges (absolute mouse coordinates relative to opposite edge)
-        if (dir.includes('w')) {
-          const rawW = initialRight - e.clientX;
-          const clampedW = Math.min(MAX_WIDTH, Math.max(MIN_WIDTH, rawW));
-          nextW = clampedW;
-          nextX = initialRight - clampedW;
-        }
-        if (dir.includes('e')) {
-          const rawW = e.clientX - initial.x;
-          const clampedW = Math.min(MAX_WIDTH, Math.max(MIN_WIDTH, rawW));
-          nextW = clampedW;
-          nextX = initial.x;
-        }
-
-        // Vertical edges
-        if (dir.includes('n')) {
-          const rawH = initialBottom - e.clientY;
-          const clampedH = Math.min(MAX_HEIGHT, Math.max(MIN_HEIGHT, rawH));
-          nextH = clampedH;
-          nextY = initialBottom - clampedH;
-        }
-        if (dir.includes('s')) {
-          const rawH = e.clientY - initial.y;
-          const clampedH = Math.min(MAX_HEIGHT, Math.max(MIN_HEIGHT, rawH));
-          nextH = clampedH;
-          nextY = initial.y;
-        }
-
-        setPosition({ x: nextX, y: nextY });
-        setWidth(nextW);
-        setHeight(nextH);
-      }
-      if (isDragging) {
-        setPosition({
-          x: e.clientX - dragOffset.x,
-          y: e.clientY - dragOffset.y,
-        });
-      }
+      // Update size if needed
+      setSize({
+        width: Math.min(size.width, window.innerWidth),
+        height: Math.min(size.height, window.innerHeight * 0.85),
+      });
     };
 
-    const handleMouseUp = () => {
-      setIsResizing(false);
-      setIsDragging(false);
-      resizeDirRef.current = null;
-      startRef.current = null;
-      initialRectRef.current = null;
-    };
-
-    if (isResizing || isDragging) {
-      document.addEventListener('mousemove', handleMouseMove);
-      document.addEventListener('mouseup', handleMouseUp);
-      document.body.style.userSelect = 'none';
-    }
-
-    return () => {
-      document.removeEventListener('mousemove', handleMouseMove);
-      document.removeEventListener('mouseup', handleMouseUp);
-      document.body.style.userSelect = '';
-    };
-  }, [isResizing, isDragging, dragOffset]);
+    window.addEventListener('resize', handleWindowResize);
+    return () => window.removeEventListener('resize', handleWindowResize);
+  }, [position, size, setPosition, setSize]);
 
   // Handle close functionality
   const handleClose = useCallback(() => {
@@ -381,27 +321,19 @@ const ChatPanelInner: React.FC<ChatPanelProps> = ({ className, onClose }) => {
         return;
       }
 
-      setIsDragging(true);
-      setDragOffset({
-        x: e.clientX - position.x,
-        y: e.clientY - position.y,
-      });
+      handleDragMouseDown(e);
     },
-    [position]
+    [handleDragMouseDown]
   );
 
   // Generic resize mouse down handler for any edge/corner
   const handleResizeMouseDown = useCallback(
     (e: React.MouseEvent, dir: 'n' | 's' | 'e' | 'w' | 'ne' | 'nw' | 'se' | 'sw') => {
       if (isDragging) return;
-      resizeDirRef.current = dir;
-      startRef.current = { x: e.clientX, y: e.clientY };
-      initialRectRef.current = { x: position.x, y: position.y, width, height };
-      setIsResizing(true);
-      e.preventDefault();
-      e.stopPropagation();
+      const handler = createResizeHandler(dir);
+      handler(e);
     },
-    [height, width, position, isDragging]
+    [isDragging, createResizeHandler]
   );
 
   // Show loading spinner while settings are being loaded
@@ -471,161 +403,7 @@ const ChatPanelInner: React.FC<ChatPanelProps> = ({ className, onClose }) => {
                 height: 'calc(100% - 60px - 70px)',
               }}
             >
-              <h3 style={{ marginBottom: '20px', fontSize: '16px', fontWeight: 'bold' }}>
-                API Settings
-              </h3>
-
-              <div style={{ marginBottom: '20px' }}>
-                <label style={{ display: 'block', marginBottom: '5px', fontSize: '14px' }}>
-                  OpenAI API Key (for GPT-5 Nano)
-                </label>
-                <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-                  <input
-                    type="text"
-                    placeholder={storedApiKeys.openai ? maskApiKey(storedApiKeys.openai) : 'sk-...'}
-                    value={apiKeys.openai}
-                    style={{
-                      flex: 1,
-                      padding: '8px',
-                      border:
-                        testResults.openai === true
-                          ? '1px solid #4CAF50'
-                          : testResults.openai === false
-                            ? '1px solid #f44336'
-                            : '1px solid #ccc',
-                      borderRadius: '4px',
-                      fontSize: '14px',
-                      fontFamily: 'monospace',
-                    }}
-                    onChange={e => setApiKeys(prev => ({ ...prev, openai: e.target.value }))}
-                  />
-                  <button
-                    onClick={() => testApiKey('openai', apiKeys.openai)}
-                    disabled={testingKeys.openai}
-                    style={{
-                      padding: '8px 12px',
-                      backgroundColor: testingKeys.openai ? '#ccc' : '#2196F3',
-                      color: 'white',
-                      border: 'none',
-                      borderRadius: '4px',
-                      cursor: testingKeys.openai ? 'not-allowed' : 'pointer',
-                      fontSize: '14px',
-                      minWidth: '60px',
-                    }}
-                  >
-                    {testingKeys.openai ? '...' : 'Test'}
-                  </button>
-                </div>
-              </div>
-
-              <div style={{ marginBottom: '20px' }}>
-                <label style={{ display: 'block', marginBottom: '5px', fontSize: '14px' }}>
-                  Google API Key (for Gemini 2.5 Flash Lite)
-                </label>
-                <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-                  <input
-                    type="text"
-                    placeholder={
-                      storedApiKeys.google ? maskApiKey(storedApiKeys.google) : 'AIza...'
-                    }
-                    value={apiKeys.google}
-                    style={{
-                      flex: 1,
-                      padding: '8px',
-                      border:
-                        testResults.google === true
-                          ? '1px solid #4CAF50'
-                          : testResults.google === false
-                            ? '1px solid #f44336'
-                            : '1px solid #ccc',
-                      borderRadius: '4px',
-                      fontSize: '14px',
-                      fontFamily: 'monospace',
-                    }}
-                    onChange={e => setApiKeys(prev => ({ ...prev, google: e.target.value }))}
-                  />
-                  <button
-                    onClick={() => testApiKey('google', apiKeys.google)}
-                    disabled={testingKeys.google}
-                    style={{
-                      padding: '8px 12px',
-                      backgroundColor: testingKeys.google ? '#ccc' : '#2196F3',
-                      color: 'white',
-                      border: 'none',
-                      borderRadius: '4px',
-                      cursor: testingKeys.google ? 'not-allowed' : 'pointer',
-                      fontSize: '14px',
-                      minWidth: '60px',
-                    }}
-                  >
-                    {testingKeys.google ? '...' : 'Test'}
-                  </button>
-                </div>
-              </div>
-
-              <div style={{ display: 'flex', gap: '10px' }}>
-                <button
-                  onClick={async () => {
-                    try {
-                      // Only save non-empty keys, keep existing ones if input is empty
-                      const keysToSave = {
-                        openai: apiKeys.openai || storedApiKeys.openai,
-                        google: apiKeys.google || storedApiKeys.google,
-                        openrouter: null,
-                      };
-                      await updateAPIKeyReferences(keysToSave);
-
-                      // Reinitialize providers with new API keys
-                      // This ensures the AI chat system immediately uses the new keys
-                      const currentProvider = getProviderTypeForModel(selectedModel);
-                      if (currentProvider) {
-                        await switchProvider(currentProvider);
-                      }
-
-                      alert('API keys saved and providers updated! You can start chatting now.');
-                      // Clear the input fields after saving
-                      setApiKeys({ openai: '', google: '' });
-                      setTestResults({});
-                    } catch (error) {
-                      alert('Failed to save API keys: ' + error);
-                    }
-                  }}
-                  style={{
-                    padding: '10px 20px',
-                    backgroundColor: '#4CAF50',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '4px',
-                    cursor: 'pointer',
-                    fontSize: '14px',
-                  }}
-                >
-                  Save API Keys
-                </button>
-
-                <button
-                  onClick={async () => {
-                    try {
-                      await resetToDefaults();
-                      alert('Settings reset! Please re-enter your API keys.');
-                      window.location.reload();
-                    } catch (error) {
-                      alert('Failed to reset settings: ' + error);
-                    }
-                  }}
-                  style={{
-                    padding: '10px 20px',
-                    backgroundColor: '#f44336',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '4px',
-                    cursor: 'pointer',
-                    fontSize: '14px',
-                  }}
-                >
-                  Reset Settings
-                </button>
-              </div>
+              <Settings />
             </div>
           ) : (
             <Body
