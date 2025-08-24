@@ -88,7 +88,7 @@ export function useAIChat(options: UseAIChatOptions = {}): UseAIChatReturn {
     return () => {
       // Cancel any ongoing operations
       // Using a ref to avoid dependency issues
-      cancelStreaming();
+      cancelMessage();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // Empty array - only run on mount/unmount
