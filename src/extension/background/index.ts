@@ -6,10 +6,10 @@
  * Initializes all subsystems and handles core extension functionality.
  */
 
-import { createDefaultMessageHandler } from './messageHandler.js';
-import { startKeepAlive } from './keepAlive.js';
-import { getSidebarManager } from './sidebarManager.js';
-import { createMessage, Message, ToggleSidebarPayload } from '../types/messages.js';
+import { createDefaultMessageHandler } from './messageHandler';
+import { startKeepAlive } from './keepAlive';
+import { getSidebarManager } from './sidebarManager';
+import { createMessage, Message, ToggleSidebarPayload } from '@types/messages';
 
 console.log('Background service worker initialized');
 

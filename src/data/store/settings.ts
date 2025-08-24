@@ -16,8 +16,8 @@ import type {
   APIKeyReferences,
   LegacySettings,
   Model,
-} from '../types/settings';
-import { SUPPORTED_MODELS, DEFAULT_MODEL_ID, getProviderTypeForModelId } from '../config/models';
+} from '@types/settings';
+import { SUPPORTED_MODELS, DEFAULT_MODEL_ID, getProviderTypeForModelId } from '@/config/models';
 
 /**
  * Current settings schema version

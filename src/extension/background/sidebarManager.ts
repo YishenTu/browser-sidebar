@@ -6,7 +6,7 @@
  * message routing between background script and content scripts.
  */
 
-import { Message, createMessage, ToggleSidebarPayload, ErrorPayload } from '../types/messages.js';
+import { Message, createMessage, ToggleSidebarPayload, ErrorPayload } from '@types/messages';
 
 /**
  * Sidebar state information for a tab
@@ -304,20 +304,20 @@ export class SidebarManager {
    */
   private async sendToContentScript(tabId: number, show: boolean): Promise<void> {
     try {
-      const messageType = show ? 'TOGGLE_SIDEBAR' : 'CLOSE_SIDEBAR';
-
+      // Always send TOGGLE_SIDEBAR with explicit show/hide payload
+      // This prevents confusion between toggle and explicit state setting
       await chrome.tabs.sendMessage(
         tabId,
         createMessage<ToggleSidebarPayload>({
-          type: messageType,
-          payload: show ? { show } : undefined,
+          type: 'TOGGLE_SIDEBAR',
+          payload: { show },
           source: 'background',
           target: 'content',
         })
       );
 
       if (this.verbose) {
-        console.log(`SidebarManager: Sent ${messageType} to tab ${tabId}`);
+        console.log(`SidebarManager: Sent TOGGLE_SIDEBAR (show=${show}) to tab ${tabId}`);
       }
     } catch (error) {
       // If content script is not loaded, try to inject it
@@ -370,8 +370,16 @@ export class SidebarManager {
       // Just wait a bit and retry the message
       await new Promise(resolve => setTimeout(resolve, 150));
 
-      // Send the original message
-      await this.sendToContentScript(tabId, show);
+      // Send the message directly (don't call sendToContentScript to avoid recursion)
+      await chrome.tabs.sendMessage(
+        tabId,
+        createMessage<ToggleSidebarPayload>({
+          type: 'TOGGLE_SIDEBAR',
+          payload: { show },
+          source: 'background',
+          target: 'content',
+        })
+      );
     } catch (injectionError) {
       console.error('SidebarManager: Failed to inject content script:', injectionError);
       throw new Error(`Content script injection failed: ${injectionError}`);

@@ -5,7 +5,6 @@ import unifiedStyles from './styles/sidebar.css?inline';
 // Theme is applied inside Sidebar.tsx via settings store effect
 
 let root: ReactDOM.Root | null = null;
-let keydownListener: ((e: KeyboardEvent) => void) | null = null;
 let shadowRoot: ShadowRoot | null = null;
 
 export function mountSidebar() {
@@ -106,22 +105,6 @@ export function mountSidebar() {
   flushSync(() => {
     root!.render(<ChatPanel onClose={() => {}} />);
   });
-
-  // Attach a global Escape key handler to support tests that assert listener wiring
-  if (!keydownListener) {
-    keydownListener = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        unmountSidebar();
-        try {
-          // Best-effort notify background (content script may also send)
-          chrome.runtime?.sendMessage?.({ type: 'sidebar-closed' });
-        } catch (_) {
-          // ignore in tests
-        }
-      }
-    };
-    document.addEventListener('keydown', keydownListener);
-  }
 }
 
 export function unmountSidebar() {
@@ -138,11 +121,5 @@ export function unmountSidebar() {
   const hostContainer = document.getElementById('ai-browser-sidebar-host');
   if (hostContainer) {
     hostContainer.remove();
-  }
-
-  // Remove global keydown listener if present
-  if (keydownListener) {
-    document.removeEventListener('keydown', keydownListener);
-    keydownListener = null;
   }
 }

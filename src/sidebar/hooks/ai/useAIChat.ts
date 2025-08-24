@@ -83,13 +83,15 @@ export function useAIChat(options: UseAIChatOptions = {}): UseAIChatReturn {
     initializeProviders,
   ]);
 
-  // Cleanup on unmount
+  // Cleanup on unmount only (empty dependency array)
   useEffect(() => {
     return () => {
       // Cancel any ongoing operations
-      cancelMessage();
+      // Using a ref to avoid dependency issues
+      cancelStreaming();
     };
-  }, [cancelMessage]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Empty array - only run on mount/unmount
 
   // Memoize return object to prevent unnecessary re-renders
   return useMemo(

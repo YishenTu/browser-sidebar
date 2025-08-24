@@ -107,19 +107,13 @@ export function useStreamHandler(): UseStreamHandlerReturn {
               chatStore.appendToMessage(assistantMessage.id, piece);
               lastSuccessfulContent += piece;
 
-              // Log table content for debugging
-              if (piece.includes('|') || piece.includes('---')) {
-                console.log('[StreamHandler] Table chunk received:', {
-                  length: piece.length,
-                  preview: piece.substring(0, 100),
-                });
-              }
+              // Table content detected - no special handling needed
             }
           }
         } catch (streamError) {
           // Streaming was interrupted
           streamInterrupted = true;
-          console.warn('Stream interrupted:', streamError);
+          // Stream error handled silently
 
           // Append recovery message if we got partial content
           if (lastSuccessfulContent && lastSuccessfulContent.length > 0) {
@@ -173,7 +167,13 @@ export function useStreamHandler(): UseStreamHandlerReturn {
         });
         throw error;
       } finally {
-        chatStore.clearActiveMessage();
+        // Only clear active message if the store is still available
+        try {
+          chatStore.clearActiveMessage();
+        } catch (cleanupError) {
+          // Ignore errors during cleanup (component may be unmounted)
+          console.debug('Failed to clear active message in finally block:', cleanupError);
+        }
         abortControllerRef.current = null;
       }
     },
@@ -188,7 +188,13 @@ export function useStreamHandler(): UseStreamHandlerReturn {
       abortControllerRef.current.abort();
       abortControllerRef.current = null;
     }
-    chatStore.clearActiveMessage();
+    // Only clear active message if the store is still available
+    try {
+      chatStore.clearActiveMessage();
+    } catch (error) {
+      // Ignore errors during cleanup (component may be unmounted)
+      console.debug('Failed to clear active message during cleanup:', error);
+    }
   }, [chatStore]);
 
   /**

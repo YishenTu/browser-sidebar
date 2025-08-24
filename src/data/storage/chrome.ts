@@ -5,9 +5,9 @@
  * retries, migrations, and serialization support.
  */
 
-import type { StorageArea, StorageSchema, MigrationScript } from '../types/storage';
-import { serialize, deserialize, getCurrentVersion, applyMigrations } from '../types/storage';
-import { DEFAULT_MODEL_ID } from '../config/models';
+import type { StorageArea, StorageSchema, MigrationScript } from '@types/storage';
+import { serialize, deserialize, getCurrentVersion, applyMigrations } from '@types/storage';
+import { DEFAULT_MODEL_ID } from '@/config/models';
 
 // =============================================================================
 // Configuration

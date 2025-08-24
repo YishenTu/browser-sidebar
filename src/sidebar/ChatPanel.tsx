@@ -12,20 +12,26 @@ import { useSettingsStore } from '@store/settings';
 import { ThemeProvider } from '@contexts/ThemeContext';
 import { ErrorProvider, useError, getErrorSource } from '@contexts/ErrorContext';
 import { ErrorBanner } from '@components/ErrorBanner';
-import { MessageList } from '@components/MessageList';
-import { ChatInput } from '@components/ChatInput';
-import { ModelSelector } from '@components/ModelSelector';
 import { useChatStore } from '@store/chat';
 import { useAIChat } from '@hooks/useAIChat';
 
-// Constants for sizing and positioning
-const MIN_WIDTH = 300;
-const MAX_WIDTH = 800;
-const DEFAULT_WIDTH = 400;
-const MIN_HEIGHT = 200;
-const MAX_HEIGHT = typeof window !== 'undefined' ? Math.round(window.innerHeight) : 1000;
-const SIDEBAR_HEIGHT_RATIO = 0.85;
-const RIGHT_PADDING = 30; // default space from the right edge
+// Layout components
+import { Header } from '@components/layout/Header';
+import { Body } from '@components/layout/Body';
+import { Footer } from '@components/layout/Footer';
+import { ResizeHandles } from '@components/layout/ResizeHandles';
+
+// Import sizing constants
+import {
+  MIN_WIDTH,
+  MAX_WIDTH,
+  DEFAULT_WIDTH,
+  MIN_HEIGHT,
+  MAX_HEIGHT,
+  getInitialY,
+  getSidebarHeight,
+  getInitialX,
+} from './constants';
 
 export interface ChatPanelProps {
   /** Custom CSS class name */
@@ -40,7 +46,7 @@ export interface ChatPanelProps {
 const ChatPanelInner: React.FC<ChatPanelProps> = ({ className, onClose }) => {
   // Positioning and sizing state
   const [width, setWidth] = useState(DEFAULT_WIDTH);
-  const [height, setHeight] = useState(Math.round(window.innerHeight * SIDEBAR_HEIGHT_RATIO));
+  const [height, setHeight] = useState(getSidebarHeight());
   const [isResizing, setIsResizing] = useState(false);
   const resizeDirRef = useRef<null | 'n' | 's' | 'e' | 'w' | 'ne' | 'nw' | 'se' | 'sw'>(null);
   const startRef = useRef<{ x: number; y: number } | null>(null);
@@ -48,21 +54,18 @@ const ChatPanelInner: React.FC<ChatPanelProps> = ({ className, onClose }) => {
     null
   );
   const sidebarHeight = height;
-  const initialY = Math.round(window.innerHeight * ((1 - SIDEBAR_HEIGHT_RATIO) / 2));
   const [position, setPosition] = useState({
-    x: window.innerWidth - DEFAULT_WIDTH - RIGHT_PADDING,
-    y: initialY,
+    x: getInitialX(),
+    y: getInitialY(),
   });
   const [isDragging, setIsDragging] = useState(false);
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
 
   // Settings store integration
-  const theme = useSettingsStore(state => state.settings.theme);
   const selectedModel = useSettingsStore(state => state.settings.selectedModel);
   const updateSelectedModel = useSettingsStore(state => state.updateSelectedModel);
   const getProviderTypeForModel = useSettingsStore(state => state.getProviderTypeForModel);
   const loadSettings = useSettingsStore(state => state.loadSettings);
-  const settingsLoading = useSettingsStore(state => state.isLoading);
   const [settingsInitialized, setSettingsInitialized] = useState(false);
 
   // Load settings on mount and track when they're ready
@@ -71,19 +74,19 @@ const ChatPanelInner: React.FC<ChatPanelProps> = ({ className, onClose }) => {
       .then(() => {
         setSettingsInitialized(true);
       })
-      .catch((error) => {
+      .catch((error: unknown) => {
         console.error('Failed to load settings:', error);
         // Still initialize even if settings fail to load
         // This allows the app to work with default settings
         setSettingsInitialized(true);
       });
-    
+
     // Fallback timeout to ensure we don't get stuck on loading screen
     const timeout = setTimeout(() => {
       // Silently proceed with defaults after timeout
       setSettingsInitialized(true);
     }, 3000); // 3 second timeout
-    
+
     return () => clearTimeout(timeout);
   }, [loadSettings]);
 
@@ -96,7 +99,7 @@ const ChatPanelInner: React.FC<ChatPanelProps> = ({ className, onClose }) => {
     enabled: true,
     autoInitialize: true, // Auto-initialize providers from settings
   });
-  
+
   // Centralized error management
   const { addError } = useError();
 
@@ -104,22 +107,22 @@ const ChatPanelInner: React.FC<ChatPanelProps> = ({ className, onClose }) => {
   const [showSettings, setShowSettings] = useState(false);
   const [apiKeys, setApiKeys] = useState({ openai: '', google: '' });
   const [testingKeys, setTestingKeys] = useState({ openai: false, google: false });
-  const [testResults, setTestResults] = useState<{openai?: boolean; google?: boolean}>({});
+  const [testResults, setTestResults] = useState<{ openai?: boolean; google?: boolean }>({});
   const storedApiKeys = useSettingsStore(state => state.settings.apiKeys);
   const updateAPIKeyReferences = useSettingsStore(state => state.updateAPIKeyReferences);
   const resetToDefaults = useSettingsStore(state => state.resetToDefaults);
-  
+
   // Clear API key inputs when settings panel opens (show only placeholders)
   useEffect(() => {
     if (showSettings) {
       setApiKeys({
         openai: '',
-        google: ''
+        google: '',
       });
       setTestResults({});
     }
   }, [showSettings]);
-  
+
   // Function to mask API key
   const maskApiKey = (key: string | null): string => {
     if (!key || key.length < 8) return '';
@@ -127,38 +130,40 @@ const ChatPanelInner: React.FC<ChatPanelProps> = ({ className, onClose }) => {
     const end = key.substring(key.length - 4);
     return `${start}...${end}`;
   };
-  
+
   // Function to test API key
   const testApiKey = async (provider: 'openai' | 'google', key: string) => {
     // Use the entered key if available, otherwise use the stored key
     const keyToTest = key || (provider === 'openai' ? storedApiKeys.openai : storedApiKeys.google);
-    
+
     if (!keyToTest) {
       alert('Please enter an API key first');
       return;
     }
-    
+
     setTestingKeys(prev => ({ ...prev, [provider]: true }));
     setTestResults(prev => ({ ...prev, [provider]: undefined }));
-    
+
     try {
       // Dynamically import validation service
       const { APIKeyValidationService } = await import('@provider/validation');
       const validator = new APIKeyValidationService();
-      
+
       const providerType = provider === 'openai' ? 'openai' : 'gemini';
       const result = await validator.validateAPIKey(keyToTest, providerType, {
         skipLiveValidation: false,
-        timeout: 10000
+        timeout: 10000,
       });
-      
+
       setTestResults(prev => ({ ...prev, [provider]: result.isValid }));
-      
+
       if (result.isValid) {
         alert(`✅ ${provider === 'openai' ? 'OpenAI' : 'Google'} API key is valid!`);
       } else {
         const errorMsg = result.errors.join(', ') || 'Invalid API key';
-        alert(`❌ ${provider === 'openai' ? 'OpenAI' : 'Google'} API key validation failed: ${errorMsg}`);
+        alert(
+          `❌ ${provider === 'openai' ? 'OpenAI' : 'Google'} API key validation failed: ${errorMsg}`
+        );
       }
     } catch (error) {
       setTestResults(prev => ({ ...prev, [provider]: false }));
@@ -195,6 +200,63 @@ const ChatPanelInner: React.FC<ChatPanelProps> = ({ className, onClose }) => {
       clearConversation();
     }
   }, [hasMessages, clearConversation]);
+
+  // Handle model change
+  const handleModelChange = useCallback(
+    async (modelId: string): Promise<void> => {
+      // Store the previous model for potential rollback
+      const previousModel = selectedModel;
+
+      try {
+        // Get the provider type for this model
+        const providerType = getProviderTypeForModel(modelId);
+
+        // Check if the API key exists for this provider
+        const settings = useSettingsStore.getState();
+        const apiKeys = settings.settings.apiKeys;
+
+        let hasApiKey = false;
+        if (providerType === 'openai') {
+          hasApiKey = !!apiKeys?.openai;
+        } else if (providerType === 'gemini') {
+          hasApiKey = !!apiKeys?.google;
+        }
+
+        if (!hasApiKey) {
+          // Show settings panel if API key is missing
+          setShowSettings(true);
+          // User will see the settings panel to add API key
+          return;
+        }
+
+        // Atomic operation: Try to switch both model and provider
+        // If either fails, rollback both
+        try {
+          // First update the model in settings
+          await updateSelectedModel(modelId);
+
+          // Then switch the provider
+          if (providerType) {
+            await switchProvider(providerType);
+          }
+        } catch (switchError) {
+          // Rollback: Restore previous model if provider switch failed
+          console.error('Provider switch failed, rolling back model selection:', switchError);
+          await updateSelectedModel(previousModel);
+
+          // Show error to user
+          const errorMsg =
+            switchError instanceof Error ? switchError.message : 'Failed to switch provider';
+          alert(`Failed to switch to ${modelId}: ${errorMsg}`);
+          throw switchError; // Re-throw to be caught by outer catch
+        }
+      } catch (err) {
+        // Log error but don't show additional alert if we already showed one
+        console.warn('Failed to switch model/provider:', err);
+      }
+    },
+    [selectedModel, getProviderTypeForModel, updateSelectedModel, switchProvider]
+  );
 
   // Handle resize and drag mouse events
   useEffect(() => {
@@ -280,6 +342,9 @@ const ChatPanelInner: React.FC<ChatPanelProps> = ({ className, onClose }) => {
     chrome.runtime.sendMessage({ type: 'sidebar-closed' });
     onClose();
   }, [onClose]);
+
+  // Cleanup is handled by useAIChat hook internally
+  // No need for additional cleanup here
 
   // Handle Escape key to close sidebar
   useEffect(() => {
@@ -381,136 +446,17 @@ const ChatPanelInner: React.FC<ChatPanelProps> = ({ className, onClose }) => {
       data-testid="chat-panel"
     >
       <div className="ai-sidebar-container" data-testid="sidebar-container">
-        <div
-          className="ai-sidebar-header"
+        <Header
+          selectedModel={selectedModel}
+          onModelChange={handleModelChange}
+          isLoading={isLoading}
+          hasMessages={hasMessages()}
+          onClearConversation={handleClearConversation}
+          onToggleSettings={() => setShowSettings(!showSettings)}
+          onClose={handleClose}
           onMouseDown={handleHeaderMouseDown}
-          style={{ cursor: isDragging ? 'grabbing' : 'grab' }}
-          data-testid="sidebar-header"
-        >
-          <div className="ai-sidebar-header-title">
-            <ModelSelector
-              className="model-selector--header"
-              value={selectedModel}
-              onChange={async modelId => {
-                // Store the previous model for potential rollback
-                const previousModel = selectedModel;
-                
-                try {
-                  // Get the provider type for this model
-                  const providerType = getProviderTypeForModel(modelId);
-                  
-                  // Check if the API key exists for this provider
-                  const settings = useSettingsStore.getState();
-                  const apiKeys = settings.settings.apiKeys;
-                  
-                  let hasApiKey = false;
-                  if (providerType === 'openai') {
-                    hasApiKey = !!apiKeys?.openai;
-                  } else if (providerType === 'gemini') {
-                    hasApiKey = !!apiKeys?.google;
-                  }
-                  
-                  if (!hasApiKey) {
-                    // Show settings panel if API key is missing
-                    setShowSettings(true);
-                    // User will see the settings panel to add API key
-                    return;
-                  }
-                  
-                  // Atomic operation: Try to switch both model and provider
-                  // If either fails, rollback both
-                  try {
-                    // First update the model in settings
-                    await updateSelectedModel(modelId);
-                    
-                    // Then switch the provider
-                    if (providerType) {
-                      await switchProvider(providerType);
-                    }
-                  } catch (switchError) {
-                    // Rollback: Restore previous model if provider switch failed
-                    console.error('Provider switch failed, rolling back model selection:', switchError);
-                    await updateSelectedModel(previousModel);
-                    
-                    // Show error to user
-                    const errorMsg = switchError instanceof Error ? switchError.message : 'Failed to switch provider';
-                    alert(`Failed to switch to ${modelId}: ${errorMsg}`);
-                    throw switchError; // Re-throw to be caught by outer catch
-                  }
-                } catch (err) {
-                  // Log error but don't show additional alert if we already showed one
-                  console.warn('Failed to switch model/provider:', err);
-                }
-              }}
-              disabled={isLoading}
-              aria-label="Select AI model"
-            />
-            <h2></h2>
-          </div>
-          <div className="ai-sidebar-header-actions">
-            {hasMessages() && (
-              <button
-                onClick={handleClearConversation}
-                className="ai-sidebar-clear"
-                aria-label="New session"
-                title="Start new session"
-                style={{
-                  marginRight: '8px',
-                }}
-              >
-                <svg
-                  width="16"
-                  height="16"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
-                  <path d="M12 5v14" />
-                  <path d="M5 12h14" />
-                </svg>
-              </button>
-            )}
-            <button
-              onClick={() => setShowSettings(!showSettings)}
-              className="ai-sidebar-settings"
-              aria-label="Settings"
-              title="API Settings"
-              style={{
-                marginRight: '8px',
-                background: 'none',
-                border: 'none',
-                color: 'inherit',
-                cursor: 'pointer',
-                padding: '4px',
-              }}
-            >
-              <svg
-                width="16"
-                height="16"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z" />
-                <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
-              </svg>
-            </button>
-            <button
-              onClick={handleClose}
-              className="ai-sidebar-close"
-              aria-label="Close sidebar"
-              title="Close (Esc)"
-            >
-              ×
-            </button>
-          </div>
-        </div>
+          isDragging={isDragging}
+        />
 
         {/* Centralized Error Banner */}
         <ErrorBanner />
@@ -536,12 +482,17 @@ const ChatPanelInner: React.FC<ChatPanelProps> = ({ className, onClose }) => {
                 <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
                   <input
                     type="text"
-                    placeholder={storedApiKeys.openai ? maskApiKey(storedApiKeys.openai) : "sk-..."}
+                    placeholder={storedApiKeys.openai ? maskApiKey(storedApiKeys.openai) : 'sk-...'}
                     value={apiKeys.openai}
                     style={{
                       flex: 1,
                       padding: '8px',
-                      border: testResults.openai === true ? '1px solid #4CAF50' : testResults.openai === false ? '1px solid #f44336' : '1px solid #ccc',
+                      border:
+                        testResults.openai === true
+                          ? '1px solid #4CAF50'
+                          : testResults.openai === false
+                            ? '1px solid #f44336'
+                            : '1px solid #ccc',
                       borderRadius: '4px',
                       fontSize: '14px',
                       fontFamily: 'monospace',
@@ -574,12 +525,19 @@ const ChatPanelInner: React.FC<ChatPanelProps> = ({ className, onClose }) => {
                 <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
                   <input
                     type="text"
-                    placeholder={storedApiKeys.google ? maskApiKey(storedApiKeys.google) : "AIza..."}
+                    placeholder={
+                      storedApiKeys.google ? maskApiKey(storedApiKeys.google) : 'AIza...'
+                    }
                     value={apiKeys.google}
                     style={{
                       flex: 1,
                       padding: '8px',
-                      border: testResults.google === true ? '1px solid #4CAF50' : testResults.google === false ? '1px solid #f44336' : '1px solid #ccc',
+                      border:
+                        testResults.google === true
+                          ? '1px solid #4CAF50'
+                          : testResults.google === false
+                            ? '1px solid #f44336'
+                            : '1px solid #ccc',
                       borderRadius: '4px',
                       fontSize: '14px',
                       fontFamily: 'monospace',
@@ -613,17 +571,17 @@ const ChatPanelInner: React.FC<ChatPanelProps> = ({ className, onClose }) => {
                       const keysToSave = {
                         openai: apiKeys.openai || storedApiKeys.openai,
                         google: apiKeys.google || storedApiKeys.google,
-                        openrouter: null
+                        openrouter: null,
                       };
                       await updateAPIKeyReferences(keysToSave);
-                      
+
                       // Reinitialize providers with new API keys
                       // This ensures the AI chat system immediately uses the new keys
                       const currentProvider = getProviderTypeForModel(selectedModel);
                       if (currentProvider) {
                         await switchProvider(currentProvider);
                       }
-                      
+
                       alert('API keys saved and providers updated! You can start chatting now.');
                       // Clear the input fields after saving
                       setApiKeys({ openai: '', google: '' });
@@ -670,85 +628,25 @@ const ChatPanelInner: React.FC<ChatPanelProps> = ({ className, onClose }) => {
               </div>
             </div>
           ) : (
-            <div 
-              className="ai-sidebar-body" 
-              data-testid="sidebar-body"
-              style={{
-                height: 'calc(100% - 60px - 70px)',
-              }}
-            >
-              <MessageList
-                messages={messages}
-                isLoading={isLoading}
-                emptyMessage=""
-                height="100%"
-              />
-            </div>
+            <Body
+              messages={messages}
+              isLoading={isLoading}
+              emptyMessage=""
+              height="calc(100% - 60px - 70px)"
+            />
           )}
 
-          <div className="ai-sidebar-footer" data-testid="sidebar-footer">
-            <ChatInput
-              onSend={handleSendMessage}
-              onCancel={cancelMessage}
-              loading={isLoading}
-              placeholder="Ask about this webpage..."
-            />
-          </div>
+          <Footer
+            onSend={handleSendMessage}
+            onCancel={cancelMessage}
+            loading={isLoading}
+            placeholder="Ask about this webpage..."
+          />
         </ThemeProvider>
       </div>
 
       {/* Resize handles placed AFTER the container so they are not covered */}
-      {/* West (left) - keep existing test id for compatibility */}
-      <div
-        className="ai-sidebar-resize-handle ai-sidebar-resize-handle--w"
-        onMouseDown={e => handleResizeMouseDown(e, 'w')}
-        data-testid="resize-handle"
-        style={{ cursor: 'ew-resize' }}
-        aria-label="Resize left"
-      />
-      {/* East (right) */}
-      <div
-        className="ai-sidebar-resize-handle ai-sidebar-resize-handle--e"
-        onMouseDown={e => handleResizeMouseDown(e, 'e')}
-        aria-label="Resize right"
-      />
-      {/* North (top) */}
-      <div
-        className="ai-sidebar-resize-handle ai-sidebar-resize-handle--n"
-        onMouseDown={e => handleResizeMouseDown(e, 'n')}
-        aria-label="Resize top"
-      />
-      {/* South (bottom) */}
-      <div
-        className="ai-sidebar-resize-handle ai-sidebar-resize-handle--s"
-        onMouseDown={e => handleResizeMouseDown(e, 's')}
-        aria-label="Resize bottom"
-      />
-      {/* Corners for diagonal resize */}
-      <div
-        className="ai-sidebar-resize-handle ai-sidebar-resize-handle--nw"
-        onMouseDown={e => handleResizeMouseDown(e, 'nw')}
-        aria-label="Resize top-left"
-        style={{ cursor: 'nwse-resize' }}
-      />
-      <div
-        className="ai-sidebar-resize-handle ai-sidebar-resize-handle--ne"
-        onMouseDown={e => handleResizeMouseDown(e, 'ne')}
-        aria-label="Resize top-right"
-        style={{ cursor: 'nesw-resize' }}
-      />
-      <div
-        className="ai-sidebar-resize-handle ai-sidebar-resize-handle--sw"
-        onMouseDown={e => handleResizeMouseDown(e, 'sw')}
-        aria-label="Resize bottom-left"
-        style={{ cursor: 'nesw-resize' }}
-      />
-      <div
-        className="ai-sidebar-resize-handle ai-sidebar-resize-handle--se"
-        onMouseDown={e => handleResizeMouseDown(e, 'se')}
-        aria-label="Resize bottom-right"
-        style={{ cursor: 'nwse-resize' }}
-      />
+      <ResizeHandles onMouseDown={handleResizeMouseDown} />
     </div>
   );
 };
@@ -774,7 +672,7 @@ const ChatPanelInner: React.FC<ChatPanelProps> = ({ className, onClose }) => {
  * <ChatPanel onClose={() => unmountSidebar()} />
  * ```
  */
-export const ChatPanel: React.FC<ChatPanelProps> = (props) => {
+export const ChatPanel: React.FC<ChatPanelProps> = props => {
   return (
     <ErrorProvider>
       <ChatPanelInner {...props} />

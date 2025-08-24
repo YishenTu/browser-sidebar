@@ -144,7 +144,7 @@ function removeSidebar() {
 
 // Listen for messages from background using typed protocol
 chrome.runtime.onMessage.addListener((message: Message, _sender, sendResponse) => {
-  console.log('Content script received message:', message);
+  // Removed console.log for cleaner output
 
   // Validate message structure
   if (!isValidMessage(message)) {
@@ -162,30 +162,76 @@ chrome.runtime.onMessage.addListener((message: Message, _sender, sendResponse) =
 
   // Handle typed messages
   switch (message.type) {
-    case 'TOGGLE_SIDEBAR':
-      if (sidebarOpen) {
-        const response = removeSidebar();
-        sendResponse(response);
+    case 'TOGGLE_SIDEBAR': {
+      // Check if we have an explicit show/hide directive
+      const explicitShow = (message.payload as any)?.show;
+
+      if (explicitShow !== undefined) {
+        // Explicit show/hide command
+        if (explicitShow && !sidebarOpen) {
+          // Show sidebar
+          injectSidebar()
+            .then(response => {
+              sendResponse(response);
+            })
+            .catch((error: unknown) => {
+              sendResponse(
+                createMessage({
+                  type: 'ERROR',
+                  payload: {
+                    message: error instanceof Error ? error.message : String(error),
+                    code: 'INJECTION_FAILED',
+                  },
+                  source: 'content',
+                  target: 'background',
+                })
+              );
+            });
+        } else if (!explicitShow && sidebarOpen) {
+          // Hide sidebar
+          const response = removeSidebar();
+          sendResponse(response);
+        } else {
+          // Already in the desired state
+          sendResponse(
+            createMessage({
+              type: 'SIDEBAR_STATE',
+              payload: {
+                status: sidebarOpen ? 'sidebar-already-open' : 'sidebar-already-closed',
+                timestamp: Date.now(),
+              },
+              source: 'content',
+              target: 'background',
+            })
+          );
+        }
       } else {
-        injectSidebar()
-          .then(response => {
-            sendResponse(response);
-          })
-          .catch((error: unknown) => {
-            sendResponse(
-              createMessage({
-                type: 'ERROR',
-                payload: {
-                  message: error instanceof Error ? error.message : String(error),
-                  code: 'INJECTION_FAILED',
-                },
-                source: 'content',
-                target: 'background',
-              })
-            );
-          });
+        // Toggle behavior (no explicit show/hide)
+        if (sidebarOpen) {
+          const response = removeSidebar();
+          sendResponse(response);
+        } else {
+          injectSidebar()
+            .then(response => {
+              sendResponse(response);
+            })
+            .catch((error: unknown) => {
+              sendResponse(
+                createMessage({
+                  type: 'ERROR',
+                  payload: {
+                    message: error instanceof Error ? error.message : String(error),
+                    code: 'INJECTION_FAILED',
+                  },
+                  source: 'content',
+                  target: 'background',
+                })
+              );
+            });
+        }
       }
       break;
+    }
 
     case 'CLOSE_SIDEBAR': {
       const closeResponse = removeSidebar();
@@ -243,7 +289,7 @@ const readyMessage = createMessage({
 
 chrome.runtime.sendMessage(readyMessage, response => {
   if (response && isValidMessage(response)) {
-    console.log('Background acknowledged:', response);
+    // Background acknowledged - no need to log
   }
 });
 

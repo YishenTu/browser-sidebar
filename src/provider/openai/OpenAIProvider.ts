@@ -241,18 +241,7 @@ export class OpenAIProvider extends BaseProvider {
 
           for await (const event of asyncIterable as any) {
             try {
-              // Log the raw event structure for debugging
-              if (event && (event.output_text || event.delta)) {
-                console.log('[OpenAI Stream] Raw event:', {
-                  hasOutputText: event.output_text !== undefined,
-                  outputTextLength: event.output_text?.length,
-                  hasDelta: event.delta !== undefined,
-                  deltaType: typeof event.delta,
-                  preview: event.output_text
-                    ? event.output_text.substring(0, 100)
-                    : event.delta?.substring?.(0, 100),
-                });
-              }
+              // Process streaming event
 
               // Extract the actual delta content
               let deltaContent: string | undefined;
@@ -265,9 +254,7 @@ export class OpenAIProvider extends BaseProvider {
                 if (currentFullText.length > lastSeenContent.length) {
                   deltaContent = currentFullText.substring(lastSeenContent.length);
                   lastSeenContent = currentFullText;
-                  console.log(
-                    `[OpenAI Stream] Extracted delta: ${deltaContent.length} new chars from cumulative`
-                  );
+                  // Delta extraction successful
                 }
               }
               // Otherwise check for incremental delta

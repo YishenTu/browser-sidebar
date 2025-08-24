@@ -272,7 +272,8 @@ export const useChatStore = create<ChatState>((set, get) => ({
   },
 
   clearActiveMessage: () => {
-    set(state => ({ ...state, activeMessageId: null }));
+    // Use a simpler update that doesn't rely on state spreading
+    set({ activeMessageId: null });
   },
 
   // Selectors
