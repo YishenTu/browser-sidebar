@@ -169,8 +169,6 @@ const ChatPanelInner: React.FC<ChatPanelProps> = ({ className, onClose }) => {
   // Settings panel state
   const [showSettings, setShowSettings] = useState(false);
 
-  // API key validation is now handled by the ApiKeyInput component
-
   // Handle sending messages
   const handleSendMessage = useCallback(
     async (content: string) => {
