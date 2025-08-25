@@ -43,6 +43,7 @@ export function parseResponse(response: OpenAIResponse, model: string): Provider
       timestamp: new Date(),
       model,
       requestId: id,
+      responseId: response.id || response.response_id,
     },
   };
 

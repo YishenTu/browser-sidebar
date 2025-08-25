@@ -281,6 +281,11 @@
   font-weight: 400;
   font-size: 12px !important;
   list-style: none; /* Remove default marker */
+  will-change: auto;
+  background: transparent;
+  border: none;
+  text-align: left;
+  transition: color 0.15s ease;
 }
 
 .search-sources-summary::-webkit-details-marker {
@@ -300,6 +305,8 @@
   margin-left: 0.5rem; /* Offset for the vertical line */
   margin-top: 0.125rem; /* Reduced margin */
   border-left: 1px solid #6b7280; /* Vertical line like thinking wrapper */
+  contain: layout style;
+  animation: expandSources 0.15s ease-out;
 }
 
 .search-source-link {
@@ -307,11 +314,25 @@
   text-decoration: none;
   padding: 0.125rem 0;
   display: block;
-  transition: color 0.2s;
+  transition:
+    color 0.15s,
+    text-decoration 0.15s;
   font-size: 12px !important;
 }
 
 .search-source-link:hover {
   color: #6b7280; /* Darker grey on hover */
   text-decoration: underline;
+}
+
+/* Animation for search sources list */
+@keyframes expandSources {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }

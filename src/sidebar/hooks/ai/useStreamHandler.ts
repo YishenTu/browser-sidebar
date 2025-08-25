@@ -83,9 +83,13 @@ export function useStreamHandler(): UseStreamHandlerReturn {
         // Create abort controller for this stream
         abortControllerRef.current = new AbortController();
 
-        // Start streaming
+        // Get last response ID for conversation continuity (OpenAI Response API)
+        const previousResponseId = chatStore.getLastResponseId();
+
+        // Start streaming with response ID if available
         const stream = provider.streamChat(messages, {
           signal: abortControllerRef.current.signal,
+          previousResponseId: previousResponseId || undefined,
         });
 
         let lastSuccessfulContent = '';
@@ -93,6 +97,7 @@ export function useStreamHandler(): UseStreamHandlerReturn {
         let isThinkingPhase = true; // Track if we're still in thinking phase
         let streamInterrupted = false;
         let searchMetadata: any = null; // Store search metadata from stream
+        let responseId: string | null = null; // Store response ID from stream
 
         try {
           for await (const chunk of stream) {
@@ -105,11 +110,17 @@ export function useStreamHandler(): UseStreamHandlerReturn {
             // Extract thinking and content from streaming chunk
             const thinking = (chunk as any)?.choices?.[0]?.delta?.thinking || '';
             const content = (chunk as any)?.choices?.[0]?.delta?.content || '';
-            
+
             // Check for search metadata in the chunk (it comes from the StreamChunk type now)
             // Gemini sends this in the last chunk with the complete response
-            if (chunk.metadata?.searchResults) {
-              searchMetadata = chunk.metadata.searchResults;
+            if (chunk.metadata?.['searchResults']) {
+              searchMetadata = chunk.metadata['searchResults'];
+            }
+
+            // Check for response ID in the chunk (OpenAI Response API)
+            // Only use the responseId from metadata, NOT the chunk.id which is locally generated
+            if (chunk.metadata?.['responseId']) {
+              responseId = chunk.metadata?.['responseId'] as string;
             }
 
             // Handle thinking content - append deltas for real-time streaming
@@ -146,7 +157,7 @@ export function useStreamHandler(): UseStreamHandlerReturn {
               // Append the content chunk
               chatStore.appendToMessage(assistantMessage.id, content);
               lastSuccessfulContent += content;
-              
+
               // Update search metadata if we have it
               if (searchMetadata) {
                 const currentMsg = chatStore.getMessageById(assistantMessage.id);
@@ -198,6 +209,10 @@ export function useStreamHandler(): UseStreamHandlerReturn {
               ...(searchMetadata && { searchResults: searchMetadata }),
             },
           });
+          // Store response ID if we got one (OpenAI Response API)
+          if (responseId) {
+            chatStore.setLastResponseId(responseId);
+          }
         } else {
           throw new Error('Stream interrupted before receiving any content');
         }

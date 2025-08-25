@@ -91,6 +91,8 @@ export interface ChatState {
   error: string | null;
   /** ID of currently active message (for streaming) */
   activeMessageId: string | null;
+  /** Last OpenAI response ID for conversation continuity */
+  lastResponseId: string | null;
 
   // Actions for message management
   /** Add a new message to the conversation */
@@ -119,6 +121,10 @@ export interface ChatState {
   setActiveMessage: (messageId: string | null) => void;
   /** Clear active message */
   clearActiveMessage: () => void;
+  /** Set last response ID for conversation continuity */
+  setLastResponseId: (responseId: string | null) => void;
+  /** Get last response ID */
+  getLastResponseId: () => string | null;
 
   // Selectors for accessing data
   /** Get all user messages */
@@ -175,6 +181,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
   isLoading: false,
   error: null,
   activeMessageId: null,
+  lastResponseId: null,
 
   // Message management actions
   addMessage: (options: CreateMessageOptions) => {
@@ -241,6 +248,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
       error: null,
       isLoading: false,
       activeMessageId: null,
+      lastResponseId: null,
     });
   },
 
@@ -251,6 +259,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
       error: null,
       isLoading: false,
       activeMessageId: null,
+      lastResponseId: null,
     });
   },
 
@@ -274,6 +283,14 @@ export const useChatStore = create<ChatState>((set, get) => ({
   clearActiveMessage: () => {
     // Use a simpler update that doesn't rely on state spreading
     set({ activeMessageId: null });
+  },
+
+  setLastResponseId: (responseId: string | null) => {
+    set(state => ({ ...state, lastResponseId: responseId }));
+  },
+
+  getLastResponseId: () => {
+    return get().lastResponseId;
   },
 
   // Selectors

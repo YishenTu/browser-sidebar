@@ -83,20 +83,18 @@ export const ThinkingWrapper: React.FC<ThinkingWrapperProps> = ({
         </span>
       </button>
 
-      {!isCollapsed && (
-        <>
-          <div className="thinking-content-bubble">
-            <div className="thinking-text">
-              <MarkdownRenderer content={thinking} />
-            </div>
+      <div style={{ display: isCollapsed ? 'none' : 'block' }}>
+        <div className="thinking-content-bubble">
+          <div className="thinking-text">
+            <MarkdownRenderer content={thinking} />
           </div>
-          {isStreaming && (
-            <div className="thinking-indicator">
-              <span className="thinking-indicator-text">Thinking...</span>
-            </div>
-          )}
-        </>
-      )}
+        </div>
+        {isStreaming && (
+          <div className="thinking-indicator">
+            <span className="thinking-indicator-text">Thinking...</span>
+          </div>
+        )}
+      </div>
     </div>
   );
 };

@@ -208,9 +208,18 @@ export class OpenAIStreamProcessor {
       usage: event.usage ? convertUsage(event.usage) : undefined,
     };
 
-    // Include search metadata if available
+    // Include metadata
+    const metadata: any = {};
     if (this.searchMetadata) {
-      chunk.metadata = { searchResults: this.searchMetadata };
+      metadata.searchResults = this.searchMetadata;
+    }
+    // Include response ID if available
+    const responseId = event.id || event.response_id;
+    if (responseId) {
+      metadata.responseId = responseId;
+    }
+    if (Object.keys(metadata).length > 0) {
+      chunk.metadata = metadata;
     }
 
     return chunk;
@@ -237,9 +246,18 @@ export class OpenAIStreamProcessor {
       usage: event.usage ? convertUsage(event.usage) : undefined,
     };
 
-    // Include search metadata if available in final chunk
+    // Include metadata in final chunk
+    const metadata: any = {};
     if (this.searchMetadata) {
-      chunk.metadata = { searchResults: this.searchMetadata };
+      metadata.searchResults = this.searchMetadata;
+    }
+    // Include response ID if available
+    const responseId = event.id || event.response_id;
+    if (responseId) {
+      metadata.responseId = responseId;
+    }
+    if (Object.keys(metadata).length > 0) {
+      chunk.metadata = metadata;
     }
 
     return chunk;

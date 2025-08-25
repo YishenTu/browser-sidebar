@@ -181,7 +181,11 @@ export class OpenAIProvider extends BaseProvider {
       throw new Error('Provider configuration not found');
     }
 
-    const request = buildRequest(messages, currentConfig, config);
+    const request = buildRequest(messages, currentConfig, {
+      ...config,
+      previousResponseId: config?.previousResponseId,
+      systemPrompt: config?.systemPrompt,
+    });
 
     return withErrorHandling(async () => {
       // Use Responses API with AbortSignal passed via RequestOptions
@@ -215,7 +219,12 @@ export class OpenAIProvider extends BaseProvider {
         }
 
         // Build streaming request
-        const request = buildRequest(messages, currentConfig, { ...config, stream: true });
+        const request = buildRequest(messages, currentConfig, {
+          ...config,
+          stream: true,
+          previousResponseId: config?.previousResponseId,
+          systemPrompt: config?.systemPrompt,
+        });
 
         // Use responses.create with stream: true (there is no separate stream method)
         const asyncIterable = await (openaiInstance as any).responses.create(request, {
@@ -228,11 +237,30 @@ export class OpenAIProvider extends BaseProvider {
           currentConfig.reasoningEffort !== undefined
         );
 
+        let capturedResponseId: string | null = null;
+
         for await (const event of asyncIterable as any) {
           try {
+            // Capture the real response ID from OpenAI's response.created event
+            // This is the ACTUAL response ID from OpenAI, not our generated chunk IDs
+            if (
+              !capturedResponseId &&
+              event.response?.id &&
+              event.response.id.startsWith('resp_')
+            ) {
+              capturedResponseId = event.response.id;
+            }
+
             // Process event and yield chunk if applicable
             const chunk = processor.processEvent(event);
             if (chunk) {
+              // Inject the REAL response ID into metadata, not the chunk ID
+              if (capturedResponseId) {
+                chunk.metadata = {
+                  ...chunk.metadata,
+                  responseId: capturedResponseId,
+                };
+              }
               yield chunk;
             }
 

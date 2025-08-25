@@ -40,8 +40,18 @@ export function useMessageHandler({
           timestamp: new Date(msg.timestamp),
         }));
 
-      // Get response from provider
-      const response = await provider.chat(messages);
+      // Get last response ID for conversation continuity (OpenAI Response API)
+      const previousResponseId = chatStore.getLastResponseId();
+
+      // Get response from provider with response ID if available
+      const response = await provider.chat(messages, {
+        previousResponseId: previousResponseId || undefined,
+      });
+
+      // Store new response ID if present (for OpenAI Response API)
+      if (response.metadata?.['responseId']) {
+        chatStore.setLastResponseId(response.metadata['responseId'] as string);
+      }
 
       // Get the selected model from settings
       const selectedModel = settingsStore.settings.selectedModel;
@@ -55,7 +65,9 @@ export function useMessageHandler({
         metadata: {
           model: modelInfo?.name || 'AI Assistant',
           thinking: response.thinking, // Store thinking separately for UI to render
-          ...(response.metadata?.searchResults && { searchResults: response.metadata.searchResults }),
+          ...(response.metadata?.['searchResults'] && {
+            searchResults: response.metadata['searchResults'],
+          }),
         },
       });
     },

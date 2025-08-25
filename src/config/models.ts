@@ -37,13 +37,13 @@ export const SUPPORTED_MODELS: ModelConfig[] = [
     id: 'gpt-5-nano',
     name: 'GPT 5 Nano',
     provider: 'openai',
-    reasoningEffort: 'low', // Default reasoning effort
+    reasoningEffort: 'low',
   },
   {
     id: 'gpt-5-mini',
     name: 'GPT 5 Mini',
     provider: 'openai',
-    reasoningEffort: 'low', // Default reasoning effort
+    reasoningEffort: 'low',
   },
   {
     id: 'gpt-5',

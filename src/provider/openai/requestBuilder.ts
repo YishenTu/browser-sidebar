@@ -16,24 +16,70 @@ export function buildRequest(
   openaiConfig: OpenAIConfig,
   chatConfig?: OpenAIChatConfig
 ): OpenAIResponseRequest {
-  // Convert messages to Responses API input format
-  const input = convertMessagesToInput(messages);
+  // Extract system prompt for instructions field
+  const systemMessages = messages.filter(m => m.role === 'system');
+  const systemPrompt =
+    chatConfig?.systemPrompt ||
+    (systemMessages.length > 0 ? systemMessages.map(m => m.content).join('\n') : undefined);
 
-  // Build request parameters - minimal set only
+  // Build request parameters for Response API
   const request: OpenAIResponseRequest = {
     model: openaiConfig.model,
-    input,
     // Always enable web search
-    tools: [{ type: 'web_search_preview' }],
+    tools: [{ type: 'web_search' }],
+    // Always store for conversation continuity
+    store: true,
   };
+
+  // Add instructions if available
+  if (systemPrompt) {
+    request.instructions = systemPrompt;
+  }
+
+  // Handle conversation context
+  // Only use previous_response_id when we have it (consecutive OpenAI calls)
+  // Otherwise, send full history for context preservation
+  if (chatConfig?.previousResponseId) {
+    // We have a previous response ID from the last OpenAI call
+    // This means we're continuing an OpenAI conversation
+    request.previous_response_id = chatConfig.previousResponseId;
+    // Only include the LAST user message (the new input)
+    // The Response API maintains previous context server-side
+    const userMessages = messages.filter(m => m.role === 'user');
+    const lastUserMessage = userMessages[userMessages.length - 1];
+    if (lastUserMessage) {
+      request.input = [{ role: 'user', content: lastUserMessage.content }];
+    }
+  } else {
+    // No previous response ID - either:
+    // 1. First message in conversation
+    // 2. Switched from another provider
+    // 3. Switched back to OpenAI after using another provider
+    // In all cases, send full conversation history
+
+    const hasAssistantMessages = messages.some(m => m.role === 'assistant');
+
+    if (hasAssistantMessages) {
+      // Mid-conversation - send full history for context
+      request.input = messages.map(m => ({
+        role: m.role as 'user' | 'assistant',
+        content: m.content,
+      }));
+    } else {
+      // First message in conversation - only include the user message
+      const firstUserMessage = messages.find(m => m.role === 'user');
+      if (firstUserMessage) {
+        request.input = [{ role: 'user', content: firstUserMessage.content }];
+      }
+    }
+  }
 
   // Add streaming flag if needed
   if (chatConfig?.stream) {
     request.stream = true;
   }
 
-  // Add reasoning params for models that support it with web search
-  // According to OpenAI docs, newer models (GPT-5 family) support both
+  // Add reasoning params for models that support it
   const reasoningEffort = chatConfig?.reasoningEffort ?? openaiConfig.reasoningEffort;
   if (reasoningEffort) {
     request.reasoning = {

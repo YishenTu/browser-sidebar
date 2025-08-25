@@ -10,13 +10,16 @@
  */
 export interface OpenAIResponseRequest {
   model: string;
-  input: string;
+  input?: Array<{ role: 'user' | 'assistant'; content: string }>;
+  instructions?: string;
+  previous_response_id?: string;
   tools?: Array<{ type: string }>;
   reasoning?: {
     effort: string;
     summary: 'auto' | 'none';
   };
   stream?: boolean;
+  store?: boolean;
 }
 
 /**
@@ -37,6 +40,7 @@ export interface OpenAIResponse {
   reasoning?: {
     summary?: Array<{ text: string }>;
   };
+  reasoning_summary?: string;
 }
 
 /**
@@ -122,6 +126,8 @@ export interface OpenAIChatConfig {
   signal?: AbortSignal;
   reasoningEffort?: string;
   stream?: boolean;
+  previousResponseId?: string;
+  systemPrompt?: string;
 }
 
 /**

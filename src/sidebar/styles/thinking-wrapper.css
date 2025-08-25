@@ -28,10 +28,11 @@
   cursor: pointer;
   font-size: 0.75rem;
   color: #9ca3af;
-  transition: all 0.2s ease;
+  transition: color 0.15s ease;
   font-weight: 400;
   border-radius: 4px;
   margin-bottom: 0.25rem;
+  will-change: auto;
 }
 
 /* Remove header margin when collapsed to eliminate gap */
@@ -74,9 +75,10 @@
   border-left: 1px solid #6b7280;
   padding-left: 1rem;
   margin-left: 0.5rem;
-  animation: expandContent 0.3s ease;
+  animation: expandContent 0.15s ease-out;
   margin-top: 0.25rem;
   margin-bottom: 0.25rem; /* Add bottom margin to create gap with message */
+  contain: layout style;
 }
 
 /* Light theme content bubble */
@@ -88,11 +90,11 @@
 @keyframes expandContent {
   from {
     opacity: 0;
-    max-height: 0;
+    transform: translateY(-4px);
   }
   to {
     opacity: 1;
-    max-height: none;
+    transform: translateY(0);
   }
 }
 

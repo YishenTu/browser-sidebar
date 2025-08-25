@@ -3,6 +3,7 @@ import { cn } from '@sidebar/lib/cn';
 import { ChatMessage, MessageRole, MessageStatus } from '@store/chat';
 import { MarkdownRenderer } from './MarkdownRenderer';
 import { ThinkingWrapper } from './ThinkingWrapper';
+import { SearchSources } from './SearchSources';
 
 /**
  * MessageBubble Props Interface
@@ -146,24 +147,7 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
         {message.role === 'assistant' && message.metadata?.['searchResults'] && (
           <div className="message-search-metadata">
             {(message.metadata['searchResults'] as any).sources && (
-              <details className="search-sources" open>
-                <summary className="search-sources-summary">
-                  Sources ({(message.metadata['searchResults'] as any).sources.length})
-                </summary>
-                <div className="search-sources-list">
-                  {(message.metadata['searchResults'] as any).sources.map((source: any, i: number) => (
-                    <a
-                      key={i}
-                      href={source.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="search-source-link"
-                    >
-                      {source.title}
-                    </a>
-                  ))}
-                </div>
-              </details>
+              <SearchSources sources={(message.metadata['searchResults'] as any).sources} />
             )}
           </div>
         )}
