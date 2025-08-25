@@ -123,7 +123,7 @@ textarea:focus {
 .chat-input__counter {
   display: flex;
   align-items: center;
-  font-family: monospace;
+  font-family: var(--font-family-mono);
 }
 
 .chat-input__send-button {

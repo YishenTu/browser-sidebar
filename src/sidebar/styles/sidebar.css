@@ -20,6 +20,13 @@
 @import './katex-math.css'; /* Mathematical equation rendering */
 @import './thinking-wrapper.css'; /* Thinking/reasoning display wrapper */
 
+/* Import new UI component styles */
+@import './alert.css'; /* Alert/Banner component */
+@import './badge.css'; /* Badge and character counter */
+@import './collapsible.css'; /* Collapsible sections */
+@import './dropdown.css'; /* Generic dropdown component */
+@import './search-sources.css'; /* Search sources display */
+
 /* Spinner animation keyframes */
 @keyframes spin {
   from {

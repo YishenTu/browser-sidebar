@@ -1,0 +1,144 @@
+/* Alert Component Styles */
+
+.alert {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  font-size: 14px;
+  position: relative;
+  border-bottom-width: 1px;
+  border-bottom-style: solid;
+}
+
+.alert__content {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+}
+
+.alert__icon {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.alert__message {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.alert__badge {
+  margin-left: 8px;
+  font-size: 12px;
+  opacity: 0.7;
+}
+
+.alert__actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.alert__action-button {
+  background: none;
+  cursor: pointer;
+  padding: 2px 8px;
+  font-size: 12px;
+  border-radius: 3px;
+  border-width: 1px;
+  border-style: solid;
+  opacity: 0.8;
+  transition: opacity 0.2s;
+}
+
+.alert__action-button:hover {
+  opacity: 1;
+}
+
+.alert__dismiss-button {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px;
+  font-size: 18px;
+  line-height: 1;
+  opacity: 0.7;
+  transition: opacity 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.alert__dismiss-button:hover {
+  opacity: 1;
+}
+
+.alert__extra-content {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+/* Alert Type Variants */
+.alert--error {
+  background-color: #fee;
+  border-bottom-color: #fcc;
+  color: #c00;
+}
+
+.alert--error .alert__action-button {
+  border-color: #c00;
+  color: #c00;
+}
+
+.alert--error .alert__dismiss-button {
+  color: #c00;
+}
+
+.alert--warning {
+  background-color: #fff3cd;
+  border-bottom-color: #ffeaa7;
+  color: #856404;
+}
+
+.alert--warning .alert__action-button {
+  border-color: #856404;
+  color: #856404;
+}
+
+.alert--warning .alert__dismiss-button {
+  color: #856404;
+}
+
+.alert--info {
+  background-color: #d1ecf1;
+  border-bottom-color: #bee5eb;
+  color: #0c5460;
+}
+
+.alert--info .alert__action-button {
+  border-color: #0c5460;
+  color: #0c5460;
+}
+
+.alert--info .alert__dismiss-button {
+  color: #0c5460;
+}
+
+.alert--success {
+  background-color: #d4edda;
+  border-bottom-color: #c3e6cb;
+  color: #155724;
+}
+
+.alert--success .alert__action-button {
+  border-color: #155724;
+  color: #155724;
+}
+
+.alert--success .alert__dismiss-button {
+  color: #155724;
+}

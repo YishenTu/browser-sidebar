@@ -16,6 +16,7 @@
   flex-shrink: 0;
 }
 
+.model-selector .dropdown__trigger,
 .model-selector__trigger {
   display: inline-flex;
   align-items: center;
@@ -35,18 +36,26 @@
   position: relative; /* For proper z-index stacking */
 }
 
+.model-selector .dropdown__trigger:hover:not(:disabled),
 .model-selector__trigger:hover:not(:disabled) {
   background: rgba(75, 85, 99, 0.2); /* Subtle hover background */
+  border: none;
 }
 
+.model-selector .dropdown__trigger:focus,
 .model-selector__trigger:focus {
   outline: none;
   background: rgba(75, 85, 99, 0.2); /* Subtle focus background */
+  border: none;
+  box-shadow: none;
 }
 
+.model-selector .dropdown__trigger--open,
 .model-selector__trigger--open {
   border-bottom-left-radius: 0;
   border-bottom-right-radius: 0;
+  background: rgba(75, 85, 99, 0.2);
+  border: none;
 }
 
 .model-selector__trigger--disabled {
@@ -65,15 +74,16 @@
   display: none; /* Hide the chevron icon */
 }
 
+.model-selector .dropdown__menu,
 .model-selector__dropdown {
   position: absolute;
   top: 100%;
   left: 0;
   min-width: 100%;
   width: max-content;
-  background: transparent; /* Fully transparent like chat panel */
+  background: transparent !important; /* Fully transparent like chat panel */
   backdrop-filter: blur(12px); /* Add blur effect for better readability */
-  border: none; /* Remove border */
+  border: none !important; /* Remove border */
   border-radius: 0 0 var(--radius-md) var(--radius-md);
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3); /* Subtle shadow */
   z-index: 2147483647; /* Match overlay z-index to ensure dropdown is on top */
@@ -85,23 +95,27 @@
   pointer-events: auto !important; /* Ensure clicks work */
 }
 
+.model-selector .dropdown__option,
 .model-selector__option {
   padding: 6px var(--spacing-md); /* Reduced vertical padding */
   cursor: pointer;
   transition: var(--transition-fast);
-  color: #e5e7eb; /* Match sidebar text color */
+  color: #e5e7eb !important; /* Match sidebar text color */
   font-size: 12px; /* Smaller font size */
   pointer-events: auto !important; /* Ensure clicks work */
 }
 
+.model-selector .dropdown__option:hover,
+.model-selector .dropdown__option--highlighted,
 .model-selector__option:hover,
 .model-selector__option--highlighted {
-  background: rgba(75, 85, 99, 0.3); /* Subtle hover background */
+  background: rgba(75, 85, 99, 0.3) !important; /* Subtle hover background */
 }
 
+.model-selector .dropdown__option--selected,
 .model-selector__option--selected {
-  background: rgba(75, 85, 99, 0.5); /* Slightly more prominent for selected */
-  color: #ffffff; /* Brighter text for selected */
+  background: rgba(75, 85, 99, 0.5) !important; /* Slightly more prominent for selected */
+  color: #ffffff !important; /* Brighter text for selected */
   font-weight: var(--font-weight-medium);
 }
 
@@ -109,21 +123,23 @@
   background: rgba(75, 85, 99, 0.6); /* Combined selected + hover */
 }
 
+.model-selector .dropdown__group-header,
 .model-selector__group-header {
   padding: 4px var(--spacing-md); /* Reduced vertical padding */
   font-size: 10px; /* Smaller font size */
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  color: rgba(156, 163, 175, 0.8); /* Muted gray */
-  background: transparent; /* Same as dropdown background */
+  color: rgba(156, 163, 175, 0.8) !important; /* Muted gray */
+  background: transparent !important; /* Same as dropdown background */
   cursor: default;
   pointer-events: none; /* Not clickable */
 }
 
+.model-selector .dropdown__divider,
 .model-selector__divider {
   height: 1px;
-  background: rgba(107, 114, 128, 0.2); /* Subtle divider line */
+  background: rgba(107, 114, 128, 0.2) !important; /* Subtle divider line */
   margin: 2px 0;
   list-style: none;
   pointer-events: none;

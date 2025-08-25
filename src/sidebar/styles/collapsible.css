@@ -1,0 +1,64 @@
+/* Collapsible Component Styles */
+
+.collapsible {
+  position: relative;
+}
+
+.collapsible-header {
+  width: 100%;
+  padding: 8px 12px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  text-align: left;
+  font-size: 14px;
+  color: var(--text-primary);
+  transition: background-color 0.2s;
+}
+
+.collapsible-header:hover {
+  background-color: var(--hover-bg, rgba(0, 0, 0, 0.05));
+}
+
+.collapsible-header:focus {
+  outline: 2px solid var(--focus-ring, #0066cc);
+  outline-offset: -2px;
+}
+
+.collapsible-header-content {
+  flex: 1;
+  display: flex;
+  align-items: center;
+}
+
+.collapsible-chevron {
+  flex-shrink: 0;
+  transition: transform 0.2s ease;
+  color: var(--text-secondary, #666);
+}
+
+.collapsible.collapsed .collapsible-chevron {
+  transform: rotate(-90deg);
+}
+
+.collapsible-content {
+  animation: slideDown 0.2s ease;
+}
+
+.collapsible.collapsed .collapsible-content {
+  animation: none;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

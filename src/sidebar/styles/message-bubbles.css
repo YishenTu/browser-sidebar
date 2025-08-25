@@ -124,7 +124,7 @@
 .message-bubble--assistant {
   background: transparent !important; /* Transparent background for AI */
   color: #e5e7eb !important;
-  padding: 6px 0 6px 6px !important; /* Reduced left padding to 6px */
+  padding: 3px 0 3px 6px !important; /* Reduced top/bottom padding for tighter spacing */
   border-radius: 16px !important;
   display: block !important; /* Block for full width */
   max-width: calc(100% - 32px) !important; /* Full width minus margins (16px * 2) */
@@ -256,10 +256,10 @@
  * ============================================================================ */
 
 .message-search-metadata {
-  margin-top: 0.125rem; /* Reduced from 0.5rem */
+  margin-top: 0.125rem; /* Reduced gap to message content */
   padding: 0;
-  margin-left: 16px; /* Align with timestamp container */
-  padding-left: 8px; /* Match timestamp container padding */
+  margin-left: 16px;
+  padding-left: 6px; /* Match timestamp container exactly */
 }
 
 .search-sources {

@@ -1,5 +1,12 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react';
-import { TextArea, TextAreaProps } from '@ui/TextArea';
+import {
+  TextArea,
+  TextAreaProps,
+  SendIcon,
+  CancelIcon,
+  CharacterCounter,
+  Spinner,
+} from '@ui/index';
 import { cn } from '@sidebar/lib/cn';
 
 export interface ChatInputProps extends Omit<TextAreaProps, 'onKeyDown' | 'value' | 'onChange'> {
@@ -30,31 +37,6 @@ export interface ChatInputProps extends Omit<TextAreaProps, 'onKeyDown' | 'value
   /** Additional CSS classes for the container */
   className?: string;
 }
-
-// Icon components (simple SVGs for now)
-const SendIcon: React.FC = () => (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-    <path
-      d="M7 11L12 6L17 11M12 18V7"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    />
-  </svg>
-);
-
-const CancelIcon: React.FC = () => (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-    <path
-      d="M6 18L18 6M6 6l12 12"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    />
-  </svg>
-);
 
 /**
  * ChatInput Component
@@ -203,35 +185,12 @@ export const ChatInput = React.forwardRef<HTMLTextAreaElement, ChatInputProps>(
       event.stopPropagation();
     }, []);
 
-    // Calculate character count and status
+    // Calculate character count
     const charCount = currentValue.length;
-    const isNearLimit = maxLength ? charCount / maxLength >= 0.8 : false;
-    const isAtLimit = maxLength ? charCount >= maxLength : false;
 
     // Determine if buttons should be disabled
     const isDisabled = loading || isSending;
     const canSend = !isDisabled && currentValue.trim().length > 0;
-    // const canClear = !isDisabled && currentValue.length > 0; // Not used after simplification
-
-    // Character counter component
-    const CharacterCounter: React.FC = () => {
-      if (!showCounter) return null;
-
-      const counterText = maxLength ? `${charCount}/${maxLength}` : `${charCount}`;
-      const counterClasses = cn('text-xs', {
-        'text-amber-600': isNearLimit && !isAtLimit,
-        'text-red-600': isAtLimit,
-        'text-gray-500': !isNearLimit && !isAtLimit,
-      });
-
-      return (
-        <span
-          className={cn(counterClasses, { warning: isNearLimit && !isAtLimit, error: isAtLimit })}
-        >
-          {counterText}
-        </span>
-      );
-    };
 
     // Focus textarea when component mounts
     useEffect(() => {
@@ -268,7 +227,7 @@ export const ChatInput = React.forwardRef<HTMLTextAreaElement, ChatInputProps>(
             <div className="chat-input__controls">
               {showCounter && (
                 <div className="chat-input__counter">
-                  <CharacterCounter />
+                  <CharacterCounter count={charCount} max={maxLength} show={true} />
                 </div>
               )}
 
@@ -287,7 +246,7 @@ export const ChatInput = React.forwardRef<HTMLTextAreaElement, ChatInputProps>(
                   className="chat-input__send-button"
                   aria-label={sendButtonLabel}
                 >
-                  {isSending || loading ? <span className="spinner" /> : <SendIcon />}
+                  {isSending || loading ? <Spinner size="sm" /> : <SendIcon />}
                 </button>
               )}
             </div>

@@ -67,15 +67,7 @@ export function createFallbackSearchMetadata(
     }
   }
 
-  // Generic fallback
-  return {
-    sources: [
-      {
-        title: 'Real-time web search performed',
-        url: 'https://www.google.com',
-      },
-    ],
-  };
+  return null;
 }
 
 /**

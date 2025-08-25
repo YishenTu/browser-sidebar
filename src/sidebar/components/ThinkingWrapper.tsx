@@ -7,6 +7,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { MarkdownRenderer } from './MarkdownRenderer';
+import { Collapsible } from '@ui/Collapsible';
 
 interface ThinkingWrapperProps {
   thinking: string;
@@ -23,6 +24,7 @@ export const ThinkingWrapper: React.FC<ThinkingWrapperProps> = ({
 }) => {
   const [isCollapsed, setIsCollapsed] = useState(initialCollapsed);
   const [thinkingDuration, setThinkingDuration] = useState(0);
+  const [hasUserInteracted, setHasUserInteracted] = useState(false);
   const startTimeRef = useRef<number | null>(null);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -50,10 +52,12 @@ export const ThinkingWrapper: React.FC<ThinkingWrapperProps> = ({
       const finalDuration = (Date.now() - startTimeRef.current) / 1000;
       setThinkingDuration(finalDuration);
 
-      // Auto-collapse after streaming ends
-      setTimeout(() => {
-        setIsCollapsed(true);
-      }, 500);
+      // Auto-collapse after streaming ends only if user hasn't interacted
+      if (!hasUserInteracted) {
+        setTimeout(() => {
+          setIsCollapsed(true);
+        }, 500);
+      }
     }
 
     return () => {
@@ -61,7 +65,7 @@ export const ThinkingWrapper: React.FC<ThinkingWrapperProps> = ({
         clearInterval(timerRef.current);
       }
     };
-  }, [isStreaming]);
+  }, [isStreaming, hasUserInteracted]);
 
   if (!thinking) return null;
 
@@ -70,20 +74,22 @@ export const ThinkingWrapper: React.FC<ThinkingWrapperProps> = ({
     return Math.round(seconds).toString();
   };
 
-  return (
-    <div className={`thinking-wrapper ${className} ${isCollapsed ? 'collapsed' : ''}`}>
-      <button
-        onClick={() => setIsCollapsed(!isCollapsed)}
-        className="thinking-header"
-        aria-expanded={!isCollapsed}
-        aria-label={isCollapsed ? 'Expand thinking' : 'Collapse thinking'}
-      >
-        <span className="thinking-label">
-          Thought for {formatDuration(thinkingDuration)} seconds
-        </span>
-      </button>
+  const headerContent = (
+    <span className="thinking-label">Thought for {formatDuration(thinkingDuration)} seconds</span>
+  );
 
-      <div style={{ display: isCollapsed ? 'none' : 'block' }}>
+  return (
+    <div className={`thinking-wrapper ${className}`}>
+      <Collapsible
+        header={headerContent}
+        collapsed={isCollapsed}
+        onToggle={collapsed => {
+          setIsCollapsed(collapsed);
+          setHasUserInteracted(true);
+        }}
+        headerClassName="thinking-header"
+        showChevron={false}
+      >
         <div className="thinking-content-bubble">
           <div className="thinking-text">
             <MarkdownRenderer content={thinking} />
@@ -94,7 +100,7 @@ export const ThinkingWrapper: React.FC<ThinkingWrapperProps> = ({
             <span className="thinking-indicator-text">Thinking...</span>
           </div>
         )}
-      </div>
+      </Collapsible>
     </div>
   );
 };

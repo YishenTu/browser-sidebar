@@ -11,13 +11,12 @@ const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
 // System prompt for consistent behavior
 const SYSTEM_PROMPT = `
-你是一个严谨、简洁的中文助理。输出结构：先结论，再依据，最后给不确定性与下一步建议。
-遵循：必要时给出公式/代码；不要使用表情；引用外部信息时给出来源。
+You are a helpful assistant. Be concise and accurate.
 `;
 
 async function testFirstRound() {
   try {
-    console.log("🔄 发送首轮请求...\n");
+    console.log("🔄 Sending request for Netflix stock price with web search...\n");
     
     const firstResponse = await client.responses.create({
       model: "gpt-5-mini",
@@ -29,18 +28,50 @@ async function testFirstRound() {
       input: [
         { 
           role: "user", 
-          content: "什么是量子计算？它与传统计算的主要区别是什么？" 
+          content: "stock price for netflix" 
         }
       ],
       tools: [{ type: "web_search" }],  // Enable web search
       store: true  // Store for future reference
     });
 
-    console.log("✅ 首轮响应 ID:", firstResponse.id);
-    console.log("\n📝 响应内容:");
+    console.log("✅ Response ID:", firstResponse.id);
+    console.log("\n📝 Response Content:");
     console.log("─".repeat(50));
     console.log(firstResponse.output_text);
     console.log("─".repeat(50));
+    
+    // Check for web search in outputs
+    if (firstResponse.output || firstResponse.outputs) {
+      const outputs = firstResponse.output || firstResponse.outputs || [];
+      console.log("\n🔍 Checking for web search results...");
+      
+      for (const output of outputs) {
+        if (output.type === 'web_search_call') {
+          console.log("✅ Found web_search_call:");
+          console.log("  - Type:", output.type);
+          if (output.action) {
+            console.log("  - Action:", JSON.stringify(output.action, null, 2));
+          }
+          if (output.item) {
+            console.log("  - Item:", JSON.stringify(output.item, null, 2));
+          }
+        }
+        
+        if (output.type === 'message' && output.content) {
+          for (const content of output.content) {
+            if (content.annotations && content.annotations.length > 0) {
+              console.log("\n📌 Found annotations (citations):");
+              for (const annotation of content.annotations) {
+                if (annotation.type === 'url_citation') {
+                  console.log(`  - ${annotation.title || 'Untitled'}: ${annotation.url}`);
+                }
+              }
+            }
+          }
+        }
+      }
+    }
     
     // 如果有 reasoning summary，打印出来
     if (firstResponse.reasoning_summary) {
@@ -68,7 +99,7 @@ async function testFirstRound() {
         model: "gpt-5-mini",
         instructions: SYSTEM_PROMPT,
         reasoning: { effort: "low", summary: "auto" },
-        input: [{ role: "user", content: "什么是量子计算？它与传统计算的主要区别是什么？" }],
+        input: [{ role: "user", content: "stock price for netflix" }],
         tools: [{ type: "web_search" }],
         store: true
       },

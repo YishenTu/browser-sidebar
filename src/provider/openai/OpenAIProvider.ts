@@ -193,7 +193,7 @@ export class OpenAIProvider extends BaseProvider {
         signal: config?.signal,
       });
 
-      return parseResponse(response, currentConfig.model);
+      return parseResponse(response, currentConfig.model, messages);
     });
   }
 
@@ -264,12 +264,35 @@ export class OpenAIProvider extends BaseProvider {
               yield chunk;
             }
 
-            // Also check for search metadata events
+            // Check for search metadata events
             const searchMetadata = extractSearchMetadataFromEvent(event);
-            if (searchMetadata && !processor.getSearchMetadata()) {
-              // Store metadata in processor for inclusion in subsequent chunks
-              createFallbackSearchMetadata(event.item?.action?.query, messages);
-              // Processor will include this in future chunks
+
+            // Handle web search events
+            if (
+              event.type === 'response.output_item.done' &&
+              event.item?.type === 'web_search_call'
+            ) {
+              // This is a web search event
+              if (searchMetadata) {
+                // We have metadata with a query
+                if (!processor.getSearchMetadata()) {
+                  processor.setSearchMetadata(searchMetadata);
+                }
+              } else {
+                // Web search was performed but no query in the event
+                // Create fallback using the user's messages
+                if (!processor.getSearchMetadata()) {
+                  const fallbackMetadata = createFallbackSearchMetadata(undefined, messages);
+                  if (fallbackMetadata) {
+                    processor.setSearchMetadata(fallbackMetadata);
+                  }
+                }
+              }
+            } else if (searchMetadata) {
+              // Other types of search metadata (e.g., citations)
+              if (!processor.getSearchMetadata()) {
+                processor.setSearchMetadata(searchMetadata);
+              }
             }
           } catch (parseError) {
             console.warn('Error parsing stream chunk:', parseError);

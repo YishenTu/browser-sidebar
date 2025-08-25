@@ -101,6 +101,13 @@ export class OpenAIStreamProcessor {
   }
 
   /**
+   * Set search metadata
+   */
+  setSearchMetadata(metadata: any): void {
+    this.searchMetadata = metadata;
+  }
+
+  /**
    * Check if event is a web search event
    */
   private isWebSearchEvent(event: OpenAIStreamEvent): boolean {

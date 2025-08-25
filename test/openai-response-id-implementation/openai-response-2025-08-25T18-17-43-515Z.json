@@ -1,0 +1,129 @@
+{
+  "timestamp": "2025-08-25T18:17:43.516Z",
+  "request": {
+    "model": "gpt-5-mini",
+    "instructions": "\nYou are a helpful assistant. Be concise and accurate.\n",
+    "reasoning": {
+      "effort": "low",
+      "summary": "auto"
+    },
+    "input": [
+      {
+        "role": "user",
+        "content": "stock price for netflix"
+      }
+    ],
+    "tools": [
+      {
+        "type": "web_search"
+      }
+    ],
+    "store": true
+  },
+  "response": {
+    "id": "resp_68aca8c29394819caa692499f04689480982f1e49b8e5d29",
+    "object": "response",
+    "created_at": 1756145858,
+    "status": "completed",
+    "background": false,
+    "error": null,
+    "incomplete_details": null,
+    "instructions": "\nYou are a helpful assistant. Be concise and accurate.\n",
+    "max_output_tokens": null,
+    "max_tool_calls": null,
+    "model": "gpt-5-mini-2025-08-07",
+    "output": [
+      {
+        "id": "rs_68aca8c31224819c8b3b20966805555c0982f1e49b8e5d29",
+        "type": "reasoning",
+        "summary": [
+          {
+            "type": "summary_text",
+            "text": "I need to use the web.run tool for getting the stock prices. It's important to call this correctly with the finance tool, specifically for the ticker NFLX in the equity market of the USA. This way, I can ensure I'm getting accurate and up-to-date information for the user. I want to make sure everything's set up properly so they can have the latest details! Let's proceed with that approach."
+          }
+        ]
+      },
+      {
+        "id": "ws_68aca8c53e94819ca0e666fbcfcf1ca70982f1e49b8e5d29",
+        "type": "web_search_call",
+        "status": "completed",
+        "action": {
+          "type": "search"
+        }
+      },
+      {
+        "id": "rs_68aca8c5d3ec819cbd2744c71d70cdf90982f1e49b8e5d29",
+        "type": "reasoning",
+        "summary": [
+          {
+            "type": "summary_text",
+            "text": "**Preparing price information**\n\nI need to present the price and provide a citation for the web.run result. I'll follow the required citation format and mention the time and date, noting that the user is in the US, with the current date being August 25, 2025. It’s important to include price details, changes, high/low values, volume, and the timestamp. I should also ask if they'd like more, such as a chart or historical data, while keeping everything concise."
+          }
+        ]
+      },
+      {
+        "id": "msg_68aca8c8ea40819c85c070d99090c0e50982f1e49b8e5d29",
+        "type": "message",
+        "status": "completed",
+        "content": [
+          {
+            "type": "output_text",
+            "annotations": [],
+            "logprobs": [],
+            "text": "Netflix (NFLX) — current price: $1,226.34 USD (change +$21.69, +1.80%). Intraday high $1,233.41 / low $1,199.75. Volume (so far): 1,950,258. Latest trade time: Aug 25, 2025 18:02:22 UTC. \n\nWould you like a recent chart, historical prices, or a price alert?"
+          }
+        ],
+        "role": "assistant"
+      }
+    ],
+    "parallel_tool_calls": true,
+    "previous_response_id": null,
+    "prompt_cache_key": null,
+    "reasoning": {
+      "effort": "low",
+      "summary": "detailed"
+    },
+    "safety_identifier": null,
+    "service_tier": "default",
+    "store": true,
+    "temperature": 1,
+    "text": {
+      "format": {
+        "type": "text"
+      },
+      "verbosity": "medium"
+    },
+    "tool_choice": "auto",
+    "tools": [
+      {
+        "type": "web_search",
+        "domain_filter": null,
+        "search_context_size": "medium",
+        "user_location": {
+          "type": "approximate",
+          "city": null,
+          "country": "US",
+          "region": null,
+          "timezone": null
+        }
+      }
+    ],
+    "top_logprobs": 0,
+    "top_p": 1,
+    "truncation": "disabled",
+    "usage": {
+      "input_tokens": 9100,
+      "input_tokens_details": {
+        "cached_tokens": 8448
+      },
+      "output_tokens": 178,
+      "output_tokens_details": {
+        "reasoning_tokens": 64
+      },
+      "total_tokens": 9278
+    },
+    "user": null,
+    "metadata": {},
+    "output_text": "Netflix (NFLX) — current price: $1,226.34 USD (change +$21.69, +1.80%). Intraday high $1,233.41 / low $1,199.75. Volume (so far): 1,950,258. Latest trade time: Aug 25, 2025 18:02:22 UTC. \n\nWould you like a recent chart, historical prices, or a price alert?"
+  }
+}

@@ -5,7 +5,13 @@
  * including content extraction, reasoning processing, and usage metadata.
  */
 
-import type { ProviderResponse, Usage, FinishReason, StreamChunk } from '../../types/providers';
+import type {
+  ProviderResponse,
+  Usage,
+  FinishReason,
+  StreamChunk,
+  ProviderChatMessage,
+} from '../../types/providers';
 import type {
   OpenAIResponse,
   OpenAIOutput,
@@ -17,9 +23,28 @@ import type {
 /**
  * Parse OpenAI Responses API response into provider format
  */
-export function parseResponse(response: OpenAIResponse, model: string): ProviderResponse {
+export function parseResponse(
+  response: OpenAIResponse,
+  model: string,
+  messages?: ProviderChatMessage[]
+): ProviderResponse {
   // Extract content and search metadata
-  const { content, searchMetadata } = extractContentAndMetadata(response);
+  const { content, searchMetadata: initialSearchMetadata } = extractContentAndMetadata(response);
+  let searchMetadata = initialSearchMetadata;
+
+  // If a web search was performed but no metadata, create fallback
+  if (!searchMetadata && response.output) {
+    const outputs = response.output || response.outputs || [];
+    const hasWebSearch =
+      Array.isArray(outputs) && outputs.some((o: any) => o?.type === 'web_search_call');
+
+    if (hasWebSearch && messages) {
+      // Use dynamic import to avoid circular dependency
+      // eslint-disable-next-line @typescript-eslint/no-var-requires
+      const { createFallbackSearchMetadata } = require('./searchMetadata');
+      searchMetadata = createFallbackSearchMetadata(undefined, messages);
+    }
+  }
 
   // Extract thinking/reasoning summary
   const thinking = extractReasoningSummary(response);
@@ -106,18 +131,13 @@ export function extractContentAndMetadata(response: OpenAIResponse): {
       }
     }
 
-    // Check for web search in outputs as fallback
+    // Check for web search in outputs but don't create incomplete fallback
+    // The caller should handle creating proper fallback with access to messages
     const webSearchItem = outputs.find((o: OpenAIOutput) => o?.type === 'web_search_call');
     if (webSearchItem && !searchMetadata) {
-      // No citations provided, create fallback
-      searchMetadata = {
-        sources: [
-          {
-            title: 'Real-time web search performed',
-            url: 'https://www.google.com',
-          },
-        ],
-      };
+      // Mark that a search was performed but don't create incomplete metadata
+      // Let the calling code handle fallback creation with access to user messages
+      searchMetadata = null;
     }
   }
 
@@ -300,16 +320,9 @@ export function extractSearchMetadataFromEvent(event: OpenAIStreamEvent): any | 
           },
         ],
       };
-    } else if (action?.type === 'search') {
-      return {
-        sources: [
-          {
-            title: 'Real-time web search',
-            url: 'https://www.google.com',
-          },
-        ],
-      };
     }
+    // Don't return incomplete metadata - let the caller handle fallback with access to messages
+    return null;
   }
 
   // Handle final message output with annotations
