@@ -52,7 +52,7 @@ export class OpenAIProvider extends BaseProvider {
       streaming: true,
       temperature: false,
       reasoning: true,
-      thinking: false,
+      thinking: true,
       multimodal: true,
       functionCalling: false,
       maxContextLength: 400000,

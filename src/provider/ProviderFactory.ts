@@ -17,6 +17,7 @@
 import { OpenAIProvider } from './openai/OpenAIProvider';
 import { GeminiProvider } from './gemini/GeminiProvider';
 import { ProviderRegistry } from './ProviderRegistry';
+import { getModelById } from '../config/models';
 import type {
   ProviderType,
   ProviderConfig,
@@ -25,11 +26,7 @@ import type {
   GeminiConfig,
   ProviderValidationResult,
 } from '../types/providers';
-import {
-  validateOpenAIConfig,
-  validateGeminiConfig,
-  isProviderType,
-} from '../types/providers';
+import { validateOpenAIConfig, validateGeminiConfig, isProviderType } from '../types/providers';
 
 // ============================================================================
 // Provider Factory Class
@@ -81,7 +78,8 @@ export class ProviderFactory {
       await provider.initialize(config);
       return provider;
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Unknown error during provider initialization';
+      const message =
+        error instanceof Error ? error.message : 'Unknown error during provider initialization';
       throw new Error(`Failed to initialize ${config.type} provider: ${message}`);
     }
   }
@@ -106,7 +104,10 @@ export class ProviderFactory {
 
       return provider;
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Unknown error during provider creation and registration';
+      const message =
+        error instanceof Error
+          ? error.message
+          : 'Unknown error during provider creation and registration';
       throw new Error(`Failed to create and register ${config.type} provider: ${message}`);
     }
   }
@@ -227,7 +228,7 @@ export class ProviderFactory {
         errors.push(`Provider ${i}: Configuration is missing`);
         continue;
       }
-      
+
       try {
         const provider = await this.createProvider(config);
         providers.push(provider);
@@ -264,7 +265,7 @@ export class ProviderFactory {
         errors.push(`Provider ${i}: Configuration is missing`);
         continue;
       }
-      
+
       try {
         const provider = await this.createAndRegister(config, registry);
         providers.push(provider);
@@ -292,10 +293,12 @@ export class ProviderFactory {
    * @returns Default OpenAI configuration
    */
   createDefaultOpenAIConfig(apiKey: string, model: string = 'gpt-5-nano'): OpenAIConfig {
+    // Get reasoning effort from model config
+    const modelConfig = getModelById(model);
     return {
       apiKey,
       model,
-      reasoningEffort: 'medium',
+      reasoningEffort: modelConfig?.reasoningEffort || 'low',
     };
   }
 
