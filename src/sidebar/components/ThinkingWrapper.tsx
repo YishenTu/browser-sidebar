@@ -27,42 +27,55 @@ export const ThinkingWrapper: React.FC<ThinkingWrapperProps> = ({
   const [hasUserInteracted, setHasUserInteracted] = useState(false);
   const startTimeRef = useRef<number | null>(null);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const hasStartedRef = useRef(false);
+  const finalDurationRef = useRef<number | null>(null);
 
   // Track thinking duration
   useEffect(() => {
-    if (isStreaming && !startTimeRef.current) {
-      // Start timing when streaming begins
-      startTimeRef.current = Date.now();
+    if (isStreaming) {
+      // Start timing when streaming begins (only once per instance)
+      if (!hasStartedRef.current) {
+        hasStartedRef.current = true;
+        startTimeRef.current = Date.now();
+        finalDurationRef.current = null;
+        setThinkingDuration(0);
+      }
 
-      // Update timer every 100ms for smooth display
-      timerRef.current = setInterval(() => {
-        if (startTimeRef.current) {
-          const elapsed = (Date.now() - startTimeRef.current) / 1000;
-          setThinkingDuration(elapsed);
-        }
-      }, 100);
-    } else if (!isStreaming && startTimeRef.current) {
+      // Always set up the interval when streaming
+      if (!timerRef.current && startTimeRef.current) {
+        timerRef.current = setInterval(() => {
+          if (startTimeRef.current) {
+            const elapsed = (Date.now() - startTimeRef.current) / 1000;
+            setThinkingDuration(elapsed);
+          }
+        }, 100);
+      }
+    } else {
       // Stop timing when streaming ends
       if (timerRef.current) {
         clearInterval(timerRef.current);
         timerRef.current = null;
       }
 
-      // Final duration update
-      const finalDuration = (Date.now() - startTimeRef.current) / 1000;
-      setThinkingDuration(finalDuration);
+      // Calculate and store final duration only once
+      if (hasStartedRef.current && startTimeRef.current && finalDurationRef.current === null) {
+        const duration = (Date.now() - startTimeRef.current) / 1000;
+        finalDurationRef.current = duration;
+        setThinkingDuration(duration);
 
-      // Auto-collapse after streaming ends only if user hasn't interacted
-      if (!hasUserInteracted) {
-        setTimeout(() => {
-          setIsCollapsed(true);
-        }, 500);
+        // Auto-collapse after streaming ends only if user hasn't interacted
+        if (!hasUserInteracted) {
+          setTimeout(() => {
+            setIsCollapsed(true);
+          }, 500);
+        }
       }
     }
 
     return () => {
       if (timerRef.current) {
         clearInterval(timerRef.current);
+        timerRef.current = null;
       }
     };
   }, [isStreaming, hasUserInteracted]);

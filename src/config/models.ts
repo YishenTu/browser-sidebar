@@ -25,7 +25,7 @@ export const SUPPORTED_MODELS: ModelConfig[] = [
     id: 'gemini-2.5-flash',
     name: 'Gemini 2.5 Flash',
     provider: 'gemini',
-    thinkingBudget: '0', // 0 to 24576
+    thinkingBudget: '-1', // 0 to 24576
   },
   {
     id: 'gemini-2.5-pro',

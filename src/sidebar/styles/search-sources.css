@@ -1,7 +1,7 @@
 /* SearchSources Component Styles */
 
 .search-sources {
-  margin: 4px 0 8px 0; /* Reduced top margin to be closer to message */
+  margin: 4px 16px 8px 0; /* Added 16px right margin to match message padding */
 }
 
 .search-sources-summary {
