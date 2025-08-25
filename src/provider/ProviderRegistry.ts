@@ -2,7 +2,7 @@
  * @file Provider Registry
  *
  * Central registry for managing AI providers in the browser sidebar extension.
- * Supports registration, lookup, switching between providers, and event-driven 
+ * Supports registration, lookup, switching between providers, and event-driven
  * provider lifecycle management.
  *
  * Features:
@@ -20,11 +20,7 @@
  * - activeProviderChanged: Emitted when active provider changes
  */
 
-import type { 
-  AIProvider, 
-  ProviderType,
-  ProviderCapabilities 
-} from '../types/providers';
+import type { AIProvider, ProviderType, ProviderCapabilities } from '../types/providers';
 
 // ============================================================================
 // Event Types
@@ -58,7 +54,10 @@ export interface ActiveProviderChangedEvent {
 /**
  * Registry event types
  */
-export type RegistryEventType = 'providerRegistered' | 'providerUnregistered' | 'activeProviderChanged';
+export type RegistryEventType =
+  | 'providerRegistered'
+  | 'providerUnregistered'
+  | 'activeProviderChanged';
 
 /**
  * Registry event data map
@@ -345,7 +344,7 @@ export class ProviderRegistry {
     const validationSchema = {
       requiredProperties: [
         'type',
-        'name', 
+        'name',
         'capabilities',
         'initialize',
         'validateConfig',
@@ -354,24 +353,22 @@ export class ProviderRegistry {
         'streamChat',
         'getModels',
         'getModel',
-        'estimateTokens',
         'formatError',
       ],
       requiredMethods: [
         'initialize',
-        'validateConfig', 
+        'validateConfig',
         'testConnection',
         'chat',
         'streamChat',
         'getModels',
         'getModel',
-        'estimateTokens',
         'formatError',
       ],
       validTypes: ['openai', 'gemini'] as const,
       requiredCapabilities: [
         'streaming',
-        'temperature', 
+        'temperature',
         'reasoning',
         'thinking',
         'multimodal',
@@ -392,8 +389,8 @@ export class ProviderRegistry {
     }
 
     // Validate required methods are functions
-    const invalidMethods = validationSchema.requiredMethods.filter(method => 
-      typeof provider[method] !== 'function'
+    const invalidMethods = validationSchema.requiredMethods.filter(
+      method => typeof provider[method] !== 'function'
     );
 
     if (invalidMethods.length > 0) {
@@ -410,8 +407,8 @@ export class ProviderRegistry {
       throw new Error(`Invalid provider: missing required properties`);
     }
 
-    const missingCapabilities = validationSchema.requiredCapabilities.filter(cap => 
-      provider.capabilities[cap] === undefined || provider.capabilities[cap] === null
+    const missingCapabilities = validationSchema.requiredCapabilities.filter(
+      cap => provider.capabilities[cap] === undefined || provider.capabilities[cap] === null
     );
 
     if (missingCapabilities.length > 0) {

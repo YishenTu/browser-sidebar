@@ -243,16 +243,6 @@ export class GeminiClient extends BaseProvider {
   // ============================================================================
 
   /**
-   * Estimate token count for text
-   * Note: Gemini doesn't provide token estimation, returning 0
-   */
-  estimateTokens(_text: string): number {
-    // Gemini doesn't provide client-side token estimation
-    // Actual token counts are returned in API responses
-    return 0;
-  }
-
-  /**
    * Format error into provider error structure
    */
   formatError(error: any): ProviderError {

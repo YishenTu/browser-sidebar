@@ -1,8 +1,8 @@
-# Gemini Models Configuration
+# Gemini Provider - Implementation
 
-## Task 4.2.2c - Model Configuration Summary
+## Overview
 
-This document outlines the comprehensive Gemini model configurations implemented for the browser extension, including thinking mode support, context limits, and capability matrices.
+This implementation provides comprehensive Google Gemini AI support with thinking modes, multimodal capabilities, and web search integration. The provider follows a modular architecture matching the OpenAI provider structure for consistency and maintainability.
 
 ## Currently Supported Models
 
@@ -161,33 +161,92 @@ Gemini sends a **single large JSON response** split across network packets:
 - **Paragraph-Level Chunks**: Thinking content arrives in complete paragraphs
 - **Natural Display**: We preserve the paragraph-level streaming rather than artificial character-by-character
 
-### File Structure
+## Architecture
+
+### Modular Structure
+
+The Gemini provider is organized into focused modules:
 
 ```
 src/provider/gemini/
-├── models.ts           # Model configurations and support matrices
-├── GeminiClient.ts     # Base client with model management
-├── GeminiProvider.ts   # Chat implementation with thinking support
-└── GeminiStreamProcessor.ts # Handles partial JSON parsing
+├── GeminiProvider.ts      # Main provider class (~200 lines)
+├── GeminiClient.ts        # Base client with model management
+├── types.ts               # TypeScript type definitions
+├── requestBuilder.ts      # Request construction logic
+├── responseParser.ts      # Response parsing and conversion
+├── streamProcessor.ts     # Stateful stream processing
+├── errorHandler.ts        # Error formatting and handling
+├── searchMetadata.ts      # Web search metadata processing
+├── index.ts              # Module exports
+└── README.md             # This file
 ```
 
-### Key Functions
+### Module Responsibilities
 
-**Model Management**:
+#### `GeminiProvider.ts`
 
-```typescript
-getGeminiModels(): ModelConfig[]          // Get all models
-getGeminiModel(id: string): ModelConfig   // Get specific model
-supportsThinkingBudget(id, budget): boolean   // Check thinking support
-isMultimodalModel(id): boolean            // Check vision support
-```
+- Main provider class extending GeminiClient
+- Orchestrates other modules
+- Implements chat and streaming methods
 
-**Stream Processing**:
+#### `GeminiClient.ts`
 
-```typescript
-convertGeminiToStreamChunk(response): StreamChunk  // Convert to unified format
-processStreamChunk(chunk, config): StreamChunk     // Apply showThoughts filter
-```
+- Extends BaseProvider
+- Manages model configurations
+- Handles provider initialization
+- Provides model selection utilities
+
+#### `types.ts`
+
+- Gemini-specific TypeScript types
+- Request/response interfaces
+- Configuration types
+- Finish reason mappings
+
+#### `requestBuilder.ts`
+
+- Builds Gemini API requests
+- Converts messages to Gemini format
+- Configures generation settings
+- Handles multimodal content
+- Enables Google Search grounding
+
+#### `responseParser.ts`
+
+- Parses API responses
+- Extracts content and thinking
+- Normalizes finish reasons
+- Converts usage statistics
+- Processes stream chunks
+
+#### `streamProcessor.ts`
+
+- Handles partial JSON parsing
+- Accumulates incomplete chunks
+- Extracts complete JSON objects
+- Manages buffer state
+
+#### `errorHandler.ts`
+
+- Formats Gemini errors to provider format
+- Categorizes error types
+- Extracts error details
+- Provides error wrapping utilities
+
+#### `searchMetadata.ts`
+
+- Formats grounding metadata
+- Extracts search sources
+- Creates search result structures
+
+### Web Search Integration
+
+The provider includes automatic web search functionality:
+
+- Google Search grounding is always enabled via `tools: [{ google_search: {} }]`
+- Search results are extracted from grounding metadata
+- Sources include titles, URLs, and snippets
+- Search metadata is included in both streaming and non-streaming responses
 
 ## Usage Examples
 
@@ -229,13 +288,60 @@ const visionModel = geminiClient.getModel('gemini-pro-1.5');
 - Parameter validation
 - Model selection and recommendations
 
-## Acceptance Criteria ✅
+## Development
 
-- [x] **gemini-2.5-flash-lite model configured** - Available with full thinking support
-- [x] **Model-specific thinking budget support** - All models support '0' (off) and '-1' (dynamic) budgets
-- [x] **Context limits defined** - Each model has appropriate context window limits
-- [x] **Thought visibility configuration** - `showThoughts` controls thinking token display
-- [x] **Support matrix documented** - Comprehensive capability and thinking mode matrix
-- [x] **Test coverage** - All requirements validated with comprehensive test suite
+### Adding New Features
 
-The Gemini model configuration is now complete with full thinking mode capabilities, optimized for various use cases from cost-effective basic tasks to high-capacity reasoning workloads.
+1. Identify the appropriate module for the feature
+2. Add types to `types.ts` if needed
+3. Implement logic in the relevant module
+4. Update `GeminiProvider.ts` to use the new functionality
+5. Add tests for the new feature
+
+### Testing
+
+The modular structure enables easy unit testing:
+
+```typescript
+// Test individual modules
+import { buildRequest } from './requestBuilder';
+import { parseResponse } from './responseParser';
+import { GeminiStreamProcessor } from './streamProcessor';
+
+// Test request building
+const request = buildRequest(messages, geminiConfig);
+
+// Test response parsing
+const response = parseResponse(apiResponse, 'gemini-2.5-pro', 'gemini');
+
+// Test stream processing
+const processor = new GeminiStreamProcessor();
+const objects = processor.processChunk(chunk);
+```
+
+### Error Handling
+
+All errors are processed through the error handler module:
+
+```typescript
+import { handleErrorResponse, withErrorHandling } from './errorHandler';
+
+// Wrap async operations
+const result = await withErrorHandling(async () => {
+  return await apiCall();
+});
+
+// Handle HTTP errors
+if (!response.ok) {
+  await handleErrorResponse(response);
+}
+```
+
+## Compatibility
+
+This implementation maintains compatibility with:
+
+- OpenAI's reasoning summaries feature
+- The unified provider interface for all AI providers
+- Multimodal content handling
+- Web search functionality across providers

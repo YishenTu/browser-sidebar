@@ -151,12 +151,6 @@ export abstract class BaseProvider implements AIProvider {
   // ============================================================================
 
   /**
-   * Estimate token count for text
-   * Must be implemented by concrete providers
-   */
-  abstract estimateTokens(text: string): number;
-
-  /**
    * Format error into provider error structure
    * Must be implemented by concrete providers
    */
