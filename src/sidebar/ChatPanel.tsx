@@ -11,7 +11,6 @@ import { useDragPosition } from '@hooks/useDragPosition';
 import { useResize } from '@hooks/useResize';
 import { unmountSidebar } from './index';
 import { useSettingsStore } from '@store/settings';
-import { ThemeProvider } from '@contexts/ThemeContext';
 import { ErrorProvider, useError, getErrorSource } from '@contexts/ErrorContext';
 import { ErrorBanner } from '@components/ErrorBanner';
 import { useChatStore } from '@store/chat';
@@ -156,8 +155,7 @@ const ChatPanelInner: React.FC<ChatPanelProps> = ({ className, onClose }) => {
     return () => clearTimeout(timeout);
   }, [loadSettings]);
 
-  // Theme is now handled by ThemeContext, no need to apply it here
-  // This prevents duplicate theme application and potential flickering
+  // Dark theme is applied by default via CSS variables
 
   // Chat store and AI chat integration
   const { messages, isLoading, clearConversation, hasMessages } = useChatStore();
@@ -388,27 +386,25 @@ const ChatPanelInner: React.FC<ChatPanelProps> = ({ className, onClose }) => {
         {/* Centralized Error Banner */}
         <ErrorBanner />
 
-        <ThemeProvider>
-          {showSettings ? (
-            <div className="ai-sidebar-settings-panel">
-              <Settings />
-            </div>
-          ) : (
-            <Body
-              messages={messages}
-              isLoading={isLoading}
-              emptyMessage=""
-              height="calc(100% - 60px - 70px)"
-            />
-          )}
-
-          <Footer
-            onSend={handleSendMessage}
-            onCancel={cancelMessage}
-            loading={isLoading}
-            placeholder="Ask about this webpage..."
+        {showSettings ? (
+          <div className="ai-sidebar-settings-panel">
+            <Settings />
+          </div>
+        ) : (
+          <Body
+            messages={messages}
+            isLoading={isLoading}
+            emptyMessage=""
+            height="calc(100% - 60px - 70px)"
           />
-        </ThemeProvider>
+        )}
+
+        <Footer
+          onSend={handleSendMessage}
+          onCancel={cancelMessage}
+          loading={isLoading}
+          placeholder="Ask about this webpage..."
+        />
       </div>
 
       {/* Resize handles placed AFTER the container so they are not covered */}
@@ -428,7 +424,6 @@ const ChatPanelInner: React.FC<ChatPanelProps> = ({ className, onClose }) => {
  * - Draggable positioning by header
  * - 85% viewport height, vertically centered
  * - Shadow DOM isolation
- * - Theme support
  * - Keyboard accessibility (Escape to close)
  * - Chat functionality with message history and AI responses
  * - Centralized error management

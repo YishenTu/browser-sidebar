@@ -1,6 +1,6 @@
 import React from 'react';
 
-export interface SpinnerProps {
+export interface SpinnerProps extends React.HTMLAttributes<HTMLDivElement> {
   /**
    * Size of the spinner
    * @default "md"
@@ -23,11 +23,6 @@ export interface SpinnerProps {
    * Additional CSS classes to apply
    */
   className?: string;
-
-  /**
-   * Additional props to pass to the container element
-   */
-  [key: string]: unknown;
 }
 
 /**

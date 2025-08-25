@@ -4,6 +4,7 @@ import { ChatMessage, MessageRole, MessageStatus } from '@store/chat';
 import { MarkdownRenderer } from './MarkdownRenderer';
 import { ThinkingWrapper } from './ThinkingWrapper';
 import { SearchSources } from './SearchSources';
+import { Spinner } from './ui/Spinner';
 
 /**
  * MessageBubble Props Interface
@@ -92,6 +93,23 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
     }
   };
 
+  // Determine what content to show
+  const messageContent: React.ReactNode = (() => {
+    if (
+      message.role === 'assistant' &&
+      message.status === 'streaming' &&
+      !message.content &&
+      !message.metadata?.['thinking']
+    ) {
+      return (
+        <div className="message-spinner">
+          <Spinner size="md" aria-label="AI is thinking..." />
+        </div>
+      );
+    }
+    return <MarkdownRenderer content={message.content || ''} />;
+  })();
+
   return (
     <div
       className={cn('message-row', `message-row--${message.role}`, className)}
@@ -105,7 +123,7 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
         message.metadata?.['thinking'] &&
         typeof message.metadata['thinking'] === 'string' ? (
           <ThinkingWrapper
-            thinking={message.metadata['thinking']}
+            thinking={message.metadata['thinking'] as string}
             isStreaming={message.metadata?.['thinkingStreaming'] as boolean}
             initialCollapsed={false}
             className=""
@@ -113,44 +131,17 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
         ) : null}
 
         <div className={cn(getMessageClasses(message.role))}>
-          <div data-testid="message-content">
-            {/* Show spinner for assistant messages that are streaming but have no content or thinking yet */}
-            {message.role === 'assistant' &&
-            message.status === 'streaming' &&
-            !message.content &&
-            !message.metadata?.['thinking'] ? (
-              <div className="message-spinner">
-                <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <circle
-                    cx="12"
-                    cy="12"
-                    r="10"
-                    stroke="#3B82F6"
-                    strokeWidth="2"
-                    strokeOpacity="0.25"
-                  />
-                  <path
-                    d="M12 2a10 10 0 0 1 10 10"
-                    stroke="#3B82F6"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                  />
-                </svg>
-              </div>
-            ) : (
-              <MarkdownRenderer content={message.content} />
-            )}
-          </div>
+          <div data-testid="message-content">{messageContent}</div>
         </div>
 
         {/* Search results display for assistant messages */}
-        {message.role === 'assistant' && message.metadata?.['searchResults'] && (
+        {message.role === 'assistant' && message.metadata?.['searchResults'] ? (
           <div className="message-search-metadata">
-            {(message.metadata['searchResults'] as any).sources && (
+            {(message.metadata['searchResults'] as any)?.sources ? (
               <SearchSources sources={(message.metadata['searchResults'] as any).sources} />
-            )}
+            ) : null}
           </div>
-        )}
+        ) : null}
 
         {/* Timestamp and model name (for assistant) - same row under bubble */}
         {showTimestamp &&

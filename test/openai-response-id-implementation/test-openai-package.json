@@ -1,0 +1,12 @@
+{
+  "name": "openai-response-test",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "test": "node test-openai-response.js"
+  },
+  "dependencies": {
+    "openai": "^4.76.4",
+    "dotenv": "^16.4.7"
+  }
+}

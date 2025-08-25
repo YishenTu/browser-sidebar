@@ -9,7 +9,6 @@ import { create } from 'zustand';
 import type {
   Settings,
   SettingsState,
-  Theme,
   UIPreferences,
   AISettings,
   PrivacySettings,
@@ -44,7 +43,6 @@ const DEFAULT_AVAILABLE_MODELS: Model[] = SUPPORTED_MODELS.map(model => ({
  */
 const DEFAULT_SETTINGS: Settings = {
   version: SETTINGS_VERSION,
-  theme: 'auto',
   ui: {
     fontSize: 'medium',
     compactMode: false,
@@ -67,13 +65,6 @@ const DEFAULT_SETTINGS: Settings = {
   },
   selectedModel: DEFAULT_MODEL_ID,
   availableModels: [...DEFAULT_AVAILABLE_MODELS],
-};
-
-/**
- * Validate theme value
- */
-const isValidTheme = (theme: unknown): theme is Theme => {
-  return typeof theme === 'string' && ['light', 'dark', 'auto'].includes(theme as string);
 };
 
 /**
@@ -259,7 +250,6 @@ const migrateSettings = (rawSettings: unknown): Settings => {
 
     return {
       version: SETTINGS_VERSION,
-      theme: isValidTheme(rs.theme) ? (rs.theme as Theme) : DEFAULT_SETTINGS.theme,
       ui: validateUIPreferences(rs.ui),
       ai: validateAISettings(rs.ai),
       privacy: validatePrivacySettings(rs.privacy),
@@ -274,7 +264,6 @@ const migrateSettings = (rawSettings: unknown): Settings => {
     const legacySettings = rawSettings as LegacySettings;
     return {
       version: SETTINGS_VERSION,
-      theme: isValidTheme(legacySettings.theme) ? legacySettings.theme : DEFAULT_SETTINGS.theme,
       ui: {
         fontSize: isValidFontSize(legacySettings.fontSize)
           ? legacySettings.fontSize
@@ -380,7 +369,6 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
       const { settings, migrated } = await loadFromStorage();
       const currentSettings = get().settings;
       // Mutate in place so existing references (in tests) observe updated values
-      currentSettings.theme = settings.theme;
       currentSettings.ui = settings.ui;
       currentSettings.ai = settings.ai;
       currentSettings.privacy = settings.privacy;
@@ -408,19 +396,6 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
     } catch (_error) {
       const errorMessage = 'Failed to load settings';
       set({ isLoading: false, error: errorMessage, settings: { ...DEFAULT_SETTINGS } });
-    }
-  },
-
-  updateTheme: async (theme: Theme) => {
-    set({ isLoading: true, error: null });
-    try {
-      const currentSettings = get().settings;
-      currentSettings.theme = theme;
-      await saveToStorage(currentSettings);
-      set({ isLoading: false });
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Failed to save settings';
-      set({ isLoading: false, error: errorMessage });
     }
   },
 

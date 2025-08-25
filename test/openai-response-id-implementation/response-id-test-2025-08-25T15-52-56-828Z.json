@@ -1,0 +1,84 @@
+{
+  "timestamp": "2025-08-25T15:52:56.830Z",
+  "results": [
+    {
+      "test": "Initial request",
+      "request": {
+        "model": "gpt-5-mini",
+        "instructions": "\n你是一个严谨、简洁的中文助理。输出结构：先结论，再依据，最后给不确定性与下一步建议。\n遵循：必要时给出公式/代码；不要使用表情；引用外部信息时给出来源。\n",
+        "input": [
+          {
+            "role": "user",
+            "content": "什么是深度学习？用3句话解释。"
+          }
+        ],
+        "reasoning": {
+          "effort": "low",
+          "summary": "auto"
+        },
+        "tools": [
+          {
+            "type": "web_search"
+          }
+        ],
+        "store": true
+      },
+      "responseId": "resp_68ac86b83ec481918c6a02575327cf040b8eb1dae1541f23",
+      "success": true
+    },
+    {
+      "test": "Follow-up with previous_response_id",
+      "request": {
+        "model": "gpt-5-mini",
+        "previous_response_id": "resp_68ac86b83ec481918c6a02575327cf040b8eb1dae1541f23",
+        "instructions": "\n你是一个严谨、简洁的中文助理。输出结构：先结论，再依据，最后给不确定性与下一步建议。\n遵循：必要时给出公式/代码；不要使用表情；引用外部信息时给出来源。\n",
+        "input": [
+          {
+            "role": "user",
+            "content": "更简洁地用1句话概括"
+          }
+        ],
+        "reasoning": {
+          "effort": "low",
+          "summary": "auto"
+        },
+        "tools": [
+          {
+            "type": "web_search"
+          }
+        ],
+        "store": true
+      },
+      "previousResponseId": "resp_68ac86b83ec481918c6a02575327cf040b8eb1dae1541f23",
+      "newResponseId": "resp_68ac86c7778c81918bbe6c8e5bf1526e0b8eb1dae1541f23",
+      "success": true
+    },
+    {
+      "test": "Second follow-up",
+      "request": {
+        "model": "gpt-5-mini",
+        "previous_response_id": "resp_68ac86c7778c81918bbe6c8e5bf1526e0b8eb1dae1541f23",
+        "instructions": "\n你是一个严谨、简洁的中文助理。输出结构：先结论，再依据，最后给不确定性与下一步建议。\n遵循：必要时给出公式/代码；不要使用表情；引用外部信息时给出来源。\n",
+        "input": [
+          {
+            "role": "user",
+            "content": "这和机器学习有什么区别？"
+          }
+        ],
+        "reasoning": {
+          "effort": "low",
+          "summary": "auto"
+        },
+        "tools": [
+          {
+            "type": "web_search"
+          }
+        ],
+        "store": true
+      },
+      "previousResponseId": "resp_68ac86c7778c81918bbe6c8e5bf1526e0b8eb1dae1541f23",
+      "newResponseId": "resp_68ac86d0be088191b00ab7d41fa2b61f0b8eb1dae1541f23",
+      "success": true
+    }
+  ]
+}

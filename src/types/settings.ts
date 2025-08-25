@@ -6,11 +6,6 @@
  */
 
 /**
- * Theme preferences for the application
- */
-export type Theme = 'light' | 'dark' | 'auto';
-
-/**
  * Font size options for the UI
  */
 export type FontSize = 'small' | 'medium' | 'large';
@@ -88,8 +83,6 @@ export interface APIKeyReferences {
 export interface Settings {
   /** Settings schema version for migrations */
   version: number;
-  /** Application theme */
-  theme: Theme;
   /** UI preferences */
   ui: UIPreferences;
   /** AI model settings */
@@ -118,8 +111,6 @@ export interface SettingsState {
   // Actions
   /** Load settings from chrome storage */
   loadSettings: () => Promise<void>;
-  /** Update theme setting */
-  updateTheme: (theme: Theme) => Promise<void>;
   /** Update UI preferences */
   updateUIPreferences: (preferences: UIPreferences) => Promise<void>;
   /** Update AI settings */
@@ -146,7 +137,6 @@ export interface SettingsState {
  * Legacy settings format for migration (v0)
  */
 export interface LegacySettings {
-  theme?: string;
   fontSize?: string;
   compactMode?: boolean;
   temperature?: number;
