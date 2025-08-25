@@ -13,7 +13,6 @@
  * - streamChat()
  * - getModels()
  * - getModel()
- * - estimateTokens()
  * - formatError()
  */
 

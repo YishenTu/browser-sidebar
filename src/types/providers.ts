@@ -263,7 +263,6 @@ export interface ProviderCapabilities {
   supportedModels: string[];
 }
 
-
 /**
  * Provider metadata
  */
@@ -302,7 +301,6 @@ export interface AIProvider {
   getModel(id: string): ModelConfig | undefined;
 
   // Utility methods
-  estimateTokens(text: string): number;
   formatError(error: any): ProviderError;
 }
 

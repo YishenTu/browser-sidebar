@@ -191,7 +191,8 @@ export class ProviderFactory {
       config,
     };
     const provider = await this.createProvider(providerConfig);
-    return provider as OpenAIProvider;
+    // We know this is an OpenAIProvider because we passed type: 'openai'
+    return provider as unknown as OpenAIProvider;
   }
 
   /**
@@ -205,7 +206,8 @@ export class ProviderFactory {
       config,
     };
     const provider = await this.createProvider(providerConfig);
-    return provider as GeminiProvider;
+    // We know this is a GeminiProvider because we passed type: 'gemini'
+    return provider as unknown as GeminiProvider;
   }
 
   // ============================================================================

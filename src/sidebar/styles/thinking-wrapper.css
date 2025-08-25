@@ -79,6 +79,7 @@
   border-left: 1px solid #6b7280;
   padding-left: 1rem;
   margin-left: 0.5rem;
+  margin-right: 16px; /* Match the right margin of message bubbles */
   animation: expandContent 0.15s ease-out;
   margin-top: 0.25rem;
   margin-bottom: 0.25rem; /* Add bottom margin to create gap with message */

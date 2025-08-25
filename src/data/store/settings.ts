@@ -461,7 +461,6 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
     try {
       const defaultSettings = { ...DEFAULT_SETTINGS };
       const currentSettings = get().settings;
-      currentSettings.theme = defaultSettings.theme;
       currentSettings.ui = defaultSettings.ui;
       currentSettings.ai = defaultSettings.ai;
       currentSettings.privacy = defaultSettings.privacy;

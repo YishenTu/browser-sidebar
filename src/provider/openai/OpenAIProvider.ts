@@ -23,7 +23,7 @@ import {
   withErrorHandling,
   withErrorHandlingGenerator,
 } from './errorHandler';
-import { createFallbackSearchMetadata } from './searchMetadata';
+import { handleStreamSearchMetadata } from './searchMetadata';
 import {
   getModelsByProvider,
   getModelById,
@@ -264,35 +264,18 @@ export class OpenAIProvider extends BaseProvider {
               yield chunk;
             }
 
-            // Check for search metadata events
+            // Handle search metadata using centralized logic
             const searchMetadata = extractSearchMetadataFromEvent(event);
+            const updatedMetadata = handleStreamSearchMetadata(
+              event,
+              searchMetadata,
+              processor.getSearchMetadata(),
+              messages
+            );
 
-            // Handle web search events
-            if (
-              event.type === 'response.output_item.done' &&
-              event.item?.type === 'web_search_call'
-            ) {
-              // This is a web search event
-              if (searchMetadata) {
-                // We have metadata with a query
-                if (!processor.getSearchMetadata()) {
-                  processor.setSearchMetadata(searchMetadata);
-                }
-              } else {
-                // Web search was performed but no query in the event
-                // Create fallback using the user's messages
-                if (!processor.getSearchMetadata()) {
-                  const fallbackMetadata = createFallbackSearchMetadata(undefined, messages);
-                  if (fallbackMetadata) {
-                    processor.setSearchMetadata(fallbackMetadata);
-                  }
-                }
-              }
-            } else if (searchMetadata) {
-              // Other types of search metadata (e.g., citations)
-              if (!processor.getSearchMetadata()) {
-                processor.setSearchMetadata(searchMetadata);
-              }
+            // Update processor if metadata changed
+            if (updatedMetadata && updatedMetadata !== processor.getSearchMetadata()) {
+              processor.setSearchMetadata(updatedMetadata);
             }
           } catch (parseError) {
             console.warn('Error parsing stream chunk:', parseError);

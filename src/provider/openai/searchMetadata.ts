@@ -96,3 +96,35 @@ export function mergeSearchMetadata(...metadataArrays: any[]): any {
     sources: allSources,
   };
 }
+
+/**
+ * Handle search metadata for streaming events
+ * Centralizes the logic for processing search metadata from OpenAI stream events
+ */
+export function handleStreamSearchMetadata(
+  event: any,
+  extractedMetadata: any,
+  currentMetadata: any,
+  messages?: ProviderChatMessage[]
+): any {
+  // Handle web search events
+  if (event.type === 'response.output_item.done' && event.item?.type === 'web_search_call') {
+    // This is a web search event
+    if (extractedMetadata) {
+      // We have metadata with a query
+      return currentMetadata || extractedMetadata;
+    } else {
+      // Web search was performed but no query in the event
+      // Create fallback using the user's messages
+      if (!currentMetadata) {
+        return createFallbackSearchMetadata(undefined, messages);
+      }
+      return currentMetadata;
+    }
+  } else if (extractedMetadata) {
+    // Other types of search metadata (e.g., citations)
+    return currentMetadata || extractedMetadata;
+  }
+
+  return currentMetadata;
+}

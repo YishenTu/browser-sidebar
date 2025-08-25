@@ -10,7 +10,7 @@ export interface ModelConfig {
   // OpenAI specific
   reasoningEffort?: 'minimal' | 'low' | 'medium' | 'high';
   // Gemini specific - '0' for off, '-1' for dynamic
-  thinkingBudget?: '0' | '-1' | '<thinkingbudget>';
+  thinkingBudget?: '0' | '-1';
 }
 
 export const SUPPORTED_MODELS: ModelConfig[] = [
