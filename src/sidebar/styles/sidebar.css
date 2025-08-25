@@ -18,4 +18,14 @@
 @import './katex-math.css'; /* Mathematical equation rendering */
 @import './thinking-wrapper.css'; /* Thinking/reasoning display wrapper */
 
+/* Spinner animation keyframes */
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 /* Any global overrides or additional styles can be added below if needed */

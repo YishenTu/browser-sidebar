@@ -122,3 +122,71 @@
 /* Removed .message-list scrollbar styling (unused) */
 
 /* Removed responsive/animation blocks for unused .chat-panel* selectors */
+
+/* Message content container styles */
+.message-content-wrapper {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+}
+
+.message-content-wrapper--user {
+  align-items: flex-end;
+}
+
+.message-content-wrapper--assistant {
+  align-items: flex-start;
+}
+
+.message-content-wrapper--system {
+  align-items: center;
+}
+
+/* Timestamp container styles */
+.message-timestamp-container {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.message-timestamp-container--assistant {
+  margin-left: 16px;
+  padding-left: 8px;
+}
+
+.message-timestamp-container--user {
+  margin-right: 16px;
+  padding-right: 12px;
+}
+
+/* Timestamp and model name styles */
+.message-model-name {
+  font-size: 10px;
+  color: #6b7280;
+  font-weight: 500;
+}
+
+.message-timestamp {
+  font-size: 10px;
+  color: #6b7280;
+}
+
+/* Status indicator */
+.message-status {
+  margin-top: 4px;
+  font-size: 12px;
+}
+
+/* Spinner for loading state */
+.message-spinner {
+  display: inline-block;
+  width: 18px;
+  height: 18px;
+  animation: spin 1s linear infinite;
+}
+
+.message-spinner svg {
+  width: 18px;
+  height: 18px;
+}

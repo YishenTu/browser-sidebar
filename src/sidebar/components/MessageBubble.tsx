@@ -98,19 +98,7 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
       aria-label={getAriaLabel(message.role)}
       {...props}
     >
-      <div
-        style={{
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems:
-            message.role === 'user'
-              ? 'flex-end'
-              : message.role === 'assistant'
-                ? 'flex-start'
-                : 'center',
-          width: '100%',
-        }}
-      >
+      <div className={cn('message-content-wrapper', `message-content-wrapper--${message.role}`)}>
         {/* Display thinking wrapper for assistant messages with thinking content */}
         {message.role === 'assistant' &&
         message.metadata?.['thinking'] &&
@@ -125,7 +113,32 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
 
         <div className={cn(getMessageClasses(message.role))}>
           <div data-testid="message-content">
-            <MarkdownRenderer content={message.content} />
+            {/* Show spinner for assistant messages that are streaming but have no content or thinking yet */}
+            {message.role === 'assistant' &&
+            message.status === 'streaming' &&
+            !message.content &&
+            !message.metadata?.['thinking'] ? (
+              <div className="message-spinner">
+                <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <circle
+                    cx="12"
+                    cy="12"
+                    r="10"
+                    stroke="#3B82F6"
+                    strokeWidth="2"
+                    strokeOpacity="0.25"
+                  />
+                  <path
+                    d="M12 2a10 10 0 0 1 10 10"
+                    stroke="#3B82F6"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                  />
+                </svg>
+              </div>
+            ) : (
+              <MarkdownRenderer content={message.content} />
+            )}
           </div>
         </div>
 
@@ -135,38 +148,20 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
             message.status === 'sent' ||
             message.status === 'received') && (
             <div
-              style={{
-                display: 'flex',
-                alignItems: 'baseline',
-                gap: '6px',
-                marginTop: '4px',
-                // Align with bubble edges
-                marginLeft: message.role === 'assistant' ? '16px' : '0', // Match AI's 16px margin
-                marginRight: message.role === 'user' ? '16px' : '0',
-                paddingLeft: message.role === 'assistant' ? '8px' : '0', // Match bubble's left padding
-                paddingRight: message.role === 'user' ? '12px' : '0', // Match user bubble's 12px horizontal padding
-              }}
+              className={cn(
+                'message-timestamp-container',
+                `message-timestamp-container--${message.role}`
+              )}
             >
               {message.role === 'assistant' && (
-                <span
-                  style={{
-                    fontSize: '10px',
-                    color: '#6b7280',
-                    fontWeight: 500,
-                  }}
-                  aria-label="model-name"
-                >
+                <span className="message-model-name" aria-label="model-name">
                   {(message.metadata?.['model'] as string) || 'AI Assistant'}
                 </span>
               )}
               <time
                 data-testid="message-timestamp"
                 dateTime={message.timestamp.toISOString()}
-                className="text-xs text-gray-500"
-                style={{
-                  fontSize: '10px',
-                  color: '#6b7280',
-                }}
+                className="message-timestamp"
               >
                 {formatTimestamp(message.timestamp)}
               </time>
@@ -175,9 +170,7 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
 
         {/* Status indicator */}
         {message.status !== 'sent' && (
-          <div className="mt-1" style={{ fontSize: '12px' }}>
-            {getStatusIndicator(message.status)}
-          </div>
+          <div className="message-status">{getStatusIndicator(message.status)}</div>
         )}
       </div>
     </div>

@@ -46,6 +46,7 @@ export const Spinner: React.FC<SpinnerProps> = ({
   'aria-label': ariaLabel = 'Loading',
   label,
   className = '',
+  style,
   ...rest
 }) => {
   // Size mappings for consistent sizing
@@ -57,9 +58,16 @@ export const Spinner: React.FC<SpinnerProps> = ({
   };
 
   return (
-    <div role="status" aria-label={ariaLabel} className={`inline-block ${className}`} {...rest}>
+    <div
+      role="status"
+      aria-label={ariaLabel}
+      className={`inline-block ${className}`}
+      style={style}
+      {...rest}
+    >
       <svg
         className={`animate-spin ${sizeClasses[size]}`}
+        style={style ? { width: '100%', height: '100%' } : undefined}
         viewBox="0 0 24 24"
         fill="none"
         xmlns="http://www.w3.org/2000/svg"
