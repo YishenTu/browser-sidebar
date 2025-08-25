@@ -28,6 +28,12 @@ export const SUPPORTED_MODELS: ModelConfig[] = [
   },
   // Append more models as needed
   {
+    id: 'gemini-2.5-flash',
+    name: 'Gemini 2.5 Flash',
+    provider: 'gemini',
+    thinkingBudget: '-1',
+  },
+  {
     id: 'gemini-2.5-pro',
     name: 'Gemini 2.5 Pro',
     provider: 'gemini',
@@ -57,7 +63,6 @@ export function getProviderTypeForModelId(modelId: string): 'openai' | 'gemini' 
   const model = getModelById(modelId);
   return model?.provider;
 }
-
 
 /**
  * Check if a model supports reasoning (OpenAI feature)

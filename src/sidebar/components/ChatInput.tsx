@@ -157,6 +157,9 @@ export const ChatInput = React.forwardRef<HTMLTextAreaElement, ChatInputProps>(
     // Handle keyboard shortcuts
     const handleKeyDown = useCallback(
       (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
+        // Always stop propagation to prevent webpage shortcuts from being triggered
+        event.stopPropagation();
+
         if (loading || isSending) {
           if (event.key === 'Enter' && !event.shiftKey && !event.ctrlKey && !event.metaKey) {
             event.preventDefault();
@@ -190,6 +193,15 @@ export const ChatInput = React.forwardRef<HTMLTextAreaElement, ChatInputProps>(
       },
       [handleSend, loading, isSending, currentValue, handleValueChange]
     );
+
+    // Stop all keyboard event propagation when the input is focused
+    const handleKeyUp = useCallback((event: React.KeyboardEvent<HTMLTextAreaElement>) => {
+      event.stopPropagation();
+    }, []);
+
+    const handleKeyPress = useCallback((event: React.KeyboardEvent<HTMLTextAreaElement>) => {
+      event.stopPropagation();
+    }, []);
 
     // Calculate character count and status
     const charCount = currentValue.length;
@@ -248,6 +260,8 @@ export const ChatInput = React.forwardRef<HTMLTextAreaElement, ChatInputProps>(
               value={currentValue}
               onChange={handleTextAreaChange}
               onKeyDown={handleKeyDown}
+              onKeyUp={handleKeyUp}
+              onKeyPress={handleKeyPress}
               placeholder={placeholder}
               disabled={isDisabled}
               aria-label={ariaLabel}
