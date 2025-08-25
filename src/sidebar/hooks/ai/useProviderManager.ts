@@ -125,13 +125,17 @@ export function useProviderManager(enabled = true): UseProviderManagerReturn {
         const geminiModel =
           selectedModel?.provider === 'gemini' ? selectedModel : defaultGeminiModel;
         if (geminiModel) {
+          const thinkingBudget = geminiModel.thinkingBudget || '0';
+          // Automatically enable showThoughts when thinking budget is non-zero
+          const showThoughts = thinkingBudget !== '0';
+
           providerConfigs.push({
             type: 'gemini',
             config: {
               apiKey: apiKeys.google,
               model: geminiModel.id,
-              thinkingBudget: geminiModel.thinkingBudget || '0',
-              showThoughts: false,
+              thinkingBudget,
+              showThoughts,
             },
           });
         }

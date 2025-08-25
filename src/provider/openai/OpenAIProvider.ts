@@ -158,9 +158,13 @@ export class OpenAIProvider extends BaseProvider {
           input,
         };
 
-        // Add reasoning effort for supported models (Responses API schema)
-        if (currentConfig.reasoningEffort && supportsReasoning(currentConfig.model)) {
-          requestParams.reasoning = { effort: currentConfig.reasoningEffort };
+        // Add reasoning params for supported models (Responses API schema)
+        if (supportsReasoning(currentConfig.model)) {
+          // Always request a summary; effort is user-configurable
+          requestParams.reasoning = {
+            ...(currentConfig.reasoningEffort ? { effort: currentConfig.reasoningEffort } : {}),
+            summary: 'auto',
+          };
         }
 
         // Log the ACTUAL API request parameters
@@ -214,9 +218,12 @@ export class OpenAIProvider extends BaseProvider {
           stream: true,
         };
 
-        // Add reasoning effort for supported models
-        if (currentConfig.reasoningEffort && supportsReasoning(currentConfig.model)) {
-          requestParams.reasoning = { effort: currentConfig.reasoningEffort };
+        // Add reasoning params for supported models
+        if (supportsReasoning(currentConfig.model)) {
+          requestParams.reasoning = {
+            ...(currentConfig.reasoningEffort ? { effort: currentConfig.reasoningEffort } : {}),
+            summary: 'auto',
+          };
         }
 
         try {
@@ -238,36 +245,97 @@ export class OpenAIProvider extends BaseProvider {
 
           // Track the last seen cumulative content to extract deltas
           let lastSeenContent = '';
+          // Track reasoning summary and whether it's emitted
+          let emittedReasoning = false;
+          let pendingReasoningSummary: string | undefined;
 
           for await (const event of asyncIterable as any) {
             try {
-              // Process streaming event
+              // Process streaming event based on OpenAI Response API event types
 
-              // Extract the actual delta content
+              // Handle reasoning summary delta events
+              if (event.type === 'response.reasoning_summary_text.delta' && event.delta) {
+                if (!pendingReasoningSummary) {
+                  pendingReasoningSummary = '';
+                }
+                pendingReasoningSummary += event.delta;
+                continue; // Accumulate reasoning, don't emit yet
+              }
+
+              // Handle reasoning summary completion
+              if (
+                event.type === 'response.reasoning_summary_text.done' ||
+                event.type === 'response.reasoning_summary_part.done'
+              ) {
+                if (!emittedReasoning && pendingReasoningSummary) {
+                  const thinkingChunk: StreamChunk = {
+                    id: `resp-chunk-${Date.now()}-thinking`,
+                    object: 'response.chunk',
+                    created: Math.floor(Date.now() / 1000),
+                    model: provider.getConfig()?.config?.model || 'unknown',
+                    choices: [
+                      {
+                        index: 0,
+                        delta: { thinking: pendingReasoningSummary },
+                        finishReason: null,
+                      },
+                    ],
+                  };
+                  emittedReasoning = true;
+                  yield thinkingChunk;
+                }
+                continue;
+              }
+
+              // Extract the actual delta content for message text
               let deltaContent: string | undefined;
 
-              // Check if this event contains cumulative content (Responses API pattern)
-              if (event.output_text !== undefined && typeof event.output_text === 'string') {
+              // Handle output text delta events (the actual message content)
+              if (event.type === 'response.output_text.delta' && event.delta) {
+                deltaContent = event.delta;
+              }
+              // Legacy patterns for backward compatibility
+              else if (event.output_text !== undefined && typeof event.output_text === 'string') {
                 const currentFullText = event.output_text;
-
                 // Extract only the new portion
                 if (currentFullText.length > lastSeenContent.length) {
                   deltaContent = currentFullText.substring(lastSeenContent.length);
                   lastSeenContent = currentFullText;
-                  // Delta extraction successful
                 }
+              } else if (event.delta && typeof event.delta === 'string') {
+                deltaContent = event.delta;
               }
-              // Otherwise check for incremental delta
-              else if (event.delta) {
-                if (typeof event.delta === 'object' && event.delta.output_text !== undefined) {
-                  deltaContent = event.delta.output_text;
-                } else if (typeof event.delta === 'string') {
-                  deltaContent = event.delta;
+
+              // Check for standalone reasoning events (in case API sends them separately)
+              if (
+                !emittedReasoning &&
+                (event.type === 'reasoning' || event.item_type === 'reasoning')
+              ) {
+                const summary = provider.extractReasoningSummary(event);
+                if (summary && summary.trim().length > 0) {
+                  const thinkingChunk: StreamChunk = {
+                    id: event.id || event.response_id || `resp-chunk-${Date.now()}-thinking`,
+                    object: 'response.chunk',
+                    created: event.created || Math.floor(Date.now() / 1000),
+                    model: event.model || provider.getConfig()?.config?.model || 'unknown',
+                    choices: [
+                      {
+                        index: 0,
+                        delta: { thinking: summary },
+                        finishReason: null,
+                      },
+                    ],
+                    usage: event.usage ? provider.convertUsage(event.usage) : undefined,
+                  };
+                  emittedReasoning = true;
+                  yield thinkingChunk;
+                  continue; // Skip to next event
                 }
               }
 
               // Create and yield the chunk if we have content
               if (deltaContent) {
+                // No need to strip reasoning from delta since we handle it separately
                 const finishReason = provider.normalizeFinishReason(
                   event.finish_reason || event.status || null
                 );
@@ -290,11 +358,16 @@ export class OpenAIProvider extends BaseProvider {
                 yield streamChunk;
               }
               // Handle finish events without content
-              else if (event.finish_reason || event.status === 'completed') {
+              else if (
+                event.type === 'response.completed' ||
+                event.finish_reason ||
+                event.status === 'completed'
+              ) {
                 const finishReason = provider.normalizeFinishReason(
                   event.finish_reason || event.status || null
                 );
 
+                // Emit final chunk to signal completion
                 const streamChunk: StreamChunk = {
                   id: event.id || event.response_id || `resp-chunk-${Date.now()}`,
                   object: 'response.chunk',
@@ -440,14 +513,31 @@ export class OpenAIProvider extends BaseProvider {
    * Convert OpenAI API response to provider format
    */
   private convertResponsesToProviderFormat(response: any): ProviderResponse {
-    // Try Responses API fields first
-    const content = response.output_text ?? response.content?.[0]?.text ?? '';
+    // Prefer reconstructing content from structured outputs to avoid mixing reasoning summary
+    let content = '';
+    const outputs = response?.output || response?.outputs || response?.response?.output;
+    if (Array.isArray(outputs)) {
+      const messageItem = outputs.find((o: any) => (o?.type || o?.item_type) === 'message');
+      if (messageItem && Array.isArray(messageItem.content)) {
+        const textParts = messageItem.content
+          .map((c: any) => (c?.type === 'output_text' ? c?.text : ''))
+          .filter(Boolean);
+        if (textParts.length) {
+          content = textParts.join('');
+        }
+      }
+    }
+    if (!content) {
+      // Fallback to SDK convenience field if structured parse failed
+      content = response.output_text ?? response.content?.[0]?.text ?? '';
+    }
     const finishReason = this.normalizeFinishReason(
       response.finish_reason || response.status || null
     );
     const usage = this.convertUsage(response.usage);
     const model = response.model;
     const id = response.id || response.response_id || `resp-${Date.now()}`;
+    const thinking = this.extractReasoningSummary(response);
 
     return {
       id,
@@ -455,6 +545,7 @@ export class OpenAIProvider extends BaseProvider {
       model,
       usage,
       finishReason,
+      thinking,
       metadata: {
         provider: this.type,
         timestamp: new Date(),
@@ -462,6 +553,71 @@ export class OpenAIProvider extends BaseProvider {
         requestId: id,
       },
     };
+  }
+
+  /**
+   * Attempt to extract a reasoning summary string from various Responses API shapes
+   */
+  private extractReasoningSummary(payload: any): string | undefined {
+    try {
+      // Direct reasoning event (streaming format from Response API)
+      if (payload?.type === 'reasoning' && payload?.summary) {
+        if (Array.isArray(payload.summary)) {
+          const parts = payload.summary
+            .map((s: any) => {
+              // Handle { type: 'summary_text', text: '...' } format
+              if (s?.type === 'summary_text' && s?.text) {
+                return s.text;
+              }
+              // Handle plain text
+              return s?.text || s?.content || '';
+            })
+            .filter(Boolean);
+          if (parts.length) {
+            return parts.join('\n');
+          }
+        }
+      }
+
+      // Prefer explicit reasoning output item
+      const outputs = payload?.output || payload?.outputs || payload?.response?.output;
+      if (Array.isArray(outputs)) {
+        const reasoningItem = outputs.find((o: any) => (o?.type || o?.item_type) === 'reasoning');
+        if (reasoningItem) {
+          const summaryArr = reasoningItem.summary || reasoningItem?.data?.summary;
+          if (Array.isArray(summaryArr)) {
+            const parts = summaryArr
+              .map((s: any) => {
+                // Handle { type: 'summary_text', text: '...' } format
+                if (s?.type === 'summary_text' && s?.text) {
+                  return s.text;
+                }
+                return s?.text || s?.content || '';
+              })
+              .filter(Boolean);
+            if (parts.length) {
+              return parts.join('\n');
+            }
+          }
+        }
+      }
+
+      // Some SDKs may surface reasoning directly under payload.reasoning
+      const directSummary = payload?.reasoning?.summary;
+      if (Array.isArray(directSummary)) {
+        const parts = directSummary.map((s: any) => s?.text || '').filter(Boolean);
+        if (parts.length) return parts.join('\n');
+      }
+
+      // Some events may carry a single summary text field
+      const summaryText = payload?.summary?.[0]?.text || payload?.summary_text;
+      if (summaryText && typeof summaryText === 'string') {
+        return summaryText;
+      }
+    } catch {
+      // Defensive: ignore parsing errors
+    }
+    return undefined;
   }
 
   /**
@@ -498,10 +654,11 @@ export class OpenAIProvider extends BaseProvider {
 
   /**
    * Convert OpenAI chunk to StreamChunk format
-   * @internal Used by streaming implementation
+   * @internal Used by streaming implementation - currently unused but preserved for future use
    * @param event - The streaming event from OpenAI API
    * @param lastCumulativeLength - Length of content already received (for cumulative APIs)
    */
+  // @ts-expect-error - Method preserved for future streaming implementation
   private convertResponsesEventToStreamChunk(
     event: any,
     lastCumulativeLength: number = 0

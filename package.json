@@ -25,6 +25,7 @@
     "@types/prismjs": "^1.26.5",
     "clsx": "^2.1.1",
     "dompurify": "^3.2.6",
+    "dotenv": "^17.2.1",
     "highlight.js": "^11.11.1",
     "katex": "^0.16.22",
     "openai": "^5.15.0",

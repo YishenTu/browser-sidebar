@@ -1,46 +1,89 @@
-# OpenAI Provider - Model Configuration
+# OpenAI Provider - Response API Implementation
 
 ## Overview
 
-This implementation provides comprehensive OpenAI model configuration for Task 4.2.1c, supporting all OpenAI models with proper parameter constraints and capabilities.
+This implementation provides comprehensive OpenAI Response API support with reasoning summaries (thinking display), supporting GPT-5 series models with proper streaming and parameter handling.
 
 ## Model Support
 
-### GPT-5 Series
-- `gpt-5-nano` - Latest generation efficiency model
+### GPT-5 Series (Response API)
 
-### o1 Series (Reasoning Models)
-- `o1-preview` - Reasoning model with thinking capabilities
-- `o1-mini` - Compact reasoning model
+- `gpt-5` - Latest generation model with reasoning summaries
+- `gpt-5-nano` - Efficiency model with reasoning summaries
 
-### GPT-4 Series (Multimodal & Function Calling)
-- `gpt-4o` - Multimodal flagship model
-- `gpt-4o-mini` - Compact multimodal model
-- `gpt-4-turbo` - Enhanced GPT-4 with larger context
-- `gpt-4` - Original GPT-4 model
+Both models support the Response API with reasoning effort parameters and automatic reasoning summary generation.
 
-### GPT-3.5 Series (Legacy)
-- `gpt-3.5-turbo` - Legacy model for basic use cases
+## Response API Features
 
-## Parameter Support Matrix
+### Reasoning Summaries
 
-| Parameter | All Models | o1 Series Only | GPT-4 Series | Notes |
-|-----------|------------|----------------|--------------|-------|
-| Temperature | ✓ | ✓ | ✓ | Range: 0.0-2.0, Default: 1.0 |
-| Reasoning Effort | ✗ | ✓ | ✗ | Values: low/medium/high |
-| Multimodal | ✗ | ✗ | ✓ | Vision, image understanding |
-| Function Calling | ✗ | ✗ | ✓ | Tool use capabilities |
-| Streaming | ✓ | ✓ | ✓ | All models support streaming |
+The Response API provides reasoning summaries that show the model's thinking process. These are displayed in a collapsible "thinking wrapper" UI component before the actual response.
 
-## Key Features
+### API Response Format
 
-- **Model-Specific Validation**: Parameters are validated based on model capabilities
-- **Graceful Parameter Handling**: Unsupported parameters are ignored (no errors)
-- **Type Safety**: Full TypeScript support with proper types
-- **Parameter Constraints**: Each model has proper min/max validation
-- **Support Matrix**: Clear capability matrix for UI configuration
-- **Cost Information**: Token costs per 1k tokens for each model
-- **Context Windows**: Proper context length limits per model
+#### Non-Streaming Response
+
+```json
+{
+  "output": [
+    {
+      "type": "reasoning",
+      "summary": [
+        {
+          "type": "summary_text",
+          "text": "**Thinking process title**\n\nDetailed reasoning explanation..."
+        }
+      ]
+    },
+    {
+      "type": "message",
+      "content": [
+        {
+          "type": "output_text",
+          "text": "The actual response to the user"
+        }
+      ]
+    }
+  ]
+}
+```
+
+#### Streaming Events
+
+The Response API sends events in this specific order:
+
+1. `response.reasoning_summary_text.delta` - Reasoning text chunks
+2. `response.reasoning_summary_text.done` - Reasoning complete
+3. `response.output_text.delta` - Response text chunks
+4. `response.output_text.done` - Response complete
+5. `response.completed` - Full response finished
+
+### Parameter Support
+
+| Parameter         | GPT-5 Series | Notes                           |
+| ----------------- | ------------ | ------------------------------- |
+| Reasoning Effort  | ✓            | Values: minimal/low/medium/high |
+| Reasoning Summary | ✓            | Auto-included with effort param |
+| Streaming         | ✓            | Full streaming support          |
+| Temperature       | ✗            | Not supported in Response API   |
+
+## Implementation Details
+
+### Streaming Handler
+
+The provider correctly handles OpenAI's Response API streaming format:
+
+- Accumulates reasoning summary deltas until complete
+- Emits thinking content before message content
+- Handles event-based streaming protocol
+- Preserves metadata during updates
+
+### Thinking Display Integration
+
+- Reasoning summaries are passed via `delta.thinking` field
+- ThinkingWrapper component displays summaries with timer
+- Auto-collapses after streaming completes
+- Works consistently with Gemini's thinking implementation
 
 ## Usage
 
@@ -49,42 +92,63 @@ import { OpenAIProvider } from './OpenAIProvider';
 
 const provider = new OpenAIProvider();
 
-// Get all models
-const models = provider.getModels();
+// Initialize with Response API configuration
+await provider.initialize({
+  type: 'openai',
+  name: 'OpenAI',
+  enabled: true,
+  config: {
+    apiKey: 'sk-...',
+    model: 'gpt-5-nano',
+    reasoningEffort: 'medium', // Enables reasoning summaries
+  },
+});
 
-// Get specific model
-const gpt5Nano = provider.getModel('gpt-5-nano');
+// Stream chat with reasoning display
+const messages = [
+  {
+    role: 'user',
+    content: 'Explain quantum computing step by step',
+  },
+];
 
-// Validate configuration
-const config = {
-  apiKey: 'sk-...',
-  model: 'gpt-5-nano',
-  temperature: 0.7,
-  // reasoningEffort: 'high' // Ignored for non-reasoning models
-};
-
-const validation = provider.validateConfig(config);
+for await (const chunk of provider.streamChat(messages)) {
+  if (chunk.choices[0].delta.thinking) {
+    // Display in ThinkingWrapper component
+    console.log('Reasoning:', chunk.choices[0].delta.thinking);
+  }
+  if (chunk.choices[0].delta.content) {
+    // Display actual response
+    console.log('Response:', chunk.choices[0].delta.content);
+  }
+}
 ```
 
-## Model Configuration Structure
+## Technical Notes
 
-Each model includes:
-- Unique ID and display name
-- Provider type ('openai')
-- Token limits (max output, context window)
-- Cost per 1k tokens (input/output)
-- Capability flags (streaming, temperature, reasoning, etc.)
-- Parameter configurations with constraints
+### Event Processing
 
-## Test Coverage
+The OpenAI Response API uses a specific event streaming protocol:
 
-- ✅ Model listing including gpt-5-nano
-- ✅ Model selection and configuration
-- ✅ Temperature support validation
-- ✅ Reasoning effort configuration per model
-- ✅ Parameter validation per model type
-- ✅ Model capabilities and limitations
-- ✅ Support matrix verification
-- ✅ Edge case handling
+- Events have a `type` field indicating the event type
+- Reasoning summaries come in delta chunks that must be accumulated
+- The complete reasoning is emitted once before message content starts
+- Message content also streams as deltas after reasoning is complete
 
-All tests follow TDD methodology and provide comprehensive coverage of the model configuration system.
+### Integration with UI
+
+The thinking content integrates seamlessly with the ThinkingWrapper component:
+
+1. Reasoning chunks are accumulated during streaming
+2. Complete reasoning is emitted via `delta.thinking` field
+3. ThinkingWrapper displays with a timer showing thinking duration
+4. Wrapper auto-collapses 500ms after streaming ends
+5. Users can expand/collapse to review reasoning
+
+### Compatibility
+
+This implementation maintains compatibility with:
+
+- Gemini's thinking budget feature
+- Standard OpenAI Chat Completions API (for older models)
+- The unified provider interface for all AI providers
