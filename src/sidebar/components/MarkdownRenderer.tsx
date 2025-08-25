@@ -251,11 +251,7 @@ const HeadingRenderer = ({ level, children }: HeadingProps) => {
  * Custom paragraph renderer
  */
 const ParagraphRenderer = ({ children, ...props }: React.ComponentProps<'p'>) => (
-  <p
-    className="text-gray-800 dark:text-gray-200 m-0 p-0 leading-tight"
-    style={{ textAlign: 'inherit' }}
-    {...props}
-  >
+  <p className="markdown-p" {...props}>
     {children}
   </p>
 );
@@ -294,7 +290,7 @@ const ListRenderer = ({
  * Custom list item renderer
  */
 const ListItemRenderer = ({ children, ...props }: React.ComponentProps<'li'>) => (
-  <li className="text-gray-800 dark:text-gray-200 m-0 p-0" {...props}>
+  <li className="markdown-li" {...props}>
     {children}
   </li>
 );
@@ -303,11 +299,7 @@ const ListItemRenderer = ({ children, ...props }: React.ComponentProps<'li'>) =>
  * Custom blockquote renderer
  */
 const BlockquoteRenderer = ({ children, ...props }: React.ComponentProps<'blockquote'>) => (
-  <blockquote
-    className="border-l-2 border-blue-500 bg-blue-50 dark:bg-blue-900/20 italic text-gray-700 dark:text-gray-300"
-    style={{ margin: 0, paddingLeft: '4px', paddingTop: 0, paddingBottom: 0, paddingRight: 0 }}
-    {...props}
-  >
+  <blockquote className="markdown-blockquote" {...props}>
     {children}
   </blockquote>
 );
@@ -560,9 +552,8 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({
       <div
         data-testid="markdown-renderer"
         role="article"
-        className={cn('max-w-none', className)}
+        className={cn('markdown-renderer', className)}
         aria-label="Empty content"
-        style={{ padding: 0, margin: 0 }}
       />
     );
   }
@@ -571,16 +562,8 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({
     <div
       data-testid="markdown-renderer"
       role="article"
-      className={cn(
-        'max-w-none',
-        'text-inherit', // Inherit text color from parent
-        className
-      )}
+      className={cn('markdown-renderer', className)}
       aria-label="Markdown content"
-      style={{
-        padding: 0,
-        margin: 0,
-      }}
     >
       <ReactMarkdown {...markdownOptions}>{processedContent}</ReactMarkdown>
     </div>

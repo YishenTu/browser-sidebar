@@ -243,17 +243,7 @@ export const ChatInput = React.forwardRef<HTMLTextAreaElement, ChatInputProps>(
     return (
       <div className={cn('chat-input', className)}>
         {/* Main input area with border */}
-        <div
-          className="chat-input__main"
-          style={{
-            border: '1px solid rgba(75, 85, 99, 0.3)',
-            borderRadius: '12px',
-            backgroundColor: 'transparent', // Same as main area
-            position: 'relative',
-            padding: '4px', // Reduced padding by half
-            margin: '4px', // Reduced margin by half
-          }}
-        >
+        <div className="chat-input__main">
           <div className="chat-input__textarea-container">
             <TextArea
               ref={textAreaRef}
@@ -268,33 +258,14 @@ export const ChatInput = React.forwardRef<HTMLTextAreaElement, ChatInputProps>(
               minRows={1}
               maxRows={8}
               tabIndex={0}
-              style={{
-                background: 'transparent',
-                backgroundColor: 'transparent',
-                border: 'none',
-                borderRadius: '0',
-                padding: '0.5rem 44px 0.5rem 0.75rem', // Extra padding right for send button
-                color: '#e5e7eb',
-                outline: 'none',
-                boxShadow: 'none',
-                width: '100%',
-                resize: 'none',
-              }}
               {...textAreaProps}
             />
           </div>
 
           {/* Action buttons row */}
-          <div
-            className="chat-input__actions"
-            style={{
-              position: 'absolute',
-              right: '4px',
-              bottom: '4px', // Back to bottom right corner
-            }}
-          >
+          <div className="chat-input__actions">
             {/* Right side - send controls first in DOM for tab order */}
-            <div className="chat-input__controls" style={{ display: 'flex', alignItems: 'center' }}>
+            <div className="chat-input__controls">
               {showCounter && (
                 <div className="chat-input__counter">
                   <CharacterCounter />
@@ -306,19 +277,6 @@ export const ChatInput = React.forwardRef<HTMLTextAreaElement, ChatInputProps>(
                   onClick={handleCancel}
                   className="chat-input__cancel-button"
                   aria-label={cancelButtonLabel}
-                  style={{
-                    background: '#b85651', // Reduced saturation red (muted/desaturated)
-                    cursor: 'pointer',
-                    border: 'none',
-                    borderRadius: '50%',
-                    width: '28px',
-                    height: '28px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    transition: 'all 0.2s',
-                    color: 'white',
-                  }}
                 >
                   <CancelIcon />
                 </button>
@@ -328,26 +286,8 @@ export const ChatInput = React.forwardRef<HTMLTextAreaElement, ChatInputProps>(
                   disabled={!canSend}
                   className="chat-input__send-button"
                   aria-label={sendButtonLabel}
-                  style={{
-                    background: canSend ? '#10b981' : '#374151',
-                    opacity: canSend ? 1 : 0.5,
-                    cursor: canSend ? 'pointer' : 'not-allowed',
-                    border: 'none',
-                    borderRadius: '50%',
-                    width: '32px',
-                    height: '32px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    transition: 'all 0.2s',
-                    color: 'white',
-                  }}
                 >
-                  {isSending || loading ? (
-                    <span className="spinner" style={{ width: '16px', height: '16px' }} />
-                  ) : (
-                    <SendIcon />
-                  )}
+                  {isSending || loading ? <span className="spinner" /> : <SendIcon />}
                 </button>
               )}
             </div>

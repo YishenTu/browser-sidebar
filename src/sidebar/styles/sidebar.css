@@ -6,6 +6,8 @@
 /* Import CSS variables for theming */
 @import './variables.css';
 
+/* Typography merged into variables.css and component styles */
+
 /* Import modular component styles */
 @import './base.css'; /* Core sidebar layout and structure */
 @import './resize-handles.css'; /* Resize handle functionality */

@@ -338,7 +338,7 @@ const ChatPanelInner: React.FC<ChatPanelProps> = ({ className, onClose }) => {
   if (!settingsInitialized) {
     return (
       <div
-        className={`ai-sidebar-overlay ${className || ''}`}
+        className={`ai-sidebar-overlay ai-sidebar-container--loading ${className || ''}`}
         role="dialog"
         aria-label="AI Browser Sidebar Loading"
         aria-modal="false"
@@ -347,14 +347,11 @@ const ChatPanelInner: React.FC<ChatPanelProps> = ({ className, onClose }) => {
           top: `${position.y}px`,
           width: `${width}px`,
           height: `${sidebarHeight}px`,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
         }}
         data-testid="chat-panel-loading"
       >
-        <div style={{ textAlign: 'center' }}>
-          <div style={{ fontSize: '24px', marginBottom: '10px' }}>⌛</div>
+        <div>
+          <div className="ai-sidebar-loading-icon">⌛</div>
           <div>Loading settings...</div>
         </div>
       </div>
@@ -393,14 +390,7 @@ const ChatPanelInner: React.FC<ChatPanelProps> = ({ className, onClose }) => {
 
         <ThemeProvider>
           {showSettings ? (
-            <div
-              className="ai-sidebar-settings-panel"
-              style={{
-                padding: '20px',
-                overflowY: 'auto',
-                height: 'calc(100% - 60px - 70px)',
-              }}
-            >
+            <div className="ai-sidebar-settings-panel">
               <Settings />
             </div>
           ) : (

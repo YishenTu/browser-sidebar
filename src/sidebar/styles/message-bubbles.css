@@ -3,6 +3,15 @@
  * Chat message display styles for user, assistant, and system messages
  * ============================================================================ */
 
+/* Apply base typography to the entire sidebar */
+.ai-sidebar-container,
+.ai-sidebar-container * {
+  font-family: var(--font-family-base) !important;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
 /* Message bubble styling for modern dark chat interface */
 .message-bubble {
   background: var(--background-secondary);
@@ -12,42 +21,93 @@
   margin: var(--spacing-sm) 0;
   color: var(--text-primary);
   box-shadow: var(--shadow-sm);
+  font-size: var(--font-size-base); /* 14px */
+  line-height: var(--line-height-base); /* 1.4 - tighter spacing */
+  letter-spacing: normal; /* Remove extra letter spacing */
 }
 
 .message-bubble--user {
   background: #2563eb !important; /* Blue for user messages */
   color: white !important;
-  padding: 12px !important; /* 12px padding in all directions */
+  padding: 10px 12px !important; /* Reduced padding */
   border-radius: 16px !important;
   display: inline-block !important; /* Inline-block for dynamic width */
   max-width: calc(100% - 16px) !important; /* Leave space for right margin */
   margin-left: auto !important; /* Push to right */
   margin-right: 16px !important; /* Explicit right margin */
   word-wrap: break-word !important;
-  text-align: justify !important; /* Justified text with better spacing */
-  text-justify: inter-word !important; /* Better word spacing algorithm */
+  text-align: left !important; /* Left-aligned text */
   hyphens: auto !important; /* Enable automatic hyphenation */
   -webkit-hyphens: auto !important; /* Safari support */
   word-break: break-word !important; /* Break long words if needed */
-  line-height: 1.4 !important; /* Slightly more line height for better readability */
-  letter-spacing: 0.01em !important; /* Tiny letter spacing to help distribution */
-  word-spacing: -0.05em !important; /* Slightly reduce word spacing */
-  font-size: 14px !important; /* Fixed font size */
+  line-height: 1.4 !important; /* Tighter line height */
+  letter-spacing: normal !important; /* Normal letter spacing */
 }
 
-/* Target all child elements inside user bubble to remove vertical spacing */
+/* Target all child elements inside user bubble for consistent spacing */
 .message-bubble--user * {
   margin: 0 !important;
   padding-top: 0 !important;
   padding-bottom: 0 !important;
-  line-height: 1.2 !important;
+  line-height: inherit !important; /* Inherit the parent's line-height */
 }
 
 /* Specifically target paragraphs in user bubbles */
 .message-bubble--user p {
   margin: 0 !important;
   padding: 0 !important;
-  line-height: 1.2 !important;
+  font-size: var(--font-size-base) !important; /* 14px */
+  line-height: inherit !important; /* Inherit the parent's line-height */
+}
+
+/* Paragraph spacing in assistant messages */
+.message-bubble--assistant p {
+  margin-bottom: 0.5em; /* Reduced spacing between paragraphs */
+  font-size: var(--font-size-base) !important; /* 14px */
+  line-height: var(--line-height-base) !important;
+}
+
+.message-bubble--assistant p:last-child {
+  margin-bottom: 0;
+}
+
+/* Ensure all text in message bubbles uses base font size */
+.message-bubble p,
+.message-bubble div:not(.thinking-wrapper):not(.search-sources) {
+  font-size: var(--font-size-base) !important; /* 14px */
+  line-height: var(--line-height-base) !important; /* 1.4 */
+}
+
+/* Code blocks should use monospace */
+.message-bubble code,
+.message-bubble pre {
+  font-family: var(--font-family-mono) !important;
+  font-size: var(--font-size-sm) !important;
+}
+
+/* Inline code */
+.message-bubble :not(pre) > code {
+  font-size: 0.9em !important;
+  padding: 0.2em 0.4em;
+  background: rgba(110, 118, 129, 0.2);
+  border-radius: 3px;
+}
+
+/* Strong emphasis */
+.message-bubble strong,
+.message-bubble b {
+  font-weight: var(--font-weight-semibold) !important;
+}
+
+/* Fix for text wrapping in responses */
+.message-bubble--assistant > *:not(pre):not(code) {
+  word-break: break-word;
+  overflow-wrap: break-word;
+}
+
+/* Ensure consistent spacing between elements */
+.message-bubble--assistant > * + * {
+  margin-top: 0.5em; /* Reduced spacing */
 }
 
 /* First and last children get no spacing */
@@ -64,42 +124,42 @@
 .message-bubble--assistant {
   background: transparent !important; /* Transparent background for AI */
   color: #e5e7eb !important;
-  padding: 0 8px 0 8px !important; /* Added 4px more to left padding */
+  padding: 6px 12px !important; /* Reduced padding */
   border-radius: 16px !important;
   display: block !important; /* Block for full width */
   max-width: calc(100% - 32px) !important; /* Full width minus margins (16px * 2) */
   width: calc(100% - 32px) !important; /* Full width minus margins (16px * 2) */
   word-wrap: break-word !important;
   margin: 0 16px !important; /* 16px margins on both sides */
-  text-align: justify !important; /* Justified text with better spacing */
-  text-justify: inter-word !important; /* Better word spacing algorithm */
+  text-align: left !important; /* Left-aligned text */
   text-align-last: left !important; /* Last line stays left-aligned */
   hyphens: auto !important; /* Enable automatic hyphenation */
   -webkit-hyphens: auto !important; /* Safari support */
   word-break: break-word !important; /* Break long words if needed */
-  letter-spacing: 0.01em !important; /* Tiny letter spacing to help distribution */
-  word-spacing: -0.05em !important; /* Slightly reduce word spacing */
+  line-height: 1.4 !important; /* Tighter line height */
+  letter-spacing: normal !important; /* Normal letter spacing */
   box-sizing: border-box !important;
-  font-size: 14px !important; /* Fixed font size */
 }
 
 .message-bubble--system {
   background: rgba(217, 119, 6, 0.2) !important; /* Yellow for system messages */
   color: #fde047 !important;
-  padding: 8px 16px !important;
+  padding: 8px 14px !important; /* Reduced padding */
   border-radius: 16px !important;
   display: inline-block !important;
   max-width: 90% !important;
   text-align: center !important;
   word-wrap: break-word !important;
   margin: 0 auto !important;
+  line-height: 1.4 !important; /* Tighter line height */
+  letter-spacing: normal !important; /* Normal letter spacing */
 }
 
 /* Message row alignment */
 .message-row {
   display: flex !important;
   width: 100% !important;
-  margin-bottom: 8px !important; /* Reduced from 16px to 8px */
+  margin-bottom: 8px !important; /* Reduced spacing between messages */
 }
 
 .message-row--user {
@@ -162,13 +222,13 @@
 
 /* Timestamp and model name styles */
 .message-model-name {
-  font-size: 10px;
+  font-size: 12px !important;
   color: #6b7280;
   font-weight: 500;
 }
 
 .message-timestamp {
-  font-size: 10px;
+  font-size: 12px !important;
   color: #6b7280;
 }
 
@@ -205,8 +265,8 @@
 .search-sources {
   background: transparent;
   border: none;
-  padding: 0;
-  font-size: 0.8125rem; /* Slightly smaller */
+  padding: 4px 0; /* 4px top and bottom padding */
+  font-size: 12px !important;
 }
 
 .search-sources[open] summary::before {
@@ -219,7 +279,7 @@
   user-select: none;
   color: #9ca3af; /* Grey color */
   font-weight: 400;
-  font-size: 0.8125rem;
+  font-size: 12px !important;
   list-style: none; /* Remove default marker */
 }
 
@@ -248,7 +308,7 @@
   padding: 0.125rem 0;
   display: block;
   transition: color 0.2s;
-  font-size: 0.8125rem;
+  font-size: 12px !important;
 }
 
 .search-source-link:hover {

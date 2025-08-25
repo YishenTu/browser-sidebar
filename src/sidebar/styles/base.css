@@ -143,3 +143,26 @@
 
 /* Remove old content styles */
 /* .ai-sidebar-content removed (unused) */
+
+/* Loading state */
+.ai-sidebar-container--loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.ai-sidebar-container--loading > div {
+  text-align: center;
+}
+
+.ai-sidebar-loading-icon {
+  font-size: 24px;
+  margin-bottom: 10px;
+}
+
+/* Settings panel */
+.ai-sidebar-settings-panel {
+  padding: 20px;
+  overflow-y: auto;
+  height: calc(100% - 60px - 70px);
+}

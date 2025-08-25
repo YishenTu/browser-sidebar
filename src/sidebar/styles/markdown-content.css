@@ -3,7 +3,58 @@
  * Code blocks and table rendering for markdown content
  * ============================================================================ */
 
+/* Ensure markdown paragraphs use base font size */
+.ai-sidebar-body p,
+[role='article'] p {
+  font-size: var(--font-size-base) !important; /* 14px */
+  line-height: var(--line-height-base) !important; /* 1.4 */
+}
+
 /* Code blocks will be handled by the new minimal component */
+
+/* Markdown renderer container */
+.markdown-renderer,
+[data-testid='markdown-renderer'] {
+  padding: 0;
+  margin: 0;
+  max-width: none;
+}
+
+/* Markdown paragraph styles */
+.markdown-p {
+  margin: 0;
+  padding: 0;
+  line-height: inherit;
+  text-align: inherit;
+  color: inherit;
+}
+
+/* Markdown blockquote styles */
+.markdown-blockquote {
+  margin: 0;
+  padding-left: 4px;
+  padding-top: 0;
+  padding-bottom: 0;
+  padding-right: 0;
+  border-left: 2px solid #3b82f6;
+  background: rgba(59, 130, 246, 0.1);
+  font-style: italic;
+  color: #9ca3af;
+}
+
+[data-theme='light'] .markdown-blockquote {
+  background: #dbeafe;
+  color: #374151;
+}
+
+/* Markdown list item styles */
+.markdown-li {
+  margin: 0;
+  padding: 0;
+  color: inherit;
+}
+
+/* Markdown list styles - handled by component with inline styles for now */
 
 /* ============================================================================
  * Markdown Table Styles
@@ -16,7 +67,7 @@
   max-width: 100% !important;
   border-collapse: collapse !important;
   margin: 1em 0 !important;
-  font-size: 14px !important;
+  font-size: var(--font-size-sm) !important; /* Tables stay smaller for readability */
 }
 
 .ai-sidebar-body thead {

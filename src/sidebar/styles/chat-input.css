@@ -20,6 +20,11 @@
   flex-direction: column;
   gap: 0;
   position: relative;
+  border: 1px solid rgba(75, 85, 99, 0.3);
+  border-radius: 12px;
+  background-color: transparent;
+  padding: 4px;
+  margin: 4px;
 }
 
 .chat-input__textarea-container {
@@ -36,15 +41,15 @@ textarea {
   border-radius: 0 !important;
   background: transparent !important;
   background-color: transparent !important;
-  padding: 12px 50px 12px 12px !important; /* Right padding for send button */
-  color: #ffffff !important; /* White text */
+  padding: 0.5rem 44px 0.5rem 0.75rem !important; /* Right padding for send button */
+  color: #e5e7eb !important; /* Light gray text */
   box-shadow: none !important;
   outline: none !important;
   -webkit-appearance: none !important;
   appearance: none !important;
   resize: none !important; /* Disable resize handle */
   box-sizing: border-box !important;
-  font-size: 14px !important;
+  font-size: var(--font-size-base) !important; /* 14px - consistent across app */
   font-family: inherit !important;
 }
 
@@ -93,8 +98,8 @@ textarea:focus {
 
 .chat-input__actions {
   position: absolute;
-  right: 8px;
-  bottom: 8px;
+  right: 4px;
+  bottom: 4px;
   display: flex;
   align-items: center;
   background: transparent;
@@ -126,25 +131,50 @@ textarea:focus {
   align-items: center;
   justify-content: center;
   gap: 0;
-  background: #10b981 !important; /* Green color matching reference */
   border: none !important;
   border-radius: 50% !important; /* Perfect circle */
-  width: 28px !important;
-  height: 28px !important;
-  min-width: 28px !important;
-  min-height: 28px !important;
+  width: 32px !important;
+  height: 32px !important;
+  min-width: 32px !important;
+  min-height: 32px !important;
   padding: 0 !important;
   color: white !important;
   transition: all var(--transition-fast) !important;
 }
 
-.chat-input__send-button:hover {
+.chat-input__send-button:enabled {
+  background: #10b981 !important;
+  opacity: 1;
+  cursor: pointer;
+}
+
+.chat-input__send-button:disabled {
+  background: #374151 !important;
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.chat-input__send-button:hover:enabled {
   background: var(--success-700) !important;
   transform: translateY(-1px);
 }
 
 .chat-input__send-button:active {
   transform: translateY(0);
+}
+
+.chat-input__cancel-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #b85651 !important; /* Muted red */
+  cursor: pointer;
+  border: none !important;
+  border-radius: 50% !important;
+  width: 28px !important;
+  height: 28px !important;
+  color: white !important;
+  transition: all 0.2s;
 }
 
 /* Send button icon styling */
@@ -180,4 +210,10 @@ textarea:focus {
 
 .chat-input__counter .error {
   color: #dc2626;
+}
+
+/* Spinner for loading state */
+.chat-input .spinner {
+  width: 16px !important;
+  height: 16px !important;
 }
