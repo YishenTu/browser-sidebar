@@ -105,7 +105,7 @@ export function useStreamHandler(): UseStreamHandlerReturn {
             const thinking = (chunk as any)?.choices?.[0]?.delta?.thinking || '';
             const content = (chunk as any)?.choices?.[0]?.delta?.content || '';
 
-            // Handle thinking content
+            // Handle thinking content - append deltas for real-time streaming
             if (thinking) {
               thinkingContent += thinking;
               // Get current message to preserve its metadata

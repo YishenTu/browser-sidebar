@@ -49,9 +49,7 @@
   margin-top: 0 !important;
 }
 
-.thinking-header:hover {
-  background-color: rgba(255, 255, 255, 0.05);
-}
+/* No hover effect for thinking header */
 
 /* Light theme header */
 [data-theme='light'] .thinking-header {
@@ -60,9 +58,7 @@
   border: none;
 }
 
-[data-theme='light'] .thinking-header:hover {
-  background-color: rgba(0, 0, 0, 0.03);
-}
+/* No hover effect for light theme either */
 
 /* Label styling */
 .thinking-label {

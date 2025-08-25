@@ -18,7 +18,7 @@ export const SUPPORTED_MODELS: ModelConfig[] = [
     id: 'gpt-5-nano',
     name: 'GPT 5 Nano',
     provider: 'openai',
-    reasoningEffort: 'medium', // Default reasoning effort
+    reasoningEffort: 'minimal', // Default reasoning effort
   },
   {
     id: 'gemini-2.5-flash-lite',
@@ -31,7 +31,7 @@ export const SUPPORTED_MODELS: ModelConfig[] = [
     id: 'gemini-2.5-flash',
     name: 'Gemini 2.5 Flash',
     provider: 'gemini',
-    thinkingBudget: '-1',
+    thinkingBudget: '0',
   },
   {
     id: 'gemini-2.5-pro',

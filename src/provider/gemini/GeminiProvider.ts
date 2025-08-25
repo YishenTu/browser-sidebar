@@ -531,6 +531,7 @@ export class GeminiProvider extends GeminiClient {
 
   /**
    * Convert Gemini response to StreamChunk format
+   * Gemini sends thinking in complete paragraphs, so we preserve that
    */
   private convertGeminiToStreamChunk(geminiResponse: any): StreamChunk {
     const candidate = geminiResponse.candidates?.[0];
@@ -541,7 +542,7 @@ export class GeminiProvider extends GeminiClient {
     if (candidate?.content?.parts) {
       for (const part of candidate.content.parts) {
         if (part.thought && part.text) {
-          // This is a thought summary
+          // This is a thought summary - Gemini sends these as complete paragraphs
           thinking += part.text;
         } else if (part.text) {
           // Regular content

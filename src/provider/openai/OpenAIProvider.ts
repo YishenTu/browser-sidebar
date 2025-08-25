@@ -247,19 +247,30 @@ export class OpenAIProvider extends BaseProvider {
           let lastSeenContent = '';
           // Track reasoning summary and whether it's emitted
           let emittedReasoning = false;
-          let pendingReasoningSummary: string | undefined;
 
           for await (const event of asyncIterable as any) {
             try {
               // Process streaming event based on OpenAI Response API event types
 
-              // Handle reasoning summary delta events
+              // Handle reasoning summary delta events - stream in real-time
               if (event.type === 'response.reasoning_summary_text.delta' && event.delta) {
-                if (!pendingReasoningSummary) {
-                  pendingReasoningSummary = '';
-                }
-                pendingReasoningSummary += event.delta;
-                continue; // Accumulate reasoning, don't emit yet
+                // Emit thinking delta immediately for real-time streaming
+                const thinkingChunk: StreamChunk = {
+                  id: `resp-chunk-${Date.now()}-thinking`,
+                  object: 'response.chunk',
+                  created: Math.floor(Date.now() / 1000),
+                  model: provider.getConfig()?.config?.model || 'unknown',
+                  choices: [
+                    {
+                      index: 0,
+                      delta: { thinking: event.delta }, // Stream thinking delta
+                      finishReason: null,
+                    },
+                  ],
+                };
+                emittedReasoning = true;
+                yield thinkingChunk;
+                continue;
               }
 
               // Handle reasoning summary completion
@@ -267,23 +278,7 @@ export class OpenAIProvider extends BaseProvider {
                 event.type === 'response.reasoning_summary_text.done' ||
                 event.type === 'response.reasoning_summary_part.done'
               ) {
-                if (!emittedReasoning && pendingReasoningSummary) {
-                  const thinkingChunk: StreamChunk = {
-                    id: `resp-chunk-${Date.now()}-thinking`,
-                    object: 'response.chunk',
-                    created: Math.floor(Date.now() / 1000),
-                    model: provider.getConfig()?.config?.model || 'unknown',
-                    choices: [
-                      {
-                        index: 0,
-                        delta: { thinking: pendingReasoningSummary },
-                        finishReason: null,
-                      },
-                    ],
-                  };
-                  emittedReasoning = true;
-                  yield thinkingChunk;
-                }
+                // Just continue, no need to emit again since we streamed deltas
                 continue;
               }
 

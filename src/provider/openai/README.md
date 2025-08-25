@@ -4,14 +4,23 @@
 
 This implementation provides comprehensive OpenAI Response API support with reasoning summaries (thinking display), supporting GPT-5 series models with proper streaming and parameter handling.
 
-## Model Support
+## Currently Supported Models
 
-### GPT-5 Series (Response API)
+Based on the active configuration in `/src/config/models.ts`:
 
-- `gpt-5` - Latest generation model with reasoning summaries
-- `gpt-5-nano` - Efficiency model with reasoning summaries
+| Model ID     | Display Name | Reasoning Effort | Reasoning Behavior            |
+| ------------ | ------------ | ---------------- | ----------------------------- |
+| `gpt-5-nano` | GPT 5 Nano   | `minimal`        | Light reasoning by default    |
+| `gpt-5`      | GPT 5        | `medium`         | Balanced reasoning by default |
 
-Both models support the Response API with reasoning effort parameters and automatic reasoning summary generation.
+### Reasoning Effort Levels
+
+- **`minimal`**: Quick, lightweight reasoning for simple queries
+- **`low`**: Basic reasoning with some depth
+- **`medium`**: Balanced reasoning for most use cases
+- **`high`**: Deep, thorough reasoning for complex problems
+
+Both models support the OpenAI Response API with automatic reasoning summary generation when a reasoning effort is configured.
 
 ## Response API Features
 
