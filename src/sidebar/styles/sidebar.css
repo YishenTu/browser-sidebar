@@ -16,5 +16,6 @@
 @import './markdown-content.css'; /* Markdown rendering styles */
 @import './provider-settings.css'; /* Provider configuration forms */
 @import './katex-math.css'; /* Mathematical equation rendering */
+@import './thinking-wrapper.css'; /* Thinking/reasoning display wrapper */
 
 /* Any global overrides or additional styles can be added below if needed */

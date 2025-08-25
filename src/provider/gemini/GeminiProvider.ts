@@ -17,9 +17,7 @@
 import { GeminiClient } from './GeminiClient';
 import { StreamParser } from '../streamParser';
 import { GeminiStreamProcessor } from './streamProcessor';
-import { 
-  supportsThinking 
-} from '../../config/models';
+import { supportsThinking } from '../../config/models';
 import type {
   ProviderChatMessage,
   ProviderResponse,
@@ -53,6 +51,7 @@ interface GeminiGenerationConfig {
   responseModalities?: string[];
   thinkingConfig?: {
     thinkingBudget: number;
+    includeThoughts?: boolean;
   };
 }
 
@@ -71,6 +70,7 @@ interface GeminiRequest {
 interface GeminiResponsePart {
   text?: string;
   thinking?: string;
+  thought?: boolean; // Indicates if this part contains thought summary
 }
 
 interface GeminiCandidate {
@@ -153,7 +153,6 @@ export class GeminiProvider extends GeminiClient {
     const request = this.buildRequest(messages, config);
     const url = this.buildGeminiApiUrl(`/models/${this.getCurrentModel()}:generateContent`);
 
-
     try {
       const response = await fetch(url, {
         method: 'POST',
@@ -167,8 +166,7 @@ export class GeminiProvider extends GeminiClient {
       }
 
       const data: GeminiResponse = await response.json();
-      
-      // Log the response to verify what model actually responded
+
       return this.parseResponse(data, config);
     } catch (error) {
       if (error instanceof Error && error.name === 'AbortError') {
@@ -235,23 +233,23 @@ export class GeminiProvider extends GeminiClient {
           }
 
           const chunk = decoder.decode(value, { stream: true });
-          
+
           // Process chunk to extract complete JSON objects
           const objects = processor.processChunk(chunk);
-          
+
           // Yield each complete object as it arrives
           for (const item of objects) {
             const streamChunk = this.convertGeminiToStreamChunk(item);
             const processedChunk = this.processStreamChunk(streamChunk, config);
-            
+
             if (processedChunk.choices[0]?.finishReason) {
               lastFinishReason = processedChunk.choices[0].finishReason;
             }
-            
+
             const hasContent = processedChunk.choices[0]?.delta?.content;
             const hasThinking = processedChunk.choices[0]?.delta?.thinking;
             const isCompletion = processedChunk.choices[0]?.finishReason;
-            
+
             if (hasContent || hasThinking || isCompletion) {
               yield processedChunk;
             }
@@ -407,12 +405,15 @@ export class GeminiProvider extends GeminiClient {
 
     // Configure thinking budget if model supports it
     const thinkingBudget = chatConfig?.thinkingBudget ?? geminiConfig.thinkingBudget;
+
     if (supportsThinking(geminiConfig.model)) {
       // Convert string budget to number for the API
       const budgetNum = parseInt(thinkingBudget || '0', 10);
+
       if (!isNaN(budgetNum)) {
         config.thinkingConfig = {
-          thinkingBudget: budgetNum
+          thinkingBudget: budgetNum,
+          includeThoughts: true, // Enable thinking summaries
         };
       }
       config.responseModalities = ['TEXT'];
@@ -446,10 +447,10 @@ export class GeminiProvider extends GeminiClient {
     const geminiConfig = this.getConfig()?.config as GeminiConfig;
     const baseUrl = geminiConfig.endpoint || 'https://generativelanguage.googleapis.com';
     const fullUrl = `${baseUrl}/v1beta${endpoint}`;
-    
+
     // Add API key as query parameter
     const urlWithKey = `${fullUrl}?key=${geminiConfig.apiKey}`;
-    
+
     return urlWithKey;
   }
 
@@ -460,26 +461,39 @@ export class GeminiProvider extends GeminiClient {
   /**
    * Parse Gemini API response
    */
-  private parseResponse(data: GeminiResponse, config?: ChatConfig): ProviderResponse {
-    const geminiConfig = this.getConfig()?.config as GeminiConfig;
+  private parseResponse(data: GeminiResponse, _config?: ChatConfig): ProviderResponse {
     const candidate = data.candidates?.[0];
 
     let content = '';
     let thinking: string | undefined;
 
     if (candidate?.content?.parts) {
-      const textParts = candidate.content.parts.filter(part => part.text).map(part => part.text);
-      content = textParts.join('');
+      // Process parts based on whether they are thoughts or regular content
+      const regularTextParts: string[] = [];
+      const thoughtParts: string[] = [];
 
-      // Handle thinking tokens
-      const showThoughts = config?.showThoughts ?? geminiConfig.showThoughts;
-      if (showThoughts) {
-        const thinkingParts = candidate.content.parts
-          .filter(part => part.thinking)
-          .map(part => part.thinking);
-        if (thinkingParts.length > 0) {
-          thinking = thinkingParts.join(' ');
+      for (const part of candidate.content.parts) {
+        if (part.thought) {
+          // This is a thought summary part
+          if (part.text) {
+            thoughtParts.push(part.text);
+          }
+        } else if (part.text) {
+          // Regular content part
+          regularTextParts.push(part.text);
         }
+        // Also handle legacy thinking field if present
+        if (part.thinking) {
+          thoughtParts.push(part.thinking);
+        }
+      }
+
+      content = regularTextParts.join('');
+
+      // Always capture thinking tokens if they exist (thinking budget enabled)
+      // The showThoughts setting should control display, not capture
+      if (thoughtParts.length > 0) {
+        thinking = thoughtParts.join(' ');
       }
     }
 
@@ -520,10 +534,28 @@ export class GeminiProvider extends GeminiClient {
    */
   private convertGeminiToStreamChunk(geminiResponse: any): StreamChunk {
     const candidate = geminiResponse.candidates?.[0];
-    const text = candidate?.content?.parts?.[0]?.text || '';
-    const thinking = candidate?.content?.parts?.[0]?.thinking || '';
+    let text = '';
+    let thinking = '';
+
+    // Process parts to separate thought summaries from regular content
+    if (candidate?.content?.parts) {
+      for (const part of candidate.content.parts) {
+        if (part.thought && part.text) {
+          // This is a thought summary
+          thinking += part.text;
+        } else if (part.text) {
+          // Regular content
+          text += part.text;
+        }
+        // Also handle legacy thinking field
+        if (part.thinking) {
+          thinking += part.thinking;
+        }
+      }
+    }
+
     const finishReason = this.normalizeFinishReason(candidate?.finishReason);
-    
+
     return {
       id: `gemini-${Date.now()}`,
       object: 'response.chunk',
@@ -533,17 +565,19 @@ export class GeminiProvider extends GeminiClient {
         {
           index: 0,
           delta: {
-            content: text,
+            content: text || undefined,
             thinking: thinking || undefined,
           },
           finishReason: candidate?.finishReason ? finishReason : null,
         },
       ],
-      usage: geminiResponse.usageMetadata ? {
-        promptTokens: geminiResponse.usageMetadata.promptTokenCount,
-        completionTokens: geminiResponse.usageMetadata.candidatesTokenCount,
-        totalTokens: geminiResponse.usageMetadata.totalTokenCount,
-      } : undefined,
+      usage: geminiResponse.usageMetadata
+        ? {
+            promptTokens: geminiResponse.usageMetadata.promptTokenCount,
+            completionTokens: geminiResponse.usageMetadata.candidatesTokenCount,
+            totalTokens: geminiResponse.usageMetadata.totalTokenCount,
+          }
+        : undefined,
     };
   }
 
@@ -616,7 +650,6 @@ export class GeminiProvider extends GeminiClient {
       };
     }
 
-
     // Extract retry-after header for rate limiting
     const retryAfter = response.headers?.get?.('retry-after');
     if (retryAfter) {
@@ -629,24 +662,30 @@ export class GeminiProvider extends GeminiClient {
     // Create more specific error messages based on status
     let specificMessage = '';
     if (response.status === 401) {
-      specificMessage = 'Authentication failed. Please check your Google API key is valid and has Gemini API enabled.';
+      specificMessage =
+        'Authentication failed. Please check your Google API key is valid and has Gemini API enabled.';
     } else if (response.status === 403) {
-      specificMessage = 'Access denied. Make sure your Google API key has access to Gemini API. You may need to enable it at console.cloud.google.com';
+      specificMessage =
+        'Access denied. Make sure your Google API key has access to Gemini API. You may need to enable it at console.cloud.google.com';
     } else if (response.status === 404) {
-      specificMessage = 'Model not found. The selected Gemini model may not be available in your region or with your API key.';
+      specificMessage =
+        'Model not found. The selected Gemini model may not be available in your region or with your API key.';
     } else if (response.status === 400) {
       const details = errorData.error?.details?.map((d: any) => d.reason || d.message).join(', ');
-      specificMessage = details ? `Invalid request: ${details}` : `Bad request: ${errorData.error?.message || errorData.message || 'Unknown error'}`;
+      specificMessage = details
+        ? `Invalid request: ${details}`
+        : `Bad request: ${errorData.error?.message || errorData.message || 'Unknown error'}`;
     }
 
     const formattedError = this.formatError({
       ...errorData,
       status: response.status,
-      message: specificMessage || errorData.error?.message || errorData.message || 'Unknown error'
+      message: specificMessage || errorData.error?.message || errorData.message || 'Unknown error',
     });
 
     // Create error with provider error properties
-    const error = new Error(specificMessage || formattedError.message) as Error & typeof formattedError;
+    const error = new Error(specificMessage || formattedError.message) as Error &
+      typeof formattedError;
     Object.assign(error, formattedError);
 
     throw error;

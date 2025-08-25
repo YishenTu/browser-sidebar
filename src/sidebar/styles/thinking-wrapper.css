@@ -1,0 +1,160 @@
+/* ============================================================================
+ * Thinking Wrapper Component Styles
+ * Collapsible wrapper for AI model thinking/reasoning display
+ * ============================================================================ */
+
+.thinking-wrapper {
+  margin: 0 16px; /* Match user bubble's 16px horizontal margin */
+  background: transparent;
+  border: none;
+}
+
+/* When collapsed, use negative margin to eliminate any gap */
+.thinking-wrapper.collapsed {
+  margin-bottom: -0.25rem !important;
+}
+
+/* When expanded, no bottom margin (content bubble handles spacing) */
+.thinking-wrapper:not(.collapsed) {
+  margin-bottom: 0;
+}
+
+/* Header button - matches chat panel background */
+.thinking-header {
+  display: inline-block;
+  padding: 0.125rem 0.375rem;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font-size: 0.75rem;
+  color: #9ca3af;
+  transition: all 0.2s ease;
+  font-weight: 400;
+  border-radius: 4px;
+  margin-bottom: 0.25rem;
+}
+
+/* Remove header margin when collapsed to eliminate gap */
+.thinking-wrapper.collapsed .thinking-header {
+  margin-bottom: 0;
+}
+
+/* When collapsed, ensure no gap with following message bubble */
+.thinking-wrapper.collapsed + .message-bubble--assistant {
+  margin-top: 0 !important;
+}
+
+/* Also handle the full-width class case */
+.thinking-wrapper.collapsed + .full-width {
+  margin-top: 0 !important;
+}
+
+.thinking-header:hover {
+  background-color: rgba(255, 255, 255, 0.05);
+}
+
+/* Light theme header */
+[data-theme='light'] .thinking-header {
+  background: transparent;
+  color: #6b7280;
+  border: none;
+}
+
+[data-theme='light'] .thinking-header:hover {
+  background-color: rgba(0, 0, 0, 0.03);
+}
+
+/* Label styling */
+.thinking-label {
+  font-size: 0.8125rem;
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+}
+
+/* Content bubble - quote style with vertical line */
+.thinking-content-bubble {
+  background: transparent;
+  border-left: 1px solid #6b7280;
+  padding-left: 1rem;
+  margin-left: 0.5rem;
+  animation: expandContent 0.3s ease;
+  margin-top: 0.25rem;
+  margin-bottom: 0.25rem; /* Add bottom margin to create gap with message */
+}
+
+/* Light theme content bubble */
+[data-theme='light'] .thinking-content-bubble {
+  background: transparent;
+  border-left: 1px solid #9ca3af;
+}
+
+@keyframes expandContent {
+  from {
+    opacity: 0;
+    max-height: 0;
+  }
+  to {
+    opacity: 1;
+    max-height: none;
+  }
+}
+
+.thinking-text {
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  color: #9ca3af; /* Grey text color */
+  padding: 0;
+}
+
+/* Light theme text color */
+[data-theme='light'] .thinking-text {
+  color: #6b7280;
+}
+
+/* Apply markdown styles within thinking text */
+.thinking-text p {
+  margin-bottom: 0.75rem;
+  color: inherit; /* Inherit from parent */
+}
+
+.thinking-text p:first-child {
+  margin-top: 0; /* Remove top margin from first paragraph */
+}
+
+.thinking-text p:last-child {
+  margin-bottom: 0;
+}
+
+.thinking-text h2,
+.thinking-text h3,
+.thinking-text h4 {
+  font-weight: 600;
+  margin-top: 0.5rem;
+  margin-bottom: 0.5rem;
+  color: #d1d5db; /* Lighter grey for headers */
+}
+
+[data-theme='light'] .thinking-text h2,
+[data-theme='light'] .thinking-text h3,
+[data-theme='light'] .thinking-text h4 {
+  color: #374151; /* Dark color for light background */
+}
+
+.thinking-text code {
+  background-color: rgba(255, 255, 255, 0.5);
+  padding: 0.125rem 0.25rem;
+  border-radius: 3px;
+  font-size: 0.85em;
+}
+
+[data-theme='dark'] .thinking-text code {
+  background-color: rgba(0, 0, 0, 0.3);
+}
+
+/* Accessibility focus styles */
+.thinking-header:focus-visible {
+  outline: 2px solid var(--primary-color, #2563eb);
+  outline-offset: 2px;
+  border-radius: 6px;
+}

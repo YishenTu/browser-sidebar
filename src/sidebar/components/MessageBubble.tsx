@@ -2,6 +2,7 @@ import React from 'react';
 import { cn } from '@sidebar/lib/cn';
 import { ChatMessage, MessageRole, MessageStatus } from '@store/chat';
 import { MarkdownRenderer } from './MarkdownRenderer';
+import { ThinkingWrapper } from './ThinkingWrapper';
 
 /**
  * MessageBubble Props Interface
@@ -110,21 +111,21 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
           width: '100%',
         }}
       >
+        {/* Display thinking wrapper for assistant messages with thinking content */}
+        {message.role === 'assistant' &&
+        message.metadata?.['thinking'] &&
+        typeof message.metadata['thinking'] === 'string' ? (
+          <ThinkingWrapper
+            thinking={message.metadata['thinking']}
+            isStreaming={message.metadata?.['thinkingStreaming'] as boolean}
+            initialCollapsed={false}
+            className=""
+          />
+        ) : null}
+
         <div className={cn(getMessageClasses(message.role))}>
           <div data-testid="message-content">
             <MarkdownRenderer content={message.content} />
-            {message.status === 'streaming' && (
-              <span
-                className="inline-block w-2 h-5 bg-current animate-pulse ml-1"
-                style={{
-                  animation: 'pulse 1s cubic-bezier(0.4, 0, 0.6, 1) infinite',
-                  verticalAlign: 'text-bottom',
-                }}
-                aria-hidden="true"
-              >
-                |
-              </span>
-            )}
           </div>
         </div>
 

@@ -7,6 +7,7 @@
 import { useCallback } from 'react';
 import { useChatStore } from '@store/chat';
 import { useSettingsStore } from '@store/settings';
+import { getModelById } from '@/config/models';
 import type { AIProvider } from '../../../types/providers';
 import type { SendMessageOptions, UseMessageHandlerReturn } from './types';
 import { useStreamHandler } from './useStreamHandler';
@@ -44,7 +45,7 @@ export function useMessageHandler({
 
       // Get the selected model from settings
       const selectedModel = settingsStore.settings.selectedModel;
-      const modelInfo = settingsStore.settings.availableModels.find(m => m.id === selectedModel);
+      const modelInfo = getModelById(selectedModel);
 
       // Add assistant message to store with model metadata
       chatStore.addMessage({
@@ -52,7 +53,8 @@ export function useMessageHandler({
         content: response.content,
         status: 'received',
         metadata: {
-          model: modelInfo?.name || selectedModel || 'Unknown Model',
+          model: modelInfo?.name || 'AI Assistant',
+          thinking: response.thinking, // Store thinking separately for UI to render
         },
       });
     },
@@ -99,9 +101,7 @@ export function useMessageHandler({
           if (streaming && typeof provider.streamChat === 'function') {
             // Get the selected model from settings
             const selectedModel = settingsStore.settings.selectedModel;
-            const modelInfo = settingsStore.settings.availableModels.find(
-              m => m.id === selectedModel
-            );
+            const modelInfo = getModelById(selectedModel);
 
             // Create assistant message for streaming with model metadata
             const assistantMessage = chatStore.addMessage({
@@ -109,7 +109,7 @@ export function useMessageHandler({
               content: '',
               status: 'streaming',
               metadata: {
-                model: modelInfo?.name || selectedModel || 'Unknown Model',
+                model: modelInfo?.name || 'AI Assistant',
               },
             });
 

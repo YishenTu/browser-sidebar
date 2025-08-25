@@ -89,6 +89,8 @@ export function useStreamHandler(): UseStreamHandlerReturn {
         });
 
         let lastSuccessfulContent = '';
+        let thinkingContent = '';
+        let isThinkingPhase = true; // Track if we're still in thinking phase
         let streamInterrupted = false;
 
         try {
@@ -99,15 +101,44 @@ export function useStreamHandler(): UseStreamHandlerReturn {
               break;
             }
 
-            // Extract text content from streaming chunk
-            const piece = (chunk as any)?.choices?.[0]?.delta?.content || '';
+            // Extract thinking and content from streaming chunk
+            const thinking = (chunk as any)?.choices?.[0]?.delta?.thinking || '';
+            const content = (chunk as any)?.choices?.[0]?.delta?.content || '';
 
-            if (piece) {
-              // Append the chunk
-              chatStore.appendToMessage(assistantMessage.id, piece);
-              lastSuccessfulContent += piece;
+            // Handle thinking content
+            if (thinking) {
+              thinkingContent += thinking;
+              // Get current message to preserve its metadata
+              const currentMsg = chatStore.getMessageById(assistantMessage.id);
+              // Update metadata with accumulated thinking, preserving existing metadata
+              chatStore.updateMessage(assistantMessage.id, {
+                metadata: {
+                  ...currentMsg?.metadata,
+                  thinking: thinkingContent,
+                  thinkingStreaming: true,
+                },
+              });
+            }
 
-              // Table content detected - no special handling needed
+            // Handle regular content
+            if (content) {
+              // Mark end of thinking phase when content starts
+              if (isThinkingPhase && thinkingContent) {
+                isThinkingPhase = false;
+                // Get current message to preserve its metadata
+                const currentMsg = chatStore.getMessageById(assistantMessage.id);
+                // Mark thinking as complete, preserving existing metadata
+                chatStore.updateMessage(assistantMessage.id, {
+                  metadata: {
+                    ...currentMsg?.metadata,
+                    thinking: thinkingContent,
+                    thinkingStreaming: false,
+                  },
+                });
+              }
+              // Append the content chunk
+              chatStore.appendToMessage(assistantMessage.id, content);
+              lastSuccessfulContent += content;
             }
           }
         } catch (streamError) {
@@ -124,15 +155,28 @@ export function useStreamHandler(): UseStreamHandlerReturn {
           }
         }
 
+        // Get current message to preserve its metadata
+        const finalMsg = chatStore.getMessageById(assistantMessage.id);
         // Mark streaming complete or partial
         if (streamInterrupted && lastSuccessfulContent.length > 0) {
           chatStore.updateMessage(assistantMessage.id, {
             status: 'received',
-            metadata: { partial: true, interrupted: true },
+            metadata: {
+              ...finalMsg?.metadata,
+              partial: true,
+              interrupted: true,
+              thinking: thinkingContent || undefined,
+              thinkingStreaming: false,
+            },
           });
         } else if (!streamInterrupted) {
           chatStore.updateMessage(assistantMessage.id, {
             status: 'received',
+            metadata: {
+              ...finalMsg?.metadata,
+              thinking: thinkingContent || undefined,
+              thinkingStreaming: false,
+            },
           });
         } else {
           throw new Error('Stream interrupted before receiving any content');
