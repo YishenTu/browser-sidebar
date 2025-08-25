@@ -92,6 +92,7 @@ export function useStreamHandler(): UseStreamHandlerReturn {
         let thinkingContent = '';
         let isThinkingPhase = true; // Track if we're still in thinking phase
         let streamInterrupted = false;
+        let searchMetadata: any = null; // Store search metadata from stream
 
         try {
           for await (const chunk of stream) {
@@ -104,6 +105,12 @@ export function useStreamHandler(): UseStreamHandlerReturn {
             // Extract thinking and content from streaming chunk
             const thinking = (chunk as any)?.choices?.[0]?.delta?.thinking || '';
             const content = (chunk as any)?.choices?.[0]?.delta?.content || '';
+            
+            // Check for search metadata in the chunk (it comes from the StreamChunk type now)
+            // Gemini sends this in the last chunk with the complete response
+            if (chunk.metadata?.searchResults) {
+              searchMetadata = chunk.metadata.searchResults;
+            }
 
             // Handle thinking content - append deltas for real-time streaming
             if (thinking) {
@@ -139,6 +146,17 @@ export function useStreamHandler(): UseStreamHandlerReturn {
               // Append the content chunk
               chatStore.appendToMessage(assistantMessage.id, content);
               lastSuccessfulContent += content;
+              
+              // Update search metadata if we have it
+              if (searchMetadata) {
+                const currentMsg = chatStore.getMessageById(assistantMessage.id);
+                chatStore.updateMessage(assistantMessage.id, {
+                  metadata: {
+                    ...currentMsg?.metadata,
+                    searchResults: searchMetadata,
+                  },
+                });
+              }
             }
           }
         } catch (streamError) {
@@ -167,6 +185,7 @@ export function useStreamHandler(): UseStreamHandlerReturn {
               interrupted: true,
               thinking: thinkingContent || undefined,
               thinkingStreaming: false,
+              ...(searchMetadata && { searchResults: searchMetadata }),
             },
           });
         } else if (!streamInterrupted) {
@@ -176,6 +195,7 @@ export function useStreamHandler(): UseStreamHandlerReturn {
               ...finalMsg?.metadata,
               thinking: thinkingContent || undefined,
               thinkingStreaming: false,
+              ...(searchMetadata && { searchResults: searchMetadata }),
             },
           });
         } else {

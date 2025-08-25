@@ -129,13 +129,21 @@ MIT — see `package.json` for the license field (LICENSE file TBD)
 
 ### Future Work
 
+#### Chat Context Management
+- **Include thinking/reasoning in chat history**: Currently, thinking content from AI responses is stored in metadata but not included when building subsequent API requests. This causes the AI to lose context of its previous reasoning in multi-turn conversations.
+  - Implementation approach: When building API requests, prepend thinking content to assistant messages using format: `<thinking>content</thinking>\n\nactual response`
+  - Affected files: `OpenAIProvider.convertMessagesToResponsesInput()`, `GeminiProvider.convertMessages()`
+  - Add user setting: "Include reasoning in chat history" toggle
+  - Considerations: Increased token usage, potential need for thinking summarization for long content
+
+#### Phase 3 Storage & Security
 - Phase 3.2 hardening (API Key Storage):
   - Align remaining test expectations with updated storage behavior:
     - Use singleton EncryptionService instance in tests (already applied in main/comprehensive suites)
     - Duplicate detection via `api_key_hash_<sha256>` mapping in Chrome storage
     - Connection tests should not assert real wall-clock delays (mock small timeout in fetch)
     - Prefer integrity check over decryption in `getAPIKey` tests
-  - Optional: unify add-failure messages to a single “Failed to add API key” if preferred over specific errors
+  - Optional: unify add-failure messages to a single "Failed to add API key" if preferred over specific errors
 - Phase 3.3 parallelizable tasks to start now:
   - 3.3.1a Conversation Types
   - 3.3.2 Cache Implementation

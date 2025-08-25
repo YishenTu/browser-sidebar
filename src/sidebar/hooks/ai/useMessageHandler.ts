@@ -55,6 +55,7 @@ export function useMessageHandler({
         metadata: {
           model: modelInfo?.name || 'AI Assistant',
           thinking: response.thinking, // Store thinking separately for UI to render
+          ...(response.metadata?.searchResults && { searchResults: response.metadata.searchResults }),
         },
       });
     },

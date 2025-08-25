@@ -18,7 +18,6 @@ import { OpenAIClient } from './OpenAIClient';
 import {
   getModelsByProvider,
   getModelById,
-  supportsReasoning,
   modelExists,
   type ModelConfig,
 } from '../../config/models';
@@ -156,18 +155,18 @@ export class OpenAIProvider extends BaseProvider {
         const requestParams: any = {
           model: currentConfig.model,
           input,
+          // Always enable web search
+          tools: [{ type: 'web_search_preview' }],
         };
 
-        // Add reasoning params for supported models (Responses API schema)
-        if (supportsReasoning(currentConfig.model)) {
-          // Always request a summary; effort is user-configurable
+        // Add reasoning params for models that support it with web search
+        // According to OpenAI docs, newer models (GPT-5 family) support both
+        if (currentConfig.reasoningEffort) {
           requestParams.reasoning = {
-            ...(currentConfig.reasoningEffort ? { effort: currentConfig.reasoningEffort } : {}),
+            effort: currentConfig.reasoningEffort,
             summary: 'auto',
           };
         }
-
-        // Log the ACTUAL API request parameters
 
         try {
           // Use Responses API with AbortSignal passed via RequestOptions
@@ -177,7 +176,7 @@ export class OpenAIProvider extends BaseProvider {
 
           // Log the response model to verify what model actually responded
           return this.convertResponsesToProviderFormat(response);
-        } catch (error) {
+        } catch (error: any) {
           // Wrap in Error instance with ProviderError fields for consistency
           const formatted = this.formatError(error);
           const providerError = new Error(formatted.message) as Error & typeof formatted;
@@ -215,42 +214,93 @@ export class OpenAIProvider extends BaseProvider {
         const requestParams: any = {
           model: currentConfig.model,
           input,
-          stream: true,
+          // Always enable web search
+          tools: [{ type: 'web_search_preview' }],
+          stream: true, // Add stream after tools, matching the order
         };
 
-        // Add reasoning params for supported models
-        if (supportsReasoning(currentConfig.model)) {
+        // Add reasoning params for models that support it with web search
+        // According to OpenAI docs, newer models (GPT-5 family) support both
+        if (currentConfig.reasoningEffort) {
           requestParams.reasoning = {
-            ...(currentConfig.reasoningEffort ? { effort: currentConfig.reasoningEffort } : {}),
+            effort: currentConfig.reasoningEffort,
             summary: 'auto',
           };
         }
 
         try {
-          let asyncIterable: any;
-
-          // Prefer the official Responses streaming helper when available
-          if ((openaiInstance as any)?.responses?.stream) {
-            asyncIterable = await (openaiInstance as any).responses.stream(
-              { ...requestParams },
-              { signal: cfg?.signal }
-            );
-          } else {
-            // Fallback: legacy pattern using create({ stream: true }) that returns an async-iterable
-            asyncIterable = await (openaiInstance as any).responses.create(
-              { ...requestParams, stream: true },
-              { signal: cfg?.signal }
-            );
-          }
+          // Use responses.create with stream: true (there is no separate stream method)
+          const asyncIterable = await (openaiInstance as any).responses.create(
+            requestParams, // requestParams already has stream: true
+            { signal: cfg?.signal }
+          );
 
           // Track the last seen cumulative content to extract deltas
           let lastSeenContent = '';
           // Track reasoning summary and whether it's emitted
           let emittedReasoning = false;
+          // Track web search metadata
+          let searchMetadata: any = null;
 
           for await (const event of asyncIterable as any) {
             try {
+              
               // Process streaming event based on OpenAI Response API event types
+
+              // Handle web search call completion
+              if (event.type === 'response.web_search_call.completed') {
+                // Web search completed, annotations will come in the final message
+                continue;
+              }
+              
+              // Capture web search query when search is performed
+              if (event.type === 'response.output_item.done' && event.item?.type === 'web_search_call') {
+                // Store search metadata as fallback - will be replaced if real citations are found
+                if (event.item.action?.query) {
+                  // If we have a specific query, create a Google search link
+                  searchMetadata = {
+                    sources: [{
+                      title: `Web search: "${event.item.action.query}"`,
+                      url: 'https://www.google.com/search?q=' + encodeURIComponent(event.item.action.query)
+                    }]
+                  };
+                } else if (event.item.action?.type === 'search') {
+                  // Generic web search without specific query - try to infer from context
+                  // Extract the user's input to create a search query
+                  const input = provider.convertMessagesToResponsesInput(msgs);
+                  const userQuery = input.split('\n').pop()?.replace('User: ', '') || 'search';
+                  searchMetadata = {
+                    sources: [{
+                      title: 'Real-time web search',
+                      url: 'https://www.google.com/search?q=' + encodeURIComponent(userQuery)
+                    }]
+                  };
+                }
+                continue;
+              }
+              
+              // Handle final message output with annotations
+              if (event.type === 'response.output_item.done' && event.item?.type === 'message') {
+                // Extract citations from the complete message
+                if (event.item.content && Array.isArray(event.item.content)) {
+                  for (const contentItem of event.item.content) {
+                    if (contentItem.type === 'output_text' && contentItem.annotations && contentItem.annotations.length > 0) {
+                      const sources = contentItem.annotations
+                        .filter((a: any) => a.type === 'url_citation')
+                        .map((a: any) => ({
+                          url: a.url,
+                          title: a.title || 'Untitled',
+                        }));
+                      
+                      if (sources.length > 0) {
+                        // Replace fallback with actual citations
+                        searchMetadata = { sources };
+                      }
+                    }
+                  }
+                }
+                continue;
+              }
 
               // Handle reasoning summary delta events - stream in real-time
               if (event.type === 'response.reasoning_summary_text.delta' && event.delta) {
@@ -348,6 +398,8 @@ export class OpenAIProvider extends BaseProvider {
                     },
                   ],
                   usage: event.usage ? provider.convertUsage(event.usage) : undefined,
+                  // Include search metadata if available
+                  ...(searchMetadata && { metadata: { searchResults: searchMetadata } }),
                 };
 
                 yield streamChunk;
@@ -376,6 +428,8 @@ export class OpenAIProvider extends BaseProvider {
                     },
                   ],
                   usage: event.usage ? provider.convertUsage(event.usage) : undefined,
+                  // Include search metadata if available in final chunk
+                  ...(searchMetadata && { metadata: { searchResults: searchMetadata } }),
                 };
 
                 yield streamChunk;
@@ -385,7 +439,7 @@ export class OpenAIProvider extends BaseProvider {
               continue;
             }
           }
-        } catch (error) {
+        } catch (error: any) {
           const formatted = provider.formatError(error);
           const providerError = new Error(formatted.message) as Error & typeof formatted;
           Object.assign(providerError, formatted);
@@ -490,13 +544,15 @@ export class OpenAIProvider extends BaseProvider {
    * Convert provider messages to OpenAI API format
    */
   private convertMessagesToResponsesInput(messages: ProviderChatMessage[]): string {
-    // Simple role-tagged concatenation for Responses API input
-    // System messages first, then others in order
-    const ordered = messages.slice().sort((a, b) => {
-      const roleOrder: Record<string, number> = { system: 0, user: 1, assistant: 2 };
-      return (roleOrder[a.role] ?? 3) - (roleOrder[b.role] ?? 3);
-    });
-    return ordered
+    // For Responses API, we need to maintain conversation order
+    // Only extract system messages to put first, then keep conversation order
+    const systemMessages = messages.filter(m => m.role === 'system');
+    const conversationMessages = messages.filter(m => m.role !== 'system');
+    
+    // Combine: system messages first (if any), then conversation in original order
+    const orderedMessages = [...systemMessages, ...conversationMessages];
+    
+    return orderedMessages
       .map(m => {
         const role = m.role.charAt(0).toUpperCase() + m.role.slice(1);
         return `${role}: ${m.content}`;
@@ -510,9 +566,12 @@ export class OpenAIProvider extends BaseProvider {
   private convertResponsesToProviderFormat(response: any): ProviderResponse {
     // Prefer reconstructing content from structured outputs to avoid mixing reasoning summary
     let content = '';
-    const outputs = response?.output || response?.outputs || response?.response?.output;
+    let searchMetadata: any = null;
+    
+    // For Responses API, output is an array of items
+    const outputs = response?.output || response?.outputs || [];
     if (Array.isArray(outputs)) {
-      const messageItem = outputs.find((o: any) => (o?.type || o?.item_type) === 'message');
+      const messageItem = outputs.find((o: any) => o?.type === 'message');
       if (messageItem && Array.isArray(messageItem.content)) {
         const textParts = messageItem.content
           .map((c: any) => (c?.type === 'output_text' ? c?.text : ''))
@@ -520,6 +579,34 @@ export class OpenAIProvider extends BaseProvider {
         if (textParts.length) {
           content = textParts.join('');
         }
+        
+        // Extract citations from message annotations
+        for (const contentItem of messageItem.content) {
+          if (contentItem.type === 'output_text' && contentItem.annotations && contentItem.annotations.length > 0) {
+            const sources = contentItem.annotations
+              .filter((a: any) => a.type === 'url_citation')
+              .map((a: any) => ({
+                url: a.url,
+                title: a.title || 'Untitled',
+              }));
+            
+            if (sources.length > 0) {
+              searchMetadata = { sources };
+            }
+          }
+        }
+      }
+      
+      // Check for web search in outputs as fallback
+      const webSearchItem = outputs.find((o: any) => o?.type === 'web_search_call');
+      if (webSearchItem && !searchMetadata) {
+        // No citations provided, create fallback
+        searchMetadata = {
+          sources: [{
+            title: 'Real-time web search performed',
+            url: 'https://www.google.com'
+          }]
+        };
       }
     }
     if (!content) {
@@ -546,6 +633,7 @@ export class OpenAIProvider extends BaseProvider {
         timestamp: new Date(),
         model,
         requestId: id,
+        ...(searchMetadata && { searchResults: searchMetadata }),
       },
     };
   }

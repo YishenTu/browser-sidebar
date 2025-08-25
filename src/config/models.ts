@@ -10,10 +10,30 @@ export interface ModelConfig {
   // OpenAI specific
   reasoningEffort?: 'minimal' | 'low' | 'medium' | 'high';
   // Gemini specific - '0' for off, '-1' for dynamic
-  thinkingBudget?: '0' | '-1';
+  thinkingBudget?: '0' | '-1' | '<thinkingbudget>';
 }
 
 export const SUPPORTED_MODELS: ModelConfig[] = [
+
+  {
+    id: 'gemini-2.5-flash-lite',
+    name: 'Gemini 2.5 Flash Lite',
+    provider: 'gemini',
+    thinkingBudget: '0', // 512 to 24576
+  },
+  // Append more models as needed
+  {
+    id: 'gemini-2.5-flash',
+    name: 'Gemini 2.5 Flash',
+    provider: 'gemini',
+    thinkingBudget: '0', // 0 to 24576
+  },
+  {
+    id: 'gemini-2.5-pro',
+    name: 'Gemini 2.5 Pro',
+    provider: 'gemini',
+    thinkingBudget: '-1', // 128 to 32768
+  },
   {
     id: 'gpt-5-nano',
     name: 'GPT 5 Nano',
@@ -21,23 +41,10 @@ export const SUPPORTED_MODELS: ModelConfig[] = [
     reasoningEffort: 'minimal', // Default reasoning effort
   },
   {
-    id: 'gemini-2.5-flash-lite',
-    name: 'Gemini 2.5 Flash Lite',
-    provider: 'gemini',
-    thinkingBudget: '0', // Default to off
-  },
-  // Append more models as needed
-  {
-    id: 'gemini-2.5-flash',
-    name: 'Gemini 2.5 Flash',
-    provider: 'gemini',
-    thinkingBudget: '0',
-  },
-  {
-    id: 'gemini-2.5-pro',
-    name: 'Gemini 2.5 Pro',
-    provider: 'gemini',
-    thinkingBudget: '-1',
+    id: 'gpt-5-mini',
+    name: 'GPT 5 Mini',
+    provider: 'openai',
+    reasoningEffort: 'low', // Default reasoning effort
   },
   {
     id: 'gpt-5',

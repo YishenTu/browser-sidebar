@@ -4,3 +4,5 @@
 [ ] 3. regeneration button for ai response
 [ ] 4. edit button for user msg
 [ ] 5. latex render
+[x] 6. reasoning summary
+[x] 7. web search

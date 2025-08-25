@@ -190,3 +190,68 @@
   width: 18px;
   height: 18px;
 }
+
+/* ============================================================================
+ * Search Metadata Display
+ * ============================================================================ */
+
+.message-search-metadata {
+  margin-top: 0.125rem; /* Reduced from 0.5rem */
+  padding: 0;
+  margin-left: 16px; /* Align with timestamp container */
+  padding-left: 8px; /* Match timestamp container padding */
+}
+
+.search-sources {
+  background: transparent;
+  border: none;
+  padding: 0;
+  font-size: 0.8125rem; /* Slightly smaller */
+}
+
+.search-sources[open] summary::before {
+  content: none; /* Remove triangle */
+}
+
+.search-sources-summary {
+  cursor: pointer;
+  padding: 0.125rem 0;
+  user-select: none;
+  color: #9ca3af; /* Grey color */
+  font-weight: 400;
+  font-size: 0.8125rem;
+  list-style: none; /* Remove default marker */
+}
+
+.search-sources-summary::-webkit-details-marker {
+  display: none; /* Remove triangle in webkit browsers */
+}
+
+.search-sources-summary:hover {
+  color: #6b7280; /* Slightly darker grey on hover */
+}
+
+.search-sources-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem; /* Reduced gap */
+  padding: 0;
+  padding-left: 1rem; /* Indent from the vertical line */
+  margin-left: 0.5rem; /* Offset for the vertical line */
+  margin-top: 0.125rem; /* Reduced margin */
+  border-left: 1px solid #6b7280; /* Vertical line like thinking wrapper */
+}
+
+.search-source-link {
+  color: #9ca3af; /* Grey color for links */
+  text-decoration: none;
+  padding: 0.125rem 0;
+  display: block;
+  transition: color 0.2s;
+  font-size: 0.8125rem;
+}
+
+.search-source-link:hover {
+  color: #6b7280; /* Darker grey on hover */
+  text-decoration: underline;
+}

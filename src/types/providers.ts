@@ -208,6 +208,7 @@ export interface StreamChunk {
   model: string;
   choices: StreamChoice[];
   usage?: Usage;
+  metadata?: Record<string, any>;
 }
 
 // ============================================================================

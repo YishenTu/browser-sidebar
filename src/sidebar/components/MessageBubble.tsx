@@ -142,6 +142,32 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
           </div>
         </div>
 
+        {/* Search results display for assistant messages */}
+        {message.role === 'assistant' && message.metadata?.['searchResults'] && (
+          <div className="message-search-metadata">
+            {(message.metadata['searchResults'] as any).sources && (
+              <details className="search-sources" open>
+                <summary className="search-sources-summary">
+                  Sources ({(message.metadata['searchResults'] as any).sources.length})
+                </summary>
+                <div className="search-sources-list">
+                  {(message.metadata['searchResults'] as any).sources.map((source: any, i: number) => (
+                    <a
+                      key={i}
+                      href={source.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="search-source-link"
+                    >
+                      {source.title}
+                    </a>
+                  ))}
+                </div>
+              </details>
+            )}
+          </div>
+        )}
+
         {/* Timestamp and model name (for assistant) - same row under bubble */}
         {showTimestamp &&
           (message.role !== 'assistant' ||

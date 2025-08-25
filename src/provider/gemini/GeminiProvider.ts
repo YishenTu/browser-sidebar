@@ -55,6 +55,10 @@ interface GeminiGenerationConfig {
   };
 }
 
+interface GeminiTool {
+  google_search?: Record<string, never>; // Empty object for Google Search (note: underscore not camelCase)
+}
+
 interface GeminiRequest {
   contents: GeminiContent[];
   generationConfig: GeminiGenerationConfig;
@@ -62,6 +66,7 @@ interface GeminiRequest {
     category: string;
     threshold: string;
   }>;
+  tools?: GeminiTool[];
 }
 
 /**
@@ -82,6 +87,27 @@ interface GeminiCandidate {
   index?: number;
 }
 
+interface GeminiSearchMetadata {
+  webSearchQueries?: string[];
+  groundingChunks?: Array<{
+    web?: {
+      uri?: string;
+      title?: string;
+    };
+  }>;
+  groundingSupports?: Array<{
+    segment?: {
+      startIndex?: number;
+      endIndex?: number;
+      text?: string;
+    };
+    groundingChunkIndices?: number[];
+  }>;
+  searchEntryPoint?: {
+    renderedContent?: string;
+  };
+}
+
 interface GeminiResponse {
   candidates?: GeminiCandidate[];
   usageMetadata?: {
@@ -90,6 +116,7 @@ interface GeminiResponse {
     totalTokenCount?: number;
     thinkingTokenCount?: number;
   };
+  groundingMetadata?: GeminiSearchMetadata;
 }
 
 /**
@@ -236,9 +263,27 @@ export class GeminiProvider extends GeminiClient {
 
           // Process chunk to extract complete JSON objects
           const objects = processor.processChunk(chunk);
+          
+          // Debug: Log raw chunk to see what we're getting
+          if (objects.length > 0) {
+            
+            // Check if the streaming response has groundingMetadata in candidates
+            if (objects[0].candidates?.[0]) {
+              // Could check candidate.groundingMetadata here if needed in future
+            }
+          }
 
           // Yield each complete object as it arrives
           for (const item of objects) {
+            // Debug: Log the raw Gemini response to see grounding metadata
+            // Check for various possible field names (camelCase and snake_case)
+            if (item.groundingMetadata || item.grounding_metadata || 
+                item.groundingChunks || item.grounding_chunks ||
+                item.webSearchQueries || item.web_search_queries ||
+                item.searchMetadata || item.search_metadata) {
+              // Grounding data present - will be processed in convertGeminiToStreamChunk
+            }
+            
             const streamChunk = this.convertGeminiToStreamChunk(item);
             const processedChunk = this.processStreamChunk(streamChunk, config);
 
@@ -249,8 +294,10 @@ export class GeminiProvider extends GeminiClient {
             const hasContent = processedChunk.choices[0]?.delta?.content;
             const hasThinking = processedChunk.choices[0]?.delta?.thinking;
             const isCompletion = processedChunk.choices[0]?.finishReason;
+            const hasMetadata = processedChunk.metadata?.searchResults;
 
-            if (hasContent || hasThinking || isCompletion) {
+            // Yield if we have content, thinking, completion, or metadata
+            if (hasContent || hasThinking || isCompletion || hasMetadata) {
               yield processedChunk;
             }
           }
@@ -330,8 +377,10 @@ export class GeminiProvider extends GeminiClient {
     const request: GeminiRequest = {
       contents,
       generationConfig: this.buildGenerationConfig(geminiConfig, config),
+      // Always enable Google Search grounding for better accuracy
+      tools: [{ google_search: {} }],
     };
-
+    
     // Add safety settings if configured
     if (geminiConfig.safetySettings) {
       request.safetySettings = geminiConfig.safetySettings;
@@ -510,7 +559,7 @@ export class GeminiProvider extends GeminiClient {
     const finishReason = this.normalizeFinishReason(candidate?.finishReason);
 
     const response: ProviderResponse = {
-      id: `gemini-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      id: `gemini-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`,
       content,
       model: this.getCurrentModel(),
       usage,
@@ -524,6 +573,19 @@ export class GeminiProvider extends GeminiClient {
 
     if (thinking) {
       response.thinking = thinking;
+    }
+
+    // Add search metadata if present (check both camelCase and snake_case)
+    const groundingData = (data as any).groundingMetadata || 
+                          (data as any).grounding_metadata ||
+                          (data as any).searchMetadata ||
+                          (data as any).search_metadata;
+    
+    if (groundingData) {
+      response.metadata = {
+        ...response.metadata,
+        searchResults: this.formatSearchMetadata(groundingData),
+      };
     }
 
     return response;
@@ -557,7 +619,7 @@ export class GeminiProvider extends GeminiClient {
 
     const finishReason = this.normalizeFinishReason(candidate?.finishReason);
 
-    return {
+    const chunk: StreamChunk = {
       id: `gemini-${Date.now()}`,
       object: 'response.chunk',
       created: Math.floor(Date.now() / 1000),
@@ -580,6 +642,25 @@ export class GeminiProvider extends GeminiClient {
           }
         : undefined,
     };
+
+    // Add search metadata if present (check both camelCase and snake_case)
+    // In streaming, this comes from candidates[0].groundingMetadata
+    const groundingData = geminiResponse.candidates?.[0]?.groundingMetadata || 
+                          geminiResponse.groundingMetadata || 
+                          geminiResponse.grounding_metadata ||
+                          geminiResponse.searchMetadata ||
+                          geminiResponse.search_metadata;
+    
+    if (groundingData && Object.keys(groundingData).length > 0) {
+      const formattedMetadata = this.formatSearchMetadata(groundingData);
+      if (formattedMetadata) {
+        chunk.metadata = {
+          searchResults: formattedMetadata,
+        };
+      }
+    }
+
+    return chunk;
   }
 
   /**
@@ -710,5 +791,48 @@ export class GeminiProvider extends GeminiClient {
   private isSupportedImageType(mimeType: string): boolean {
     const supportedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
     return supportedTypes.includes(mimeType.toLowerCase());
+  }
+
+  /**
+   * Format search metadata for response
+   */
+  private formatSearchMetadata(metadata: any): any {
+    const searchInfo: any = {};
+
+    // Check for search queries (both camelCase and snake_case)
+    const queries = metadata.webSearchQueries || metadata.web_search_queries;
+    if (queries?.length) {
+      searchInfo.queries = queries;
+    }
+
+    // Check for grounding chunks (both camelCase and snake_case)
+    const chunks = metadata.groundingChunks || metadata.grounding_chunks;
+    if (chunks?.length) {
+      searchInfo.sources = chunks
+        .filter((chunk: any) => chunk.web?.uri)
+        .map((chunk: any) => ({
+          url: chunk.web.uri,
+          title: chunk.web.title || 'Untitled',
+        }));
+    }
+
+    // Check for grounding supports (both camelCase and snake_case)
+    const supports = metadata.groundingSupports || metadata.grounding_supports;
+    if (supports?.length) {
+      searchInfo.citations = supports.map((support: any) => ({
+        text: support.segment?.text || '',
+        startIndex: support.segment?.startIndex || support.segment?.start_index,
+        endIndex: support.segment?.endIndex || support.segment?.end_index,
+        sourceIndices: support.groundingChunkIndices || support.grounding_chunk_indices || [],
+      }));
+    }
+
+    // Check for search entry point (both camelCase and snake_case)
+    const entryPoint = metadata.searchEntryPoint || metadata.search_entry_point;
+    if (entryPoint?.renderedContent || entryPoint?.rendered_content) {
+      searchInfo.searchWidget = entryPoint.renderedContent || entryPoint.rendered_content;
+    }
+
+    return Object.keys(searchInfo).length > 0 ? searchInfo : undefined;
   }
 }
