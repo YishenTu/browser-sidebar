@@ -1,0 +1,265 @@
+/**
+ * @file Gemini Response Parser
+ *
+ * Handles parsing and normalization of Gemini API responses,
+ * including content extraction, thinking processing, and usage metadata.
+ */
+
+import type {
+  ProviderResponse,
+  Usage,
+  FinishReason,
+  StreamChunk,
+  ProviderType,
+} from '../../types/providers';
+import type { GeminiResponse, GeminiCandidate, GeminiChatConfig } from './types';
+import { FINISH_REASON_MAP } from './types';
+import { formatSearchMetadata } from './searchMetadata';
+
+/**
+ * Parse Gemini API response into provider response format
+ */
+export function parseResponse(
+  data: GeminiResponse,
+  model: string,
+  providerType: ProviderType,
+  _config?: GeminiChatConfig
+): ProviderResponse {
+  const candidate = data.candidates?.[0];
+
+  // Extract content and thinking from response
+  const { content, thinking } = extractContentAndThinking(candidate);
+
+  // Build usage metadata
+  const usage = buildUsageMetadata(data);
+
+  // Normalize finish reason
+  const finishReason = normalizeFinishReason(candidate?.finishReason);
+
+  // Build base response
+  const response: ProviderResponse = {
+    id: generateResponseId(),
+    content,
+    model,
+    usage,
+    finishReason,
+    metadata: {
+      provider: providerType,
+      timestamp: new Date(),
+      model,
+    },
+  };
+
+  // Add thinking if present
+  if (thinking) {
+    response.thinking = thinking;
+  }
+
+  // Add search metadata if present
+  const searchMetadata = extractSearchMetadata(data);
+  if (searchMetadata) {
+    response.metadata = {
+      ...response.metadata,
+      searchResults: searchMetadata,
+    };
+  }
+
+  return response;
+}
+
+/**
+ * Convert Gemini streaming response to StreamChunk format
+ */
+export function convertToStreamChunk(geminiResponse: any, model: string): StreamChunk {
+  const candidate = geminiResponse.candidates?.[0];
+
+  // Extract content and thinking
+  const { content, thinking } = extractContentAndThinking(candidate);
+
+  // Normalize finish reason
+  const finishReason = normalizeFinishReason(candidate?.finishReason);
+
+  const chunk: StreamChunk = {
+    id: generateChunkId(),
+    object: 'response.chunk',
+    created: Math.floor(Date.now() / 1000),
+    model,
+    choices: [
+      {
+        index: 0,
+        delta: {
+          content: content || undefined,
+          thinking: thinking || undefined,
+        },
+        finishReason: candidate?.finishReason ? finishReason : null,
+      },
+    ],
+  };
+
+  // Add usage metadata if present
+  if (geminiResponse.usageMetadata) {
+    chunk.usage = {
+      promptTokens: geminiResponse.usageMetadata.promptTokenCount,
+      completionTokens: geminiResponse.usageMetadata.candidatesTokenCount,
+      totalTokens: geminiResponse.usageMetadata.totalTokenCount,
+    };
+  }
+
+  // Add search metadata if present
+  const searchMetadata = extractStreamingSearchMetadata(geminiResponse);
+  if (searchMetadata) {
+    chunk.metadata = {
+      searchResults: searchMetadata,
+    };
+  }
+
+  return chunk;
+}
+
+/**
+ * Extract content and thinking from candidate
+ */
+function extractContentAndThinking(candidate?: GeminiCandidate): {
+  content: string;
+  thinking?: string;
+} {
+  let content = '';
+  let thinking: string | undefined;
+
+  if (candidate?.content?.parts) {
+    const regularTextParts: string[] = [];
+    const thoughtParts: string[] = [];
+
+    for (const part of candidate.content.parts) {
+      if (part.thought) {
+        // This is a thought summary part
+        if (part.text) {
+          thoughtParts.push(part.text);
+        }
+      } else if (part.text) {
+        // Regular content part
+        regularTextParts.push(part.text);
+      }
+      // Also handle legacy thinking field if present
+      if (part.thinking) {
+        thoughtParts.push(part.thinking);
+      }
+    }
+
+    content = regularTextParts.join('');
+
+    // Capture thinking tokens if they exist
+    if (thoughtParts.length > 0) {
+      thinking = thoughtParts.join(' ');
+    }
+  }
+
+  return { content, thinking };
+}
+
+/**
+ * Build usage metadata from response
+ */
+function buildUsageMetadata(data: GeminiResponse): Usage {
+  const usage: Usage = {
+    promptTokens: data.usageMetadata?.promptTokenCount || 0,
+    completionTokens: data.usageMetadata?.candidatesTokenCount || 0,
+    totalTokens: data.usageMetadata?.totalTokenCount || 0,
+  };
+
+  if (data.usageMetadata?.thinkingTokenCount) {
+    usage.thinkingTokens = data.usageMetadata.thinkingTokenCount;
+  }
+
+  return usage;
+}
+
+/**
+ * Extract search metadata from response (handles multiple field names)
+ */
+function extractSearchMetadata(data: GeminiResponse): any {
+  const groundingData =
+    (data as any).groundingMetadata ||
+    (data as any).grounding_metadata ||
+    (data as any).searchMetadata ||
+    (data as any).search_metadata;
+
+  if (groundingData) {
+    return formatSearchMetadata(groundingData);
+  }
+
+  return undefined;
+}
+
+/**
+ * Extract search metadata from streaming response
+ */
+function extractStreamingSearchMetadata(geminiResponse: any): any {
+  const groundingData =
+    geminiResponse.candidates?.[0]?.groundingMetadata ||
+    geminiResponse.groundingMetadata ||
+    geminiResponse.grounding_metadata ||
+    geminiResponse.searchMetadata ||
+    geminiResponse.search_metadata;
+
+  if (groundingData && Object.keys(groundingData).length > 0) {
+    return formatSearchMetadata(groundingData);
+  }
+
+  return undefined;
+}
+
+/**
+ * Normalize finish reasons from Gemini to standard format
+ */
+export function normalizeFinishReason(reason?: string): FinishReason {
+  if (!reason) return 'stop';
+
+  const upperReason = reason.toUpperCase();
+  return FINISH_REASON_MAP[upperReason] || 'stop';
+}
+
+/**
+ * Generate unique response ID
+ */
+function generateResponseId(): string {
+  return `gemini-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`;
+}
+
+/**
+ * Generate unique chunk ID
+ */
+function generateChunkId(): string {
+  return `gemini-${Date.now()}`;
+}
+
+/**
+ * Process stream chunk with configuration
+ */
+export function processStreamChunk(
+  chunk: StreamChunk,
+  config?: GeminiChatConfig,
+  defaultShowThoughts?: boolean
+): StreamChunk {
+  const showThoughts = config?.showThoughts ?? defaultShowThoughts;
+
+  // Create a copy to avoid mutating the original
+  const processedChunk = { ...chunk };
+  processedChunk.choices = chunk.choices.map(choice => {
+    const processedChoice = { ...choice };
+
+    // Filter out thinking content if showThoughts is false
+    if (!showThoughts && choice.delta?.thinking) {
+      processedChoice.delta = {
+        ...choice.delta,
+        thinking: undefined,
+      };
+    } else {
+      processedChoice.delta = { ...choice.delta };
+    }
+
+    return processedChoice;
+  });
+
+  return processedChunk;
+}

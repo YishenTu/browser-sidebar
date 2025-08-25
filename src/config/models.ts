@@ -14,7 +14,6 @@ export interface ModelConfig {
 }
 
 export const SUPPORTED_MODELS: ModelConfig[] = [
-
   {
     id: 'gemini-2.5-flash-lite',
     name: 'Gemini 2.5 Flash Lite',
@@ -38,7 +37,7 @@ export const SUPPORTED_MODELS: ModelConfig[] = [
     id: 'gpt-5-nano',
     name: 'GPT 5 Nano',
     provider: 'openai',
-    reasoningEffort: 'minimal', // Default reasoning effort
+    reasoningEffort: 'low', // Default reasoning effort
   },
   {
     id: 'gpt-5-mini',

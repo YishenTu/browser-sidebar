@@ -15,11 +15,7 @@
  */
 
 import { BaseProvider } from '../BaseProvider';
-import { 
-  getModelsByProvider, 
-  getModelById, 
-  modelExists 
-} from '../../config/models';
+import { getModelsByProvider, getModelById, modelExists } from '../../config/models';
 import type {
   ProviderConfig,
   GeminiConfig,
@@ -39,7 +35,6 @@ const GEMINI_API_CONFIG = {
   BASE_URL: 'https://generativelanguage.googleapis.com',
   VERSION: 'v1beta',
   DEFAULT_RETRY_AFTER: 60, // seconds
-  TOKEN_ESTIMATION_RATIO: 3.5, // average characters per token
 } as const;
 
 /**
@@ -82,7 +77,7 @@ export class GeminiClient extends BaseProvider {
     // Extract API key and setup internal client
     const geminiConfig = config.config as GeminiConfig;
     this.apiKey = geminiConfig.apiKey;
-    
+
     // Set base URL if custom endpoint provided (for testing)
     if (geminiConfig.endpoint) {
       this.baseUrl = geminiConfig.endpoint;
@@ -133,8 +128,12 @@ export class GeminiClient extends BaseProvider {
     }
 
     // Log if legacy parameters are provided (but don't fail)
-    if (config.temperature !== undefined || config.topP !== undefined || 
-        config.topK !== undefined || config.maxTokens !== undefined) {
+    if (
+      config.temperature !== undefined ||
+      config.topP !== undefined ||
+      config.topK !== undefined ||
+      config.maxTokens !== undefined
+    ) {
       console.debug('Legacy parameters ignored:', {
         temperature: config.temperature,
         topP: config.topP,
@@ -201,7 +200,7 @@ export class GeminiClient extends BaseProvider {
   async chat(messages: ProviderChatMessage[], _config?: any): Promise<ProviderResponse> {
     this.ensureConfigured();
     this.validateMessages(messages);
-    
+
     // Placeholder - will be implemented in Task 4.2.2b
     throw new Error('Chat method not yet implemented - will be completed in Task 4.2.2b');
   }
@@ -213,10 +212,10 @@ export class GeminiClient extends BaseProvider {
   async *streamChat(messages: ProviderChatMessage[], _config?: any): AsyncIterable<StreamChunk> {
     this.ensureConfigured();
     this.validateMessages(messages);
-    
+
     // Placeholder - will be implemented in Task 4.2.2b
     throw new Error('Stream chat method not yet implemented - will be completed in Task 4.2.2b');
-    
+
     // Unreachable yield to satisfy generator function requirement
     yield {} as StreamChunk;
   }
@@ -245,15 +244,12 @@ export class GeminiClient extends BaseProvider {
 
   /**
    * Estimate token count for text
-   * Uses approximate calculation based on Gemini tokenization
+   * Note: Gemini doesn't provide token estimation, returning 0
    */
-  estimateTokens(text: string): number {
-    if (!text || text.length === 0) {
-      return 0;
-    }
-
-    // Use configuration constant for token estimation ratio
-    return Math.ceil(text.length / GEMINI_API_CONFIG.TOKEN_ESTIMATION_RATIO);
+  estimateTokens(_text: string): number {
+    // Gemini doesn't provide client-side token estimation
+    // Actual token counts are returned in API responses
+    return 0;
   }
 
   /**
@@ -337,5 +333,4 @@ export class GeminiClient extends BaseProvider {
   private buildApiUrl(endpoint: string): string {
     return `${this.baseUrl}/${GEMINI_API_CONFIG.VERSION}${endpoint}`;
   }
-
 }
