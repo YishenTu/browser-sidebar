@@ -58,6 +58,7 @@
 .model-selector__value {
   text-align: left;
   white-space: nowrap;
+  font-weight: 600;
 }
 
 .model-selector__icon {

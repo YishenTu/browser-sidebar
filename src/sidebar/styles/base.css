@@ -93,17 +93,19 @@
 .ai-sidebar-header-actions {
   display: flex;
   align-items: center;
-  gap: var(--spacing-xs);
+  gap: var(--spacing-sm);
 }
 
 .ai-sidebar-clear,
+.ai-sidebar-settings,
 .ai-sidebar-close {
   border: none;
   background: transparent;
-  font-size: var(--font-size-lg);
+  width: 24px;
+  height: 24px;
   line-height: 1;
   cursor: pointer;
-  padding: var(--spacing-xs) var(--spacing-sm);
+  padding: 0;
   color: var(--text-secondary);
   border-radius: var(--radius-sm);
   transition: var(--transition-fast);
@@ -113,12 +115,14 @@
 }
 
 .ai-sidebar-clear:hover,
+.ai-sidebar-settings:hover,
 .ai-sidebar-close:hover {
   background: var(--hover-overlay);
   color: var(--text-primary);
 }
 
 .ai-sidebar-clear:active,
+.ai-sidebar-settings:active,
 .ai-sidebar-close:active {
   background: var(--active-overlay);
 }

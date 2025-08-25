@@ -18,6 +18,7 @@
     "test:watch": "vitest",
     "test:ui": "vitest --ui",
     "test:coverage": "vitest run --coverage",
+    "test:openai": "tsx test-openai-gpt5-nano.ts",
     "prepare": "husky"
   },
   "dependencies": {
@@ -72,6 +73,7 @@
     "postcss": "^8.4.0",
     "prettier": "^3.0.0",
     "tailwindcss": "^3.3.0",
+    "tsx": "^4.20.5",
     "typescript": "^5.9.2",
     "vite": "^5.0.0",
     "vitest": "^1.0.0"

@@ -124,7 +124,7 @@
 .message-bubble--assistant {
   background: transparent !important; /* Transparent background for AI */
   color: #e5e7eb !important;
-  padding: 6px 12px !important; /* Reduced padding */
+  padding: 6px 0 6px 6px !important; /* Reduced left padding to 6px */
   border-radius: 16px !important;
   display: block !important; /* Block for full width */
   max-width: calc(100% - 32px) !important; /* Full width minus margins (16px * 2) */
@@ -212,7 +212,7 @@
 
 .message-timestamp-container--assistant {
   margin-left: 16px;
-  padding-left: 8px;
+  padding-left: 6px;
 }
 
 .message-timestamp-container--user {

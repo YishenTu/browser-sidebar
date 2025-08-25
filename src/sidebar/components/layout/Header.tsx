@@ -67,9 +67,6 @@ export const Header: React.FC<HeaderProps> = ({
             className="ai-sidebar-clear"
             aria-label="New session"
             title="Start new session"
-            style={{
-              marginRight: '8px',
-            }}
           >
             <svg
               width="16"
@@ -91,14 +88,6 @@ export const Header: React.FC<HeaderProps> = ({
           className="ai-sidebar-settings"
           aria-label="Settings"
           title="API Settings"
-          style={{
-            marginRight: '8px',
-            background: 'none',
-            border: 'none',
-            color: 'inherit',
-            cursor: 'pointer',
-            padding: '4px',
-          }}
         >
           <svg
             width="16"
@@ -120,7 +109,19 @@ export const Header: React.FC<HeaderProps> = ({
           aria-label="Close sidebar"
           title="Close (Esc)"
         >
-          ×
+          <svg
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <line x1="18" y1="6" x2="6" y2="18" />
+            <line x1="6" y1="6" x2="18" y2="18" />
+          </svg>
         </button>
       </div>
     </div>
