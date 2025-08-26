@@ -4,7 +4,7 @@ import { ChatMessage, MessageRole, MessageStatus } from '@store/chat';
 import { MarkdownRenderer } from './MarkdownRenderer';
 import { ThinkingWrapper } from './ThinkingWrapper';
 import { SearchSources } from './SearchSources';
-import { Spinner } from './ui/Spinner';
+import { Spinner, CopyButton, EditIcon, RegenerateIcon } from './ui';
 
 /**
  * MessageBubble Props Interface
@@ -20,6 +20,10 @@ export interface MessageBubbleProps extends React.HTMLAttributes<HTMLDivElement>
   className?: string;
   /** Callback for retry action on error messages */
   onRetry?: (messageId: string) => void;
+  /** Callback for edit action on user messages */
+  onEdit?: (message: ChatMessage) => void;
+  /** Callback for regenerate action on assistant messages */
+  onRegenerate?: (message: ChatMessage) => void;
 }
 
 /**
@@ -33,24 +37,10 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
   showTimestamp = true,
   showFullDate = false,
   className,
+  onEdit,
+  onRegenerate,
   ...props
 }) => {
-  // Format timestamp based on options
-  const formatTimestamp = (timestamp: Date) => {
-    if (showFullDate) {
-      return timestamp.toLocaleDateString('en-US', {
-        month: 'short',
-        day: 'numeric',
-        hour: 'numeric',
-        minute: '2-digit',
-      });
-    }
-    return timestamp.toLocaleTimeString('en-US', {
-      hour: 'numeric',
-      minute: '2-digit',
-    });
-  };
-
   // Get message bubble styling based on role
   const getMessageClasses = (role: MessageRole) => {
     switch (role) {
@@ -130,44 +120,114 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
           />
         ) : null}
 
-        <div className={cn(getMessageClasses(message.role))}>
-          <div data-testid="message-content">{messageContent}</div>
-        </div>
-
-        {/* Search results display for assistant messages */}
-        {message.role === 'assistant' && message.metadata?.['searchResults'] ? (
-          <div className="message-search-metadata">
-            {(message.metadata['searchResults'] as any)?.sources ? (
-              <SearchSources sources={(message.metadata['searchResults'] as any).sources} />
-            ) : null}
+        {/* Hover container for bubble and footer */}
+        <div className={cn('message-hover-container', `message-hover-container--${message.role}`)}>
+          <div className={cn(getMessageClasses(message.role))}>
+            <div data-testid="message-content">{messageContent}</div>
           </div>
-        ) : null}
 
-        {/* Timestamp and model name (for assistant) - same row under bubble */}
-        {showTimestamp &&
-          (message.role !== 'assistant' ||
-            message.status === 'sent' ||
-            message.status === 'received') && (
-            <div
-              className={cn(
-                'message-timestamp-container',
-                `message-timestamp-container--${message.role}`
-              )}
-            >
-              {message.role === 'assistant' && (
-                <span className="message-model-name" aria-label="model-name">
-                  {(message.metadata?.['model'] as string) || 'AI Assistant'}
-                </span>
-              )}
-              <time
-                data-testid="message-timestamp"
-                dateTime={message.timestamp.toISOString()}
-                className="message-timestamp"
-              >
-                {formatTimestamp(message.timestamp)}
-              </time>
+          {/* Search results display for assistant messages - inside hover container */}
+          {message.role === 'assistant' && message.metadata?.['searchResults'] ? (
+            <div className="message-search-metadata">
+              {(message.metadata['searchResults'] as any)?.sources ? (
+                <SearchSources sources={(message.metadata['searchResults'] as any).sources} />
+              ) : null}
             </div>
-          )}
+          ) : null}
+
+          {/* Message Footer - displays metadata below the message bubble */}
+          {showTimestamp &&
+            (message.role !== 'assistant' ||
+              message.status === 'sent' ||
+              message.status === 'received') &&
+            (() => {
+              // Format timestamp based on options (24-hour format)
+              const formatTimestamp = (timestamp: Date) => {
+                if (showFullDate) {
+                  return timestamp.toLocaleDateString('en-US', {
+                    month: 'short',
+                    day: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    hour12: false,
+                  });
+                }
+                return timestamp.toLocaleTimeString('en-US', {
+                  hour: '2-digit',
+                  minute: '2-digit',
+                  hour12: false,
+                });
+              };
+
+              return (
+                <div className={cn('message-footer', `message-footer--${message.role}`)}>
+                  {/* Assistant Footer: Model name + Regenerate button + Copy button | Timestamp (far right) */}
+                  {message.role === 'assistant' && (
+                    <>
+                      <div className="message-footer-left">
+                        <span className="message-footer-model" aria-label="model-name">
+                          {(message.metadata?.['model'] as string) || 'AI Assistant'}
+                        </span>
+
+                        {onRegenerate && (
+                          <button
+                            onClick={() => onRegenerate(message)}
+                            className="message-footer-regenerate"
+                            aria-label="Regenerate response"
+                            title="Regenerate response"
+                            type="button"
+                          >
+                            <RegenerateIcon size={12} className="message-footer-regenerate-icon" />
+                          </button>
+                        )}
+                        <CopyButton
+                          text={message.content || ''}
+                          className="message-footer-copy"
+                          iconSize={12}
+                        />
+                      </div>
+                      <time
+                        data-testid="message-timestamp"
+                        dateTime={message.timestamp.toISOString()}
+                        className="message-footer-timestamp"
+                      >
+                        {formatTimestamp(message.timestamp)}
+                      </time>
+                    </>
+                  )}
+
+                  {/* User Footer: Edit button + Copy button + Timestamp */}
+                  {message.role === 'user' && (
+                    <>
+                      {onEdit && (
+                        <button
+                          onClick={() => onEdit(message)}
+                          className="message-footer-edit"
+                          aria-label="Edit message"
+                          title="Edit message"
+                          type="button"
+                        >
+                          <EditIcon size={12} className="message-footer-edit-icon" />
+                        </button>
+                      )}
+                      <CopyButton
+                        text={message.content || ''}
+                        className="message-footer-copy"
+                        iconSize={12}
+                      />
+                      <time
+                        data-testid="message-timestamp"
+                        dateTime={message.timestamp.toISOString()}
+                        className="message-footer-timestamp"
+                      >
+                        {formatTimestamp(message.timestamp)}
+                      </time>
+                    </>
+                  )}
+                </div>
+              );
+            })()}
+        </div>
 
         {/* Status indicator */}
         {message.status !== 'sent' && (

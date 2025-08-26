@@ -5,6 +5,7 @@
 
 /* Import CSS variables for theming */
 @import './variables.css';
+@import './animations.css'; /* Shared animation keyframes */
 
 /* Typography merged into variables.css and component styles */
 
@@ -13,10 +14,10 @@
 @import './resize-handles.css'; /* Resize handle functionality */
 @import './chat-input.css'; /* Chat input component */
 @import './message-bubbles.css'; /* Message display styles */
-@import './icon-button.css'; /* Icon button component */
+/* @import './icon-button.css'; - Removed: Only animation needed, moved to animations.css */
 @import './model-selector.css'; /* Model selection dropdown */
 @import './markdown-content.css'; /* Markdown rendering styles */
-@import './provider-settings.css'; /* Provider configuration forms */
+/* @import './provider-settings.css'; - REMOVED: Unused component */
 @import './katex-math.css'; /* Mathematical equation rendering */
 @import './thinking-wrapper.css'; /* Thinking/reasoning display wrapper */
 
@@ -26,15 +27,7 @@
 @import './collapsible.css'; /* Collapsible sections */
 @import './dropdown.css'; /* Generic dropdown component */
 @import './search-sources.css'; /* Search sources display */
-
-/* Spinner animation keyframes */
-@keyframes spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
-}
+@import './copy-button.css'; /* Copy button component */
+@import './edit-indicator.css'; /* Edit indicator for message editing */
 
 /* Any global overrides or additional styles can be added below if needed */

@@ -17,6 +17,10 @@ export interface BodyProps {
   height?: string;
   /** Empty message text */
   emptyMessage?: string;
+  /** Callback for editing a message */
+  onEditMessage?: (message: ChatMessage) => void;
+  /** Callback for regenerating an assistant message */
+  onRegenerateMessage?: (message: ChatMessage) => void;
 }
 
 /**
@@ -28,6 +32,8 @@ export const Body: React.FC<BodyProps> = ({
   isLoading,
   height = 'calc(100% - 60px - 70px)',
   emptyMessage = '',
+  onEditMessage,
+  onRegenerateMessage,
 }) => {
   return (
     <div
@@ -42,6 +48,8 @@ export const Body: React.FC<BodyProps> = ({
         isLoading={isLoading}
         emptyMessage={emptyMessage}
         height="100%"
+        onEditMessage={onEditMessage}
+        onRegenerateMessage={onRegenerateMessage}
       />
     </div>
   );

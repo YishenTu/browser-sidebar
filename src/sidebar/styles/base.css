@@ -5,27 +5,7 @@
 
 /* Minimal styles for the injected sidebar to ensure visibility and layout */
 
-/* Animation for spinning icons */
-@keyframes spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-/* Animation for slide in effect */
-@keyframes slideIn {
-  from {
-    opacity: 0;
-    transform: translateY(-10px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
+/* Animations moved to icon-button.css */
 
 /* Ensure the React root container doesn't interfere */
 #ai-browser-sidebar-root {
@@ -88,8 +68,6 @@
   color: var(--text-primary);
 }
 
-/* .ai-sidebar-message-count not used */
-
 .ai-sidebar-header-actions {
   display: flex;
   align-items: center;
@@ -144,9 +122,6 @@
   width: 100%;
   box-sizing: border-box;
 }
-
-/* Remove old content styles */
-/* .ai-sidebar-content removed (unused) */
 
 /* Loading state */
 .ai-sidebar-container--loading {

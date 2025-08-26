@@ -23,3 +23,7 @@ export type { BadgeProps, CharacterCounterProps, BadgeVariant, BadgeSize } from 
 // Dropdown exports
 export { Dropdown } from './Dropdown';
 export type { DropdownProps, DropdownOption, DropdownGroup } from './Dropdown';
+
+// CopyButton exports
+export { CopyButton } from './CopyButton';
+export type { CopyButtonProps } from './CopyButton';

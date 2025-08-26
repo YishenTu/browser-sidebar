@@ -99,17 +99,3 @@
   overflow-x: auto !important;
   max-width: 100% !important;
 }
-
-/* Markdown prose table overrides */
-.prose table {
-  display: table !important;
-  table-layout: auto !important;
-}
-
-.prose thead th {
-  color: #e5e7eb !important;
-}
-
-.prose tbody td {
-  color: #d1d5db !important;
-}

@@ -1,0 +1,41 @@
+/* ===========================================
+ * CopyButton Component Styles (Dark Mode)
+ * =========================================== */
+
+.copy-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2px;
+  background: transparent;
+  border: none;
+  border-radius: 3px;
+  cursor: pointer;
+  color: #9ca3af;
+  transition: all 0.2s ease;
+  outline: none;
+  position: relative;
+}
+
+.copy-button:hover {
+  background-color: rgba(156, 163, 175, 0.15);
+  color: #d1d5db;
+}
+
+.copy-button:active {
+  transform: scale(0.95);
+}
+
+.copy-button:focus-visible {
+  box-shadow: 0 0 0 2px rgba(96, 165, 250, 0.5);
+}
+
+.copy-button-icon {
+  display: block;
+  transition: opacity 0.2s ease;
+}
+
+/* Success state (when copied) */
+.copy-button[aria-label='Copied'] .copy-button-icon {
+  color: #34d399;
+}

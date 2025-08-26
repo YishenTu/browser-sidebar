@@ -24,6 +24,10 @@ export interface MessageListProps {
   onScroll?: (event: React.UIEvent<HTMLDivElement>) => void;
   /** Threshold for enabling virtualization (default: 100) */
   virtualizationThreshold?: number;
+  /** Callback for editing a message */
+  onEditMessage?: (message: ChatMessage) => void;
+  /** Callback for regenerating an assistant message */
+  onRegenerateMessage?: (message: ChatMessage) => void;
 }
 
 /**
@@ -34,6 +38,8 @@ interface VirtualListItemProps {
   style: React.CSSProperties;
   data: {
     messages: ChatMessage[];
+    onEditMessage?: (message: ChatMessage) => void;
+    onRegenerateMessage?: (message: ChatMessage) => void;
   };
 }
 
@@ -81,7 +87,7 @@ const OVERSCAN_COUNT = 5;
  * VirtualListItem Component - Renders individual message items in virtualized list
  */
 const VirtualListItem: React.FC<VirtualListItemProps> = ({ index, style, data }) => {
-  const { messages } = data;
+  const { messages, onEditMessage, onRegenerateMessage } = data;
   const message = messages[index];
 
   if (!message) return null;
@@ -89,7 +95,12 @@ const VirtualListItem: React.FC<VirtualListItemProps> = ({ index, style, data })
   return (
     <div style={style} className="px-4">
       <div className="mb-4">
-        <MessageBubble message={message} className="message-list-item" />
+        <MessageBubble
+          message={message}
+          className="message-list-item"
+          onEdit={onEditMessage}
+          onRegenerate={onRegenerateMessage}
+        />
       </div>
     </div>
   );
@@ -104,6 +115,8 @@ export const MessageList: React.FC<MessageListProps> = ({
   className,
   onScroll,
   virtualizationThreshold = DEFAULT_VIRTUALIZATION_THRESHOLD,
+  onEditMessage,
+  onRegenerateMessage,
 }) => {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const virtualListRef = useRef<List>(null);
@@ -160,8 +173,10 @@ export const MessageList: React.FC<MessageListProps> = ({
   const virtualListData = useMemo(
     () => ({
       messages,
+      onEditMessage,
+      onRegenerateMessage,
     }),
-    [messages]
+    [messages, onEditMessage, onRegenerateMessage]
   );
 
   /**
@@ -188,7 +203,12 @@ export const MessageList: React.FC<MessageListProps> = ({
 
     return messages.map(message => (
       <div key={message.id}>
-        <MessageBubble message={message} className="message-list-item" />
+        <MessageBubble
+          message={message}
+          className="message-list-item"
+          onEdit={onEditMessage}
+          onRegenerate={onRegenerateMessage}
+        />
       </div>
     ));
   }, [messages, isVirtualized]);

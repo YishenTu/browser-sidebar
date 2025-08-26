@@ -21,49 +21,75 @@
   margin: var(--spacing-sm) 0;
   color: var(--text-primary);
   box-shadow: var(--shadow-sm);
-  font-size: var(--font-size-base); /* 14px */
-  line-height: var(--line-height-base); /* 1.4 - tighter spacing */
-  letter-spacing: normal; /* Remove extra letter spacing */
+  font-size: var(--font-size-base);
+  /* 14px */
+  line-height: var(--line-height-base);
+  /* 1.4 - tighter spacing */
+  letter-spacing: normal;
+  /* Remove extra letter spacing */
 }
 
 .message-bubble--user {
-  background: #2563eb !important; /* Blue for user messages */
+  background: #2563eb !important;
+  /* Blue for user messages */
   color: white !important;
-  padding: 10px 12px !important; /* Reduced padding */
+  padding: 10px !important;
+  /* Equal padding on all sides */
   border-radius: 16px !important;
-  display: inline-block !important; /* Inline-block for dynamic width */
-  max-width: calc(100% - 16px) !important; /* Leave space for right margin */
-  margin-left: auto !important; /* Push to right */
-  margin-right: 16px !important; /* Explicit right margin */
+  display: inline-flex !important;
+  /* Inline-flex for dynamic width without text spacing issues */
+  align-items: center !important;
+  max-width: 100% !important;
+  /* Full width of hover container */
+  margin: 0 !important;
+  /* Margins handled by hover container */
   word-wrap: break-word !important;
-  text-align: left !important; /* Left-aligned text */
-  hyphens: auto !important; /* Enable automatic hyphenation */
-  -webkit-hyphens: auto !important; /* Safari support */
-  word-break: break-word !important; /* Break long words if needed */
-  line-height: 1.4 !important; /* Tighter line height */
-  letter-spacing: normal !important; /* Normal letter spacing */
+  text-align: left !important;
+  /* Left-aligned text */
+  hyphens: auto !important;
+  /* Enable automatic hyphenation */
+  -webkit-hyphens: auto !important;
+  /* Safari support */
+  word-break: break-word !important;
+  /* Break long words if needed */
+  line-height: 1.4 !important;
+  /* Tighter line height */
+  letter-spacing: normal !important;
+  /* Normal letter spacing */
+  box-sizing: border-box !important;
+  /* Ensure padding is included in width calculation */
 }
 
 /* Target all child elements inside user bubble for consistent spacing */
 .message-bubble--user * {
   margin: 0 !important;
-  padding-top: 0 !important;
-  padding-bottom: 0 !important;
-  line-height: inherit !important; /* Inherit the parent's line-height */
+  padding: 0 !important; /* Remove ALL padding, not just vertical */
+  line-height: inherit !important;
+  /* Inherit the parent's line-height */
+}
+
+/* Ensure message content div has no padding */
+.message-bubble--user [data-testid='message-content'] {
+  padding: 0 !important;
+  margin: 0 !important;
 }
 
 /* Specifically target paragraphs in user bubbles */
 .message-bubble--user p {
   margin: 0 !important;
   padding: 0 !important;
-  font-size: var(--font-size-base) !important; /* 14px */
-  line-height: inherit !important; /* Inherit the parent's line-height */
+  font-size: var(--font-size-base) !important;
+  /* 14px */
+  line-height: inherit !important;
+  /* Inherit the parent's line-height */
 }
 
 /* Paragraph spacing in assistant messages */
 .message-bubble--assistant p {
-  margin-bottom: 0.5em; /* Reduced spacing between paragraphs */
-  font-size: var(--font-size-base) !important; /* 14px */
+  margin-bottom: 0.5em;
+  /* Reduced spacing between paragraphs */
+  font-size: var(--font-size-base) !important;
+  /* 14px */
   line-height: var(--line-height-base) !important;
 }
 
@@ -74,8 +100,10 @@
 /* Ensure all text in message bubbles uses base font size */
 .message-bubble p,
 .message-bubble div:not(.thinking-wrapper):not(.search-sources) {
-  font-size: var(--font-size-base) !important; /* 14px */
-  line-height: var(--line-height-base) !important; /* 1.4 */
+  font-size: var(--font-size-base) !important;
+  /* 14px */
+  line-height: var(--line-height-base) !important;
+  /* 1.4 */
 }
 
 /* Code blocks should use monospace */
@@ -107,7 +135,8 @@
 
 /* Ensure consistent spacing between elements */
 .message-bubble--assistant > * + * {
-  margin-top: 0.5em; /* Reduced spacing */
+  margin-top: 0.5em;
+  /* Reduced spacing */
 }
 
 /* First and last children get no spacing */
@@ -122,66 +151,82 @@
 }
 
 .message-bubble--assistant {
-  background: transparent !important; /* Transparent background for AI */
+  background: transparent !important;
+  /* Transparent background for AI */
   color: #e5e7eb !important;
-  padding: 3px 0 3px 6px !important; /* Reduced top/bottom padding for tighter spacing */
+  padding: 3px 16px 3px 22px !important;
+  /* Adjusted padding: 16px right, 22px left (16px + 6px original) */
   border-radius: 16px !important;
-  display: block !important; /* Block for full width */
-  max-width: calc(100% - 32px) !important; /* Full width minus margins (16px * 2) */
-  width: calc(100% - 32px) !important; /* Full width minus margins (16px * 2) */
+  display: block !important;
+  /* Block for full width */
+  max-width: 100% !important;
+  /* Full width of hover container */
+  width: 100% !important;
+  /* Full width of hover container */
   word-wrap: break-word !important;
-  margin: 0 16px !important; /* 16px margins on both sides */
-  text-align: left !important; /* Left-aligned text */
-  text-align-last: left !important; /* Last line stays left-aligned */
-  hyphens: auto !important; /* Enable automatic hyphenation */
-  -webkit-hyphens: auto !important; /* Safari support */
-  word-break: break-word !important; /* Break long words if needed */
-  line-height: 1.4 !important; /* Tighter line height */
-  letter-spacing: normal !important; /* Normal letter spacing */
+  margin: 0 !important;
+  /* Margins handled by hover container */
+  text-align: left !important;
+  /* Left-aligned text */
+  text-align-last: left !important;
+  /* Last line stays left-aligned */
+  hyphens: auto !important;
+  /* Enable automatic hyphenation */
+  -webkit-hyphens: auto !important;
+  /* Safari support */
+  word-break: break-word !important;
+  /* Break long words if needed */
+  line-height: 1.4 !important;
+  /* Tighter line height */
+  letter-spacing: normal !important;
+  /* Normal letter spacing */
   box-sizing: border-box !important;
 }
 
 .message-bubble--system {
-  background: rgba(217, 119, 6, 0.2) !important; /* Yellow for system messages */
+  background: rgba(217, 119, 6, 0.2) !important;
+  /* Yellow for system messages */
   color: #fde047 !important;
-  padding: 8px 14px !important; /* Reduced padding */
+  padding: 8px 14px !important;
+  /* Reduced padding */
   border-radius: 16px !important;
   display: inline-block !important;
   max-width: 90% !important;
   text-align: center !important;
   word-wrap: break-word !important;
   margin: 0 auto !important;
-  line-height: 1.4 !important; /* Tighter line height */
-  letter-spacing: normal !important; /* Normal letter spacing */
+  line-height: 1.4 !important;
+  /* Tighter line height */
+  letter-spacing: normal !important;
+  /* Normal letter spacing */
 }
 
 /* Message row alignment */
 .message-row {
   display: flex !important;
   width: 100% !important;
-  margin-bottom: 8px !important; /* Reduced spacing between messages */
+  margin-bottom: 8px !important;
+  /* Reduced spacing between messages */
 }
 
 .message-row--user {
   justify-content: flex-end !important;
-  padding: 0 0 0 100px !important; /* 100px left padding, right handled by bubble margin */
-  box-sizing: border-box !important; /* Ensure proper box model */
+  padding: 0 0 0 100px !important;
+  /* 100px left padding, right handled by bubble margin */
+  box-sizing: border-box !important;
+  /* Ensure proper box model */
 }
 
 .message-row--assistant {
   justify-content: flex-start !important;
-  padding: 0 !important; /* Padding handled by bubble margin */
+  padding: 0 !important;
+  /* Padding handled by bubble margin */
 }
 
 .message-row--system {
   justify-content: center !important;
   padding: 0 12px !important;
 }
-
-/* Custom scrollbar for dark theme */
-/* Removed .message-list scrollbar styling (unused) */
-
-/* Removed responsive/animation blocks for unused .chat-panel* selectors */
 
 /* Message content container styles */
 .message-content-wrapper {
@@ -202,7 +247,161 @@
   align-items: center;
 }
 
-/* Timestamp container styles */
+/* Hover container for bubble and footer */
+.message-hover-container {
+  display: inline-flex;
+  flex-direction: column;
+  position: relative;
+}
+
+.message-hover-container--user {
+  max-width: calc(100% - 16px);
+  margin-left: auto;
+  margin-right: 16px;
+}
+
+.message-hover-container--assistant {
+  max-width: 100%;
+  width: 100%;
+}
+
+/* Message Footer styles - unified container for metadata */
+.message-footer {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 4px;
+  font-size: 11px;
+  color: #9ca3af;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  pointer-events: none;
+}
+
+/* Show footer on hover of the hover container */
+.message-hover-container:hover .message-footer {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.message-footer--assistant {
+  display: flex;
+  justify-content: space-between;
+  margin-left: 0;
+  margin-right: 6px;
+  padding-left: 22px;
+  /* Match bubble left padding */
+  padding-right: 16px;
+  /* Match bubble right padding */
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.message-footer--user {
+  margin-right: 6px;
+  padding-right: 0;
+  justify-content: flex-end;
+}
+
+/* Footer elements */
+.message-footer-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.message-footer-model {
+  font-weight: 500;
+  color: #9ca3af;
+}
+
+.message-footer-timestamp {
+  color: #9ca3af;
+}
+
+.message-footer-copy {
+  margin-left: 0px;
+  padding: 1px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: #6b7280;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 3px;
+  transition: all 0.2s ease;
+}
+
+.message-footer-copy:hover {
+  background-color: rgba(107, 114, 128, 0.2);
+  color: #9ca3af;
+}
+
+.message-footer-copy:active {
+  transform: scale(0.95);
+}
+
+/* Edit button styles */
+.message-footer-edit {
+  margin-right: 0px;
+  padding: 1px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: #6b7280;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 3px;
+  transition: all 0.2s ease;
+}
+
+.message-footer-edit:hover {
+  background-color: rgba(107, 114, 128, 0.2);
+  color: #9ca3af;
+}
+
+.message-footer-edit:active {
+  transform: scale(0.95);
+}
+
+.message-footer-edit-icon {
+  display: block;
+  transition: opacity 0.2s ease;
+}
+
+/* Regenerate button styles */
+.message-footer-regenerate {
+  margin-left: 2px;
+  margin-right: 2px;
+  padding: 1px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: #6b7280;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 3px;
+  transition: all 0.2s ease;
+}
+
+.message-footer-regenerate:hover {
+  background-color: rgba(107, 114, 128, 0.2);
+  color: #9ca3af;
+}
+
+.message-footer-regenerate:active {
+  transform: scale(0.95);
+}
+
+.message-footer-regenerate-icon {
+  display: block;
+  transition: opacity 0.2s ease;
+}
+
+/* Legacy timestamp styles (for backwards compatibility) */
 .message-timestamp-container {
   display: flex;
   align-items: baseline;
@@ -220,7 +419,6 @@
   padding-right: 12px;
 }
 
-/* Timestamp and model name styles */
 .message-model-name {
   font-size: 12px !important;
   color: #6b7280;
@@ -256,31 +454,39 @@
  * ============================================================================ */
 
 .message-search-metadata {
-  margin-top: 0.125rem; /* Reduced gap to message content */
+  margin-top: 0.125rem;
+  /* Reduced gap to message content */
   padding: 0;
-  margin-left: 16px;
-  padding-left: 6px; /* Match timestamp container exactly */
+  margin-left: 0;
+  padding-left: 22px;
+  /* Match assistant bubble left padding */
+  padding-right: 16px;
+  /* Match assistant bubble right padding */
 }
 
 .search-sources {
   background: transparent;
   border: none;
-  padding: 4px 0; /* 4px top and bottom padding */
+  padding: 4px 0;
+  /* 4px top and bottom padding */
   font-size: 12px !important;
 }
 
 .search-sources[open] summary::before {
-  content: none; /* Remove triangle */
+  content: none;
+  /* Remove triangle */
 }
 
 .search-sources-summary {
   cursor: pointer;
   padding: 0.125rem 0;
   user-select: none;
-  color: #9ca3af; /* Grey color */
+  color: #9ca3af;
+  /* Grey color */
   font-weight: 400;
   font-size: 12px !important;
-  list-style: none; /* Remove default marker */
+  list-style: none;
+  /* Remove default marker */
   will-change: auto;
   background: transparent;
   border: none;
@@ -289,28 +495,36 @@
 }
 
 .search-sources-summary::-webkit-details-marker {
-  display: none; /* Remove triangle in webkit browsers */
+  display: none;
+  /* Remove triangle in webkit browsers */
 }
 
 .search-sources-summary:hover {
-  color: #6b7280; /* Slightly darker grey on hover */
+  color: #6b7280;
+  /* Slightly darker grey on hover */
 }
 
 .search-sources-list {
   display: flex;
   flex-direction: column;
-  gap: 0.125rem; /* Reduced gap */
+  gap: 0.125rem;
+  /* Reduced gap */
   padding: 0;
-  padding-left: 1rem; /* Indent from the vertical line */
-  margin-left: 0.5rem; /* Offset for the vertical line */
-  margin-top: 0.125rem; /* Reduced margin */
-  border-left: 1px solid #6b7280; /* Vertical line like thinking wrapper */
+  padding-left: 1rem;
+  /* Indent from the vertical line */
+  margin-left: 0.5rem;
+  /* Offset for the vertical line */
+  margin-top: 0.125rem;
+  /* Reduced margin */
+  border-left: 1px solid #6b7280;
+  /* Vertical line like thinking wrapper */
   contain: layout style;
   animation: expandSources 0.15s ease-out;
 }
 
 .search-source-link {
-  color: #9ca3af; /* Grey color for links */
+  color: #9ca3af;
+  /* Grey color for links */
   text-decoration: none;
   padding: 0.125rem 0;
   display: block;
@@ -321,18 +535,9 @@
 }
 
 .search-source-link:hover {
-  color: #6b7280; /* Darker grey on hover */
+  color: #6b7280;
+  /* Darker grey on hover */
   text-decoration: underline;
 }
 
-/* Animation for search sources list */
-@keyframes expandSources {
-  from {
-    opacity: 0;
-    transform: translateY(-4px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
+/* expandSources animation defined in animations.css */

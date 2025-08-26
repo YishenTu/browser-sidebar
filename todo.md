@@ -4,7 +4,7 @@
 [ ] 2. copy button for both user msg and ai response
 [ ] 3. regeneration button for ai response
 [ ] 4. edit button for user msg
-[ ] 5. latex render
+[ ] 5. latex render fix
 [x] 6. reasoning summary
 [x] 7. web search
 [x] 8. openai use response id to maintain chat history

@@ -92,16 +92,7 @@
   border-left: 1px solid #9ca3af;
 }
 
-@keyframes expandContent {
-  from {
-    opacity: 0;
-    transform: translateY(-4px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
+/* expandContent animation defined in animations.css */
 
 .thinking-text {
   font-size: 0.8125rem;
@@ -174,7 +165,7 @@
   font-size: 0.75rem;
   color: #9ca3af;
   font-style: italic;
-  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  animation: thinkingPulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }
 
 /* Light theme thinking indicator */
@@ -182,13 +173,4 @@
   color: #6b7280;
 }
 
-/* Pulse animation for thinking text */
-@keyframes pulse {
-  0%,
-  100% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0.5;
-  }
-}
+/* thinkingPulse animation defined in animations.css */

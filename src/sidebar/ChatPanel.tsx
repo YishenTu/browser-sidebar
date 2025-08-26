@@ -158,7 +158,15 @@ const ChatPanelInner: React.FC<ChatPanelProps> = ({ className, onClose }) => {
   // Dark theme is applied by default via CSS variables
 
   // Chat store and AI chat integration
-  const { messages, isLoading, clearConversation, hasMessages } = useChatStore();
+  const {
+    messages,
+    isLoading,
+    clearConversation,
+    hasMessages,
+    editMessage,
+    getPreviousUserMessage,
+    removeMessageAndAfter,
+  } = useChatStore();
   const { sendMessage, switchProvider, cancelMessage } = useAIChat({
     enabled: true,
     autoInitialize: true, // Auto-initialize providers from settings
@@ -167,10 +175,23 @@ const ChatPanelInner: React.FC<ChatPanelProps> = ({ className, onClose }) => {
   // Settings panel state
   const [showSettings, setShowSettings] = useState(false);
 
+  // Edit mode state
+  const [editingMessage, setEditingMessage] = useState<{ id: string; content: string } | null>(
+    null
+  );
+
   // Handle sending messages
   const handleSendMessage = useCallback(
     async (content: string) => {
       try {
+        // If we're editing, delete the message we're editing and all messages after it
+        if (editingMessage) {
+          // Remove all messages after the edited one
+          editMessage(editingMessage.id);
+          // Clear edit mode
+          setEditingMessage(null);
+        }
+
         await sendMessage(content, {
           streaming: true,
         });
@@ -185,15 +206,69 @@ const ChatPanelInner: React.FC<ChatPanelProps> = ({ className, onClose }) => {
         });
       }
     },
-    [sendMessage, addError]
+    [sendMessage, addError, editingMessage, editMessage]
   );
 
   // Handle clear conversation
   const handleClearConversation = useCallback(() => {
     if (hasMessages() && window.confirm('Clear conversation? This cannot be undone.')) {
       clearConversation();
+      setEditingMessage(null); // Clear edit mode when clearing conversation
     }
   }, [hasMessages, clearConversation]);
+
+  // Handle edit message
+  const handleEditMessage = useCallback((message: ChatMessage) => {
+    if (message.role === 'user') {
+      setEditingMessage({ id: message.id, content: message.content });
+    }
+  }, []);
+
+  // Handle clear edit
+  const handleClearEdit = useCallback(() => {
+    setEditingMessage(null);
+  }, []);
+
+  // Handle regenerate message
+  const handleRegenerateMessage = useCallback(
+    async (message: ChatMessage) => {
+      if (message.role !== 'assistant') return;
+
+      // Get the previous user message (to get its content for regeneration)
+      const previousUserMessage = getPreviousUserMessage(message.id);
+      if (!previousUserMessage) {
+        addError({
+          message: 'Cannot find the previous user message to regenerate',
+          type: 'error',
+          source: 'chat',
+          dismissible: true,
+        });
+        return;
+      }
+
+      // Remove ONLY the assistant message and all messages after it
+      // This keeps the original user message in place
+      removeMessageAndAfter(message.id);
+
+      // Send a new AI response without adding a new user message
+      try {
+        await sendMessage(previousUserMessage.content, {
+          streaming: true,
+          skipUserMessage: true, // This prevents adding a duplicate user message
+        });
+      } catch (error) {
+        const errorMessage =
+          error instanceof Error ? error.message : 'Failed to regenerate response';
+        addError({
+          message: errorMessage,
+          type: 'error',
+          source: getErrorSource(error instanceof Error ? error : errorMessage),
+          dismissible: true,
+        });
+      }
+    },
+    [getPreviousUserMessage, removeMessageAndAfter, sendMessage, addError]
+  );
 
   // Handle model change
   const handleModelChange = useCallback(
@@ -396,6 +471,8 @@ const ChatPanelInner: React.FC<ChatPanelProps> = ({ className, onClose }) => {
             isLoading={isLoading}
             emptyMessage=""
             height="calc(100% - 60px - 70px)"
+            onEditMessage={handleEditMessage}
+            onRegenerateMessage={handleRegenerateMessage}
           />
         )}
 
@@ -403,7 +480,9 @@ const ChatPanelInner: React.FC<ChatPanelProps> = ({ className, onClose }) => {
           onSend={handleSendMessage}
           onCancel={cancelMessage}
           loading={isLoading}
-          placeholder="Ask about this webpage..."
+          placeholder={editingMessage ? 'Edit your message...' : 'Ask about this webpage...'}
+          editingMessage={editingMessage?.content}
+          onClearEdit={handleClearEdit}
         />
       </div>
 

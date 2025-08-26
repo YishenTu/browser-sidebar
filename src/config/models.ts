@@ -20,7 +20,6 @@ export const SUPPORTED_MODELS: ModelConfig[] = [
     provider: 'gemini',
     thinkingBudget: '0', // 512 to 24576
   },
-  // Append more models as needed
   {
     id: 'gemini-2.5-flash',
     name: 'Gemini 2.5 Flash',
@@ -51,6 +50,7 @@ export const SUPPORTED_MODELS: ModelConfig[] = [
     provider: 'openai',
     reasoningEffort: 'medium',
   },
+  // Append more models as needed
 ];
 
 export const DEFAULT_MODEL_ID = 'gpt-5-nano';

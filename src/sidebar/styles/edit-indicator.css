@@ -1,0 +1,58 @@
+/* ===========================================
+ * Edit Indicator Styles (Dark Mode)
+ * =========================================== */
+
+.edit-indicator {
+  position: absolute;
+  top: -24px;
+  left: 12px;
+  right: 12px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: rgba(59, 130, 246, 0.1);
+  border: 1px solid rgba(59, 130, 246, 0.3);
+  border-radius: 4px;
+  padding: 2px 8px;
+  font-size: 11px;
+  color: #93c5fd;
+  animation: editSlideDown 0.2s ease;
+}
+
+/* editSlideDown animation defined in animations.css */
+
+.edit-indicator span {
+  font-weight: 500;
+}
+
+.edit-cancel-btn {
+  background: transparent;
+  border: none;
+  color: #93c5fd;
+  cursor: pointer;
+  font-size: 16px;
+  line-height: 1;
+  padding: 0;
+  width: 16px;
+  height: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 2px;
+  transition: all 0.2s ease;
+}
+
+.edit-cancel-btn:hover {
+  background: rgba(59, 130, 246, 0.2);
+  color: #dbeafe;
+}
+
+.edit-cancel-btn:active {
+  transform: scale(0.9);
+}
+
+/* Adjust footer position when editing */
+.ai-sidebar-footer {
+  position: relative;
+}

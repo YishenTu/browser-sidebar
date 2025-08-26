@@ -87,7 +87,7 @@ export function useMessageHandler({
         return; // Don't send empty messages
       }
 
-      const { streaming = true } = options;
+      const { streaming = true, skipUserMessage = false } = options;
 
       try {
         // Clear any previous errors
@@ -103,12 +103,22 @@ export function useMessageHandler({
           throw new Error('No active AI provider configured. Please add an API key in settings.');
         }
 
-        // Add user message to chat store
-        const userMessage = chatStore.addMessage({
-          role: 'user',
-          content: trimmedContent,
-          status: 'sending',
-        });
+        // Add user message to chat store (unless we're regenerating)
+        let userMessage;
+        if (!skipUserMessage) {
+          userMessage = chatStore.addMessage({
+            role: 'user',
+            content: trimmedContent,
+            status: 'sending',
+          });
+        } else {
+          // For regeneration, get the last user message
+          const lastUserMessage = chatStore.getUserMessages().slice(-1)[0];
+          if (!lastUserMessage) {
+            throw new Error('No user message found for regeneration');
+          }
+          userMessage = lastUserMessage;
+        }
 
         try {
           if (streaming && typeof provider.streamChat === 'function') {

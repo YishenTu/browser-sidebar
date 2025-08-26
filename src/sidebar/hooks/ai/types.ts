@@ -17,6 +17,8 @@ export interface SendMessageOptions {
   timeout?: number;
   /** Additional metadata */
   metadata?: Record<string, unknown>;
+  /** Skip adding user message (for regeneration) */
+  skipUserMessage?: boolean;
 }
 
 /**

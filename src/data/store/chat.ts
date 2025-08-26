@@ -103,6 +103,12 @@ export interface ChatState {
   appendToMessage: (id: string, content: string) => void;
   /** Delete a specific message */
   deleteMessage: (id: string) => void;
+  /** Edit a message and remove all messages after it */
+  editMessage: (id: string) => ChatMessage | undefined;
+  /** Get the previous user message before an assistant message for regeneration */
+  getPreviousUserMessage: (assistantMessageId: string) => ChatMessage | undefined;
+  /** Remove an assistant message and all messages after it */
+  removeMessageAndAfter: (id: string) => void;
 
   // Actions for conversation management
   /** Clear all messages and reset conversation state */
@@ -238,6 +244,61 @@ export const useChatStore = create<ChatState>((set, get) => ({
     set(state => ({
       ...state,
       messages: state.messages.filter(message => message.id !== id),
+    }));
+  },
+
+  editMessage: (id: string) => {
+    const state = get();
+    const messageIndex = state.messages.findIndex(msg => msg.id === id);
+
+    if (messageIndex === -1) {
+      return undefined;
+    }
+
+    // Get the message to edit
+    const messageToEdit = state.messages[messageIndex];
+
+    // Remove all messages after this one
+    set(state => ({
+      ...state,
+      messages: state.messages.slice(0, messageIndex + 1),
+      lastResponseId: null, // Reset response ID since we're editing
+    }));
+
+    return messageToEdit;
+  },
+
+  getPreviousUserMessage: (assistantMessageId: string) => {
+    const state = get();
+    const assistantIndex = state.messages.findIndex(msg => msg.id === assistantMessageId);
+
+    if (assistantIndex === -1) {
+      return undefined;
+    }
+
+    // Find the previous user message
+    for (let i = assistantIndex - 1; i >= 0; i--) {
+      if (state.messages[i]?.role === 'user') {
+        return state.messages[i];
+      }
+    }
+
+    return undefined;
+  },
+
+  removeMessageAndAfter: (id: string) => {
+    const state = get();
+    const messageIndex = state.messages.findIndex(msg => msg.id === id);
+
+    if (messageIndex === -1) {
+      return;
+    }
+
+    // Remove this message and all messages after it
+    set(state => ({
+      ...state,
+      messages: state.messages.slice(0, messageIndex),
+      lastResponseId: null, // Reset response ID
     }));
   },
 
