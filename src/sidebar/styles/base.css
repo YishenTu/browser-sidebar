@@ -144,4 +144,5 @@
   padding: 20px;
   overflow-y: auto;
   height: calc(100% - 60px - 70px);
+  background: rgba(26, 26, 26, 0.8); /* Same as main chat panel - 20% transparent (80% opacity) */
 }
