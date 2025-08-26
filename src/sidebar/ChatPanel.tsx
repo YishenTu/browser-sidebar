@@ -181,6 +181,7 @@ const ChatPanelInner: React.FC<ChatPanelProps> = ({ className, onClose }) => {
     content: extractedContent,
     loading: contentLoading,
     error: contentError,
+    qualityAssessment,
     reextract,
   } = useContentExtraction(true); // Auto-extract content when sidebar opens
 
@@ -468,6 +469,9 @@ const ChatPanelInner: React.FC<ChatPanelProps> = ({ className, onClose }) => {
           onClose={handleClose}
           onMouseDown={handleHeaderMouseDown}
           isDragging={isDragging}
+          extractedContent={extractedContent}
+          contentLoading={contentLoading}
+          contentError={contentError}
         />
 
         {/* Centralized Error Banner */}
@@ -479,6 +483,7 @@ const ChatPanelInner: React.FC<ChatPanelProps> = ({ className, onClose }) => {
           loading={contentLoading}
           error={contentError}
           onReextract={reextract}
+          qualityAssessment={qualityAssessment}
           className="ai-sidebar-content-preview"
         />
 

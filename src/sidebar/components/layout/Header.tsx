@@ -6,6 +6,7 @@
 
 import React from 'react';
 import { ModelSelector } from '@components/ModelSelector';
+import type { ExtractedContent } from '@/types/extraction';
 
 export interface HeaderProps {
   /** Currently selected model ID */
@@ -26,6 +27,12 @@ export interface HeaderProps {
   onMouseDown: (e: React.MouseEvent) => void;
   /** Whether currently dragging */
   isDragging: boolean;
+  /** Extracted content for status display */
+  extractedContent?: ExtractedContent | null;
+  /** Content extraction loading state */
+  contentLoading?: boolean;
+  /** Content extraction error state */
+  contentError?: Error | null;
 }
 
 /**
@@ -42,7 +49,51 @@ export const Header: React.FC<HeaderProps> = ({
   onClose,
   onMouseDown,
   isDragging,
+  extractedContent,
+  contentLoading,
+  contentError,
 }) => {
+  // Create extraction status indicator
+  const renderExtractionStatus = () => {
+    if (contentLoading) {
+      return (
+        <div className="extraction-status extraction-status--loading" title="Extracting content...">
+          <div className="extraction-status-dot"></div>
+        </div>
+      );
+    }
+
+    if (contentError) {
+      return (
+        <div
+          className="extraction-status extraction-status--error"
+          title="Content extraction failed"
+        >
+          <div className="extraction-status-dot"></div>
+        </div>
+      );
+    }
+
+    if (extractedContent) {
+      const wordCount = extractedContent.metadata?.wordCount ?? extractedContent.wordCount ?? 0;
+      const method = extractedContent.extractionMethod;
+      const truncated = extractedContent.metadata?.truncated || extractedContent.isTruncated;
+
+      const title = `Content extracted (${method}) • ${wordCount.toLocaleString()} words${truncated ? ' • Truncated' : ''}`;
+
+      return (
+        <div
+          className={`extraction-status extraction-status--success ${method === 'fallback' ? 'extraction-status--fallback' : ''}`}
+          title={title}
+        >
+          <div className="extraction-status-dot"></div>
+          {truncated && <div className="extraction-status-truncated">!</div>}
+        </div>
+      );
+    }
+
+    return null;
+  };
   return (
     <div
       className="ai-sidebar-header"
@@ -58,6 +109,7 @@ export const Header: React.FC<HeaderProps> = ({
           disabled={isLoading}
           aria-label="Select AI model"
         />
+        {renderExtractionStatus()}
         <h2></h2>
       </div>
       <div className="ai-sidebar-header-actions">

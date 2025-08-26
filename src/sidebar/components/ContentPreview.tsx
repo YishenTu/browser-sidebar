@@ -7,8 +7,14 @@
 
 import React from 'react';
 import type { ExtractedContent } from '@/types/extraction';
+import {
+  scoreContentQuality,
+  getQualityDescription,
+  getQualityBadgeVariant,
+} from '@tabext/contentQuality';
 import { Spinner } from '@ui/Spinner';
 import { Alert } from '@ui/Alert';
+import { Badge } from '@ui/Badge';
 import { Collapsible } from '@ui/Collapsible';
 import { RegenerateIcon } from '@ui/Icons';
 
@@ -21,6 +27,8 @@ export interface ContentPreviewProps {
   error: Error | null;
   /** Function to trigger re-extraction */
   onReextract: () => void;
+  /** Pre-calculated quality assessment (optional) */
+  qualityAssessment?: ReturnType<typeof scoreContentQuality> | null;
   /** Custom CSS class */
   className?: string;
 }
@@ -36,15 +44,21 @@ export const ContentPreview: React.FC<ContentPreviewProps> = ({
   loading,
   error,
   onReextract,
+  qualityAssessment: providedQualityAssessment,
   className = '',
 }) => {
   const wordCount = content?.metadata?.wordCount ?? content?.wordCount ?? 0;
   const hasCodeBlocks = content?.metadata?.hasCodeBlocks ?? content?.hasCode ?? false;
   const hasTables = content?.metadata?.hasTables ?? content?.hasTables ?? false;
+  const truncated = content?.metadata?.truncated ?? content?.isTruncated ?? false;
 
   // Generate excerpt if not provided
   const excerpt =
     content?.excerpt || (content?.textContent ? content.textContent.substring(0, 200) + '...' : '');
+
+  // Use provided quality assessment or calculate it
+  const qualityAssessment =
+    providedQualityAssessment ?? (content ? scoreContentQuality(content) : null);
 
   // Create header content for collapsible
   const headerContent = (isCollapsed: boolean) => {
@@ -70,7 +84,20 @@ export const ContentPreview: React.FC<ContentPreviewProps> = ({
         <div className="content-preview-header">
           <div className="content-preview-header-main">
             <span className="content-preview-title">{content.title}</span>
-            <span className="content-preview-domain">{content.domain}</span>
+            <div className="content-preview-header-meta">
+              <span className="content-preview-domain">{content.domain}</span>
+              {qualityAssessment && (
+                <div title={`Content quality score: ${qualityAssessment.score}/100`}>
+                  <Badge
+                    variant={getQualityBadgeVariant(qualityAssessment.qualityLevel)}
+                    size="small"
+                    className="content-preview-quality-badge"
+                  >
+                    {getQualityDescription(qualityAssessment.qualityLevel)}
+                  </Badge>
+                </div>
+              )}
+            </div>
           </div>
           {!isCollapsed && (
             <button
@@ -133,10 +160,64 @@ export const ContentPreview: React.FC<ContentPreviewProps> = ({
               {/* Content metadata */}
               <div className="content-preview-stats">
                 <span>{wordCount.toLocaleString()} words</span>
+                {truncated && <span className="content-preview-truncated">Truncated</span>}
                 {hasCodeBlocks && <span>Code</span>}
                 {hasTables && <span>Tables</span>}
-                <span className="content-preview-method">{content.extractionMethod}</span>
+                <span className="content-preview-method">
+                  {content.extractionMethod === 'readability' ? 'Readability' : 'Fallback'}
+                </span>
               </div>
+
+              {/* Quality assessment details */}
+              {qualityAssessment && (
+                <div className="content-preview-quality">
+                  <div className="content-preview-quality-score">
+                    <span className="content-preview-quality-label">Quality Score:</span>
+                    <Badge
+                      variant={getQualityBadgeVariant(qualityAssessment.qualityLevel)}
+                      size="small"
+                    >
+                      {qualityAssessment.score}/100
+                    </Badge>
+                  </div>
+                  {qualityAssessment.score < 70 && (
+                    <div className="content-preview-quality-signals">
+                      <span className="content-preview-quality-signals-label">
+                        Quality indicators:
+                      </span>
+                      <div className="content-preview-quality-signals-list">
+                        {!qualityAssessment.signals.hasTitle && <span>❌ Title</span>}
+                        {!qualityAssessment.signals.hasSufficientWordCount && (
+                          <span>❌ Word count</span>
+                        )}
+                        {!qualityAssessment.signals.hasStructure && <span>❌ Structure</span>}
+                        {qualityAssessment.signals.hasCode && <span>✅ Code</span>}
+                        {qualityAssessment.signals.hasTables && <span>✅ Tables</span>}
+                        {qualityAssessment.signals.hasAuthor && <span>✅ Author</span>}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Truncation warning */}
+              {truncated && (
+                <div className="content-preview-truncation-warning">
+                  <svg
+                    width="16"
+                    height="16"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                  >
+                    <path d="M12 9v4" />
+                    <circle cx="12" cy="17" r="1" />
+                    <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+                  </svg>
+                  <span>Content was truncated due to size limits.</span>
+                </div>
+              )}
 
               {/* Content excerpt */}
               {excerpt && (

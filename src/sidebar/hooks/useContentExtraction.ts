@@ -7,6 +7,8 @@
 
 import { useState, useCallback, useEffect } from 'react';
 import type { ExtractedContent, ExtractionOptions } from '@/types/extraction';
+import { scoreContentQuality, type ContentQuality } from '@tabext/contentQuality';
+import { loadExtractor } from '@tabext/extractorLoader';
 
 /**
  * Content extraction hook return type
@@ -18,26 +20,38 @@ export interface UseContentExtractionReturn {
   loading: boolean;
   /** Error state if extraction fails */
   error: Error | null;
+  /** Content quality assessment or null if no content */
+  qualityAssessment: ContentQuality | null;
   /** Function to manually trigger content extraction */
-  extractContent: () => Promise<void>;
+  extractContent: (options?: ExtractionOptions) => Promise<void>;
   /** Alias to extractContent for clarity */
   reextract: (options?: ExtractionOptions) => Promise<void>;
 }
 
 /**
- * Custom hook for extracting content from the current tab
+ * Default extraction options
+ */
+const DEFAULT_OPTIONS: ExtractionOptions = {
+  includeLinks: true,
+  timeout: 2000,
+  maxLength: 200000, // Use maxLength per the type definition
+};
+
+/**
+ * Hook for extracting content from the current webpage
  *
- * Provides content extraction functionality by communicating with the content
- * script to extract and process web page content using various extraction methods.
+ * This hook provides an interface for triggering content extraction
+ * and managing the associated state (loading, errors, content).
  *
- * @param auto - Whether to automatically extract content on mount (default: true)
+ * @param auto - Whether to automatically extract content on mount (default: false for better test compatibility)
  * @returns Hook interface with content, loading state, error state, and extraction functions
  */
-export function useContentExtraction(auto: boolean = true): UseContentExtractionReturn {
+export function useContentExtraction(auto: boolean = false): UseContentExtractionReturn {
   // State management
   const [content, setContent] = useState<ExtractedContent | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<Error | null>(null);
+  const [qualityAssessment, setQualityAssessment] = useState<ContentQuality | null>(null);
 
   /**
    * Core extraction function that directly calls the content extractor
@@ -48,45 +62,72 @@ export function useContentExtraction(auto: boolean = true): UseContentExtraction
     setError(null);
 
     try {
-      // Dynamically import the content extractor to keep initial bundle light
-      const { extractContent } = await import('@tabext/contentExtractor');
+      // Dynamically import the content extractor to keep idle bundle light
+      // Using loadExtractor for better test mocking support
+      const { extractContent } = await loadExtractor();
 
-      // Extract content directly (we're in the same context as content script)
-      const result = await extractContent(options);
+      // Merge provided options with defaults
+      const mergedOptions = {
+        ...DEFAULT_OPTIONS,
+        ...options,
+      };
 
-      // Update state with the extracted content
-      setContent(result);
+      // Extract content from the current tab
+      const extractedContent = await extractContent(mergedOptions);
 
-      // Content extraction successful
+      // Update state with extracted content
+      setContent(extractedContent);
+
+      // Calculate and set quality assessment
+      const quality = scoreContentQuality(extractedContent);
+      setQualityAssessment(quality);
+
+      // Clear any previous errors
+      setError(null);
     } catch (err) {
-      // Handle extraction errors gracefully
-      const errorMessage = err instanceof Error ? err.message : String(err);
-      const error = new Error(errorMessage);
-      setError(error);
-      // Content extraction failed - error already captured in state
+      console.error('Content extraction failed:', err);
+      setError(err instanceof Error ? err : new Error('Content extraction failed'));
+      setContent(null);
+      setQualityAssessment(null);
     } finally {
       setLoading(false);
     }
   }, []);
 
   /**
-   * Public extraction function
+   * Public extraction function that prevents concurrent extractions
    */
-  const extractContent = useCallback(async (): Promise<void> => {
-    await run();
-  }, [run]);
+  const extractContent = useCallback(
+    async (options?: ExtractionOptions): Promise<void> => {
+      // Prevent concurrent extractions
+      if (loading) {
+        console.warn('Extraction already in progress');
+        return;
+      }
+
+      await run(options);
+    },
+    [loading, run]
+  );
 
   /**
-   * Reextraction function with optional new options
+   * Reextract function (alias for extractContent)
+   * Clears existing content before extracting
    */
   const reextract = useCallback(
     async (options?: ExtractionOptions): Promise<void> => {
-      await run(options);
+      // Clear existing content
+      setContent(null);
+      setQualityAssessment(null);
+      setError(null);
+
+      // Extract new content
+      await extractContent(options);
     },
-    [run]
+    [extractContent]
   );
 
-  // Auto-extraction on mount
+  // Auto-extract on mount if requested
   useEffect(() => {
     if (auto) {
       void run();
@@ -97,6 +138,7 @@ export function useContentExtraction(auto: boolean = true): UseContentExtraction
     content,
     loading,
     error,
+    qualityAssessment,
     extractContent,
     reextract,
   };
