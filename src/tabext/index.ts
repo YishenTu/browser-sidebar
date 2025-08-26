@@ -2,7 +2,6 @@
 // Content script - handles sidebar injection and communication with background
 
 import { createMessage, isValidMessage, Message } from '@/types/messages';
-import { MessageBus } from '@extension/messaging';
 
 // Early injection: Patch document.querySelector to intercept link lookups
 const originalQuerySelector = document.querySelector;
@@ -86,8 +85,8 @@ document.createElement = function (tagName: string) {
 let sidebarModule: { mountSidebar: () => void; unmountSidebar: () => void } | null = null;
 let sidebarOpen = false;
 
-// Initialize message bus for content script explicitly
-const messageBus = MessageBus.getInstance('content');
+// MessageBus available if needed in future
+// const messageBus = MessageBus.getInstance('content');
 
 // Function to inject or show sidebar
 async function injectSidebar() {
@@ -164,7 +163,7 @@ chrome.runtime.onMessage.addListener((message: Message, _sender, sendResponse) =
   switch (message.type) {
     case 'TOGGLE_SIDEBAR': {
       // Check if we have an explicit show/hide directive
-      const explicitShow = (message.payload as any)?.show;
+      const explicitShow = (message.payload as { show?: boolean })?.show;
 
       if (explicitShow !== undefined) {
         // Explicit show/hide command
@@ -239,6 +238,103 @@ chrome.runtime.onMessage.addListener((message: Message, _sender, sendResponse) =
       break;
     }
 
+    case 'EXTRACT_CONTENT': {
+      // Handle content extraction request with enhanced error handling
+      (async () => {
+        try {
+          // Import extraction modules with better error handling
+          const { extractContent } = await import('./contentExtractor');
+          const { isExtractionOptions, validateExtractionOptions } = await import(
+            '../types/extraction'
+          );
+
+          // Validate and normalize extraction options
+          let extractionOptions = undefined;
+          if (message.payload && typeof message.payload === 'object') {
+            if (isExtractionOptions(message.payload)) {
+              extractionOptions = validateExtractionOptions(message.payload);
+            } else {
+              console.warn('Invalid extraction options provided, using defaults:', message.payload);
+            }
+          }
+
+          // Perform extraction with validated options
+          const extractedContent = await extractContent(extractionOptions);
+
+          // Map ExtractedContent to ContentExtractedPayload format for compatibility
+          const responsePayload = {
+            text: extractedContent.content, // Map content to text for backward compatibility
+            title: extractedContent.title,
+            url: extractedContent.url,
+            metadata: {
+              domain: extractedContent.domain,
+              author: extractedContent.author,
+              publishedDate: extractedContent.publishedDate,
+              extractedAt: extractedContent.extractedAt,
+              extractionMethod: extractedContent.extractionMethod,
+              textContent: extractedContent.textContent,
+              excerpt: extractedContent.excerpt,
+              ...extractedContent.metadata,
+              // Include backward compatibility fields
+              wordCount: extractedContent.metadata?.wordCount || extractedContent.wordCount,
+              hasCodeBlocks: extractedContent.metadata?.hasCodeBlocks || extractedContent.hasCode,
+              hasTables: extractedContent.metadata?.hasTables || extractedContent.hasTables,
+              truncated: extractedContent.metadata?.truncated || extractedContent.isTruncated,
+            },
+          };
+
+          sendResponse(
+            createMessage({
+              type: 'CONTENT_EXTRACTED',
+              payload: responsePayload,
+              source: 'content',
+              target: message.source,
+            })
+          );
+        } catch (error) {
+          // Enhanced error classification and reporting
+          let errorCode = 'EXTRACTION_FAILED';
+          const errorMessage = error instanceof Error ? error.message : String(error);
+
+          // Classify specific error types for better handling
+          if (error instanceof Error) {
+            const msg = error.message.toLowerCase();
+            if (msg.includes('timeout')) {
+              errorCode = 'EXTRACTION_TIMEOUT';
+            } else if (msg.includes('network') || msg.includes('loading')) {
+              errorCode = 'EXTRACTION_NETWORK_ERROR';
+            } else if (msg.includes('dom') || msg.includes('document')) {
+              errorCode = 'EXTRACTION_DOM_ERROR';
+            } else if (msg.includes('memory')) {
+              errorCode = 'EXTRACTION_MEMORY_ERROR';
+            } else if (msg.includes('parsing')) {
+              errorCode = 'EXTRACTION_PARSING_ERROR';
+            }
+          }
+
+          console.error(`Content extraction failed [${errorCode}]:`, error);
+
+          sendResponse(
+            createMessage({
+              type: 'ERROR',
+              payload: {
+                message: errorMessage,
+                code: errorCode,
+                details: {
+                  timestamp: Date.now(),
+                  url: typeof window !== 'undefined' ? window.location?.href : undefined,
+                  userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : undefined,
+                },
+              },
+              source: 'content',
+              target: message.source,
+            })
+          );
+        }
+      })();
+      break;
+    }
+
     case 'PING':
       sendResponse(
         createMessage({
@@ -267,11 +363,7 @@ chrome.runtime.onMessage.addListener((message: Message, _sender, sendResponse) =
   return true; // Keep channel open for async response
 });
 
-// Subscribe to specific message types using MessageBus
-messageBus.subscribe('EXTRACT_CONTENT', async (): Promise<void> => {
-  // Future: Implement content extraction logic
-  // Content extraction requested - implementation pending
-});
+// MessageBus instance available for future use if needed
 
 // Notify background that content script is ready using typed message
 const readyMessage = createMessage({

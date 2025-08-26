@@ -17,6 +17,8 @@ import { getErrorSource } from '@contexts/errorUtils';
 import { ErrorBanner } from '@components/ErrorBanner';
 import { useChatStore, type ChatMessage } from '@store/chat';
 import { useAIChat } from '@hooks/useAIChat';
+import { useContentExtraction } from '@hooks/useContentExtraction';
+import { ContentPreview } from '@components/ContentPreview';
 
 // Layout components
 import { Header } from '@components/layout/Header';
@@ -173,6 +175,14 @@ const ChatPanelInner: React.FC<ChatPanelProps> = ({ className, onClose }) => {
     enabled: true,
     autoInitialize: true, // Auto-initialize providers from settings
   });
+
+  // Content extraction integration
+  const {
+    content: extractedContent,
+    loading: contentLoading,
+    error: contentError,
+    reextract,
+  } = useContentExtraction(true); // Auto-extract content when sidebar opens
 
   // Settings panel state
   const [showSettings, setShowSettings] = useState(false);
@@ -462,6 +472,15 @@ const ChatPanelInner: React.FC<ChatPanelProps> = ({ className, onClose }) => {
 
         {/* Centralized Error Banner */}
         <ErrorBanner />
+
+        {/* Content Extraction Preview */}
+        <ContentPreview
+          content={extractedContent}
+          loading={contentLoading}
+          error={contentError}
+          onReextract={reextract}
+          className="ai-sidebar-content-preview"
+        />
 
         {showSettings ? (
           <div className="ai-sidebar-settings-panel">

@@ -97,6 +97,9 @@ export type {
   AIProvider,
 } from './providers';
 
+// Extraction types and interfaces
+export type { ExtractionMethod, ExtractedContent, ExtractionOptions } from './extraction';
+
 export {
   isProviderType,
   isProviderError,
@@ -115,6 +118,13 @@ export {
   THINKING_BUDGETS,
   MAX_THINKING_TOKENS_RANGE,
 } from './providers';
+
+export {
+  DEFAULT_EXTRACTION_OPTIONS,
+  isExtractedContent,
+  isExtractionOptions,
+  validateExtractionOptions,
+} from './extraction';
 
 // Note: CSS module declarations are in css.d.ts as ambient declarations
 // and don't need to be re-exported here
