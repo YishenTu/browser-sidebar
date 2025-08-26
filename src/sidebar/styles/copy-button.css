@@ -11,15 +11,15 @@
   border: none;
   border-radius: 3px;
   cursor: pointer;
-  color: #9ca3af;
+  color: #6b7280;
   transition: all 0.2s ease;
   outline: none;
   position: relative;
 }
 
 .copy-button:hover {
-  background-color: rgba(156, 163, 175, 0.15);
-  color: #d1d5db;
+  background-color: rgba(107, 114, 128, 0.2);
+  color: #9ca3af;
 }
 
 .copy-button:active {
