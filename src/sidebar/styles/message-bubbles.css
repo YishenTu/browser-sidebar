@@ -30,34 +30,21 @@
 }
 
 .message-bubble--user {
-  background: #2563eb !important;
-  /* Blue for user messages */
+  background: #2f67de !important; /* Blue for user messages */
   color: white !important;
-  padding: 10px !important;
-  /* Equal padding on all sides */
+  padding: 10px 12px !important; /* Match previous correct spacing */
   border-radius: 16px !important;
-  display: inline-flex !important;
-  /* Inline-flex for dynamic width without text spacing issues */
-  align-items: center !important;
-  max-width: 100% !important;
-  /* Full width of hover container */
-  margin: 0 !important;
-  /* Margins handled by hover container */
+  display: inline-block !important; /* Inline-block for dynamic width */
+  max-width: calc(100% - 16px) !important; /* Leave space for right margin */
+  margin-left: auto !important; /* Push to right */
+  margin-right: 16px !important; /* Explicit right margin */
   word-wrap: break-word !important;
-  text-align: left !important;
-  /* Left-aligned text */
-  hyphens: auto !important;
-  /* Enable automatic hyphenation */
-  -webkit-hyphens: auto !important;
-  /* Safari support */
-  word-break: break-word !important;
-  /* Break long words if needed */
-  line-height: 1.4 !important;
-  /* Tighter line height */
-  letter-spacing: normal !important;
-  /* Normal letter spacing */
-  box-sizing: border-box !important;
-  /* Ensure padding is included in width calculation */
+  text-align: left !important; /* Left-aligned text */
+  hyphens: auto !important; /* Enable automatic hyphenation */
+  -webkit-hyphens: auto !important; /* Safari support */
+  word-break: break-word !important; /* Break long words if needed */
+  line-height: 1.4 !important; /* Tighter line height */
+  letter-spacing: normal !important; /* Normal letter spacing */
 }
 
 /* Target all child elements inside user bubble for consistent spacing */
@@ -255,9 +242,10 @@
 }
 
 .message-hover-container--user {
-  max-width: calc(100% - 16px);
+  /* Let the bubble control its own margins like before */
+  max-width: 100%;
   margin-left: auto;
-  margin-right: 16px;
+  margin-right: 0;
 }
 
 .message-hover-container--assistant {
@@ -288,10 +276,10 @@
   display: flex;
   justify-content: space-between;
   margin-left: 0;
-  margin-right: 6px;
+  margin-right: 0; /* Use padding-right for consistent internal spacing */
   padding-left: 22px;
   /* Match bubble left padding */
-  padding-right: 16px;
+  padding-right: 20px; /* 16 (container) + 20 = 36 total from right edge */
   /* Match bubble right padding */
   width: 100%;
   box-sizing: border-box;
@@ -299,7 +287,7 @@
 
 .message-footer--user {
   margin-right: 6px;
-  padding-right: 0;
+  padding-right: 14px;
   justify-content: flex-end;
 }
 
