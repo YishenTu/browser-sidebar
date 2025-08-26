@@ -28,7 +28,9 @@ provider/
 ## Core Components
 
 ### BaseProvider.ts
+
 Abstract base class that all AI providers extend. Provides:
+
 - Common interface for chat and streaming operations
 - Token estimation and usage tracking
 - Error handling and formatting
@@ -36,21 +38,27 @@ Abstract base class that all AI providers extend. Provides:
 - Model configuration access
 
 ### ProviderFactory.ts
+
 Factory pattern implementation for creating provider instances:
+
 - Type-safe provider creation
 - Default configuration generation
 - Validation before instantiation
 - Support for OpenAI and Gemini providers
 
 ### ProviderRegistry.ts
+
 Singleton registry for managing provider instances:
+
 - Provider instance caching
 - Lifecycle management
 - Type-safe provider retrieval
 - Resource cleanup on disposal
 
 ### validation.ts
+
 API key validation service with:
+
 - Live API validation through test calls
 - Result caching for performance
 - Batch validation support
@@ -58,21 +66,27 @@ API key validation service with:
 - Support for OpenAI and Gemini
 
 ### errors.ts
+
 Provider error handling utilities:
+
 - Standardized error types
 - Error formatting and wrapping
 - Provider-specific error mapping
 - Retry logic helpers
 
 ### streamParser.ts
+
 Stream parsing for different response formats:
+
 - Server-Sent Events (SSE) parsing
 - Newline-delimited JSON parsing
 - Chunk reassembly
 - Error recovery
 
 ### tokenBuffer.ts
+
 Token buffering for smooth streaming:
+
 - Multiple flush strategies (SIZE_BASED, TIME_BASED, HYBRID)
 - Configurable buffer sizes
 - Smooth token delivery
@@ -81,7 +95,9 @@ Token buffering for smooth streaming:
 ## Provider Implementations
 
 ### OpenAI Provider
+
 Located in `openai/` subdirectory:
+
 - **OpenAIProvider.ts**: Implements OpenAI's Responses API
 - **OpenAIClient.ts**: Handles API communication and initialization
 - Supports reasoning effort parameter (low/medium/high)
@@ -89,7 +105,9 @@ Located in `openai/` subdirectory:
 - Request cancellation via AbortController
 
 ### Gemini Provider
+
 Located in `gemini/` subdirectory:
+
 - **GeminiProvider.ts**: Implements Gemini's generateContent API
 - **GeminiClient.ts**: Handles API communication and initialization
 - Supports thinking budgets ('0'=off, '-1'=dynamic)
@@ -99,9 +117,11 @@ Located in `gemini/` subdirectory:
 ## Configuration
 
 ### Minimal Configuration
+
 After the refactor, providers only require essential configuration:
 
 **OpenAI:**
+
 ```typescript
 {
   apiKey: string;
@@ -111,6 +131,7 @@ After the refactor, providers only require essential configuration:
 ```
 
 **Gemini:**
+
 ```typescript
 {
   apiKey: string;
@@ -121,7 +142,9 @@ After the refactor, providers only require essential configuration:
 ```
 
 ### Removed Parameters
+
 The following parameters have been removed as they're no longer used:
+
 - `temperature` - Model-specific behavior is predetermined
 - `topP`, `topK` - Sampling parameters not needed
 - `maxTokens` - Uses model defaults from centralized config
@@ -141,18 +164,16 @@ const registry = ProviderRegistry.getInstance();
 const openaiConfig = {
   apiKey: 'sk-...',
   model: 'gpt-5-nano',
-  reasoningEffort: 'medium'
+  reasoningEffort: 'medium',
 };
 const openaiProvider = await factory.createProvider({
   type: 'openai',
-  config: openaiConfig
+  config: openaiConfig,
 });
 registry.registerProvider('openai', openaiProvider);
 
 // Use the provider
-const response = await openaiProvider.chat([
-  { role: 'user', content: 'Hello!' }
-]);
+const response = await openaiProvider.chat([{ role: 'user', content: 'Hello!' }]);
 
 // Stream responses
 for await (const chunk of openaiProvider.streamChat(messages)) {
@@ -163,6 +184,7 @@ for await (const chunk of openaiProvider.streamChat(messages)) {
 ## Model Configuration
 
 All model configurations are centralized in `src/config/models.ts`. The provider layer references this single source of truth for:
+
 - Available models per provider
 - Model capabilities (context length, max tokens)
 - Feature support (reasoning, thinking budgets)
@@ -170,6 +192,7 @@ All model configurations are centralized in `src/config/models.ts`. The provider
 ## Error Handling
 
 Providers use a standardized error format:
+
 ```typescript
 {
   type: 'authentication' | 'rate_limit' | 'network' | 'validation' | 'unknown';
@@ -184,6 +207,7 @@ Providers use a standardized error format:
 ## Testing
 
 Each provider includes comprehensive tests covering:
+
 - API key validation
 - Chat completion
 - Streaming responses
@@ -192,15 +216,24 @@ Each provider includes comprehensive tests covering:
 
 ## Migration Notes
 
-### Recent Changes (Provider Refactor Completed)
+### Recent Changes (Latest Updates)
+
 - Model configurations centralized in `src/config/models.ts` (single source of truth)
-- RateLimiter and RequestQueue removed (not needed for BYOK model)
-- OpenRouter provider removed (focus on OpenAI and Gemini only)
+- Debug logging simplified - removed verbose console.debug statements
+- Legacy parameter handling now silent (no debug output)
 - Temperature, topP, topK parameters removed (not used by current models)
 - Simplified validation - format validation removed, live API testing only
 - Removed duplicate model definitions in provider-specific files
 
+### UI Integration Updates
+
+- ThinkingWrapper component enhanced with persistent state management
+- Thinking display now maintains collapse state across re-renders
+- Real-time timer shows thinking duration
+- Auto-collapse after streaming with user interaction tracking
+
 ### Backward Compatibility
-- Legacy parameters in stored settings are ignored with debug logging
+
+- Legacy parameters in stored settings are silently ignored
 - Settings migration automatically removes deprecated fields
 - API remains compatible for existing integrations

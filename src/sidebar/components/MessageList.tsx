@@ -2,7 +2,6 @@ import React, { useRef, useEffect, useState, useCallback, useMemo } from 'react'
 import { VariableSizeList as List } from 'react-window';
 import { ChatMessage } from '@store/chat';
 import { MessageBubble } from './MessageBubble';
-import { cn } from '@sidebar/lib/cn';
 
 /**
  * Props for the MessageList component
@@ -211,7 +210,7 @@ export const MessageList: React.FC<MessageListProps> = ({
         />
       </div>
     ));
-  }, [messages, isVirtualized]);
+  }, [messages, isVirtualized, onEditMessage, onRegenerateMessage]);
 
   /**
    * Render non-virtualized messages
@@ -264,7 +263,11 @@ export const MessageList: React.FC<MessageListProps> = ({
   const isEmpty = messages.length === 0 && !isLoading;
 
   return (
-    <div className={cn('relative', className)} data-testid="message-list" style={{ height }}>
+    <div
+      className={`relative${className ? ` ${className}` : ''}`}
+      data-testid="message-list"
+      style={{ height }}
+    >
       {/* Virtualized message list */}
       {isVirtualized ? (
         <div className="h-full" style={{ height }}>

@@ -90,72 +90,65 @@ Sidebar React App (src/sidebar/)
 
 ```
 src/
-├── backend/        # Service worker, routing, tab state
-│   ├── index.ts              # Background script entry point
-│   ├── keepAlive.ts          # Service worker keep-alive
-│   ├── messageHandler.ts     # Message routing
-│   └── sidebarManager.ts     # Tab state management
-├── tabext/         # Content script: sidebar injection + tab content capture
+├── extension/      # Chrome extension infrastructure
+│   ├── background/           # Service worker
+│   │   ├── index.ts          # Background script entry
+│   │   ├── keepAlive.ts      # Keep-alive mechanism
+│   │   ├── messageHandler.ts # Message routing
+│   │   └── sidebarManager.ts # Tab state management
+│   └── messaging/            # Message passing utilities
+├── tabext/         # Content script for sidebar injection
 │   └── index.ts              # Content script entry point
-├── sidebar/        # Unified React UI with all chat components
-│   ├── ChatPanel.tsx         # Main unified chat interface (combines old Sidebar + ChatPanel)
-│   ├── index.tsx             # Sidebar mount/unmount functions
-│   ├── components/           # All React components
-│   │   ├── ChatInput.tsx         # Message input with send functionality
-│   │   ├── CodeBlock.tsx         # Syntax highlighted code blocks
-│   │   ├── MarkdownRenderer.tsx  # Markdown message rendering
-│   │   ├── MessageBubble.tsx     # Individual message display
-│   │   ├── MessageList.tsx       # Message list with virtualization
-│   │   ├── ModelSelector.tsx     # AI model selection dropdown
-│   │   ├── StreamingText.tsx     # Real-time text streaming
-│   │   ├── ThemeToggle.tsx       # Light/dark theme switch
-│   │   ├── TypingIndicator.tsx   # Typing animation
-│   │   ├── index.ts              # Component exports
-│   │   └── ui/                   # Reusable UI components
-│   │       ├── Button.tsx
-│   │       ├── Card.tsx
-│   │       ├── IconButton.tsx
-│   │       ├── Input.tsx
-│   │       ├── Spinner.tsx
-│   │       ├── TextArea.tsx
-│   │       └── index.ts
+├── sidebar/        # React UI with Shadow DOM
+│   ├── ChatPanel.tsx         # Main chat interface with AI integration
+│   ├── index.tsx             # Mount/unmount functions
+│   ├── components/           # React components
+│   │   ├── ChatInput.tsx         # Enhanced input with character counter
+│   │   ├── MarkdownRenderer.tsx  # Full markdown + KaTeX math
+│   │   ├── MessageBubble.tsx     # Messages with thinking display
+│   │   ├── MessageList.tsx       # Virtualized for performance
+│   │   ├── ModelSelector.tsx     # AI model selection
+│   │   ├── ThinkingWrapper.tsx   # Real-time reasoning display
+│   │   └── ui/                   # Core UI components
 │   ├── contexts/           # React contexts
-│   │   ├── ThemeContext.tsx      # Theme state management
-│   │   └── index.ts              # Context exports
-│   ├── hooks/              # Custom React hooks
-│   │   └── useMockChat.ts        # Mock chat functionality
-│   └── styles/             # Unified styling
-│       └── sidebar.css           # Single CSS file for all sidebar styles
-├── core/           # Messaging and shared infra
-│   └── messaging.ts              # Chrome extension messaging types
-├── store/          # Zustand state management
-│   ├── chat.ts                   # Chat state (messages, loading)
-│   ├── settings.ts               # App settings (theme, model selection)
-│   └── index.ts                  # Store exports
-├── provider/       # BYOK + provider clients (future)
-├── storage/        # Persistence layer (future)
-├── services/       # Backend services (future)
-├── types/          # TypeScript definitions
-│   ├── chat.ts                   # Chat-related types
-│   ├── manifest.ts               # Extension manifest types
-│   ├── messages.ts               # Message passing types
-│   ├── settings.ts               # Settings types
-│   └── index.ts                  # Type exports
-├── utils/          # Shared utilities
-│   ├── cn.ts                     # Class name utility (tailwind-merge)
-│   ├── mockChat.ts               # Mock chat data generation
-│   └── theme.ts                  # Theme utilities
-└── styles/         # Global styles
-    └── variables.css             # CSS custom properties/variables
+│   │   └── ErrorContext.tsx      # Unified error handling
+│   ├── hooks/              # Custom hooks
+│   │   └── ai/                   # AI chat hooks
+│   │       ├── useAIChat.ts          # Main chat logic
+│   │       ├── useStreamHandler.ts   # Stream processing
+│   │       └── useProviderManager.ts # Provider switching
+│   └── styles/             # Component-specific CSS
+├── provider/       # AI provider implementations (✅ COMPLETE)
+│   ├── BaseProvider.ts           # Abstract base class
+│   ├── ProviderFactory.ts        # Factory pattern
+│   ├── ProviderRegistry.ts       # Singleton registry
+│   ├── openai/                   # OpenAI GPT-5 series
+│   │   ├── OpenAIProvider.ts     # Response API implementation
+│   │   └── streamProcessor.ts    # Event stream handling
+│   └── gemini/                   # Google Gemini 2.5
+│       ├── GeminiProvider.ts     # Gemini API implementation
+│       └── streamProcessor.ts    # JSON stream parsing
+├── data/           # Data management layer
+│   ├── store/                    # Zustand stores
+│   │   ├── chat.ts               # Chat state with streaming
+│   │   └── settings.ts           # Settings + API keys
+│   ├── storage/                  # Chrome storage layer
+│   │   ├── keys/                 # API key management
+│   │   └── chrome.ts             # Storage wrapper
+│   └── security/                 # Encryption utilities
+│       └── crypto.ts             # AES-GCM encryption
+├── config/         # Centralized configuration
+│   └── models.ts                 # AI model definitions
+└── types/          # TypeScript definitions
 ```
 
 ## Development Stages
 
 **Stage 1 ✅**: Extension Infrastructure - Custom sidebar, message passing, cross-browser support
-**Stage 2 ✅**: Chat UI - Unified React components, markdown rendering, theme support, model selector
-**Stage 3**: Storage & Security - Encrypted API key storage, conversation history
-**Stage 4**: AI Providers - OpenAI, Gemini, Anthropic integrations
-**Stage 5**: Content Extraction - Web page analysis, multi-tab context
+**Stage 2 ✅**: Chat UI - Full React component suite, markdown, virtualization, thinking display
+**Stage 3 ✅**: Storage & Security - Encrypted API key storage, Chrome storage integration
+**Stage 4 ✅**: AI Providers - OpenAI and Gemini fully integrated with streaming
+**Stage 5 🚧**: Content Extraction - Tab content capture, multi-tab aggregation (in progress)
 
 ## Refactoring (Task 5 - Completed)
 
@@ -190,15 +183,26 @@ Implemented comprehensive path aliases for cleaner, more maintainable imports:
 - Clear module boundaries and organization
 - Better IDE support and refactoring capabilities
 
-### Model Selector Feature
+### Current AI Models
 
-Added a new `ModelSelector` component with:
+**OpenAI GPT-5 Series**:
 
-- **Dropdown Interface**: Clean dropdown for selecting AI models (GPT-4, Claude 3, Gemini Pro, etc.)
-- **Full Keyboard Navigation**: Arrow keys, Enter, Escape, Tab support
-- **Accessibility Compliant**: ARIA attributes, screen reader support
-- **Performance Optimized**: <50ms render time, smooth interactions
-- **Integration Ready**: Prepared for future AI provider integrations
+- `gpt-5-nano` - Fast responses with low reasoning effort
+- `gpt-5-mini` - Balanced performance
+- `gpt-5` - Advanced reasoning with medium effort
+
+**Google Gemini 2.5 Series**:
+
+- `gemini-2.5-flash-lite` - Cost-effective, thinking disabled
+- `gemini-2.5-flash` - Balanced, dynamic thinking
+- `gemini-2.5-pro` - Advanced with automatic thinking
+
+### Recent Updates
+
+- **ThinkingWrapper**: Persistent state management across re-renders
+- **Provider Refactor**: Removed debug logging, silent legacy parameter handling
+- **UI Simplification**: Removed cn.ts utility, direct string concatenation
+- **Error Handling**: Unified error context with source tracking
 
 ## Key Technical Decisions
 
@@ -337,6 +341,15 @@ npm run format          # Format all files
 ## Performance Considerations
 
 - Sidebar lazy-loads only when triggered
-- React components use callbacks to prevent re-renders
+- Message list virtualization for large conversations
+- React components use callbacks and refs to prevent re-renders
 - Background script maintains minimal state
 - Content script stays lightweight (~2KB)
+- Streaming responses with smooth token buffering
+
+# important-instruction-reminders
+
+Do what has been asked; nothing more, nothing less.
+NEVER create files unless they're absolutely necessary for achieving your goal.
+ALWAYS prefer editing an existing file to creating a new one.
+NEVER proactively create documentation files (\*.md) or README files. Only create documentation files if explicitly requested by the User.

@@ -22,13 +22,37 @@ export const ThinkingWrapper: React.FC<ThinkingWrapperProps> = ({
   initialCollapsed = false,
   className = '',
 }) => {
-  const [isCollapsed, setIsCollapsed] = useState(initialCollapsed);
+  // Use refs to persist state across re-renders
+  const hasFinishedStreamingRef = useRef(false);
+  const userCollapsedStateRef = useRef<boolean | null>(null);
+  const hasUserInteractedRef = useRef(false);
+
+  const [isCollapsed, setIsCollapsed] = useState(() => {
+    // Priority: user's manual choice > auto-collapsed after streaming > initial prop
+    if (userCollapsedStateRef.current !== null) {
+      return userCollapsedStateRef.current;
+    }
+    if (hasFinishedStreamingRef.current) {
+      return true;
+    }
+    return initialCollapsed;
+  });
+
   const [thinkingDuration, setThinkingDuration] = useState(0);
-  const [hasUserInteracted, setHasUserInteracted] = useState(false);
   const startTimeRef = useRef<number | null>(null);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const hasStartedRef = useRef(false);
   const finalDurationRef = useRef<number | null>(null);
+
+  // Sync collapsed state on re-render if user hasn't interacted
+  useEffect(() => {
+    if (!hasUserInteractedRef.current) {
+      // If streaming finished and user hasn't interacted, ensure it's collapsed
+      if (hasFinishedStreamingRef.current && !isStreaming) {
+        setIsCollapsed(true);
+      }
+    }
+  }, [isStreaming]); // Run on mount/remount and when streaming changes
 
   // Track thinking duration
   useEffect(() => {
@@ -63,10 +87,14 @@ export const ThinkingWrapper: React.FC<ThinkingWrapperProps> = ({
         finalDurationRef.current = duration;
         setThinkingDuration(duration);
 
+        // Mark that streaming has finished
+        hasFinishedStreamingRef.current = true;
+
         // Auto-collapse after streaming ends only if user hasn't interacted
-        if (!hasUserInteracted) {
+        if (!hasUserInteractedRef.current) {
           setTimeout(() => {
             setIsCollapsed(true);
+            // Don't update userCollapsedStateRef here since this is auto-collapse
           }, 500);
         }
       }
@@ -78,7 +106,7 @@ export const ThinkingWrapper: React.FC<ThinkingWrapperProps> = ({
         timerRef.current = null;
       }
     };
-  }, [isStreaming, hasUserInteracted]);
+  }, [isStreaming]);
 
   if (!thinking) return null;
 
@@ -98,7 +126,8 @@ export const ThinkingWrapper: React.FC<ThinkingWrapperProps> = ({
         collapsed={isCollapsed}
         onToggle={collapsed => {
           setIsCollapsed(collapsed);
-          setHasUserInteracted(true);
+          hasUserInteractedRef.current = true;
+          userCollapsedStateRef.current = collapsed;
         }}
         headerClassName="thinking-header"
         showChevron={false}

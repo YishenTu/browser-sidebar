@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import { cn } from '@sidebar/lib/cn';
 import { CopyIcon, CheckIcon } from './Icons';
 
 export interface CopyButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
@@ -44,7 +43,7 @@ export const CopyButton: React.FC<CopyButtonProps> = ({
   return (
     <button
       onClick={handleCopy}
-      className={cn('copy-button', className)}
+      className={`copy-button${className ? ` ${className}` : ''}`}
       aria-label={copied ? 'Copied' : 'Copy to clipboard'}
       title={copied ? 'Copied!' : 'Copy to clipboard'}
       type="button"

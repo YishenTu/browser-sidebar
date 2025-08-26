@@ -4,23 +4,26 @@ A privacy‑focused browser extension for AI‑powered chat with web content usi
 
 ## Features
 
-- 🔒 **Privacy-First**: All data stays local, no cloud storage
-- 💬 **Streaming UI**: Smooth streaming display in the chat UI (mock-based today)
+- 🔒 **Privacy-First**: All data stays local, encrypted API key storage
+- 💬 **AI Chat**: Full streaming support with OpenAI GPT-5 and Google Gemini 2.5
+- 🧠 **Thinking Display**: Real-time reasoning visualization with timer
 - 🎨 **Customizable UI**: Resizable & movable sidebar, light/dark themes
 - 🌐 **Universal Compatibility**: Works in Chrome, Arc, Edge, and other Chromium browsers
-- 🧩 **Planned: Multi-Provider (BYOK)**: OpenAI, Google Gemini, Anthropic (Stage 4)
+- 🧩 **Multi-Provider (BYOK)**: OpenAI and Google Gemini fully integrated
+- 🔍 **Web Search**: Automatic web search grounding for enhanced responses
 - 📑 **Planned: Smart Content Extraction**: Extract/format page content (Stage 5)
 - 🎯 **Planned: Multi-Tab Context**: Aggregate information from multiple tabs (Stage 5)
 
 ## Tech Stack
 
-- **Frontend**: React 18 + TypeScript
-- **Build**: Vite + CRXJS
-- **Styling**: CSS + Tailwind tokens + dark mode
-- **State**: Zustand stores (`@store/*`) for chat/settings
-- **Testing**: Vitest + React Testing Library
-- **Virtualization**: react-window
-- **Markdown**: react-markdown + remark-gfm + rehype-highlight
+- **Frontend**: React 18 + TypeScript (strict mode)
+- **Build**: Vite + CRXJS (Manifest V3)
+- **Styling**: CSS modules + CSS variables + dark mode
+- **State**: Zustand stores for chat/settings/API keys
+- **AI Providers**: OpenAI Response API, Gemini API
+- **Testing**: Vitest + React Testing Library (>90% coverage)
+- **Virtualization**: react-window for message lists
+- **Markdown**: react-markdown + code highlighting + KaTeX math
 
 ## Development
 
@@ -88,18 +91,27 @@ npm run test:ui
 ```
 browser-sidebar/
 ├── src/
-│   ├── backend/       # Service worker, routing, tab state
-│   ├── tabext/        # Content script: sidebar injection + tab content capture
-│   ├── sidebar/       # Sidebar React app (unified ChatPanel, components, hooks, styles, contexts)
-│   ├── core/          # Messaging and shared infra
-│   ├── provider/      # Provider clients & BYOK (Stage 4)
-│   ├── storage/       # Secure storage & encryption (Stage 3)
-│   ├── services/      # Extraction/aggregation services (Stage 5)
-│   ├── types/         # TypeScript definitions
-│   └── utils/         # Utility functions
-├── tests/             # Test files
-├── public/            # Static assets (icons)
-├── dist/              # Build output
+│   ├── extension/     # Chrome extension infrastructure
+│   │   └── background/   # Service worker, message handling
+│   ├── tabext/        # Content script for sidebar injection
+│   ├── sidebar/       # React UI with Shadow DOM
+│   │   ├── ChatPanel.tsx        # Main chat interface
+│   │   ├── components/          # UI components
+│   │   │   ├── MessageBubble.tsx    # Message display
+│   │   │   ├── ThinkingWrapper.tsx  # Reasoning display
+│   │   │   └── ModelSelector.tsx    # AI model picker
+│   │   └── hooks/ai/            # AI chat hooks
+│   ├── provider/      # AI provider implementations
+│   │   ├── openai/    # OpenAI GPT-5 series
+│   │   └── gemini/    # Google Gemini 2.5
+│   ├── data/          # Data management layer
+│   │   ├── store/     # Zustand state management
+│   │   ├── storage/   # Chrome storage + encryption
+│   │   └── security/  # AES-GCM encryption
+│   ├── config/        # Model configurations
+│   └── types/         # TypeScript definitions
+├── tests/             # Comprehensive test suites
+├── dist/              # Build output (load in browser)
 └── docs/              # Documentation
 ```
 
@@ -120,16 +132,21 @@ MIT — see `package.json` for the license field (LICENSE file TBD)
 
 ## Status
 
-✅ **Stage 2 complete** — Unified sidebar UI, Shadow DOM overlay preserved, model selector integrated, tests passing. AI provider integration and extraction are planned next.
+### ✅ Completed Features
 
-### Current Focus
+- **Stage 1**: Extension Infrastructure - Custom sidebar, message passing, cross-browser support
+- **Stage 2**: Chat UI - Full React component suite with markdown, virtualization, thinking display
+- **Stage 3**: Storage & Security - Encrypted API key storage, Chrome storage integration
+- **Stage 4**: AI Providers - OpenAI and Gemini fully integrated with streaming
 
-- Stage 3: Storage & Security (in progress)
-- Stage 4: AI Provider System (planned)
+### 🚧 In Progress
+
+- **Stage 5**: Content Extraction - Tab content capture and multi-tab aggregation
 
 ### Future Work
 
 #### Chat Context Management
+
 - **Include thinking/reasoning in chat history**: Currently, thinking content from AI responses is stored in metadata but not included when building subsequent API requests. This causes the AI to lose context of its previous reasoning in multi-turn conversations.
   - Implementation approach: When building API requests, prepend thinking content to assistant messages using format: `<thinking>content</thinking>\n\nactual response`
   - Affected files: `OpenAIProvider.convertMessagesToResponsesInput()`, `GeminiProvider.convertMessages()`
@@ -137,6 +154,7 @@ MIT — see `package.json` for the license field (LICENSE file TBD)
   - Considerations: Increased token usage, potential need for thinking summarization for long content
 
 #### Phase 3 Storage & Security
+
 - Phase 3.2 hardening (API Key Storage):
   - Align remaining test expectations with updated storage behavior:
     - Use singleton EncryptionService instance in tests (already applied in main/comprehensive suites)
@@ -154,5 +172,5 @@ MIT — see `package.json` for the license field (LICENSE file TBD)
 
 ---
 
-_Version: 0.1.0-dev_
-_Last Updated: 2025-08-21_
+_Version: 0.4.0-dev_
+_Last Updated: 2025-08-26_

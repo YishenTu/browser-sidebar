@@ -251,7 +251,7 @@ export function useStreamHandler(): UseStreamHandlerReturn {
           chatStore.clearActiveMessage();
         } catch (cleanupError) {
           // Ignore errors during cleanup (component may be unmounted)
-          console.debug('Failed to clear active message in finally block:', cleanupError);
+          // Failed to clear active message in finally block - non-critical
         }
         abortControllerRef.current = null;
       }
@@ -272,7 +272,7 @@ export function useStreamHandler(): UseStreamHandlerReturn {
       chatStore.clearActiveMessage();
     } catch (error) {
       // Ignore errors during cleanup (component may be unmounted)
-      console.debug('Failed to clear active message during cleanup:', error);
+      // Failed to clear active message during cleanup - non-critical
     }
   }, [chatStore]);
 

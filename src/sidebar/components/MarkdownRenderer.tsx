@@ -22,7 +22,6 @@ import remarkGfm from 'remark-gfm';
 import remarkMath from 'remark-math';
 import rehypeSanitize, { defaultSchema } from 'rehype-sanitize';
 import rehypeKatex from 'rehype-katex';
-import { cn } from '@sidebar/lib/cn';
 import { CodeBlock } from './CodeBlock';
 import 'katex/dist/katex.min.css';
 
@@ -228,19 +227,19 @@ const HeadingRenderer = ({ level, children }: HeadingProps) => {
 
     switch (level) {
       case 1:
-        return cn(baseClasses, 'text-2xl m-0 p-0 leading-tight');
+        return `${baseClasses} text-2xl m-0 p-0 leading-tight`;
       case 2:
-        return cn(baseClasses, 'text-xl m-0 p-0 leading-tight');
+        return `${baseClasses} text-xl m-0 p-0 leading-tight`;
       case 3:
-        return cn(baseClasses, 'text-lg m-0 p-0 leading-tight');
+        return `${baseClasses} text-lg m-0 p-0 leading-tight`;
       case 4:
-        return cn(baseClasses, 'text-base m-0 p-0 leading-tight');
+        return `${baseClasses} text-base m-0 p-0 leading-tight`;
       case 5:
-        return cn(baseClasses, 'text-sm m-0 p-0 leading-tight');
+        return `${baseClasses} text-sm m-0 p-0 leading-tight`;
       case 6:
-        return cn(baseClasses, 'text-xs m-0 p-0 leading-tight');
+        return `${baseClasses} text-xs m-0 p-0 leading-tight`;
       default:
-        return cn(baseClasses, 'text-base m-0 p-0 leading-tight');
+        return `${baseClasses} text-base m-0 p-0 leading-tight`;
     }
   };
 
@@ -552,7 +551,7 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({
       <div
         data-testid="markdown-renderer"
         role="article"
-        className={cn('markdown-renderer', className)}
+        className={`markdown-renderer${className ? ` ${className}` : ''}`}
         aria-label="Empty content"
       />
     );
@@ -562,7 +561,7 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({
     <div
       data-testid="markdown-renderer"
       role="article"
-      className={cn('markdown-renderer', className)}
+      className={`markdown-renderer${className ? ` ${className}` : ''}`}
       aria-label="Markdown content"
     >
       <ReactMarkdown {...markdownOptions}>{processedContent}</ReactMarkdown>

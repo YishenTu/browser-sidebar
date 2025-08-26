@@ -1,5 +1,4 @@
 import React from 'react';
-import { cn } from '@sidebar/lib/cn';
 import { ChatMessage, MessageRole, MessageStatus } from '@store/chat';
 import { MarkdownRenderer } from './MarkdownRenderer';
 import { ThinkingWrapper } from './ThinkingWrapper';
@@ -102,12 +101,12 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
 
   return (
     <div
-      className={cn('message-row', `message-row--${message.role}`, className)}
+      className={`message-row message-row--${message.role}${className ? ` ${className}` : ''}`}
       data-testid="message-bubble"
       aria-label={getAriaLabel(message.role)}
       {...props}
     >
-      <div className={cn('message-content-wrapper', `message-content-wrapper--${message.role}`)}>
+      <div className={`message-content-wrapper message-content-wrapper--${message.role}`}>
         {/* Display thinking wrapper for assistant messages with thinking content */}
         {message.role === 'assistant' &&
         message.metadata?.['thinking'] &&
@@ -121,8 +120,8 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
         ) : null}
 
         {/* Hover container for bubble and footer */}
-        <div className={cn('message-hover-container', `message-hover-container--${message.role}`)}>
-          <div className={cn(getMessageClasses(message.role))}>
+        <div className={`message-hover-container message-hover-container--${message.role}`}>
+          <div className={getMessageClasses(message.role)}>
             <div data-testid="message-content">{messageContent}</div>
           </div>
 
@@ -160,7 +159,7 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
               };
 
               return (
-                <div className={cn('message-footer', `message-footer--${message.role}`)}>
+                <div className={`message-footer message-footer--${message.role}`}>
                   {/* Assistant Footer: Model name + Regenerate button + Copy button | Timestamp (far right) */}
                   {message.role === 'assistant' && (
                     <>

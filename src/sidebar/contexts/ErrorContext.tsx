@@ -5,7 +5,7 @@
  * and provide consistent error handling across the application.
  */
 
-import { createContext, useContext, useState, useCallback, ReactNode } from 'react';
+import { createContext, useState, useCallback, ReactNode } from 'react';
 
 export interface AppError {
   id: string;
@@ -35,7 +35,7 @@ interface ErrorContextValue {
   hasErrors: () => boolean;
 }
 
-const ErrorContext = createContext<ErrorContextValue | undefined>(undefined);
+export const ErrorContext = createContext<ErrorContextValue | undefined>(undefined);
 
 export interface ErrorProviderProps {
   children: ReactNode;
@@ -121,52 +121,4 @@ export function ErrorProvider({ children }: ErrorProviderProps) {
   return <ErrorContext.Provider value={value}>{children}</ErrorContext.Provider>;
 }
 
-/**
- * Hook to use the error context
- */
-export function useError() {
-  const context = useContext(ErrorContext);
-  if (!context) {
-    throw new Error('useError must be used within an ErrorProvider');
-  }
-  return context;
-}
-
-/**
- * Error type guards and utilities
- */
-export function isNetworkError(error: Error | string): boolean {
-  const message = typeof error === 'string' ? error : error.message;
-  return (
-    message.toLowerCase().includes('network') ||
-    message.toLowerCase().includes('timeout') ||
-    message.toLowerCase().includes('connection') ||
-    message.toLowerCase().includes('fetch')
-  );
-}
-
-export function isAuthError(error: Error | string): boolean {
-  const message = typeof error === 'string' ? error : error.message;
-  return (
-    message.toLowerCase().includes('unauthorized') ||
-    message.toLowerCase().includes('401') ||
-    message.toLowerCase().includes('403') ||
-    message.toLowerCase().includes('api key') ||
-    message.toLowerCase().includes('authentication')
-  );
-}
-
-export function getErrorSource(error: Error | string): AppError['source'] {
-  if (isNetworkError(error)) return 'network';
-  if (isAuthError(error)) return 'provider';
-
-  const message = typeof error === 'string' ? error : error.message;
-  if (message.toLowerCase().includes('chat') || message.toLowerCase().includes('message'))
-    return 'chat';
-  if (message.toLowerCase().includes('settings') || message.toLowerCase().includes('storage'))
-    return 'settings';
-  if (message.toLowerCase().includes('provider') || message.toLowerCase().includes('api'))
-    return 'provider';
-
-  return 'unknown';
-}
+// useError hook is exported from ./useError.ts to avoid React Fast Refresh warnings

@@ -11,9 +11,11 @@ import { useDragPosition } from '@hooks/useDragPosition';
 import { useResize } from '@hooks/useResize';
 import { unmountSidebar } from './index';
 import { useSettingsStore } from '@store/settings';
-import { ErrorProvider, useError, getErrorSource } from '@contexts/ErrorContext';
+import { ErrorProvider } from '@contexts/ErrorContext';
+import { useError } from '@contexts/useError';
+import { getErrorSource } from '@contexts/errorUtils';
 import { ErrorBanner } from '@components/ErrorBanner';
-import { useChatStore } from '@store/chat';
+import { useChatStore, type ChatMessage } from '@store/chat';
 import { useAIChat } from '@hooks/useAIChat';
 
 // Layout components
@@ -324,7 +326,7 @@ const ChatPanelInner: React.FC<ChatPanelProps> = ({ className, onClose }) => {
         console.warn('Failed to switch model/provider:', err);
       }
     },
-    [selectedModel, getProviderTypeForModel, updateSelectedModel, switchProvider]
+    [selectedModel, getProviderTypeForModel, updateSelectedModel, switchProvider, showError]
   );
 
   // Update bounds when window resizes

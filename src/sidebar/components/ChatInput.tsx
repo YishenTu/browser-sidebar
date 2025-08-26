@@ -7,7 +7,6 @@ import {
   CharacterCounter,
   Spinner,
 } from '@ui/index';
-import { cn } from '@sidebar/lib/cn';
 
 export interface ChatInputProps extends Omit<TextAreaProps, 'onKeyDown' | 'value' | 'onChange'> {
   /** Callback fired when message is sent */
@@ -200,7 +199,7 @@ export const ChatInput = React.forwardRef<HTMLTextAreaElement, ChatInputProps>(
     }, [loading]);
 
     return (
-      <div className={cn('chat-input', className)}>
+      <div className={`chat-input${className ? ` ${className}` : ''}`}>
         {/* Main input area with border */}
         <div className="chat-input__main">
           <div className="chat-input__textarea-container">

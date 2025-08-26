@@ -19,7 +19,8 @@
     ".eslintrc.json",
     "node_modules",
     "*.config.ts",
-    "*.config.js"
+    "*.config.js",
+    "tests.backup"
   ],
   "parser": "@typescript-eslint/parser",
   "parserOptions": {

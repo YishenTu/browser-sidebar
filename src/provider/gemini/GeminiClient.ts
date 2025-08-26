@@ -134,12 +134,8 @@ export class GeminiClient extends BaseProvider {
       config.topK !== undefined ||
       config.maxTokens !== undefined
     ) {
-      console.debug('Legacy parameters ignored:', {
-        temperature: config.temperature,
-        topP: config.topP,
-        topK: config.topK,
-        maxTokens: config.maxTokens,
-      });
+      // Legacy parameters ignored - silently handled
+      // temperature, topP, topK, maxTokens are no longer used
     }
 
     // Safety settings validation (optional)

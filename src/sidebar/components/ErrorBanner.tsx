@@ -4,7 +4,7 @@
  * Unified error banner that displays errors from the centralized error context.
  */
 
-import { useError } from '@contexts/ErrorContext';
+import { useError } from '@contexts/useError';
 import { Alert } from '@ui/Alert';
 
 export interface ErrorBannerProps {

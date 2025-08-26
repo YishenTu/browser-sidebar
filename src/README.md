@@ -8,13 +8,18 @@ This layout groups code by major functions: sidebar (frontend UI), tabext (tab c
 
 React UI for the sidebar (Shadow DOM overlay).
 
-- `ChatPanel.tsx` – Unified chat panel (overlay, resize/drag)
-- `components/` – Reusable UI components (MessageList, Markdown, ModelSelector, UI)
-- `components/ui/` – Button, Input, Card, IconButton, Spinner, TextArea
-- `hooks/` – Sidebar-specific hooks
-- `styles/` – Unified sidebar stylesheet + theme variables
-- `contexts/` – UI contexts (e.g., theme)
-- `lib/` – UI utilities (cn.ts for className merging)
+- `ChatPanel.tsx` – Unified chat panel (overlay, resize/drag) with AI chat integration
+- `components/` – Reusable UI components with recent updates:
+  - `MessageList.tsx` – Virtualized message list for performance
+  - `MessageBubble.tsx` – Message display with thinking wrapper support
+  - `MarkdownRenderer.tsx` – Full markdown support with code highlighting
+  - `ThinkingWrapper.tsx` – Real-time thinking display with timer
+  - `ModelSelector.tsx` – AI model selection dropdown
+  - `ChatInput.tsx` – Enhanced input with character counter and auto-resize
+- `components/ui/` – Core UI components (simplified without cn.ts dependency)
+- `hooks/` – AI chat hooks (`useAIChat`, `useStreamHandler`, `useProviderManager`)
+- `styles/` – CSS modules for component styling
+- `contexts/` – Error context for unified error handling
 - `index.tsx` – Shadow DOM mount/unmount logic
 
 ### `/tabext`
@@ -30,11 +35,20 @@ Content extraction system for capturing web page content. This module owns the T
 
 ### `/provider`
 
-AI provider configuration and clients (BYOK - Bring Your Own Key).
+AI provider configuration and clients (BYOK - Bring Your Own Key). Fully implemented with streaming support.
 
-- Provider abstraction, per-provider clients (OpenAI/Gemini/Anthropic)
-- API key validation utilities
-- Provider-specific settings and configuration
+- `BaseProvider.ts` – Abstract base class for all providers
+- `ProviderFactory.ts` – Factory for creating provider instances
+- `ProviderRegistry.ts` – Singleton registry for provider management
+- `openai/` – OpenAI Response API implementation
+  - Supports GPT-5 series models (nano, mini, standard)
+  - Reasoning effort levels (minimal/low/medium/high)
+  - Thinking display integration
+- `gemini/` – Gemini API implementation
+  - Supports Gemini 2.5 series (Flash Lite, Flash, Pro)
+  - Thinking budget modes (0=off, -1=dynamic)
+  - Web search grounding
+- Common features: streaming, error handling, API validation
 
 ### `/extension`
 
@@ -53,14 +67,17 @@ Chrome extension infrastructure components.
 Unified data management layer.
 
 - `store/` – Zustand stores for application state
-  - `index.ts` – Base store setup
-  - `chat.ts` – Chat conversation state
-  - `settings.ts` – User settings and preferences
-- `storage/` – Persistence layer (simplified)
+  - `chat.ts` – Chat conversation state with streaming support
+  - `settings.ts` – User settings, model selection, API keys
+- `storage/` – Persistence layer
   - `chrome.ts` – Chrome storage API wrapper
-  - `keys.ts` – API key storage management
-- `security/` – Essential security utilities
-  - `crypto.ts` – Encryption/decryption
+  - `keys/` – Comprehensive API key management
+    - Secure storage with encryption
+    - Import/export functionality
+    - Health checks and rotation
+    - Usage tracking
+- `security/` – Security utilities
+  - `crypto.ts` – AES-GCM encryption/decryption
   - `masking.ts` – Data masking for sensitive info
 
 ### `/types`
@@ -118,19 +135,26 @@ Configured in `vite.config.ts` and `tsconfig.json`:
 - `@security` – `src/data/security`
 - `@types` – `src/types`
 
-## Architecture Decisions
+## Current Implementation Status
 
-### Why This Structure?
+### ✅ Completed Features
 
-1. **Feature-Based Organization**: Major features (sidebar, tabext, provider) get top-level directories
-2. **Infrastructure Grouping**: Extension-specific code grouped under `/extension`
-3. **Data Layer Consolidation**: All data management (state, storage, security) under `/data`
-4. **Simplified Storage**: Removed complex IndexedDB/migration system in favor of Chrome storage API
-5. **Security Focus**: Essential encryption utilities without over-engineering
+1. **Extension Infrastructure** - Custom sidebar with resize/move, message passing, cross-browser support
+2. **Chat UI** - Full React component suite with markdown, code highlighting, virtualization
+3. **AI Providers** - OpenAI and Gemini fully integrated with streaming and thinking display
+4. **Storage & Security** - Encrypted API key storage, Chrome storage integration
+5. **State Management** - Zustand stores with TypeScript support
 
-### Future Scalability
+### 🚧 In Progress
 
-- `tabext/` will expand with extraction services as the feature develops
-- `provider/` will add more AI providers and streaming capabilities
-- `data/storage/` can add IndexedDB later if needed
-- Extension messaging remains centralized for easy debugging
+- Tab content extraction system (planned architecture in place)
+- Multi-tab context aggregation
+- Advanced provider features (function calling, vision)
+
+### Recent Updates
+
+- **ThinkingWrapper** - Real-time timer display with improved state persistence
+- **Message Components** - Enhanced layout with copy buttons and timestamps
+- **Provider Refactor** - Simplified configuration, removed unused parameters
+- **UI Simplification** - Removed cn.ts dependency for cleaner code
+- **Error Handling** - Unified error context across components

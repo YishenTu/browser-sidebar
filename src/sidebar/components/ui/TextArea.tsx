@@ -6,7 +6,6 @@ import React, {
   useCallback,
   useImperativeHandle,
 } from 'react';
-import { cn } from '@sidebar/lib/cn';
 
 export interface TextAreaProps
   extends Omit<React.TextareaHTMLAttributes<HTMLTextAreaElement>, 'size'> {
@@ -183,15 +182,7 @@ export const TextArea = forwardRef<HTMLTextAreaElement, TextAreaProps>(
     if (ariaDescribedBy) describedByIds.push(ariaDescribedBy);
 
     // Build textarea classes
-    const textAreaClasses = cn(
-      'textarea',
-      `textarea-${size}`,
-      {
-        error: error,
-        success: success,
-      },
-      className
-    );
+    const textAreaClasses = `textarea textarea-${size}${error ? ' error' : ''}${success ? ' success' : ''}${className ? ` ${className}` : ''}`;
 
     const textAreaElement = (
       <div className="relative">

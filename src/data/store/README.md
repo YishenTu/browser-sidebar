@@ -137,25 +137,46 @@ interface AppActions {
 - `appStore`: Default store instance
 - `storeUtils`: Utility functions for direct store access
 
-### Settings Store (Model Selector)
+### Settings Store
 
 ```ts
-// src/store/settings.ts
-interface Model {
-  id: string;
-  name: string;
-  provider: string;
-  available: boolean;
-}
-
+// src/data/store/settings.ts
 interface SettingsState {
   selectedModel: string;
-  availableModels: Model[];
-  setModel: (id: string) => void;
+  updateSelectedModel: (modelId: string) => void;
+  apiKeys: Record<string, string>;
+  updateApiKey: (provider: string, key: string) => void;
 }
 ```
 
-Used by `@components/ModelSelector` in the ChatPanel header. Persists via `chrome.storage` where available.
+Used by `@components/ModelSelector` in the ChatPanel header. Manages:
+
+- Model selection across providers
+- API key storage (encrypted via storage layer)
+- Provider-specific settings
+
+### Chat Store
+
+```ts
+// src/data/store/chat.ts
+interface ChatState {
+  messages: ChatMessage[];
+  activeMessage: StreamingMessage | null;
+  isLoading: boolean;
+  error: string | null;
+  addMessage: (message: ChatMessage) => void;
+  updateMessage: (id: string, updates: Partial<ChatMessage>) => void;
+  setActiveMessage: (message: StreamingMessage) => void;
+  clearActiveMessage: () => void;
+}
+```
+
+Manages conversation state with support for:
+
+- Message history with metadata
+- Real-time streaming updates
+- Thinking content display
+- Error states
 
 ## Chrome Extension Integration
 

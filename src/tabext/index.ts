@@ -270,8 +270,7 @@ chrome.runtime.onMessage.addListener((message: Message, _sender, sendResponse) =
 // Subscribe to specific message types using MessageBus
 messageBus.subscribe('EXTRACT_CONTENT', async (): Promise<void> => {
   // Future: Implement content extraction logic
-  // For now, just log the event
-  console.log('Content extraction requested');
+  // Content extraction requested - implementation pending
 });
 
 // Notify background that content script is ready using typed message

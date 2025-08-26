@@ -1,5 +1,4 @@
 import { useState, useEffect, useCallback, useRef, memo } from 'react';
-import { cn } from '@sidebar/lib/cn';
 
 /**
  * Props for the StreamingText component
@@ -196,11 +195,7 @@ export const StreamingText = memo<StreamingTextProps>(
         data-testid="streaming-text"
         role="status"
         aria-live="polite"
-        className={cn(
-          'inline-block',
-          preserveMarkdown ? 'whitespace-pre-wrap' : 'whitespace-normal',
-          className
-        )}
+        className={`inline-block ${preserveMarkdown ? 'whitespace-pre-wrap' : 'whitespace-normal'}${className ? ` ${className}` : ''}`}
         {...props}
       >
         {displayedText}

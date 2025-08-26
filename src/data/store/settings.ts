@@ -172,10 +172,8 @@ const validateAISettings = (ai: unknown): AISettings => {
 
   // Log if legacy parameters are being migrated
   if ('temperature' in a || 'maxTokens' in a) {
-    console.debug('Migrating legacy AI settings, removing:', {
-      temperature: a.temperature,
-      maxTokens: a.maxTokens,
-    });
+    // Legacy AI settings migration - silently handled
+    // Previously: temperature: a.temperature, maxTokens: a.maxTokens
   }
 
   return {
@@ -217,7 +215,7 @@ const validateAPIKeyReferences = (apiKeys: unknown): APIKeyReferences => {
 
   // Log if legacy openrouter key is being removed
   if ('openrouter' in a) {
-    console.debug('Migrating API keys, removing openrouter');
+    // Legacy openrouter key migration - silently handled
   }
 
   return {
