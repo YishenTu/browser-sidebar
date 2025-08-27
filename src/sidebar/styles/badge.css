@@ -62,18 +62,4 @@
   color: var(--badge-info-text, #1e40af);
 }
 
-/* Character Counter specific styles */
-.character-counter {
-  font-family: var(--font-family-mono);
-  transition: all 0.2s ease;
-}
-
-.character-counter.badge--warning {
-  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-}
-
-.character-counter.badge--error {
-  animation: shake 0.5s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
-}
-
 /* Animations pulse and shake defined in animations.css */

@@ -17,8 +17,8 @@ export { Alert } from './Alert';
 export type { AlertProps, AlertType, AlertAction } from './Alert';
 
 // Badge exports
-export { Badge, CharacterCounter } from './Badge';
-export type { BadgeProps, CharacterCounterProps, BadgeVariant, BadgeSize } from './Badge';
+export { Badge } from './Badge';
+export type { BadgeProps, BadgeVariant, BadgeSize } from './Badge';
 
 // Dropdown exports
 export { Dropdown } from './Dropdown';

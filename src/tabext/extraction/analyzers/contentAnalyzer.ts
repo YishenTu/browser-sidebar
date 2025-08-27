@@ -24,30 +24,6 @@ export function detectTables(markdown: string): boolean {
 }
 
 /**
- * Counts words in text content
- */
-export function countWords(text: string): number {
-  if (!text || !text.trim()) {
-    return 0;
-  }
-
-  // Remove markdown syntax and count words
-  const cleanText = text
-    .replace(/```[\s\S]*?```/g, '') // Remove code blocks
-    .replace(/`[^`]+`/g, '') // Remove inline code
-    .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1') // Convert links to text
-    .replace(/[#*_~`]/g, '') // Remove markdown formatting
-    .replace(/\s+/g, ' ') // Normalize whitespace
-    .trim();
-
-  if (!cleanText) {
-    return 0;
-  }
-
-  return cleanText.split(/\s+/).length;
-}
-
-/**
  * Generates a brief excerpt from the content (first ~200 characters)
  */
 export function generateExcerpt(markdown: string): string {

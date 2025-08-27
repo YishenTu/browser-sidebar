@@ -67,8 +67,6 @@ export interface ExtractedContent {
 
   /** Content metadata and statistics */
   metadata?: {
-    /** Total word count of the extracted content */
-    wordCount: number;
     /** Whether the content contains code blocks */
     hasCodeBlocks: boolean;
     /** Whether the content contains data tables */
@@ -86,8 +84,6 @@ export interface ExtractedContent {
   // Backward compatibility fields (deprecated, will be removed in v2)
   /** @deprecated Use content instead */
   markdown?: string;
-  /** @deprecated Use metadata.wordCount instead */
-  wordCount?: number;
   /** @deprecated Use metadata.hasCodeBlocks instead */
   hasCode?: boolean;
   /** @deprecated Use hasTables from metadata instead */
@@ -155,7 +151,6 @@ export function isExtractedContent(obj: any): obj is ExtractedContent {
     ['defuddle', 'selection'].includes(obj.extractionMethod) &&
     (obj.metadata === undefined ||
       (typeof obj.metadata === 'object' &&
-        typeof obj.metadata.wordCount === 'number' &&
         typeof obj.metadata.hasCodeBlocks === 'boolean' &&
         typeof obj.metadata.hasTables === 'boolean'))
   );

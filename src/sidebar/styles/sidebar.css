@@ -28,7 +28,6 @@
 @import './dropdown.css'; /* Generic dropdown component */
 @import './search-sources.css'; /* Search sources display */
 @import './copy-button.css'; /* Copy button component */
-@import './tab-context-indicator.css'; /* Tab context indicator */
 @import './modal.css'; /* Modal component for full content display */
 /* @import './extraction-mode-selector.css'; - Extraction mode selector - not yet implemented */
 

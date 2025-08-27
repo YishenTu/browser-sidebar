@@ -11,12 +11,7 @@ import { validateExtractionOptions, ExtractionMode } from '../../types/extractio
 import { normalizeUrls, cleanHtml } from '../utils/domUtils';
 import { clampText } from '../utils/textUtils';
 import { getPageMetadata } from './analyzers/metadataExtractor';
-import {
-  detectCodeBlocks,
-  detectTables,
-  countWords,
-  generateExcerpt,
-} from './analyzers/contentAnalyzer';
+import { detectCodeBlocks, detectTables, generateExcerpt } from './analyzers/contentAnalyzer';
 import { htmlToMarkdown } from './converters/markdownConverter';
 
 // Debug flag - disable in production
@@ -452,16 +447,7 @@ async function performExtraction(
   }
 
   // Step 7: Calculate features on final content with error handling
-  let wordCount = 0;
   let excerpt = '';
-
-  try {
-    wordCount = countWords(clampedMarkdown);
-  } catch (error) {
-    console.warn('Word count calculation failed:', error);
-    // Simple fallback word count
-    wordCount = clampedMarkdown.split(/\s+/).filter(word => word.length > 0).length;
-  }
 
   try {
     excerpt = generateExcerpt(clampedMarkdown);
@@ -500,7 +486,6 @@ async function performExtraction(
     extractedAt: Date.now(),
     extractionMethod,
     metadata: {
-      wordCount,
       hasCodeBlocks: hasCode,
       hasTables,
       truncated: isTruncated,
@@ -508,7 +493,6 @@ async function performExtraction(
     },
     // Backward compatibility fields (deprecated)
     markdown: clampedMarkdown,
-    wordCount,
     hasCode,
     hasTables,
     isTruncated,
@@ -623,16 +607,6 @@ function createFallbackContent(
     excerpt = cleanText.length > 200 ? cleanText.substring(0, 197) + '...' : cleanText;
   }
 
-  // Safe word count
-  let wordCount: number;
-  try {
-    wordCount = countWords(clampedText);
-  } catch (error) {
-    console.warn('Word count failed in fallback:', error);
-    // Simple fallback word count
-    wordCount = clampedText.split(/\s+/).filter(word => word.length > 0).length;
-  }
-
   return {
     title,
     url,
@@ -645,7 +619,6 @@ function createFallbackContent(
     extractedAt: Date.now(),
     extractionMethod: 'defuddle' as const, // Default to defuddle even on failure
     metadata: {
-      wordCount,
       hasCodeBlocks: false,
       hasTables: false,
       truncated: isTruncated,
@@ -653,7 +626,6 @@ function createFallbackContent(
     },
     // Backward compatibility fields (deprecated)
     markdown: clampedText,
-    wordCount,
     hasCode: false,
     hasTables: false,
     isTruncated,

@@ -10,7 +10,6 @@ type DefuddleParsed = {
   description?: string;
   favicon?: string;
   image?: string;
-  wordCount?: number;
   parseTime?: number;
   schemaOrgData?: unknown;
   metaTags?: Array<Record<string, string>>;
@@ -55,7 +54,6 @@ export async function extractWithDefuddle(): Promise<ExtractedContent> {
       extractedAt: Date.now(),
       extractionMethod: 'defuddle' as const,
       metadata: {
-        wordCount: defuddled.wordCount || 0,
         hasCodeBlocks: codeBlocks > 0,
         hasTables: tables > 0,
         truncated: false,
@@ -66,7 +64,6 @@ export async function extractWithDefuddle(): Promise<ExtractedContent> {
       },
       // Backward compatibility fields
       markdown: defuddled.content || '',
-      wordCount: defuddled.wordCount || 0,
       hasCode: codeBlocks > 0,
       hasTables: tables > 0,
       isTruncated: false,
@@ -93,14 +90,12 @@ export async function extractWithDefuddle(): Promise<ExtractedContent> {
       extractedAt: Date.now(),
       extractionMethod: 'defuddle',
       metadata: {
-        wordCount: fallbackContent.split(/\s+/).length,
         hasCodeBlocks: false,
         hasTables: false,
         truncated: false,
       },
       // Backward compatibility fields
       markdown: fallbackContent,
-      wordCount: fallbackContent.split(/\s+/).length,
       hasCode: false,
       hasTables: false,
       isTruncated: false,

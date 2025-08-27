@@ -52,49 +52,4 @@ export const Badge: React.FC<BadgeProps> = ({
   );
 };
 
-/**
- * CharacterCounter Component
- *
- * A specialized badge for showing character counts with limit warnings.
- */
-export interface CharacterCounterProps {
-  /** Current character count */
-  count: number;
-  /** Maximum allowed characters */
-  max?: number;
-  /** Warning threshold as percentage (0-1) */
-  warningThreshold?: number;
-  /** Custom CSS class */
-  className?: string;
-  /** Whether to show the counter */
-  show?: boolean;
-}
-
-export const CharacterCounter: React.FC<CharacterCounterProps> = ({
-  count,
-  max,
-  warningThreshold = 0.8,
-  className = '',
-  show = true,
-}) => {
-  if (!show) return null;
-
-  const getVariant = (): BadgeVariant => {
-    if (!max) return 'default';
-
-    const percentage = count / max;
-    if (percentage >= 1) return 'error';
-    if (percentage >= warningThreshold) return 'warning';
-    return 'default';
-  };
-
-  const text = max ? `${count}/${max}` : `${count}`;
-
-  return (
-    <Badge variant={getVariant()} size="small" className={`character-counter ${className}`}>
-      {text}
-    </Badge>
-  );
-};
-
 export default Badge;

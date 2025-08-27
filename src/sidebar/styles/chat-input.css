@@ -49,7 +49,7 @@ textarea {
   border-radius: 0 !important;
   background: transparent !important;
   background-color: transparent !important;
-  padding: 0.5rem 44px 0.5rem 0.75rem !important; /* Right padding for send button */
+  padding: 0.5rem 0.75rem !important; /* Equal padding on both sides */
   color: #e5e7eb !important; /* Light gray text */
   box-shadow: none !important;
   outline: none !important;
@@ -128,49 +128,6 @@ textarea:focus {
   gap: 0.25rem;
 }
 
-.chat-input__counter {
-  display: flex;
-  align-items: center;
-  font-family: var(--font-family-mono);
-}
-
-.chat-input__send-button {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0;
-  border: none !important;
-  border-radius: 50% !important; /* Perfect circle */
-  width: 32px !important;
-  height: 32px !important;
-  min-width: 32px !important;
-  min-height: 32px !important;
-  padding: 0 !important;
-  color: white !important;
-  transition: all var(--transition-fast) !important;
-}
-
-.chat-input__send-button:enabled {
-  background: #10b981 !important;
-  opacity: 1;
-  cursor: pointer;
-}
-
-.chat-input__send-button:disabled {
-  background: #374151 !important;
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-.chat-input__send-button:hover:enabled {
-  background: var(--success-700) !important;
-  transform: translateY(-1px);
-}
-
-.chat-input__send-button:active {
-  transform: translateY(0);
-}
-
 .chat-input__cancel-button {
   display: flex;
   align-items: center;
@@ -183,13 +140,6 @@ textarea:focus {
   height: 28px !important;
   color: white !important;
   transition: all 0.2s;
-}
-
-/* Send button icon styling */
-.chat-input__send-button svg {
-  width: 1rem !important; /* 16px - smaller icon */
-  height: 1rem !important; /* 16px - smaller icon */
-  transform: rotate(0deg);
 }
 
 /* Loading state */
@@ -209,15 +159,6 @@ textarea:focus {
   clip: rect(0, 0, 0, 0);
   white-space: nowrap;
   border: 0;
-}
-
-/* Counter color classes */
-.chat-input__counter .warning {
-  color: #d97706;
-}
-
-.chat-input__counter .error {
-  color: #dc2626;
 }
 
 /* Spinner for loading state */

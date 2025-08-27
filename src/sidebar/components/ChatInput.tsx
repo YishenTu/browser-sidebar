@@ -1,12 +1,5 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react';
-import {
-  TextArea,
-  TextAreaProps,
-  SendIcon,
-  CancelIcon,
-  CharacterCounter,
-  Spinner,
-} from '@ui/index';
+import { TextArea, TextAreaProps, CancelIcon } from '@ui/index';
 
 export interface ChatInputProps extends Omit<TextAreaProps, 'onKeyDown' | 'value' | 'onChange'> {
   /** Callback fired when message is sent */
@@ -23,12 +16,6 @@ export interface ChatInputProps extends Omit<TextAreaProps, 'onKeyDown' | 'value
   onCancel?: () => void;
   /** Whether to clear input after successful send */
   clearOnSend?: boolean;
-  /** Whether to show character counter */
-  showCounter?: boolean;
-  /** Maximum character length */
-  maxLength?: number;
-  /** Send button label */
-  sendButtonLabel?: string;
   /** Cancel button label */
   cancelButtonLabel?: string;
   /** Aria label for the textarea */
@@ -53,9 +40,6 @@ export const ChatInput = React.forwardRef<HTMLTextAreaElement, ChatInputProps>(
       loading = false,
       onCancel,
       clearOnSend = true,
-      showCounter = false,
-      maxLength,
-      sendButtonLabel = 'Send',
       cancelButtonLabel = 'Cancel',
       ariaLabel = 'Chat message input',
       className,
@@ -96,15 +80,9 @@ export const ChatInput = React.forwardRef<HTMLTextAreaElement, ChatInputProps>(
     const handleTextAreaChange = useCallback(
       (event: React.ChangeEvent<HTMLTextAreaElement>) => {
         const newValue = event.target.value;
-
-        // Respect maxLength if provided
-        if (maxLength && newValue.length > maxLength) {
-          return;
-        }
-
         handleValueChange(newValue);
       },
-      [handleValueChange, maxLength]
+      [handleValueChange]
     );
 
     // Send message
@@ -184,12 +162,8 @@ export const ChatInput = React.forwardRef<HTMLTextAreaElement, ChatInputProps>(
       event.stopPropagation();
     }, []);
 
-    // Calculate character count
-    const charCount = currentValue.length;
-
     // Determine if buttons should be disabled
     const isDisabled = loading || isSending;
-    const canSend = !isDisabled && currentValue.trim().length > 0;
 
     // Focus textarea when component mounts
     useEffect(() => {
@@ -220,17 +194,10 @@ export const ChatInput = React.forwardRef<HTMLTextAreaElement, ChatInputProps>(
             />
           </div>
 
-          {/* Action buttons row */}
-          <div className="chat-input__actions">
-            {/* Right side - send controls first in DOM for tab order */}
-            <div className="chat-input__controls">
-              {showCounter && (
-                <div className="chat-input__counter">
-                  <CharacterCounter count={charCount} max={maxLength} show={true} />
-                </div>
-              )}
-
-              {loading && onCancel ? (
+          {/* Action buttons row - only show cancel when loading */}
+          {loading && onCancel && (
+            <div className="chat-input__actions">
+              <div className="chat-input__controls">
                 <button
                   onClick={handleCancel}
                   className="chat-input__cancel-button"
@@ -238,18 +205,9 @@ export const ChatInput = React.forwardRef<HTMLTextAreaElement, ChatInputProps>(
                 >
                   <CancelIcon />
                 </button>
-              ) : (
-                <button
-                  onClick={handleSend}
-                  disabled={!canSend}
-                  className="chat-input__send-button"
-                  aria-label={sendButtonLabel}
-                >
-                  {isSending || loading ? <Spinner size="sm" /> : <SendIcon />}
-                </button>
-              )}
+              </div>
             </div>
-          </div>
+          )}
         </div>
       </div>
     );

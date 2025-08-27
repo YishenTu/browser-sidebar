@@ -3,7 +3,7 @@ import { ChatMessage, MessageRole, MessageStatus } from '@store/chat';
 import { MarkdownRenderer } from './MarkdownRenderer';
 import { ThinkingWrapper } from './ThinkingWrapper';
 import { SearchSources } from './SearchSources';
-import { Spinner, CopyButton, EditIcon, RegenerateIcon, DocumentIcon } from './ui';
+import { Spinner, CopyButton, EditIcon, RegenerateIcon } from './ui';
 
 /**
  * MessageBubble Props Interface
@@ -210,25 +210,9 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
                     </>
                   )}
 
-                  {/* User Footer: Context indicator + Edit button + Copy button + Timestamp */}
+                  {/* User Footer: Edit button + Copy button + Timestamp */}
                   {message.role === 'user' && (
                     <>
-                      {/* Context indicator for messages with tab context */}
-                      {message.metadata?.hasTabContext && (
-                        <div
-                          className="tab-context-indicator"
-                          aria-label="Includes page context"
-                          tabIndex={0}
-                        >
-                          <span className="tab-context-indicator-icon">
-                            <DocumentIcon size={10} />
-                          </span>
-                          <div className="tab-context-tooltip">
-                            Includes page:{' '}
-                            {message.metadata.tabTitle || message.metadata.tabUrl || 'Unknown page'}
-                          </div>
-                        </div>
-                      )}
                       {onEdit && (
                         <button
                           onClick={() => onEdit(message)}

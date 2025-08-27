@@ -46,7 +46,6 @@ export const ContentPreview: React.FC<ContentPreviewProps> = ({
   const [showFullContent, setShowFullContent] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
-  const wordCount = content?.metadata?.wordCount ?? content?.wordCount ?? 0;
   const hasCodeBlocks = content?.metadata?.hasCodeBlocks ?? content?.hasCode ?? false;
   const hasTables = content?.metadata?.hasTables ?? content?.hasTables ?? false;
   const truncated = content?.metadata?.truncated ?? content?.isTruncated ?? false;
@@ -217,7 +216,6 @@ export const ContentPreview: React.FC<ContentPreviewProps> = ({
                   {/* Content metadata */}
                   <div className="content-preview-stats">
                     <div className="content-preview-stats-badges">
-                      <span>{wordCount.toLocaleString()} words</span>
                       {truncated && <span className="content-preview-truncated">Truncated</span>}
                       {hasCodeBlocks && <span>Code</span>}
                       {hasTables && <span>Tables</span>}
@@ -286,7 +284,6 @@ export const ContentPreview: React.FC<ContentPreviewProps> = ({
             <div className="content-full-modal-meta">
               <span className="content-full-modal-url">{content.url}</span>
               <div className="content-full-modal-stats">
-                <span>{wordCount.toLocaleString()} words</span>
                 {truncated && <span className="content-full-modal-truncated">Truncated</span>}
                 {hasCodeBlocks && <span>Contains code</span>}
                 {hasTables && <span>Contains tables</span>}
