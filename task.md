@@ -1,349 +1,419 @@
-# Tab Content Extraction MVP - Task Execution Plan
+# Tab Content Injection Implementation Tasks
 
 ## Project Overview
 
-Build a reliable, fast, and private content extraction system for the current browser tab. The system extracts main content, converts to clean Markdown suitable for AI prompts, and provides a React hook for sidebar integration. Target performance: <500ms for simple pages, 2s hard timeout. Check @tabext-mvp.md for detail plan if needed.
+Integrate the completed Tab Content Extraction MVP with the existing chat system to enable "chat-with-tab" functionality. Users can ask questions about the webpage they're viewing, with content automatically injected as context on the first message only.
+
+## Core Implementation Strategy
+
+**Two Simple Rules:**
+
+1. **Inject Once**: Tab content is injected ONLY with the first user message (when `messages.length === 0`)
+2. **Persist in History**: Content remains in chat history for all follow-up messages
 
 ## Task Execution Guidelines
 
-- **Parallel Execution (🔄)**: Tasks marked with 🔄 can be executed simultaneously by different sub-agents
-- **Sequential Execution (⚡)**: Tasks marked with ⚡ must be completed in order
-- **Synchronization Points**: Review required after each phase before proceeding
-- **Testing**: Each component must have unit tests before integration
-- **Code Style**: Follow existing patterns in the codebase, use TypeScript strict mode
-
-## Phase 0: Dependencies [Sequential]
-
-### ⚡ [x] Task 0.1: Install Extraction Dependencies
-
-**Prerequisites**: None
-**Description**: Ensure required packages are installed and types compile
-**Deliverables**:
-
-- Add/install: `@mozilla/readability`, `turndown`, `turndown-plugin-gfm`
-- Verify `dompurify` and `@types/dompurify` are present and compile
-  **Acceptance Criteria**:
-- Packages appear in `package.json` and lockfile
-- CI typecheck passes with imports in stubs
-
-## Phase 1: Foundation Types & Utilities [Parallelizable]
-
-### 🔄 [x] Task 1.1: Create Extraction Types
-
-**Prerequisites**: None
-**Description**: Define TypeScript interfaces for extraction system
-**Deliverables**:
-
-- `src/types/extraction.ts` with ExtractedContent, ExtractionOptions interfaces
-  **Acceptance Criteria**:
-- Types match the “Types” contract in tabext-mvp.md (ExtractedContent, ExtractionOptions)
-- Exports are properly typed
-- No TypeScript errors
-  **Interface Contract**: ExtractedContent, ExtractionOptions exported
-
-### 🔄 [x] Task 1.2: Implement DOM Utilities
-
-**Prerequisites**: None
-**Description**: Create safe DOM manipulation and metadata extraction utilities
-**Deliverables**:
-
-- `src/tabext/domUtils.ts` with isVisible, getPageMetadata, clampText functions
-  **Acceptance Criteria**:
-- Functions handle edge cases (null elements, missing attributes)
-- No DOM mutations occur
-- Visibility detection covers common CSS scenarios (display:none, visibility:hidden, offscreen unless fixed, aria-hidden)
-  **Interface Contract**: Export isVisible, getPageMetadata, clampText functions
-
-### 🔄 [x] Task 1.3: Setup Markdown Converter Base
-
-**Prerequisites**: None  
-**Description**: Create HTML to Markdown converter with DOMPurify sanitization
-**Deliverables**:
-
-- `src/tabext/markdown/markdownConverter.ts` with `htmlToMarkdown(html, { includeLinks? })`
-- Custom Turndown rule `fencedCodeWithLang` to output code blocks as ```lang fences from `<pre><code>` elements
-- Dynamic imports for Turndown + GFM with simple in-module caching
-  **Acceptance Criteria**:
-- DOMPurify sanitizes HTML before conversion
-- Turndown configured with GFM plugin
-- Language detection for code blocks works (uses language-\* class hints when present)
-- Link stripping option functional when `opts.includeLinks === false`
-- Custom `fencedCodeWithLang` Turndown rule implemented
-- Dynamic import caching avoids reloading libraries on subsequent calls
-  **Interface Contract**: Export async `htmlToMarkdown(html: string, opts?: { includeLinks?: boolean })`
-
-## Phase 2: Extractor Components [Parallelizable]
-
-### 🔄 [x] Task 2.1: Implement Readability Extractor
-
-**Prerequisites**: Task 1.1
-**Description**: Create Mozilla Readability adapter for article extraction
-**Deliverables**:
-
-- `src/tabext/extractors/readability.ts` with extractWithReadability function
-- Install @mozilla/readability dependency
-  **Acceptance Criteria**:
-- Document cloned before parsing (no mutations)
-- Memory cleanup after extraction
-- Returns null for non-article pages
-- Preserves class attributes for code detection (keepClasses: true)
-  **Interface Contract**: Export extractWithReadability(): Promise<ReadabilityResult | null>
-
-### 🔄 [x] Task 2.2: Implement Fallback Extractor
-
-**Prerequisites**: Task 1.2
-**Description**: Create heuristic content extractor for non-article pages
-**Deliverables**:
-
-- `src/tabext/extractors/fallback.ts` with extractFallbackHTML function
-  **Acceptance Criteria**:
-- Selects best content container (main, article, highest-scoring visible div/section)
-- Scoring algorithm: h2=50, h3=30, p=10 points, plus text length; only visible elements considered
-- Removes scripts, styles, hidden elements using `window.getComputedStyle`
-- Enforces character budget (500KB default)
-- Returns truncation flag when content exceeds budget
-  **Interface Contract**: Export extractFallbackHTML(budgetChars?: number)
-
-## Phase 3: Core Orchestrator [Sequential]
-
-### ⚡ [x] Task 3.1: Create Content Extractor Orchestrator
-
-**Prerequisites**: Tasks 1.1, 1.2, 1.3, 2.1, 2.2
-**Description**: Implement main extraction orchestrator with timeout and fallback logic
-**Deliverables**:
-
-- `src/tabext/contentExtractor.ts` with extractContent function
-  **Acceptance Criteria**:
-- Tries Readability first, falls back to heuristic on failure
-- Enforces 2s timeout (configurable)
-- Clamps Markdown output to 200K chars
-- Detects code blocks and tables in output
-- Passes includeLinks option through to Markdown converter (default includeLinks=true)
-- Returns metadata with word count and truncation status
-- Maps publishedDate from DOM metadata when available
-- Loads heavy libs via dynamic import and caches modules between calls
-  **Interface Contract**: Export extractContent(opts?: ExtractionOptions): Promise<ExtractedContent>
-
-### ⚡ [x] Task 3.2: Add Extraction Error Handling
-
-**Prerequisites**: Task 3.1
-**Description**: Enhance orchestrator with comprehensive error handling
-**Deliverables**:
-
-- Updated `src/tabext/contentExtractor.ts` with try-catch, timeout handling
-  **Acceptance Criteria**:
-- Graceful degradation on extraction failure
-- Returns minimal valid ExtractedContent on error
-- Timeout errors properly caught and logged
-- Performance timing captured using `performance.now()`; reference result (e.g., `void elapsed`) to avoid unused warnings
-
-## Phase 4: React Integration [Sequential]
-
-### ⚡ [x] Task 4.1: Create React Hook for Content Extraction
-
-**Prerequisites**: Task 3.1
-**Description**: Build React hook for sidebar to trigger and consume extraction
-**Deliverables**:
-
-- `src/sidebar/hooks/useContentExtraction.ts` with useContentExtraction hook
-  **Acceptance Criteria**:
-- Hook exposes content, loading, error, reextract
-- Auto-extracts on mount when auto=true
-- Handles errors gracefully
-- Properly manages loading states
-  **Interface Contract**: Export useContentExtraction(auto?: boolean)
-
-### ⚡ [x] Task 4.2: Optional - Add Message Bus Integration
-
-**Prerequisites**: Task 4.1
-**Description**: Add content script message handler for future decoupling
-**Deliverables**:
-
-- Updated `src/tabext/index.ts` with EXTRACT_CONTENT handler
-  **Acceptance Criteria**:
-- Handler uses subscribeWithResponse pattern
-- Returns ExtractedContent via StandardResponse
-- Compatible with existing MessageBus types
-  **Interface Contract**: Message handler for EXTRACT_CONTENT
-
-## Phase 5: Testing Suite [Parallelizable after Phase 3]
-
-### 🔄 [x] Task 5.1: Unit Tests for Utilities
-
-**Prerequisites**: Tasks 1.2, 1.3
-**Description**: Create unit tests for DOM utils and Markdown converter
-**Deliverables**:
-
-- `tests/unit/tabext/domUtils.test.ts`
-- `tests/unit/tabext/markdownConverter.test.ts`
-  **Acceptance Criteria**:
-- > 90% code coverage
-- Edge cases tested (null, empty, malformed inputs)
-- Performance benchmarks included
-
-### 🔄 [x] Task 5.2: Unit Tests for Extractors
-
-**Prerequisites**: Tasks 2.1, 2.2
-**Description**: Create unit tests for Readability and fallback extractors
-**Deliverables**:
-
-- `tests/unit/tabext/readability.test.ts`
-- `tests/unit/tabext/fallback.test.ts`
-  **Acceptance Criteria**:
-- Test with fixture HTML documents
-- Verify no DOM mutations occur
-- Budget enforcement tested
-
-### 🔄 [x] Task 5.3: Integration Tests
-
-**Prerequisites**: Task 3.1
-**Description**: End-to-end tests for content extraction pipeline
-**Deliverables**:
-
-- `tests/integration/tabext/extractContent.test.ts`
-  **Acceptance Criteria**:
-- Tests with real-world HTML fixtures (news, blog, docs, GitHub README, StackOverflow, landing page)
-- Timeout behavior verified and truncation flags properly set
-- Performance target under 500ms for simple pages; hard timeout 2s
-
-## Phase 6: UI Integration [Sequential]
-
-### ⚡ [x] Task 6.1: Integrate Hook into ChatPanel
-
-**Prerequisites**: Task 4.1
-**Description**: Add content extraction to sidebar UI
-**Deliverables**:
-
-- Updated `src/sidebar/ChatPanel.tsx` with extraction preview
-  **Acceptance Criteria**:
-- Shows extracted content preview (title, domain, excerpt)
-- Loading state displayed during extraction
-- Error states handled gracefully
-- Re-extract button functional
-  **Interface Contract**: Uses useContentExtraction hook
-
-### ⚡ [x] Task 6.2: Add Extraction Status UI
-
-**Prerequisites**: Task 6.1
-**Description**: Create UI components for extraction status
-**Deliverables**:
-
-- Status indicator in sidebar header
-- Extraction metadata display
-  **Acceptance Criteria**:
-- Shows extraction method (readability/fallback)
-- Displays word count and truncation status
-- Indicates presence of code blocks/tables
-
-### 🔄 [x] Task 6.3 (Optional): Add Quality Metrics
-
-**Prerequisites**: Task 3.1
-**Description**: Implement simple content quality scoring for UX hints
-**Deliverables**:
-
-- `scoreContentQuality(content: ExtractedContent)` utility or inline in orchestrator
-- Signals: hasTitle, wordCount, hasStructure (headings/paragraphs), hasCode
-  **Acceptance Criteria**:
-- Returns score 0–100 and signals object
-- Used to optionally surface a “quality” badge in preview
-
-## Synchronization Points
-
-### After Phase 1 & 2 Completion
-
-- Review all interfaces ensure compatibility
-- Verify no circular dependencies
-- Check TypeScript compilation
-
-### After Phase 3 Completion
-
-- Manual testing on sample pages
-- Performance profiling
-- Review error handling coverage
-
-### After Phase 5 Completion
-
-- Verify >90% test coverage
-- Review test failures and edge cases
-- Performance benchmark validation
-
-### Before Phase 6
-
-- Ensure all core functionality tested
-- Review React hook implementation
-- Verify sidebar compatibility
-
-## Risk Mitigation
-
-### Performance Risks
-
-- **Risk**: Readability library too slow on complex pages
-- **Mitigation**: Strict 2s timeout, fallback to heuristic extraction
-
-### Memory Risks
-
-- **Risk**: Large DOM clones causing memory issues
-- **Mitigation**: Explicit cleanup, character budgets, avoid keeping references
-
-### Compatibility Risks
-
-- **Risk**: Content script conflicts with existing code
-- **Mitigation**: Minimal footprint, no global pollution, Shadow DOM isolation
-
-### Security Risks
-
-- **Risk**: XSS through extracted content
-- **Mitigation**: DOMPurify sanitization before Markdown conversion
-
-## Progress Tracking
-
-### Overall Completion: 16/16 tasks (100%)
-
-**Phase 0**: [x] (1/1)
-**Phase 1**: [x] [x] [x] (3/3)
-**Phase 2**: [x] [x] (2/2)  
-**Phase 3**: [x] [x] (2/2)
-**Phase 4**: [x] [x] (2/2)
-**Phase 5**: [x] [x] [x] (3/3)
-**Phase 6**: [x] [x] [x] (3/3, includes optional 6.3)
-
-### Critical Path
-
-1. Task 1.1 → Task 3.1 → Task 4.1 → Task 6.1 (Types → Orchestrator → Hook → UI)
-2. Parallel paths can reduce total time by ~40%
-
-## Notes for Sub-Agents
-
-- Use existing project patterns from `src/` directory
-- Follow TypeScript strict mode settings
-- Import using path aliases (@tabext/_, @types/_, etc.)
-- All async functions must handle promise rejections
-- Keep bundle size minimal with dynamic imports and simple in-module caching
-- Preserve existing MessageBus compatibility; for MVP, prefer direct orchestrator call from sidebar; Phase 1.1 may add EXTRACT_CONTENT handler using subscribeWithResponse
-- Test in isolation before integration
+- Sub-agents should focus on their specific task without modifying unrelated code
+- All file paths are absolute from project root
+- Test changes locally before marking complete
+- Preserve existing functionality while adding new features
+- Follow existing code patterns and conventions
 
 ---
 
-## ✅ Phase 6 Completion Summary
+## Phase 1: Data Model Enhancement 🔄 (Parallelizable)
 
-**All tasks completed successfully!** The Tab Content Extraction MVP is now fully functional with:
+### [ ] Task 1.1: Extend ChatMessage Interface
 
-### Completed Features:
+- **Prerequisites**: None
+- **Description**: Add fields to ChatMessage interface to support dual content display and multi-tab tracking
+- **Files to modify**: `/src/data/store/chat.ts`
+- **Deliverables**:
+  - Add `displayContent?: string` field for UI-specific text
+  - Add metadata fields: `hasTabContext?: boolean`, `originalUserContent?: string`
+  - Add `tabId?: number | string` for multi-tab support
+  - Add `tabTitle?: string`, `tabUrl?: string` for tab context
+  - Ensure backward compatibility with existing messages
+- **Acceptance Criteria**:
+  - TypeScript compilation passes
+  - Existing message creation still works
+  - New fields are optional
+  - Each tab maintains independent message history
 
-- **Content Preview UI**: Collapsible component with title, domain, excerpt, and quality assessment
-- **Extraction Status**: Header indicator and comprehensive metadata display
-- **Quality Metrics**: Scoring system with visual badges and signal indicators
-- **Auto-extraction**: Content automatically extracted when sidebar opens
-- **Error Handling**: Graceful error states with retry functionality
-- **Performance**: Dynamic imports keep bundle size optimized
+### [ ] Task 1.2: Update Store Methods
 
-### Additional Fixes Applied:
+- **Prerequisites**: Task 1.1
+- **Description**: Modify addMessage to accept both content types
+- **Files to modify**: `/src/data/store/chat.ts`
+- **Deliverables**:
+  - Update `addMessage` method signature to accept displayContent
+  - Ensure metadata is properly stored
+- **Acceptance Criteria**:
+  - Can create messages with both content and displayContent
+  - Existing code using addMessage continues to work
 
-- Fixed hook auto-extraction default for test compatibility
-- Aligned option names (maxLength) with type definitions
-- Implemented extractorLoader for proper test mocking
-- Eliminated duplicate quality computations
-- Corrected misleading truncation warnings
-- Updated all tests to match implementation
+---
 
-**Build Status**: ✅ All tests passing, production build successful
+## Phase 2: Content Injection Logic ⚡ (Sequential)
+
+### [ ] Task 2.0: Add Tab ID Message Handler
+
+- **Prerequisites**: Task 1.1
+- **Description**: Add background message handler to return tab ID
+- **Files to modify**: `/src/extension/background/messageHandler.ts`
+- **Deliverables**:
+  - Add message type `GET_TAB_ID` to message types
+  - Handle message in background, return sender.tab.id
+  - Ensure response works with async/await in content script
+- **Acceptance Criteria**:
+  - Background correctly returns tab ID
+  - Content script can request and receive tab ID
+  - No errors in message passing
+
+### [ ] Task 2.1: Import Dependencies
+
+- **Prerequisites**: Task 1.1, Task 1.2
+- **Description**: Add necessary imports to ChatPanel
+- **Files to modify**: `/src/sidebar/ChatPanel.tsx`
+- **Deliverables**:
+  - Import extractedContent from content store (if needed)
+  - Ensure all required types are imported
+- **Acceptance Criteria**:
+  - No TypeScript import errors
+  - All required dependencies available
+
+### [ ] Task 2.2: Implement Content Injection in handleSendMessage
+
+- **Prerequisites**: Task 2.1
+- **Description**: Modify handleSendMessage to inject content on first message with tab tracking
+- **Files to modify**: `/src/sidebar/ChatPanel.tsx`
+- **Deliverables**:
+  - Check if first message using `messages.length === 0`
+  - Format content with webpage metadata and user question
+  - Set both content (for API) and displayContent (for UI)
+  - Add metadata to track injection including tabId
+  - Request tab ID via `chrome.runtime.sendMessage` to background (content scripts can't access chrome.tabs)
+  - Background responds with sender.tab.id
+- **Acceptance Criteria**:
+  - First message includes tab content in API call
+  - Subsequent messages sent normally
+  - No content injection on non-first messages
+  - UI shows only user input, not injected content
+  - Performance impact < 100ms
+  - TabId correctly tracked in metadata via background messaging
+
+### [ ] Task 2.3: Update Message Creation Call
+
+- **Prerequisites**: Task 2.2
+- **Description**: Ensure message is created with both contents
+- **Files to modify**: `/src/sidebar/ChatPanel.tsx`
+- **Deliverables**:
+  - Pass both content and displayContent to addMessage
+  - Include metadata object with injection tracking
+- **Acceptance Criteria**:
+  - Message stored correctly with both content fields
+  - Metadata properly attached to message
+
+---
+
+## Phase 3: UI Display Updates 🔄 (Parallelizable after Phase 2)
+
+### [ ] Task 3.1: Update MessageBubble Display Logic
+
+- **Prerequisites**: Task 1.1
+- **Description**: Modify MessageBubble to use displayContent when available
+- **Files to modify**: `/src/sidebar/components/MessageBubble.tsx`
+- **Deliverables**:
+  - Use `message.displayContent || message.content` for rendering
+  - Update copy functionality to use `displayContent || content` for user messages
+  - Ensure proper text rendering for both cases
+- **Acceptance Criteria**:
+  - Messages with displayContent show only that content
+  - Messages without displayContent show regular content
+  - Copy button copies displayContent (not injected content) for user messages
+  - No visual breaking changes
+
+### [ ] Task 3.2: Add Context Indicator
+
+- **Prerequisites**: Task 3.1
+- **Description**: Add visual indicator for messages with tab context
+- **Files to modify**: `/src/sidebar/components/MessageBubble.tsx`
+- **Deliverables**:
+  - Small icon/badge when `message.metadata?.hasTabContext` is true
+  - Tooltip showing page title from metadata
+  - CSS styling for indicator
+- **Acceptance Criteria**:
+  - Indicator appears only on messages with tab context
+  - Tooltip displays page title on hover
+  - Indicator is subtle and non-intrusive
+
+### [ ] Task 3.3: Style Context Indicator
+
+- **Prerequisites**: Task 3.2
+- **Description**: Add CSS for context indicator
+- **Files to modify**: `/src/sidebar/styles/sidebar.css`
+- **Deliverables**:
+  - `.tab-context-indicator` class styling
+  - Tooltip styling
+  - Icon positioning and sizing
+- **Acceptance Criteria**:
+  - Indicator visually appealing and consistent with design
+  - Tooltip properly positioned and readable
+
+---
+
+## Phase 4: Session Management ⚡ (Sequential)
+
+### [ ] Task 4.1: Handle New Conversation and Panel Open
+
+- **Prerequisites**: Task 2.2
+- **Description**: Ensure new conversations and panel reopening allow fresh injection
+- **Files to modify**: `/src/sidebar/ChatPanel.tsx`
+- **Deliverables**:
+  - Verify clearConversation empties messages array
+  - Handle panel mount/unmount for fresh sessions
+  - No additional state management needed (empty array = inject on next)
+- **Acceptance Criteria**:
+  - New conversation button clears all messages
+  - Panel reopening starts fresh conversation (empty messages)
+  - Next message after clear/reopen gets content injection
+  - Note: Tab close automatically cleans content script state (no persistence after tab close)
+
+### [ ] Task 4.2: Verify URL Change Behavior
+
+- **Prerequisites**: Task 4.1
+- **Description**: Ensure URL changes don't affect ongoing conversation
+- **Files to modify**: None (verification only)
+- **Deliverables**:
+  - Document that URL changes preserve conversation
+  - Verify content remains from original extraction
+- **Acceptance Criteria**:
+  - Changing URLs doesn't clear messages
+  - Existing conversation continues normally
+  - No re-injection on URL change
+
+---
+
+## Phase 4.5: Edit and Error Handling ⚡ (Sequential)
+
+### [ ] Task 4.3: Handle Message Editing
+
+- **Prerequisites**: Task 3.1
+- **Description**: Preserve edit flow with original user content
+- **Files to modify**: `/src/sidebar/components/Footer.tsx`, `/src/sidebar/ChatPanel.tsx`
+- **Deliverables**:
+  - Edit mode should use `metadata.originalUserContent || displayContent || content`
+  - On resend after edit: rebuild injection if first message, otherwise send normally
+  - Preserve metadata structure during edit
+- **Acceptance Criteria**:
+  - Edit shows user's original input, not injected content
+  - Edited first message re-injects content
+  - Edited subsequent messages don't inject
+  - Metadata preserved through edit cycle
+
+### [ ] Task 4.4: Add Error Notifications
+
+- **Prerequisites**: Task 2.2
+- **Description**: Show user-friendly error when extraction fails
+- **Files to modify**: `/src/sidebar/ChatPanel.tsx`
+- **Deliverables**:
+  - Check if extraction failed or unavailable
+  - Display warning using ErrorBanner component
+  - Allow message to proceed without injection
+- **Acceptance Criteria**:
+  - User sees clear warning about missing context
+  - Chat continues normally without injection
+  - Error dismissible by user
+
+---
+
+## Phase 5: Testing & Validation 🔄 (Parallelizable)
+
+### [ ] Task 5.1: Unit Tests - Store and Injection Logic
+
+- **Prerequisites**: All Phase 2 tasks
+- **Description**: Create unit tests for data model and injection logic
+- **Files to create**: `/tests/store/chat-injection.test.ts`
+- **Deliverables**:
+  - Test displayContent field storage and retrieval
+  - Test metadata preservation including tabId
+  - Test first message injection logic
+  - Test subsequent message handling
+- **Acceptance Criteria**:
+  - All tests pass
+  - > 90% coverage of modified store methods
+  - Edge cases covered (null content, empty messages)
+
+### [ ] Task 5.2: Integration Tests - Provider Streaming
+
+- **Prerequisites**: Task 5.1
+- **Description**: Test providers handle injected content correctly
+- **Files to create**: `/tests/integration/provider-injection.test.ts`
+- **Deliverables**:
+  - Test OpenAI streaming with injected content
+  - Test Gemini streaming with injected content
+  - Verify large content handling (200K chars)
+  - Test conversation history preservation
+- **Acceptance Criteria**:
+  - Both providers handle injected content
+  - Streaming works without errors
+  - Context maintained in subsequent calls
+  - Performance within 100ms overhead
+
+### [ ] Task 5.3: UI Tests - Display and Interaction
+
+- **Prerequisites**: Task 3.1, 3.2
+- **Description**: Test UI components handle dual content correctly
+- **Files to create**: `/tests/sidebar/components/MessageBubble-injection.test.tsx`
+- **Deliverables**:
+  - Test displayContent rendering
+  - Test context indicator appearance
+  - Test tooltip functionality
+  - Test copy behavior (copies displayContent)
+  - Test edit flow preservation
+- **Acceptance Criteria**:
+  - UI shows only user input for injected messages
+  - Context indicator visible and functional
+  - Copy/edit use correct content
+  - Accessibility standards met
+
+### [ ] Task 5.4: E2E Tests - Full User Workflows
+
+- **Prerequisites**: All previous tasks
+- **Description**: Test complete user flows end-to-end
+- **Files to create**: `/tests/e2e/content-injection.test.ts`
+- **Deliverables**:
+  - Test: Open sidebar → Extract → Ask question → Get response
+  - Test: Multiple tab switching with independent contexts
+  - Test: New conversation reset flow
+  - Test: Panel close/reopen behavior
+  - Test: URL changes preserve conversation
+  - Test: Edit and resend first message
+- **Acceptance Criteria**:
+  - All user flows work as expected
+  - Multi-tab independence verified
+  - Performance < 100ms impact
+  - No memory leaks on tab close
+
+---
+
+## Synchronization Points
+
+### After Phase 1 ✓
+
+- Orchestrator verify: Data model changes compile
+- Check: No breaking changes to existing functionality
+
+### After Phase 2 ✓
+
+- Orchestrator verify: Content injection logic works
+- Check: First message includes content, subsequent don't
+
+### After Phase 3 ✓
+
+- Orchestrator verify: UI displays correctly
+- Check: Clean UI with subtle indicators
+
+### After Phase 4 ✓
+
+- Orchestrator verify: Session management correct
+- Check: New conversations reset properly
+
+### After Phase 5 ✓
+
+- Final verification: Complete user flow works
+- Check: All acceptance criteria met
+
+---
+
+## Risk Mitigation
+
+### Potential Blockers
+
+1. **Content extraction not available**: Task 2.2 should handle gracefully with null check
+2. **TypeScript errors**: Task 1.1 must ensure backward compatibility
+3. **UI breaking**: Task 3.1 must preserve existing message rendering
+4. **Performance issues**: Monitor with large content (already clamped to 200K)
+
+### Critical Path
+
+Tasks 1.1 → 1.2 → 2.1 → 2.2 form the critical path. These must be completed sequentially for core functionality.
+
+---
+
+## Progress Tracking
+
+### Phase Completion
+
+- [ ] Phase 1: Data Model (2 tasks)
+- [ ] Phase 2: Injection Logic (4 tasks)
+- [ ] Phase 3: UI Updates (3 tasks)
+- [ ] Phase 4: Session Management (2 tasks)
+- [ ] Phase 4.5: Edit and Error Handling (2 tasks)
+- [ ] Phase 5: Testing (4 tasks)
+
+### Overall Progress
+
+- Total Tasks: 17
+- Completed: 0
+- In Progress: 0
+- Remaining: 17
+
+---
+
+## Interface Contracts
+
+### ChatMessage Interface Extension
+
+```typescript
+interface ChatMessage {
+  // existing fields...
+  displayContent?: string;
+  metadata?: {
+    hasTabContext?: boolean;
+    originalUserContent?: string;
+    tabId?: number | string;
+    tabTitle?: string;
+    tabUrl?: string;
+  };
+}
+```
+
+### Content Injection Format
+
+```typescript
+const injectedContent = `I'm looking at a webpage with the following content:
+
+Title: ${extractedContent.title}
+URL: ${extractedContent.url}
+Domain: ${extractedContent.domain}
+
+Content:
+${extractedContent.content}
+
+---
+My question: ${userInput}`;
+```
+
+### Execution Priority
+
+1. **High Priority**: Tasks 1.1, 1.2, 2.1, 2.2 (core functionality)
+2. **Medium Priority**: Tasks 3.1, 3.2, 4.1 (user experience)
+3. **Low Priority**: Tasks 3.3, 4.2, 5.1-5.4 (polish and validation)
+
+---
+
+## Notes for Sub-Agents
+
+- **DO NOT** modify provider implementations - they already handle messages correctly
+- **DO NOT** add system messages - use user message injection as specified
+- **DO NOT** track state beyond empty message check - simplicity is key
+- **DO NOT** use chrome.tabs API in content scripts - request tab ID from background instead
+- **DO** preserve existing functionality while adding new features
+- **DO** follow the existing code style and patterns
+- **DO** test your changes before marking complete
+
+### Important Architecture Notes
+
+- **Tab ID Retrieval**: Content scripts cannot access chrome.tabs API. Must request tab ID from background service worker via chrome.runtime.sendMessage
+- **Tab State Cleanup**: Content script state (including sidebar) is automatically cleaned when tab closes. Only use chrome.tabs.onRemoved in background if caching tab-specific data there
