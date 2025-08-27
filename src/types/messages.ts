@@ -17,6 +17,7 @@ export type MessageType =
   | 'SIDEBAR_STATE'
   | 'SEND_TO_AI'
   | 'AI_RESPONSE'
+  | 'GET_TAB_ID'
   | 'ERROR'
   | 'PING'
   | 'PONG';
@@ -110,6 +111,11 @@ export interface AIResponsePayload {
   isFinal?: boolean;
 }
 
+export interface GetTabIdPayload {
+  /** The tab ID */
+  tabId: number;
+}
+
 export interface ErrorPayload {
   /** Error message */
   message: string;
@@ -162,6 +168,10 @@ export interface PingMessage extends Message<void> {
   type: 'PING';
 }
 
+export interface GetTabIdMessage extends Message<void> {
+  type: 'GET_TAB_ID';
+}
+
 export interface PongMessage extends Message<void> {
   type: 'PONG';
 }
@@ -178,6 +188,7 @@ export type TypedMessage =
   | SidebarStateMessage
   | SendToAIMessage
   | AIResponseMessage
+  | GetTabIdMessage
   | ErrorMessage
   | PingMessage
   | PongMessage;
@@ -273,6 +284,7 @@ export function isValidMessage(obj: unknown): obj is Message {
     'SIDEBAR_STATE',
     'SEND_TO_AI',
     'AI_RESPONSE',
+    'GET_TAB_ID',
     'ERROR',
     'PING',
     'PONG',

@@ -19,6 +19,8 @@ export interface SendMessageOptions {
   metadata?: Record<string, unknown>;
   /** Skip adding user message (for regeneration) */
   skipUserMessage?: boolean;
+  /** UI-specific display content (overrides content for display) */
+  displayContent?: string;
 }
 
 /**

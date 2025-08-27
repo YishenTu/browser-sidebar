@@ -87,7 +87,7 @@ export function useMessageHandler({
         return; // Don't send empty messages
       }
 
-      const { streaming = true, skipUserMessage = false } = options;
+      const { streaming = true, skipUserMessage = false, displayContent, metadata } = options;
 
       try {
         // Clear any previous errors
@@ -109,7 +109,9 @@ export function useMessageHandler({
           userMessage = chatStore.addMessage({
             role: 'user',
             content: trimmedContent,
+            displayContent: displayContent,
             status: 'sending',
+            metadata: metadata,
           });
         } else {
           // For regeneration, get the last user message

@@ -12,6 +12,7 @@ import {
   isValidMessage,
   createMessage,
   ErrorPayload,
+  GetTabIdPayload,
 } from '@/types/messages';
 
 /**
@@ -221,6 +222,30 @@ export class DefaultHandlers {
       target: message.source,
     });
   }
+
+  /**
+   * Handler for tab ID requests - returns the sender's tab ID
+   */
+  static async handleGetTabId(
+    message: Message<void>,
+    sender: chrome.runtime.MessageSender
+  ): Promise<Message<GetTabIdPayload>> {
+    console.log('GET_TAB_ID request from:', sender.tab?.id || 'unknown tab');
+
+    // Ensure sender has a tab ID
+    if (!sender.tab?.id) {
+      throw new Error('Unable to determine tab ID from sender');
+    }
+
+    return createMessage<GetTabIdPayload>({
+      type: 'GET_TAB_ID',
+      payload: {
+        tabId: sender.tab.id,
+      },
+      source: 'background',
+      target: message.source,
+    });
+  }
 }
 
 /**
@@ -243,6 +268,11 @@ export function createDefaultMessageHandler(): MessageHandlerRegistry {
     'SIDEBAR_STATE',
     DefaultHandlers.handleSidebarState,
     'Sidebar state ack'
+  );
+  registry.registerHandler(
+    'GET_TAB_ID',
+    DefaultHandlers.handleGetTabId,
+    'Return sender tab ID'
   );
 
   return registry;

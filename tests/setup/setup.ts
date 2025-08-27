@@ -58,6 +58,17 @@ beforeAll(() => {
     originalError(...args);
   });
 
+  // Mock clipboard API globally for jsdom
+  if (!navigator.clipboard) {
+    Object.defineProperty(navigator, 'clipboard', {
+      value: {
+        writeText: vi.fn().mockResolvedValue(undefined),
+      },
+      configurable: true,
+      writable: true,
+    });
+  }
+
   // @ts-expect-error: set global chrome mock in test env
   global.chrome = {
     storage: mockChromeStorage,

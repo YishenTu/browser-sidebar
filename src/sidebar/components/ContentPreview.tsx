@@ -5,7 +5,7 @@
  * Shows title, domain, and excerpt with loading and error states.
  */
 
-import React from 'react';
+import React, { useState } from 'react';
 import type { ExtractedContent } from '@/types/extraction';
 import {
   scoreContentQuality,
@@ -16,7 +16,8 @@ import { Spinner } from '@ui/Spinner';
 import { Alert } from '@ui/Alert';
 import { Badge } from '@ui/Badge';
 import { Collapsible } from '@ui/Collapsible';
-import { RegenerateIcon } from '@ui/Icons';
+import { RegenerateIcon, ExpandIcon } from '@ui/Icons';
+import { Modal } from '@ui/Modal';
 
 export interface ContentPreviewProps {
   /** Extracted content data */
@@ -47,6 +48,7 @@ export const ContentPreview: React.FC<ContentPreviewProps> = ({
   qualityAssessment: providedQualityAssessment,
   className = '',
 }) => {
+  const [showFullContent, setShowFullContent] = useState(false);
   const wordCount = content?.metadata?.wordCount ?? content?.wordCount ?? 0;
   const hasCodeBlocks = content?.metadata?.hasCodeBlocks ?? content?.hasCode ?? false;
   const hasTables = content?.metadata?.hasTables ?? content?.hasTables ?? false;
@@ -99,19 +101,17 @@ export const ContentPreview: React.FC<ContentPreviewProps> = ({
               )}
             </div>
           </div>
-          {!isCollapsed && (
-            <button
-              onClick={e => {
-                e.stopPropagation();
-                onReextract();
-              }}
-              className="content-preview-refresh"
-              title="Re-extract content"
-              aria-label="Re-extract content"
-            >
-              <RegenerateIcon size={16} />
-            </button>
-          )}
+          <button
+            onClick={e => {
+              e.stopPropagation();
+              onReextract();
+            }}
+            className="content-preview-refresh"
+            title="Re-extract content"
+            aria-label="Re-extract content"
+          >
+            <RegenerateIcon size={16} />
+          </button>
         </div>
       );
     }
@@ -129,7 +129,8 @@ export const ContentPreview: React.FC<ContentPreviewProps> = ({
   }
 
   return (
-    <div className={`content-preview ${className}`}>
+    <>
+      <div className={`content-preview ${className}`}>
       {error ? (
         // Show error as Alert instead of collapsible
         <Alert
@@ -156,8 +157,9 @@ export const ContentPreview: React.FC<ContentPreviewProps> = ({
               <p>Extracting webpage content...</p>
             </div>
           ) : content ? (
-            <div className="content-preview-content">
-              {/* Content metadata */}
+            <div className="content-preview-content-wrapper">
+              <div className="content-preview-content">
+                {/* Content metadata */}
               <div className="content-preview-stats">
                 <span>{wordCount.toLocaleString()} words</span>
                 {truncated && <span className="content-preview-truncated">Truncated</span>}
@@ -238,22 +240,53 @@ export const ContentPreview: React.FC<ContentPreviewProps> = ({
                 </div>
               )}
 
-              {/* Re-extract button in expanded view */}
-              <div className="content-preview-actions">
-                <button
-                  onClick={onReextract}
-                  className="content-preview-reextract-button"
-                  disabled={loading}
-                >
-                  <RegenerateIcon size={16} />
-                  Re-extract content
-                </button>
               </div>
+              {/* Overlay expand button at bottom right */}
+              <button
+                onClick={() => setShowFullContent(true)}
+                className="content-preview-expand-overlay"
+                title="View full content"
+                aria-label="View full content"
+              >
+                <ExpandIcon size={16} />
+              </button>
             </div>
           ) : null}
-        </Collapsible>
-      )}
-    </div>
+          </Collapsible>
+        )}
+      </div>
+
+      {/* Full Content Modal */}
+      <Modal
+        isOpen={showFullContent}
+        onClose={() => setShowFullContent(false)}
+        title={content?.title || 'Page Content'}
+        maxWidth="80%"
+        className="content-full-modal"
+      >
+        {content && (
+          <div className="content-full-modal-body">
+            {/* Content metadata */}
+            <div className="content-full-modal-meta">
+              <span className="content-full-modal-url">{content.url}</span>
+              <div className="content-full-modal-stats">
+                <span>{wordCount.toLocaleString()} words</span>
+                {truncated && <span className="content-full-modal-truncated">Truncated</span>}
+                {hasCodeBlocks && <span>Contains code</span>}
+                {hasTables && <span>Contains tables</span>}
+                {content.author && <span>By {content.author}</span>}
+                {content.publishedDate && <span>{content.publishedDate}</span>}
+              </div>
+            </div>
+
+            {/* Full content */}
+            <div className="content-full-modal-text">
+              <pre>{content.content || content.markdown || content.textContent || ''}</pre>
+            </div>
+          </div>
+        )}
+      </Modal>
+    </>
   );
 };
 

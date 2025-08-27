@@ -1,0 +1,212 @@
+/* ============================================================================
+ * Tab Context Indicator
+ * Visual indicator showing when a message has context from specific page/tab
+ * ============================================================================ */
+
+/* Main context indicator element */
+.tab-context-indicator {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  margin-left: var(--spacing-xs);
+  margin-right: var(--spacing-xs);
+  background: var(--primary-600);
+  border-radius: var(--radius-full);
+  cursor: help;
+  opacity: 0.8;
+  transition: 
+    opacity var(--transition-fast),
+    background-color var(--transition-fast),
+    transform var(--transition-fast);
+  flex-shrink: 0; /* Prevent shrinking in flex layouts */
+}
+
+/* Hover state for the indicator */
+.tab-context-indicator:hover {
+  opacity: 1;
+  background: var(--primary-500);
+  transform: scale(1.1);
+}
+
+/* Focus state for accessibility */
+.tab-context-indicator:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+  background: var(--primary-500);
+}
+
+/* Icon inside the indicator */
+.tab-context-indicator-icon {
+  width: 10px;
+  height: 10px;
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* SVG icon styling */
+.tab-context-indicator-icon svg {
+  width: 10px;
+  height: 10px;
+  fill: currentColor;
+}
+
+/* Tooltip container */
+.tab-context-tooltip {
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  margin-bottom: var(--spacing-xs);
+  padding: var(--spacing-xs) var(--spacing-sm);
+  background: var(--background-elevated);
+  color: var(--text-primary);
+  border: 1px solid var(--border-secondary);
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+  line-height: var(--line-height-tight);
+  white-space: nowrap;
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  box-shadow: var(--shadow-lg);
+  z-index: var(--z-tooltip);
+  pointer-events: none;
+  user-select: none;
+  
+  /* Initially hidden */
+  opacity: 0;
+  visibility: hidden;
+  transform: translateX(-50%) translateY(-4px);
+  transition: 
+    opacity var(--transition-fast),
+    visibility var(--transition-fast),
+    transform var(--transition-fast);
+}
+
+/* Show tooltip on hover */
+.tab-context-indicator:hover .tab-context-tooltip {
+  opacity: 1;
+  visibility: visible;
+  transform: translateX(-50%) translateY(0);
+}
+
+/* Tooltip arrow */
+.tab-context-tooltip::after {
+  content: '';
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border: 4px solid transparent;
+  border-top-color: var(--background-elevated);
+  border-bottom: none;
+}
+
+/* Dark border for the arrow */
+.tab-context-tooltip::before {
+  content: '';
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border: 5px solid transparent;
+  border-top-color: var(--border-secondary);
+  border-bottom: none;
+  z-index: -1;
+}
+
+/* Special positioning when in message footer */
+.message-footer .tab-context-indicator {
+  margin-left: var(--spacing-sm);
+  margin-right: 0;
+}
+
+/* Adjust tooltip position in footer context */
+.message-footer .tab-context-indicator .tab-context-tooltip {
+  bottom: calc(100% + var(--spacing-sm));
+  margin-bottom: 0;
+}
+
+/* Light theme adjustments */
+.ai-sidebar-container[data-theme='light'] .tab-context-indicator {
+  background: var(--primary-600);
+}
+
+.ai-sidebar-container[data-theme='light'] .tab-context-indicator:hover {
+  background: var(--primary-700);
+}
+
+/* Auto theme - light mode */
+@media (prefers-color-scheme: light) {
+  .ai-sidebar-container[data-theme='auto'] .tab-context-indicator {
+    background: var(--primary-600);
+  }
+  
+  .ai-sidebar-container[data-theme='auto'] .tab-context-indicator:hover {
+    background: var(--primary-700);
+  }
+}
+
+/* Animation for when indicator appears */
+@keyframes contextIndicatorAppear {
+  from {
+    opacity: 0;
+    transform: scale(0.8);
+  }
+  to {
+    opacity: 0.8;
+    transform: scale(1);
+  }
+}
+
+/* Apply appear animation when added dynamically */
+.tab-context-indicator.animate-appear {
+  animation: contextIndicatorAppear var(--transition-medium) ease-out;
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+  .tab-context-indicator {
+    transition: opacity var(--transition-fast);
+  }
+  
+  .tab-context-indicator:hover {
+    transform: none;
+  }
+  
+  .tab-context-tooltip {
+    transition: opacity var(--transition-fast);
+    transform: translateX(-50%);
+  }
+  
+  .tab-context-indicator:hover .tab-context-tooltip {
+    transform: translateX(-50%);
+  }
+  
+  .tab-context-indicator.animate-appear {
+    animation: none;
+  }
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+  .tab-context-indicator {
+    border: 1px solid currentColor;
+    background: var(--text-primary);
+  }
+  
+  .tab-context-indicator-icon {
+    color: var(--background-primary);
+  }
+  
+  .tab-context-tooltip {
+    border: 2px solid var(--text-primary);
+    background: var(--background-primary);
+  }
+}

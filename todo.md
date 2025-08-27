@@ -9,3 +9,4 @@
 [x] 7. web search
 [x] 8. openai use response id to maintain chat history
 [ ] 9. system prompt
+[ ] 10. slash command

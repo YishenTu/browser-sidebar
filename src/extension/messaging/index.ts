@@ -595,6 +595,9 @@ export class MessageBus {
       case 'ERROR':
         return 'background';
 
+      case 'GET_TAB_ID':
+        return 'background'; // Content scripts request tab ID from background
+
       case 'PING':
       case 'PONG':
         // For ping/pong, target depends on source

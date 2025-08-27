@@ -19,6 +19,8 @@ import { useChatStore, type ChatMessage } from '@store/chat';
 import { useAIChat } from '@hooks/useAIChat';
 import { useContentExtraction } from '@hooks/useContentExtraction';
 import { ContentPreview } from '@components/ContentPreview';
+// Import for Task 2.2: Content Injection with Tab ID tracking
+import { getCurrentTabIdSafe } from '@tabext/tabUtils';
 
 // Layout components
 import { Header } from '@components/layout/Header';
@@ -170,11 +172,17 @@ const ChatPanelInner: React.FC<ChatPanelProps> = ({ className, onClose }) => {
     editMessage,
     getPreviousUserMessage,
     removeMessageAndAfter,
+    updateMessage,
   } = useChatStore();
   const { sendMessage, switchProvider, cancelMessage } = useAIChat({
     enabled: true,
     autoInitialize: true, // Auto-initialize providers from settings
   });
+
+  // Issue 1 Fix: Clear conversation on component mount to ensure fresh session
+  useEffect(() => {
+    clearConversation();
+  }, [clearConversation]);
 
   // Content extraction integration
   const {
@@ -195,19 +203,138 @@ const ChatPanelInner: React.FC<ChatPanelProps> = ({ className, onClose }) => {
 
   // Handle sending messages
   const handleSendMessage = useCallback(
-    async (content: string) => {
+    async (userInput: string) => {
       try {
-        // If we're editing, delete the message we're editing and all messages after it
+        let isFirstMessage = false;
+        let editedMessageMetadata: any = {};
+        let wasEditing = false;
+
+        // If we're editing, get the metadata from the original message and determine if it's the first message
         if (editingMessage) {
+          wasEditing = true;
+          const originalMessage = messages.find(msg => msg.id === editingMessage.id);
+          if (originalMessage) {
+            // Preserve the original metadata structure
+            editedMessageMetadata = originalMessage.metadata || {};
+            // Determine if this was the first message by checking if it has tab context
+            isFirstMessage = !!(originalMessage.metadata?.hasTabContext);
+          }
+          
           // Remove all messages after the edited one
           editMessage(editingMessage.id);
           // Clear edit mode
           setEditingMessage(null);
+        } else {
+          // For new messages, check if this is the first message
+          isFirstMessage = messages.length === 0;
+        }
+        
+        let messageContent = userInput;
+        let displayContent = userInput;
+        let messageMetadata: any = wasEditing ? editedMessageMetadata : {};
+
+        // Handle content extraction errors or missing content for first message
+        if (isFirstMessage) {
+          if (contentError) {
+            // Show warning about extraction failure, but allow message to proceed
+            showError(
+              `Failed to extract webpage content: ${contentError.message}. Your message will be sent without webpage context.`,
+              'warning'
+            );
+          } else if (!extractedContent && !contentLoading) {
+            // Show warning about missing content, but allow message to proceed
+            showError(
+              'No webpage content available. Your message will be sent without webpage context.',
+              'warning'
+            );
+          }
         }
 
-        await sendMessage(content, {
-          streaming: true,
-        });
+        // Inject content on first message with tab tracking
+        if (isFirstMessage && extractedContent) {
+          try {
+            // Get tab ID for metadata
+            const tabId = await getCurrentTabIdSafe();
+            
+            // Format content with webpage metadata and user question
+            const injectedContent = `I'm looking at a webpage with the following content:
+
+Title: ${extractedContent.title}
+URL: ${extractedContent.url}
+Domain: ${extractedContent.domain}
+
+Content:
+${extractedContent.content}
+
+---
+My question: ${userInput}`;
+
+            // Set content for API and displayContent for UI
+            messageContent = injectedContent;
+            displayContent = userInput; // UI shows only user input
+            
+            // Add/update metadata to track injection including tabId
+            // For edited messages, preserve existing metadata and update injection-specific fields
+            messageMetadata = {
+              ...messageMetadata, // Preserve existing metadata
+              hasTabContext: true,
+              originalUserContent: userInput,
+              tabId: tabId,
+              tabTitle: extractedContent.title,
+              tabUrl: extractedContent.url,
+            };
+
+          } catch (tabError) {
+            // If tab ID retrieval fails, continue without it but still inject content
+            console.warn('Failed to get tab ID for content injection:', tabError);
+            
+            const injectedContent = `I'm looking at a webpage with the following content:
+
+Title: ${extractedContent.title}
+URL: ${extractedContent.url}
+Domain: ${extractedContent.domain}
+
+Content:
+${extractedContent.content}
+
+---
+My question: ${userInput}`;
+
+            messageContent = injectedContent;
+            displayContent = userInput;
+            messageMetadata = {
+              ...messageMetadata, // Preserve existing metadata
+              hasTabContext: true,
+              originalUserContent: userInput,
+              tabTitle: extractedContent.title,
+              tabUrl: extractedContent.url,
+            };
+          }
+        }
+
+        // Issue 2 Fix: Handle editing vs new message properly
+        if (wasEditing && editingMessage) {
+          // Update the existing message instead of creating a new one
+          updateMessage(editingMessage.id, {
+            content: messageContent,
+            displayContent: displayContent,
+            status: 'sending',
+            metadata: Object.keys(messageMetadata).length > 0 ? messageMetadata : undefined,
+          });
+
+          // Send message without creating a duplicate user message
+          await sendMessage(messageContent, {
+            streaming: true,
+            skipUserMessage: true, // Prevent duplicate user message
+          });
+        } else {
+          // Send message with content injection for first message or normal content for subsequent messages
+          await sendMessage(messageContent, {
+            streaming: true,
+            displayContent: displayContent,
+            metadata: Object.keys(messageMetadata).length > 0 ? messageMetadata : undefined,
+          });
+        }
       } catch (error) {
         // Add error to centralized error context
         const errorMessage = error instanceof Error ? error.message : 'Failed to send message';
@@ -219,7 +346,7 @@ const ChatPanelInner: React.FC<ChatPanelProps> = ({ className, onClose }) => {
         });
       }
     },
-    [sendMessage, addError, editingMessage, editMessage]
+    [sendMessage, addError, editingMessage, editMessage, updateMessage, messages.length, extractedContent, contentError, contentLoading, showError]
   );
 
   // Handle clear conversation
@@ -233,7 +360,10 @@ const ChatPanelInner: React.FC<ChatPanelProps> = ({ className, onClose }) => {
   // Handle edit message
   const handleEditMessage = useCallback((message: ChatMessage) => {
     if (message.role === 'user') {
-      setEditingMessage({ id: message.id, content: message.content });
+      // Use original user content for editing, not injected content
+      // Priority: metadata.originalUserContent || displayContent || content
+      const editContent = message.metadata?.originalUserContent || message.displayContent || message.content;
+      setEditingMessage({ id: message.id, content: editContent });
     }
   }, []);
 

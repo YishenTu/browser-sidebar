@@ -32,14 +32,29 @@ export interface ChatMessage {
   role: MessageRole;
   /** Message content/text */
   content: string;
+  /** UI-specific display content (overrides content if provided) */
+  displayContent?: string;
   /** Message creation timestamp */
   timestamp: Date;
   /** Current message status */
   status: MessageStatus;
   /** Error message if status is 'error' */
   error?: string;
-  /** Additional metadata for the message */
-  metadata?: Record<string, unknown>;
+  /** Message metadata including tab context */
+  metadata?: {
+    /** Indicates if tab content was injected into this message */
+    hasTabContext?: boolean;
+    /** Original user input before tab content injection */
+    originalUserContent?: string;
+    /** Tab ID for multi-tab support */
+    tabId?: number | string;
+    /** Tab title for context */
+    tabTitle?: string;
+    /** Tab URL for context */
+    tabUrl?: string;
+    /** Additional extensible metadata */
+    [key: string]: unknown;
+  };
 }
 
 /**
@@ -50,6 +65,8 @@ export interface CreateMessageOptions {
   role: MessageRole;
   /** Message content */
   content: string;
+  /** Optional UI-specific display content */
+  displayContent?: string;
   /** Optional custom ID (auto-generated if not provided) */
   id?: string;
   /** Optional custom timestamp (current time if not provided) */
@@ -59,7 +76,20 @@ export interface CreateMessageOptions {
   /** Optional error message */
   error?: string;
   /** Optional metadata */
-  metadata?: Record<string, unknown>;
+  metadata?: {
+    /** Indicates if tab content was injected into this message */
+    hasTabContext?: boolean;
+    /** Original user input before tab content injection */
+    originalUserContent?: string;
+    /** Tab ID for multi-tab support */
+    tabId?: number | string;
+    /** Tab title for context */
+    tabTitle?: string;
+    /** Tab URL for context */
+    tabUrl?: string;
+    /** Additional extensible metadata */
+    [key: string]: unknown;
+  };
 }
 
 /**
@@ -68,12 +98,27 @@ export interface CreateMessageOptions {
 export interface UpdateMessageOptions {
   /** New content (optional) */
   content?: string;
+  /** New UI-specific display content (optional) */
+  displayContent?: string;
   /** New status (optional) */
   status?: MessageStatus;
   /** New error message (optional) */
   error?: string;
   /** New metadata (optional) */
-  metadata?: Record<string, unknown>;
+  metadata?: {
+    /** Indicates if tab content was injected into this message */
+    hasTabContext?: boolean;
+    /** Original user input before tab content injection */
+    originalUserContent?: string;
+    /** Tab ID for multi-tab support */
+    tabId?: number | string;
+    /** Tab title for context */
+    tabTitle?: string;
+    /** Tab URL for context */
+    tabUrl?: string;
+    /** Additional extensible metadata */
+    [key: string]: unknown;
+  };
 }
 
 /**
@@ -195,6 +240,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
       id: options.id || generateMessageId(),
       role: options.role,
       content: options.content,
+      displayContent: options.displayContent,
       timestamp: options.timestamp || new Date(),
       status: options.status || getDefaultStatus(options.role),
       error: options.error,
@@ -220,6 +266,10 @@ export const useChatStore = create<ChatState>((set, get) => ({
               // Preserve original timestamp and ID
               timestamp: message.timestamp,
               id: message.id,
+              // Merge metadata shallowly to prevent accidental loss
+              metadata: updates.metadata
+                ? { ...message.metadata, ...updates.metadata }
+                : message.metadata,
             }
           : message
       ),

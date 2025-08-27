@@ -23,7 +23,7 @@ export function ContentExtractionExample(): React.ReactElement {
       {/* Control buttons */}
       <div style={{ marginBottom: '16px', display: 'flex', gap: '8px' }}>
         <button
-          onClick={extractContent}
+          onClick={() => extractContent()}
           disabled={loading}
           style={{
             padding: '8px 16px',

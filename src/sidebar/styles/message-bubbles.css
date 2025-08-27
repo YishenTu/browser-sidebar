@@ -45,6 +45,7 @@
   word-break: break-word !important; /* Break long words if needed */
   line-height: 1.4 !important; /* Tighter line height */
   letter-spacing: normal !important; /* Normal letter spacing */
+  position: relative !important; /* For context indicator positioning */
 }
 
 /* Target all child elements inside user bubble for consistent spacing */
@@ -168,6 +169,7 @@
   letter-spacing: normal !important;
   /* Normal letter spacing */
   box-sizing: border-box !important;
+  position: relative !important; /* For context indicator positioning */
 }
 
 .message-bubble--system {
@@ -529,3 +531,58 @@
 }
 
 /* expandSources animation defined in animations.css */
+
+/* ============================================================================
+ * Context Indicator
+ * ============================================================================ */
+
+.message-context-indicator {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  background: rgba(0, 0, 0, 0.6);
+  border-radius: 50%;
+  opacity: 0.7;
+  transition: opacity 0.2s ease;
+  cursor: help;
+}
+
+.message-context-indicator:hover {
+  opacity: 1;
+  background: rgba(0, 0, 0, 0.8);
+}
+
+.context-indicator-icon {
+  color: #9ca3af;
+  display: block;
+  transition: color 0.2s ease;
+}
+
+.message-context-indicator:hover .context-indicator-icon {
+  color: #e5e7eb;
+}
+
+/* Adjust positioning for user messages to account for right alignment */
+.message-bubble--user .message-context-indicator {
+  right: 10px;
+  top: 8px;
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.message-bubble--user .message-context-indicator:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+.message-bubble--user .context-indicator-icon {
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.message-bubble--user .message-context-indicator:hover .context-indicator-icon {
+  color: rgba(255, 255, 255, 1);
+}

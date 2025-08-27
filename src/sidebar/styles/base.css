@@ -298,12 +298,21 @@
   text-overflow: ellipsis;
 }
 
+.content-preview-header-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
 .content-preview-domain {
   font-size: 12px;
   color: #9ca3af;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  flex-shrink: 1;
+  min-width: 0;
 }
 
 .content-preview-refresh {
