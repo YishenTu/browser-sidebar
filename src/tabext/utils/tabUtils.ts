@@ -57,11 +57,12 @@ export async function getCurrentTabIdSafe(): Promise<number | null> {
  * @returns Promise that resolves when the example completes
  */
 export async function exampleUsage(): Promise<void> {
-  console.log('Getting current tab ID...');
+  // console.log('Getting current tab ID...');
 
   try {
-    const tabId = await getCurrentTabId();
-    console.log('Current tab ID:', tabId);
+    await getCurrentTabId();
+    // const tabId = await getCurrentTabId();
+    // console.log('Current tab ID:', tabId);
 
     // Use the tab ID for whatever functionality needs it
     // For example, you might use it to:
@@ -69,14 +70,14 @@ export async function exampleUsage(): Promise<void> {
     // - Send tab-targeted messages
     // - Track tab-specific state
   } catch (error) {
-    console.error('Failed to get tab ID:', error);
+    // console.error('Failed to get tab ID:', error);
 
     // Fallback to safe method
     const tabId = await getCurrentTabIdSafe();
     if (tabId) {
-      console.log('Got tab ID via safe method:', tabId);
+      // console.log('Got tab ID via safe method:', tabId);
     } else {
-      console.warn('Unable to determine tab ID');
+      // console.warn('Unable to determine tab ID');
     }
   }
 }

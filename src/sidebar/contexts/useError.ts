@@ -6,7 +6,7 @@
  */
 
 import { useContext } from 'react';
-import { ErrorContext } from './ErrorContext';
+import { ErrorContext } from './ErrorContextDef';
 
 /**
  * Hook to use the error context

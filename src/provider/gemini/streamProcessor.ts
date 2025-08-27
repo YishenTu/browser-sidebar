@@ -33,7 +33,7 @@ export class GeminiStreamProcessor {
    * @param chunk Raw text chunk from stream
    * @returns Array of parsed JSON objects ready for processing
    */
-  processChunk(chunk: string): any[] {
+  processChunk(chunk: string): unknown[] {
     this.state.buffer += chunk;
 
     // Detect array format on first chunk
@@ -56,8 +56,8 @@ export class GeminiStreamProcessor {
   /**
    * Extract complete JSON objects from buffer
    */
-  private extractJsonObjects(): any[] {
-    const results: any[] = [];
+  private extractJsonObjects(): unknown[] {
+    const results: unknown[] = [];
 
     while (this.state.buffer.length > 0) {
       // Skip whitespace
@@ -151,8 +151,8 @@ export class GeminiStreamProcessor {
   /**
    * Extract SSE/NDJSON objects from buffer
    */
-  private extractSseObjects(): any[] {
-    const results: any[] = [];
+  private extractSseObjects(): unknown[] {
+    const results: unknown[] = [];
     const lines = this.state.buffer.split('\n');
 
     // Keep incomplete line in buffer

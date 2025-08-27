@@ -145,6 +145,17 @@ export interface OpenAIError {
 }
 
 /**
+ * Search metadata structure
+ */
+export interface SearchMetadata {
+  sources: Array<{
+    title: string;
+    url: string;
+    snippet?: string;
+  }>;
+}
+
+/**
  * Supported reasoning effort levels
  */
 export const REASONING_EFFORTS = ['minimal', 'low', 'medium', 'high'] as const;

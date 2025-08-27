@@ -96,7 +96,7 @@ export function useStreamHandler(): UseStreamHandlerReturn {
         let thinkingContent = '';
         let isThinkingPhase = true; // Track if we're still in thinking phase
         let streamInterrupted = false;
-        let searchMetadata: any = null; // Store search metadata from stream
+        let searchMetadata: unknown = null; // Store search metadata from stream
         let responseId: string | null = null; // Store response ID from stream
 
         try {
@@ -108,8 +108,8 @@ export function useStreamHandler(): UseStreamHandlerReturn {
             }
 
             // Extract thinking and content from streaming chunk
-            const thinking = (chunk as any)?.choices?.[0]?.delta?.thinking || '';
-            const content = (chunk as any)?.choices?.[0]?.delta?.content || '';
+            const thinking = (chunk as StreamChunk)?.choices?.[0]?.delta?.thinking || '';
+            const content = (chunk as StreamChunk)?.choices?.[0]?.delta?.content || '';
 
             // Check for search metadata in the chunk (it comes from the StreamChunk type now)
             // Gemini sends this in the last chunk with the complete response

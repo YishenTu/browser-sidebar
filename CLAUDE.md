@@ -97,18 +97,31 @@ src/
 │   │   ├── messageHandler.ts # Message routing
 │   │   └── sidebarManager.ts # Tab state management
 │   └── messaging/            # Message passing utilities
-├── tabext/         # Content script for sidebar injection
-│   └── index.ts              # Content script entry point
+├── tabext/         # Content script & extraction
+│   ├── index.ts              # Content script entry
+│   ├── core/                 # Core functionality
+│   │   ├── domManipulator.ts # DOM operations
+│   │   └── messageHandler.ts # Message handling
+│   ├── extraction/           # Content extraction
+│   │   ├── ContentExtractor.ts # Main extraction logic
+│   │   ├── markdownConverter.ts # Markdown conversion
+│   │   └── extractors/       # Site-specific extractors
+│   └── utils/                # Utilities
+│       ├── constants.ts      # Constants
+│       └── logger.ts         # Logging utility
 ├── sidebar/        # React UI with Shadow DOM
 │   ├── ChatPanel.tsx         # Main chat interface with AI integration
 │   ├── index.tsx             # Mount/unmount functions
 │   ├── components/           # React components
 │   │   ├── ChatInput.tsx         # Enhanced input with character counter
+│   │   ├── ContentPreview.tsx    # Page content display
 │   │   ├── MarkdownRenderer.tsx  # Full markdown + KaTeX math
 │   │   ├── MessageBubble.tsx     # Messages with thinking display
 │   │   ├── MessageList.tsx       # Virtualized for performance
 │   │   ├── ModelSelector.tsx     # AI model selection
+│   │   ├── Settings/             # Settings components
 │   │   ├── ThinkingWrapper.tsx   # Real-time reasoning display
+│   │   ├── layout/              # Layout components
 │   │   └── ui/                   # Core UI components
 │   ├── contexts/           # React contexts
 │   │   └── ErrorContext.tsx      # Unified error handling
@@ -148,9 +161,11 @@ src/
 **Stage 2 ✅**: Chat UI - Full React component suite, markdown, virtualization, thinking display
 **Stage 3 ✅**: Storage & Security - Encrypted API key storage, Chrome storage integration
 **Stage 4 ✅**: AI Providers - OpenAI and Gemini fully integrated with streaming
-**Stage 5 🚧**: Content Extraction - Tab content capture, multi-tab aggregation (in progress)
+**Stage 5 ✅**: Content Extraction - Advanced tab content capture with markdown conversion, multi-tab aggregation
 
-## Refactoring (Task 5 - Completed)
+## Major Refactoring Milestones
+
+### Task 5 - UI Consolidation (Completed)
 
 The project underwent a major refactoring in Task 5 to consolidate the sidebar architecture:
 
@@ -197,12 +212,14 @@ Implemented comprehensive path aliases for cleaner, more maintainable imports:
 - `gemini-2.5-flash` - Balanced, dynamic thinking
 - `gemini-2.5-pro` - Advanced with automatic thinking
 
-### Recent Updates
+### Recent Updates (Stage 5)
 
-- **ThinkingWrapper**: Persistent state management across re-renders
-- **Provider Refactor**: Removed debug logging, silent legacy parameter handling
-- **UI Simplification**: Removed cn.ts utility, direct string concatenation
-- **Error Handling**: Unified error context with source tracking
+- **Content Extraction System**: Complete implementation with markdown conversion
+- **Multi-tab Support**: Aggregate content from multiple browser tabs
+- **Smart Extraction**: Using Readability algorithm for clean content
+- **Dynamic Monitoring**: MutationObserver for SPA content updates
+- **Selection Handling**: Context-aware text selection with markers
+- **Performance**: Optimized extraction with caching and lazy loading
 
 ## Key Technical Decisions
 
@@ -344,8 +361,11 @@ npm run format          # Format all files
 - Message list virtualization for large conversations
 - React components use callbacks and refs to prevent re-renders
 - Background script maintains minimal state
-- Content script stays lightweight (~2KB)
+- Content script optimized with modular loading
 - Streaming responses with smooth token buffering
+- Content extraction caching (5 min TTL)
+- Debounced re-extraction for dynamic content (300-500ms)
+- Progressive content loading for large pages
 
 # important-instruction-reminders
 

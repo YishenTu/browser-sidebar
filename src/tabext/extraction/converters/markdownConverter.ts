@@ -10,7 +10,7 @@ async function getTurndownService(): Promise<TurndownService> {
   if (!turndownInstance) {
     // Dynamic imports to reduce bundle size
     const TurndownService = (await import('turndown')).default;
-    const { gfm } = (await import('turndown-plugin-gfm')) as any;
+    const { gfm } = (await import('turndown-plugin-gfm')) as { gfm: (service: unknown) => void };
 
     // Create and configure Turndown service
     turndownInstance = new TurndownService({
@@ -64,7 +64,7 @@ async function getTurndownService(): Promise<TurndownService> {
         }
 
         // Enable/disable based on per-conversion option
-        const includeLinks = (options as any)?.includeLinks !== false;
+        const includeLinks = (options as { includeLinks?: boolean })?.includeLinks !== false;
 
         if (!includeLinks) {
           return content; // Just return the text content without the link
@@ -283,7 +283,7 @@ export async function htmlToMarkdown(
     const turndownService = await getTurndownService();
 
     // Set the includeLinks option for this conversion
-    (turndownService.options as any).includeLinks = includeLinks;
+    (turndownService.options as { includeLinks?: boolean }).includeLinks = includeLinks;
 
     // Convert to Markdown
     let markdown = turndownService.turndown(cleanHtml);

@@ -206,7 +206,7 @@ const ChatPanelInner: React.FC<ChatPanelProps> = ({ className, onClose }) => {
     async (userInput: string) => {
       try {
         let isFirstMessage = false;
-        let editedMessageMetadata: any = {};
+        let editedMessageMetadata: Record<string, unknown> = {};
         let wasEditing = false;
 
         // If we're editing, get the metadata from the original message and determine if it's the first message
@@ -231,7 +231,7 @@ const ChatPanelInner: React.FC<ChatPanelProps> = ({ className, onClose }) => {
 
         let messageContent = userInput;
         let displayContent = userInput;
-        let messageMetadata: any = wasEditing ? editedMessageMetadata : {};
+        let messageMetadata: Record<string, unknown> = wasEditing ? editedMessageMetadata : {};
 
         // Handle content extraction errors or missing content for first message
         if (isFirstMessage) {
@@ -351,7 +351,7 @@ My question: ${userInput}`;
       editingMessage,
       editMessage,
       updateMessage,
-      messages.length,
+      messages,
       extractedContent,
       contentError,
       contentLoading,

@@ -131,8 +131,20 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
           {/* Search results display for assistant messages - inside hover container */}
           {message.role === 'assistant' && message.metadata?.['searchResults'] ? (
             <div className="message-search-metadata">
-              {(message.metadata['searchResults'] as any)?.sources ? (
-                <SearchSources sources={(message.metadata['searchResults'] as any).sources} />
+              {(
+                message.metadata['searchResults'] as {
+                  sources?: Array<{ title: string; url: string; snippet?: string }>;
+                }
+              )?.sources ? (
+                <SearchSources
+                  sources={
+                    (
+                      message.metadata['searchResults'] as {
+                        sources: Array<{ title: string; url: string; snippet?: string }>;
+                      }
+                    ).sources
+                  }
+                />
               ) : null}
             </div>
           ) : null}

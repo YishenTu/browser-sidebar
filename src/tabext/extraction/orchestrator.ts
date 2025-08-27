@@ -147,7 +147,7 @@ export async function extractContent(
     // Calculate final extraction time and reference to avoid unused warning
     const extractionTime = performance.now() - startTime;
     if (DEBUG) {
-      console.log(`Content extraction completed successfully in ${extractionTime.toFixed(2)}ms`);
+      // console.log(`Content extraction completed successfully in ${extractionTime.toFixed(2)}ms`);
     }
 
     return {
@@ -284,11 +284,11 @@ async function performExtraction(
       htmlContent = selection.html;
       textContent = selection.text;
       extractionMethod = 'selection';
-      if (DEBUG) console.log('Using user selection only');
+      // if (DEBUG) console.log('Using user selection only');
     } else {
       // For defuddle mode, we'll extract full content but mark the selection
       // This will be enhanced after full extraction
-      if (DEBUG) console.log('Selection captured, will enhance extraction');
+      // if (DEBUG) console.log('Selection captured, will enhance extraction');
     }
   }
 
@@ -304,12 +304,12 @@ async function performExtraction(
         author = defuddleResult.author || undefined;
         extractionMethod = 'defuddle';
 
-        console.log(
-          '[ContentExtractor] Defuddle extraction succeeded with content length:',
-          htmlContent.length
-        );
+        // console.log(
+        //   '[ContentExtractor] Defuddle extraction succeeded with content length:',
+        //   htmlContent.length
+        // );
       } else {
-        console.log('[ContentExtractor] Defuddle extraction returned empty content');
+        // console.log('[ContentExtractor] Defuddle extraction returned empty content');
       }
     } catch (error) {
       console.error('[ContentExtractor] Defuddle extraction failed:', error);
@@ -330,7 +330,7 @@ async function performExtraction(
       // This ensures images are always normalized but links are only normalized when needed
       htmlContent = normalizeUrls(htmlContent, window.location.href, includeLinks);
 
-      if (DEBUG) console.log('HTML cleaning and URL normalization completed');
+      // if (DEBUG) console.log('HTML cleaning and URL normalization completed');
     } catch (error) {
       console.warn('HTML cleaning/normalization failed, using original content:', error);
     }
@@ -349,7 +349,7 @@ async function performExtraction(
       );
       selectionMarkdown = await htmlToMarkdown(normalizedSelection, { includeLinks });
 
-      if (DEBUG) console.log('Selection enhanced in full extraction');
+      // if (DEBUG) console.log('Selection enhanced in full extraction');
     } catch (error) {
       console.warn('Failed to process selection:', error);
     }
@@ -366,10 +366,10 @@ async function performExtraction(
         markdown = `## Selected Content\n\n${selectionMarkdown}\n\n---\n\n## Full Page Content\n\n${markdown}`;
       }
 
-      console.log(
-        '[ContentExtractor] HTML to Markdown conversion succeeded, length:',
-        markdown.length
-      );
+      // console.log(
+      //   '[ContentExtractor] HTML to Markdown conversion succeeded, length:',
+      //   markdown.length
+      // );
     } catch (error) {
       if (error instanceof Error) {
         if (error.message.includes('parsing')) {
@@ -393,7 +393,7 @@ async function performExtraction(
         const doc = parser.parseFromString(htmlContent, 'text/html');
         markdown = doc.body?.textContent || doc.body?.innerText || '';
         if (markdown.trim()) {
-          console.log('Text extraction fallback succeeded');
+          // console.log('Text extraction fallback succeeded');
         }
       } catch (parseError) {
         console.error('Even text extraction fallback failed:', parseError);
@@ -516,7 +516,7 @@ async function performExtraction(
 
   const totalTime = performance.now() - stepStartTime;
   if (DEBUG) {
-    console.log(`Content processing completed in ${totalTime.toFixed(2)}ms`);
+    // console.log(`Content processing completed in ${totalTime.toFixed(2)}ms`);
   } else {
     void totalTime; // Reference to avoid unused warning in production
   }
@@ -543,7 +543,7 @@ function createFallbackContent(
   timeoutMs: number = 2000
 ): ExtractedContent {
   if (DEBUG) {
-    console.log('Creating fallback content due to extraction failure');
+    // console.log('Creating fallback content due to extraction failure');
   }
 
   // Safe metadata extraction

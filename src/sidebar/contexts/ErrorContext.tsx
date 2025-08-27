@@ -1,41 +1,14 @@
 /**
- * @file Error Context
+ * @file Error Context Provider
  *
- * Centralized error management context to prevent multiple error banners
+ * Centralized error management provider to prevent multiple error banners
  * and provide consistent error handling across the application.
  */
 
-import { createContext, useState, useCallback, ReactNode } from 'react';
+import { useState, useCallback, ReactNode } from 'react';
+import { ErrorContext, ErrorContextValue, AppError } from './ErrorContextDef';
 
-export interface AppError {
-  id: string;
-  message: string;
-  type: 'error' | 'warning' | 'info';
-  source: 'chat' | 'settings' | 'provider' | 'network' | 'unknown';
-  timestamp: Date;
-  dismissible: boolean;
-  action?: {
-    label: string;
-    handler: () => void;
-  };
-}
-
-interface ErrorContextValue {
-  /** Current active error (only one shown at a time) */
-  currentError: AppError | null;
-  /** Queue of pending errors */
-  errorQueue: AppError[];
-  /** Add an error to the queue */
-  addError: (error: Omit<AppError, 'id' | 'timestamp'>) => void;
-  /** Clear the current error and show next in queue */
-  dismissError: (id?: string) => void;
-  /** Clear all errors */
-  clearAllErrors: () => void;
-  /** Check if there are any errors */
-  hasErrors: () => boolean;
-}
-
-export const ErrorContext = createContext<ErrorContextValue | undefined>(undefined);
+export type { AppError } from './ErrorContextDef';
 
 export interface ErrorProviderProps {
   children: ReactNode;

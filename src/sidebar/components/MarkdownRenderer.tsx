@@ -49,7 +49,7 @@ export interface MarkdownRendererProps {
  * Create sanitization schema that allows KaTeX output safely
  */
 const createSanitizeSchema = () => {
-  const schema: any = { ...defaultSchema };
+  const schema: typeof defaultSchema = { ...defaultSchema };
 
   if (!schema.attributes) schema.attributes = {};
   if (!schema.tagNames) schema.tagNames = [];
@@ -458,16 +458,21 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({
       // Keep inline $...$ enabled for now to preserve behavior
       remarkPlugins: [
         remarkGfm,
-        [remarkMath, { singleDollarTextMath: true }] as any,
+        [remarkMath, { singleDollarTextMath: true }] as [
+          typeof remarkMath,
+          { singleDollarTextMath: boolean },
+        ],
         ...(options.remarkPlugins || []),
       ],
       rehypePlugins: [
         // Render KaTeX first, then sanitize its output
         [
-          rehypeKatex as any,
+          rehypeKatex as typeof rehypeKatex,
           { throwOnError: false, strict: 'ignore', trust: false, errorColor: '#ef4444' },
         ],
-        ...(sanitizeHtml ? [[rehypeSanitize, sanitizeSchema] as any] : []),
+        ...(sanitizeHtml
+          ? [[rehypeSanitize, sanitizeSchema] as [typeof rehypeSanitize, typeof sanitizeSchema]]
+          : []),
         ...(options.rehypePlugins || []),
       ],
       components: {
@@ -492,10 +497,13 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({
         a: props => <LinkRenderer onLinkClick={onLinkClick} {...props} />,
 
         // Pre element renderer to prevent double wrapping
-        pre: ({ children, ...props }: any) => {
+        pre: ({ children, ...props }: React.HTMLProps<HTMLPreElement>) => {
           // Extract the code element from children
           if (React.isValidElement(children)) {
-            const codeElement = children as any;
+            const codeElement = children as React.ReactElement<{
+              className?: string;
+              children?: React.ReactNode;
+            }>;
             // Check if it's a code element with language
             if (codeElement.type === 'code' || codeElement.props?.className) {
               const match = /language-(\w+)/.exec(codeElement.props?.className || '');
@@ -520,7 +528,7 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({
         },
 
         // Code renderer for inline code only
-        code: ({ children, ...props }: any) => {
+        code: ({ children, ...props }: React.HTMLProps<HTMLElement>) => {
           // Only handle inline code here, block code is handled by pre
           return <InlineCodeRenderer {...props}>{children}</InlineCodeRenderer>;
         },

@@ -83,7 +83,10 @@ export function ModelSelector({
   }, []);
 
   // Custom render for trigger to show "Add API KEY" when no key is set
-  const renderTrigger = (selectedValue: string | undefined, selectedOption: any) => {
+  const renderTrigger = (
+    selectedValue: string | undefined,
+    selectedOption: { label: string; value: string } | undefined
+  ) => {
     if (!hasApiKey && selectedValue) {
       return <span className="dropdown__value dropdown__value--no-key">Add API KEY</span>;
     }

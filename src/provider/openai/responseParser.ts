@@ -18,6 +18,8 @@ import type {
   OpenAIUsage,
   OpenAIStreamEvent,
   OpenAIMessageContent,
+  SearchMetadata,
+  OpenAIAnnotation,
 } from './types';
 
 /**
@@ -36,7 +38,8 @@ export function parseResponse(
   if (!searchMetadata && response.output) {
     const outputs = response.output || response.outputs || [];
     const hasWebSearch =
-      Array.isArray(outputs) && outputs.some((o: any) => o?.type === 'web_search_call');
+      Array.isArray(outputs) &&
+      outputs.some((o: unknown) => (o as OpenAIOutput)?.type === 'web_search_call');
 
     if (hasWebSearch && messages) {
       // Use dynamic import to avoid circular dependency
@@ -93,10 +96,10 @@ export function parseResponse(
  */
 export function extractContentAndMetadata(response: OpenAIResponse): {
   content: string;
-  searchMetadata?: any;
+  searchMetadata?: SearchMetadata | null;
 } {
   let content = '';
-  let searchMetadata: any = null;
+  let searchMetadata: SearchMetadata | null = null;
 
   // For Responses API, output is an array of items
   const outputs = response.output || response.outputs || [];
@@ -185,7 +188,9 @@ export function extractReasoningSummary(payload: unknown): string | undefined {
     // Prefer explicit reasoning output item
     const outputs = data?.output || data?.outputs || data?.response?.output;
     if (Array.isArray(outputs)) {
-      const reasoningItem = outputs.find((o: { type?: string; item_type?: string }) => (o?.type || o?.item_type) === 'reasoning');
+      const reasoningItem = outputs.find(
+        (o: { type?: string; item_type?: string }) => (o?.type || o?.item_type) === 'reasoning'
+      );
       if (reasoningItem) {
         const summaryArr = reasoningItem.summary || reasoningItem?.data?.summary;
         if (Array.isArray(summaryArr)) {
@@ -316,7 +321,7 @@ export function convertToStreamChunk(
 /**
  * Extract search metadata from streaming event
  */
-export function extractSearchMetadataFromEvent(event: OpenAIStreamEvent): any | null {
+export function extractSearchMetadataFromEvent(event: OpenAIStreamEvent): SearchMetadata | null {
   // Handle web search call completion
   if (event.type === 'response.output_item.done' && event.item?.type === 'web_search_call') {
     const action = event.item.action;
@@ -345,8 +350,8 @@ export function extractSearchMetadataFromEvent(event: OpenAIStreamEvent): any | 
           contentItem.annotations.length > 0
         ) {
           const sources = contentItem.annotations
-            .filter((a: any) => a.type === 'url_citation')
-            .map((a: any) => ({
+            .filter((a: OpenAIAnnotation) => a.type === 'url_citation')
+            .map((a: OpenAIAnnotation) => ({
               url: a.url,
               title: a.title || 'Untitled',
             }));

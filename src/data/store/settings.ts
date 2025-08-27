@@ -325,7 +325,7 @@ const loadFromStorage = async (): Promise<{ settings: Settings; migrated: boolea
     const result = (await Promise.race([
       chrome.storage.sync.get([STORAGE_KEY]),
       new Promise((_, reject) => setTimeout(() => reject(new Error('Storage timeout')), 2000)),
-    ])) as { [key: string]: any };
+    ])) as { [key: string]: unknown };
 
     const rawSettings = result[STORAGE_KEY];
     if (rawSettings !== undefined && (typeof rawSettings !== 'object' || rawSettings === null)) {

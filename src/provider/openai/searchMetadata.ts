@@ -6,20 +6,21 @@
  */
 
 import type { ProviderChatMessage } from '../../types/providers';
+import type { SearchMetadata } from './types';
 
 /**
  * Format search metadata from OpenAI response
  */
-export function formatSearchMetadata(sources: any[]): any {
+export function formatSearchMetadata(sources: unknown[]): SearchMetadata | null {
   if (!sources || !Array.isArray(sources)) {
     return null;
   }
 
-  const formattedSources = sources
+  const formattedSources = (sources as Array<{ title?: string; url?: string; snippet?: string }>)
     .filter(source => source && source.url)
     .map(source => ({
       title: source.title || 'Untitled',
-      url: source.url,
+      url: source.url!,
       snippet: source.snippet,
     }));
 
@@ -38,7 +39,7 @@ export function formatSearchMetadata(sources: any[]): any {
 export function createFallbackSearchMetadata(
   query?: string,
   messages?: ProviderChatMessage[]
-): any {
+): SearchMetadata | null {
   if (query) {
     return {
       sources: [
@@ -73,7 +74,9 @@ export function createFallbackSearchMetadata(
 /**
  * Merge search metadata from multiple sources
  */
-export function mergeSearchMetadata(...metadataArrays: any[]): any {
+export function mergeSearchMetadata(
+  ...metadataArrays: (SearchMetadata | null | undefined)[]
+): SearchMetadata | null {
   const allSources: any[] = [];
   const seenUrls = new Set<string>();
 
@@ -102,11 +105,11 @@ export function mergeSearchMetadata(...metadataArrays: any[]): any {
  * Centralizes the logic for processing search metadata from OpenAI stream events
  */
 export function handleStreamSearchMetadata(
-  event: any,
-  extractedMetadata: any,
-  currentMetadata: any,
+  event: unknown,
+  extractedMetadata: SearchMetadata | null,
+  currentMetadata: SearchMetadata | null,
   messages?: ProviderChatMessage[]
-): any {
+): SearchMetadata | null {
   // Handle web search events
   if (event.type === 'response.output_item.done' && event.item?.type === 'web_search_call') {
     // This is a web search event

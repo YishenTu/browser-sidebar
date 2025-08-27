@@ -117,7 +117,7 @@ export interface ProviderChatMessage {
     tokens?: number;
     thinkingTokens?: number;
     model?: string;
-    [key: string]: any;
+    [key: string]: unknown;
   };
 }
 
@@ -166,7 +166,7 @@ export interface ResponseMetadata {
   timestamp: Date;
   requestId?: string;
   model?: string;
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 // ============================================================================
@@ -208,7 +208,7 @@ export interface StreamChunk {
   model: string;
   choices: StreamChoice[];
   usage?: Usage;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
 }
 
 // ============================================================================
@@ -228,7 +228,7 @@ export interface ProviderError {
     statusCode?: number;
     timestamp?: Date;
     requestId?: string;
-    [key: string]: any;
+    [key: string]: unknown;
   };
 }
 
@@ -241,7 +241,7 @@ export interface ProviderValidationResult {
   details?: {
     field?: string;
     code?: string;
-    [key: string]: any;
+    [key: string]: unknown;
   };
 }
 
@@ -289,19 +289,19 @@ export interface AIProvider {
 
   // Core methods
   initialize(config: ProviderConfig): Promise<void>;
-  validateConfig(config: any): ProviderValidationResult;
+  validateConfig(config: unknown): ProviderValidationResult;
   testConnection(): Promise<boolean>;
 
   // Chat methods
-  chat(messages: ProviderChatMessage[], config?: any): Promise<ProviderResponse>;
-  streamChat(messages: ProviderChatMessage[], config?: any): AsyncIterable<StreamChunk>;
+  chat(messages: ProviderChatMessage[], config?: unknown): Promise<ProviderResponse>;
+  streamChat(messages: ProviderChatMessage[], config?: unknown): AsyncIterable<StreamChunk>;
 
   // Model methods
   getModels(): ModelConfig[];
   getModel(id: string): ModelConfig | undefined;
 
   // Utility methods
-  formatError(error: any): ProviderError;
+  formatError(error: unknown): ProviderError;
 }
 
 // ============================================================================
@@ -311,14 +311,14 @@ export interface AIProvider {
 /**
  * Type guard for provider types
  */
-export function isProviderType(value: any): value is ProviderType {
+export function isProviderType(value: unknown): value is ProviderType {
   return typeof value === 'string' && ['openai', 'gemini'].includes(value);
 }
 
 /**
  * Type guard for provider errors
  */
-export function isProviderError(value: any): value is ProviderError {
+export function isProviderError(value: unknown): value is ProviderError {
   return (
     typeof value === 'object' &&
     value !== null &&
@@ -333,7 +333,7 @@ export function isProviderError(value: any): value is ProviderError {
 /**
  * Type guard for stream chunks
  */
-export function isStreamChunk(value: any): value is StreamChunk {
+export function isStreamChunk(value: unknown): value is StreamChunk {
   return (
     typeof value === 'object' &&
     value !== null &&
@@ -343,10 +343,12 @@ export function isStreamChunk(value: any): value is StreamChunk {
     typeof value.model === 'string' &&
     Array.isArray(value.choices) &&
     value.choices.every(
-      (choice: any) =>
-        typeof choice.index === 'number' &&
-        typeof choice.delta === 'object' &&
-        choice.delta !== null
+      (choice: unknown) =>
+        typeof choice === 'object' &&
+        choice !== null &&
+        typeof (choice as { index?: unknown }).index === 'number' &&
+        typeof (choice as { delta?: unknown }).delta === 'object' &&
+        (choice as { delta?: unknown }).delta !== null
     )
   );
 }
@@ -354,7 +356,7 @@ export function isStreamChunk(value: any): value is StreamChunk {
 /**
  * Type guard for provider responses
  */
-export function isProviderResponse(value: any): value is ProviderResponse {
+export function isProviderResponse(value: unknown): value is ProviderResponse {
   return (
     typeof value === 'object' &&
     value !== null &&
@@ -375,7 +377,7 @@ export function isProviderResponse(value: any): value is ProviderResponse {
 /**
  * Type guard for streaming responses
  */
-export function isStreamingResponse(value: any): value is StreamingResponse {
+export function isStreamingResponse(value: unknown): value is StreamingResponse {
   return (
     typeof value === 'object' &&
     value !== null &&
@@ -423,45 +425,46 @@ export function isValidMaxThinkingTokens(value: any): value is number {
 /**
  * Validate OpenAI configuration
  */
-export function validateOpenAIConfig(config: any): ProviderValidationResult {
+export function validateOpenAIConfig(config: unknown): ProviderValidationResult {
   const errors: string[] = [];
+  const cfg = config as Record<string, unknown>;
 
-  if (!config.apiKey || typeof config.apiKey !== 'string' || config.apiKey.trim() === '') {
+  if (!cfg.apiKey || typeof cfg.apiKey !== 'string' || cfg.apiKey.trim() === '') {
     errors.push('Invalid API key');
   }
 
-  if (!isValidTemperature(config.temperature)) {
+  if (!isValidTemperature(cfg.temperature)) {
     errors.push('Invalid temperature');
   }
 
-  if (!isValidReasoningEffort(config.reasoningEffort)) {
+  if (!isValidReasoningEffort(cfg.reasoningEffort)) {
     errors.push('Invalid reasoning effort');
   }
 
-  if (!config.model || typeof config.model !== 'string') {
+  if (!cfg.model || typeof cfg.model !== 'string') {
     errors.push('Invalid model');
   }
 
-  if (typeof config.maxTokens !== 'number' || config.maxTokens <= 0) {
+  if (typeof cfg.maxTokens !== 'number' || (cfg.maxTokens as number) <= 0) {
     errors.push('Invalid max tokens');
   }
 
-  if (typeof config.topP !== 'number' || config.topP < 0 || config.topP > 1) {
+  if (typeof cfg.topP !== 'number' || (cfg.topP as number) < 0 || (cfg.topP as number) > 1) {
     errors.push('Invalid top P');
   }
 
   if (
-    typeof config.frequencyPenalty !== 'number' ||
-    config.frequencyPenalty < -2 ||
-    config.frequencyPenalty > 2
+    typeof cfg.frequencyPenalty !== 'number' ||
+    (cfg.frequencyPenalty as number) < -2 ||
+    (cfg.frequencyPenalty as number) > 2
   ) {
     errors.push('Invalid frequency penalty');
   }
 
   if (
-    typeof config.presencePenalty !== 'number' ||
-    config.presencePenalty < -2 ||
-    config.presencePenalty > 2
+    typeof cfg.presencePenalty !== 'number' ||
+    (cfg.presencePenalty as number) < -2 ||
+    (cfg.presencePenalty as number) > 2
   ) {
     errors.push('Invalid presence penalty');
   }
@@ -475,10 +478,11 @@ export function validateOpenAIConfig(config: any): ProviderValidationResult {
 /**
  * Validate Gemini configuration
  */
-export function validateGeminiConfig(config: any): ProviderValidationResult {
+export function validateGeminiConfig(config: unknown): ProviderValidationResult {
   const errors: string[] = [];
+  const cfg = config as Record<string, unknown>;
 
-  if (!config.apiKey || typeof config.apiKey !== 'string' || config.apiKey.trim() === '') {
+  if (!cfg.apiKey || typeof cfg.apiKey !== 'string' || cfg.apiKey.trim() === '') {
     errors.push('Invalid API key');
   }
 
@@ -494,19 +498,19 @@ export function validateGeminiConfig(config: any): ProviderValidationResult {
     errors.push('Invalid show thoughts setting');
   }
 
-  if (!config.model || typeof config.model !== 'string') {
+  if (!cfg.model || typeof cfg.model !== 'string') {
     errors.push('Invalid model');
   }
 
-  if (typeof config.maxTokens !== 'number' || config.maxTokens <= 0) {
+  if (typeof cfg.maxTokens !== 'number' || (cfg.maxTokens as number) <= 0) {
     errors.push('Invalid max tokens');
   }
 
-  if (typeof config.topP !== 'number' || config.topP <= 0 || config.topP > 1) {
+  if (typeof cfg.topP !== 'number' || (cfg.topP as number) <= 0 || (cfg.topP as number) > 1) {
     errors.push('Invalid top P');
   }
 
-  if (typeof config.topK !== 'number' || config.topK <= 0) {
+  if (typeof cfg.topK !== 'number' || (cfg.topK as number) <= 0) {
     errors.push('Invalid top K');
   }
 

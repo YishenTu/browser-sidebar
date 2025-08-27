@@ -6,7 +6,7 @@
  */
 
 import type { StreamChunk } from '../../types/providers';
-import type { OpenAIStreamEvent } from './types';
+import type { OpenAIStreamEvent, SearchMetadata } from './types';
 import {
   extractSearchMetadataFromEvent,
   extractReasoningSummary,
@@ -20,7 +20,7 @@ import {
 export class OpenAIStreamProcessor {
   private lastSeenContent: string = '';
   private emittedReasoning: boolean = false;
-  private searchMetadata: any = null;
+  private searchMetadata: SearchMetadata | null = null;
   private model: string;
   private showThinking: boolean;
 
@@ -96,14 +96,14 @@ export class OpenAIStreamProcessor {
   /**
    * Get accumulated search metadata
    */
-  getSearchMetadata(): any {
+  getSearchMetadata(): SearchMetadata | null {
     return this.searchMetadata;
   }
 
   /**
    * Set search metadata
    */
-  setSearchMetadata(metadata: any): void {
+  setSearchMetadata(metadata: SearchMetadata | null): void {
     this.searchMetadata = metadata;
   }
 
@@ -216,7 +216,7 @@ export class OpenAIStreamProcessor {
     };
 
     // Include metadata
-    const metadata: any = {};
+    const metadata: Record<string, unknown> = {};
     if (this.searchMetadata) {
       metadata.searchResults = this.searchMetadata;
     }
@@ -254,7 +254,7 @@ export class OpenAIStreamProcessor {
     };
 
     // Include metadata in final chunk
-    const metadata: any = {};
+    const metadata: Record<string, unknown> = {};
     if (this.searchMetadata) {
       metadata.searchResults = this.searchMetadata;
     }

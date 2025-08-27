@@ -164,15 +164,16 @@ export function isExtractedContent(obj: any): obj is ExtractedContent {
 /**
  * Type guard to check if an object is valid ExtractionOptions
  */
-export function isExtractionOptions(obj: any): obj is ExtractionOptions {
+export function isExtractionOptions(obj: unknown): obj is ExtractionOptions {
+  const o = obj as Record<string, unknown>;
   return (
     typeof obj === 'object' &&
     obj !== null &&
-    (obj.timeout === undefined || (typeof obj.timeout === 'number' && obj.timeout > 0)) &&
-    (obj.includeLinks === undefined || typeof obj.includeLinks === 'boolean') &&
-    (obj.maxLength === undefined || (typeof obj.maxLength === 'number' && obj.maxLength > 0)) &&
-    (obj.maxOutputChars === undefined ||
-      (typeof obj.maxOutputChars === 'number' && obj.maxOutputChars > 0))
+    (o.timeout === undefined || (typeof o.timeout === 'number' && o.timeout > 0)) &&
+    (o.includeLinks === undefined || typeof o.includeLinks === 'boolean') &&
+    (o.maxLength === undefined || (typeof o.maxLength === 'number' && o.maxLength > 0)) &&
+    (o.maxOutputChars === undefined ||
+      (typeof o.maxOutputChars === 'number' && o.maxOutputChars > 0))
   );
 }
 

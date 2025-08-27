@@ -140,8 +140,11 @@ export function useContentExtraction(auto: boolean = false): UseContentExtractio
     setError(null);
 
     // Also clear global extracted content if it exists
-    if (typeof window !== 'undefined' && (window as any).extractedContent) {
-      (window as any).extractedContent = null;
+    if (
+      typeof window !== 'undefined' &&
+      (window as Window & { extractedContent?: ExtractedContent | null }).extractedContent
+    ) {
+      (window as Window & { extractedContent?: ExtractedContent | null }).extractedContent = null;
     }
   }, []);
 

@@ -12,8 +12,8 @@ A privacy‑focused browser extension for AI‑powered chat with web content usi
 - 🧩 **Multi-Provider (BYOK)**: OpenAI and Google Gemini fully integrated
 - 🔍 **Web Search**: Automatic web search grounding for enhanced responses
 - 🔄 **Smart Context Management**: OpenAI Response API with intelligent conversation continuity
-- 📑 **Planned: Smart Content Extraction**: Extract/format page content (Stage 5)
-- 🎯 **Planned: Multi-Tab Context**: Aggregate information from multiple tabs (Stage 5)
+- 📑 **Content Extraction**: Smart page content capture with markdown conversion
+- 🎯 **Multi-Tab Context**: Aggregate information from multiple browser tabs
 
 ## Tech Stack
 
@@ -94,13 +94,17 @@ browser-sidebar/
 ├── src/
 │   ├── extension/     # Chrome extension infrastructure
 │   │   └── background/   # Service worker, message handling
-│   ├── tabext/        # Content script for sidebar injection
+│   ├── tabext/        # Content script & extraction
+│   │   ├── core/         # DOM manipulation, messaging
+│   │   ├── extraction/   # Content extraction algorithms
+│   │   └── utils/        # Helper utilities
 │   ├── sidebar/       # React UI with Shadow DOM
 │   │   ├── ChatPanel.tsx        # Main chat interface
 │   │   ├── components/          # UI components
 │   │   │   ├── MessageBubble.tsx    # Message display
 │   │   │   ├── ThinkingWrapper.tsx  # Reasoning display
-│   │   │   └── ModelSelector.tsx    # AI model picker
+│   │   │   ├── ModelSelector.tsx    # AI model picker
+│   │   │   └── ContentPreview.tsx   # Page content display
 │   │   └── hooks/ai/            # AI chat hooks
 │   ├── provider/      # AI provider implementations
 │   │   ├── openai/    # OpenAI GPT-5 series
@@ -118,10 +122,10 @@ browser-sidebar/
 
 ## Documentation
 
-- [Product Requirements (PRD)](./docs/planning/PRD.md)
-- [Development Plan](./docs/planning/development-plan.md)
-- [Task Breakdown](./docs/planning/task-overview.md)
-- Stage guides: `docs/stages/task-stage-*.md` — Stage 2 now includes the merged Refactoring Blueprint from `task.md` (file removed)
+- [Product Requirements (PRD)](./docs/PRD.md)
+- [Claude Code Instructions](./CLAUDE.md)
+- [Agent Guidelines](./AGENTS.md)
+- Stage guides in `docs/stages/` for detailed implementation
 
 ## Contributing
 
@@ -142,39 +146,44 @@ MIT — see `package.json` for the license field (LICENSE file TBD)
   - OpenAI Response API with multi-turn conversation support via response IDs
   - Intelligent context management: minimal tokens for consecutive OpenAI calls
   - Smart provider switching: preserves context when needed, clears when appropriate
+- **Stage 5**: Content Extraction - Advanced tab content capture system
+  - Smart content extraction with Readability algorithm
+  - Markdown conversion with structure preservation
+  - Multi-tab aggregation support
+  - Selection handling with context markers
+  - Dynamic content monitoring for SPAs
 
-### 🚧 In Progress
+### Future Enhancements
 
-- **Stage 5**: Content Extraction - Tab content capture and multi-tab aggregation
+#### Advanced Features
 
-### Future Work
+- **Enhanced Context Management**:
+  - Include thinking/reasoning in chat history for better context retention
+  - Implementation: Prepend thinking content to assistant messages
+  - User toggle: "Include reasoning in chat history" option
+- **Content Extraction Improvements**:
+  - Image extraction for multimodal models
+  - PDF and document parsing
+  - Cross-origin iframe handling
+  - Advanced table structure preservation
 
-#### Chat Context Management
+#### Planned Improvements
 
-- **Include thinking/reasoning in chat history**: Currently, thinking content from AI responses is stored in metadata but not included when building subsequent API requests. This causes the AI to lose context of its previous reasoning in multi-turn conversations.
-  - Implementation approach: When building API requests, prepend thinking content to assistant messages using format: `<thinking>content</thinking>\n\nactual response`
-  - Affected files: `OpenAIProvider.convertMessagesToResponsesInput()`, `GeminiProvider.convertMessages()`
-  - Add user setting: "Include reasoning in chat history" toggle
-  - Considerations: Increased token usage, potential need for thinking summarization for long content
-
-#### Phase 3 Storage & Security
-
-- Phase 3.2 hardening (API Key Storage):
-  - Align remaining test expectations with updated storage behavior:
-    - Use singleton EncryptionService instance in tests (already applied in main/comprehensive suites)
-    - Duplicate detection via `api_key_hash_<sha256>` mapping in Chrome storage
-    - Connection tests should not assert real wall-clock delays (mock small timeout in fetch)
-    - Prefer integrity check over decryption in `getAPIKey` tests
-  - Optional: unify add-failure messages to a single "Failed to add API key" if preferred over specific errors
-- Phase 3.3 parallelizable tasks to start now:
-  - 3.3.1a Conversation Types
-  - 3.3.2 Cache Implementation
-  - 3.3.4a/b Sensitive Pattern Detection + Data Masking
-- Defer until 3.2 fully green:
-  - 3.3.1b Conversation Storage
-  - 3.3.3 Data Cleanup
+- **Performance Optimizations**:
+  - WebWorker for heavy content processing
+  - Advanced caching strategies
+  - Incremental content updates
+- **Security Enhancements**:
+  - Sensitive data pattern detection
+  - Automatic PII masking
+  - Domain-specific security policies
+- **User Experience**:
+  - Custom prompt templates
+  - Keyboard shortcuts customization
+  - Export conversation history
+  - Voice input support
 
 ---
 
-_Version: 0.4.0-dev_
-_Last Updated: 2025-08-26_
+_Version: 0.5.0-dev_
+_Last Updated: 2025-08-27_
