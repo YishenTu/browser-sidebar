@@ -63,8 +63,8 @@ async function getTurndownService(): Promise<TurndownService> {
           return content;
         }
 
-        // This will be dynamically enabled/disabled based on options
-        const includeLinks = (options as any).includeLinks !== false;
+        // Enable/disable based on per-conversion option
+        const includeLinks = (options as any)?.includeLinks !== false;
 
         if (!includeLinks) {
           return content; // Just return the text content without the link
@@ -93,72 +93,75 @@ async function getTurndownService(): Promise<TurndownService> {
         const figure = node as HTMLElement;
         const img = figure.querySelector('img');
         const caption = figure.querySelector('figcaption');
-        
+
         if (!img) return content;
-        
+
         const alt = img.getAttribute('alt') || '';
         const src = img.getAttribute('src') || '';
         const captionText = caption ? `\n*${caption.textContent?.trim() || ''}*` : '';
-        
+
         return `\n\n![${alt}](${src})${captionText}\n\n`;
-      }
+      },
     });
 
     // Custom rule for footnotes
     turndownInstance.addRule('footnote', {
-      filter: function(node) {
-        return node.nodeName === 'SUP' && 
-               node.querySelector('a[href^="#fn"]') !== null;
+      filter: function (node) {
+        return node.nodeName === 'SUP' && node.querySelector('a[href^="#fn"]') !== null;
       },
       replacement: function (content, node) {
         const link = node.querySelector('a[href^="#fn"]');
         if (!link) return content;
-        
+
         const href = link.getAttribute('href') || '';
         const id = href.replace('#fn', '').replace('#', '');
         return `[^${id}]`;
-      }
+      },
     });
 
     // Custom rule for footnote references
     turndownInstance.addRule('footnoteReference', {
-      filter: function(node) {
-        return (node.nodeName === 'OL' || node.nodeName === 'UL') && 
-               (node.getAttribute('class')?.includes('footnote') || 
-                node.querySelector('li[id^="fn"]') !== null);
+      filter: function (node) {
+        return (
+          (node.nodeName === 'OL' || node.nodeName === 'UL') &&
+          (node.getAttribute('class')?.includes('footnote') ||
+            node.querySelector('li[id^="fn"]') !== null)
+        );
       },
       replacement: function (content, node) {
         const items = node.querySelectorAll('li[id^="fn"]');
         if (items.length === 0) return content;
-        
+
         let footnotes = '\n\n---\n\n';
-        items.forEach((item) => {
+        items.forEach(item => {
           const id = item.getAttribute('id')?.replace('fn', '') || '';
           const text = item.textContent?.trim() || '';
           footnotes += `[^${id}]: ${text}\n\n`;
         });
-        
+
         return footnotes;
-      }
+      },
     });
 
     // Custom rule for YouTube/Twitter embeds - always preserve these
     turndownInstance.addRule('embedToMarkdown', {
-      filter: function(node) {
+      filter: function (node) {
         return node.nodeName === 'IFRAME' && node.getAttribute('src') !== null;
       },
-      replacement: function (content, node, options) {
+      replacement: function (content, node) {
         const iframe = node as HTMLIFrameElement;
         const src = iframe.getAttribute('src') || '';
-        
+
         // YouTube embeds - always preserve as image with link
-        const ytMatch = src.match(/(?:youtube\.com|youtu\.be)\/(?:embed\/|watch\?v=)?([a-zA-Z0-9_-]+)/);
+        const ytMatch = src.match(
+          /(?:youtube\.com|youtu\.be)\/(?:embed\/|watch\?v=)?([a-zA-Z0-9_-]+)/
+        );
         if (ytMatch?.[1]) {
           const videoId = ytMatch[1];
           // Use image markdown which is always preserved
           return `\n\n![YouTube Video](https://img.youtube.com/vi/${videoId}/0.jpg)\n\n`;
         }
-        
+
         // Twitter/X embeds - preserve as text mention
         const twitterMatch = src.match(/(?:twitter\.com|x\.com)\/.*?(?:status|statuses)\/(\d+)/);
         if (twitterMatch?.[1]) {
@@ -166,19 +169,19 @@ async function getTurndownService(): Promise<TurndownService> {
           // Just mention it as text, no link
           return `\n\n[Tweet ${tweetId}]\n\n`;
         }
-        
+
         // Generic iframe - just show as text
         if (src) {
           return `\n\n[Embedded Content]\n\n`;
         }
-        
+
         return content;
-      }
+      },
     });
 
     // Keep important elements for better extraction
     turndownInstance.keep(['iframe', 'video', 'audio', 'sup', 'sub', 'mark']);
-    
+
     // Remove unwanted elements
     turndownInstance.remove(['script', 'style', 'button', 'noscript']);
   }

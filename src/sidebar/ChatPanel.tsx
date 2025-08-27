@@ -189,8 +189,8 @@ const ChatPanelInner: React.FC<ChatPanelProps> = ({ className, onClose }) => {
     content: extractedContent,
     loading: contentLoading,
     error: contentError,
-    qualityAssessment,
     reextract,
+    clearContent,
   } = useContentExtraction(true); // Auto-extract content when sidebar opens
 
   // Settings panel state
@@ -217,9 +217,9 @@ const ChatPanelInner: React.FC<ChatPanelProps> = ({ className, onClose }) => {
             // Preserve the original metadata structure
             editedMessageMetadata = originalMessage.metadata || {};
             // Determine if this was the first message by checking if it has tab context
-            isFirstMessage = !!(originalMessage.metadata?.hasTabContext);
+            isFirstMessage = !!originalMessage.metadata?.hasTabContext;
           }
-          
+
           // Remove all messages after the edited one
           editMessage(editingMessage.id);
           // Clear edit mode
@@ -228,7 +228,7 @@ const ChatPanelInner: React.FC<ChatPanelProps> = ({ className, onClose }) => {
           // For new messages, check if this is the first message
           isFirstMessage = messages.length === 0;
         }
-        
+
         let messageContent = userInput;
         let displayContent = userInput;
         let messageMetadata: any = wasEditing ? editedMessageMetadata : {};
@@ -255,7 +255,7 @@ const ChatPanelInner: React.FC<ChatPanelProps> = ({ className, onClose }) => {
           try {
             // Get tab ID for metadata
             const tabId = await getCurrentTabIdSafe();
-            
+
             // Format content with webpage metadata and user question
             const injectedContent = `I'm looking at a webpage with the following content:
 
@@ -272,7 +272,7 @@ My question: ${userInput}`;
             // Set content for API and displayContent for UI
             messageContent = injectedContent;
             displayContent = userInput; // UI shows only user input
-            
+
             // Add/update metadata to track injection including tabId
             // For edited messages, preserve existing metadata and update injection-specific fields
             messageMetadata = {
@@ -283,11 +283,10 @@ My question: ${userInput}`;
               tabTitle: extractedContent.title,
               tabUrl: extractedContent.url,
             };
-
           } catch (tabError) {
             // If tab ID retrieval fails, continue without it but still inject content
             console.warn('Failed to get tab ID for content injection:', tabError);
-            
+
             const injectedContent = `I'm looking at a webpage with the following content:
 
 Title: ${extractedContent.title}
@@ -346,7 +345,18 @@ My question: ${userInput}`;
         });
       }
     },
-    [sendMessage, addError, editingMessage, editMessage, updateMessage, messages.length, extractedContent, contentError, contentLoading, showError]
+    [
+      sendMessage,
+      addError,
+      editingMessage,
+      editMessage,
+      updateMessage,
+      messages.length,
+      extractedContent,
+      contentError,
+      contentLoading,
+      showError,
+    ]
   );
 
   // Handle clear conversation
@@ -362,7 +372,8 @@ My question: ${userInput}`;
     if (message.role === 'user') {
       // Use original user content for editing, not injected content
       // Priority: metadata.originalUserContent || displayContent || content
-      const editContent = message.metadata?.originalUserContent || message.displayContent || message.content;
+      const editContent =
+        message.metadata?.originalUserContent || message.displayContent || message.content;
       setEditingMessage({ id: message.id, content: editContent });
     }
   }, []);
@@ -613,7 +624,7 @@ My question: ${userInput}`;
           loading={contentLoading}
           error={contentError}
           onReextract={reextract}
-          qualityAssessment={qualityAssessment}
+          onClearContent={clearContent}
           className="ai-sidebar-content-preview"
         />
 

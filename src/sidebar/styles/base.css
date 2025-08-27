@@ -151,9 +151,7 @@
 
 /* Content Preview Enhancements */
 .content-preview-truncated {
-  background: rgba(251, 191, 36, 0.2) !important; /* yellow with transparency */
-  color: var(--color-yellow-400) !important;
-  border: 1px solid var(--color-yellow-500);
+  color: var(--color-yellow-400);
 }
 
 .content-preview-truncation-warning {
@@ -228,15 +226,50 @@
 }
 
 .content-preview {
-  background: rgba(31, 35, 40, 0.9);
-  border: 1px solid rgba(75, 85, 99, 0.3);
+  background: rgba(26, 26, 26, 0.8); /* Same as chat panel - 20% transparent */
   border-radius: 8px;
+}
+
+/* Content preview wrapper for close button positioning */
+.content-preview-wrapper {
+  position: relative;
+}
+
+/* Close button in header - use flex positioning instead of absolute */
+.content-preview-header-close {
+  border: none;
+  background: transparent;
+  width: 16px;
+  height: 16px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0;
+  color: var(--text-secondary);
+  border-radius: var(--radius-sm);
+  transition: var(--transition-fast);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  margin-left: auto;
+}
+
+.content-preview-header-close:hover {
+  background: var(--hover-overlay);
+  color: var(--text-primary);
+}
+
+.content-preview-header-close:active {
+  background: var(--active-overlay);
 }
 
 .content-preview-collapsible {
   width: 100%;
-  border: 2px solid rgba(75, 85, 99, 0.3); /* Default border */
-  transition: border-color 0.3s ease, box-shadow 0.3s ease;
+  border: 1px solid rgba(75, 85, 99, 0.3); /* Default border - thinner */
+  border-radius: 8px;
+  transition:
+    border-color 0.3s ease,
+    box-shadow 0.3s ease;
 }
 
 .collapsible-header {
@@ -275,6 +308,9 @@
 
 .collapsible-content {
   border-top: 1px solid rgba(75, 85, 99, 0.2);
+  border-bottom-left-radius: 8px;
+  border-bottom-right-radius: 8px;
+  overflow: hidden;
 }
 
 .content-preview-header {
@@ -287,6 +323,16 @@
 
 .content-preview-header--error {
   color: #f87171;
+}
+
+.content-preview-header-content {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  flex: 1;
+  overflow: hidden;
+  padding-right: 8px; /* Small gap before close button */
 }
 
 .content-preview-header-main {
@@ -314,7 +360,7 @@
 .content-preview-title {
   font-weight: 500;
   color: #e5e7eb;
-  font-size: 14px;
+  font-size: 13px; /* Reduced from 14px */
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -324,19 +370,19 @@
 
 /* Quality-based border colors for content preview */
 .content-preview-collapsible.content-preview-quality-high {
-  border: 2px solid #10b981; /* Green for high quality */
+  border: 1px solid #10b981; /* Green for high quality - thinner border */
   border-radius: 8px;
   box-shadow: 0 0 8px rgba(16, 185, 129, 0.2);
 }
 
 .content-preview-collapsible.content-preview-quality-medium {
-  border: 2px solid #f59e0b; /* Yellow/amber for medium quality */
+  border: 1px solid #f59e0b; /* Yellow/amber for medium quality - thinner border */
   border-radius: 8px;
   box-shadow: 0 0 8px rgba(245, 158, 11, 0.2);
 }
 
 .content-preview-collapsible.content-preview-quality-low {
-  border: 2px solid #ef4444; /* Red for low quality */
+  border: 1px solid #ef4444; /* Red for low quality - thinner border */
   border-radius: 8px;
   box-shadow: 0 0 8px rgba(239, 68, 68, 0.2);
 }
@@ -383,7 +429,7 @@
 }
 
 .content-preview-content {
-  padding: 16px;
+  padding: 12px 16px 8px 16px; /* Reduced bottom padding from 16px to 8px */
 }
 
 .content-preview-stats {
@@ -391,21 +437,19 @@
   justify-content: space-between;
   align-items: center;
   gap: 8px;
-  margin-bottom: 12px;
+  margin-bottom: 4px; /* Reduced from 12px to 4px */
   font-size: 12px;
 }
 
 .content-preview-stats-badges {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: 12px;
+  color: #9ca3af;
+  font-size: 12px;
 }
 
 .content-preview-stats-badges span {
-  background: rgba(55, 65, 81, 0.8);
-  color: #d1d5db;
-  padding: 4px 8px;
-  border-radius: 12px;
   white-space: nowrap;
 }
 
@@ -442,8 +486,7 @@
 }
 
 .content-preview-method {
-  background: rgba(34, 197, 94, 0.2) !important;
-  color: #86efac !important;
+  /* Removed special styling - same as other metadata */
 }
 
 .content-preview-excerpt {
@@ -455,9 +498,8 @@
   font-size: 13px;
   line-height: 1.5;
   color: #d1d5db;
-  background: rgba(17, 24, 39, 0.8);
-  padding: 12px;
-  border-radius: 6px;
+  /* Removed background color and styling */
+  padding: 0;
 }
 
 .content-preview-meta {

@@ -6,8 +6,8 @@
  */
 
 import { useState, useCallback, useEffect } from 'react';
-import type { ExtractedContent, ExtractionOptions, ExtractionMode } from '@/types/extraction';
-import { scoreContentQuality, type ContentQuality } from '@tabext/contentQuality';
+import type { ExtractedContent, ExtractionOptions } from '@/types/extraction';
+import { ExtractionMode } from '@/types/extraction';
 import { loadExtractor } from '@tabext/extractorLoader';
 
 /**
@@ -28,12 +28,12 @@ export interface UseContentExtractionReturn {
   loading: boolean;
   /** Error state if extraction fails */
   error: Error | null;
-  /** Content quality assessment or null if no content */
-  qualityAssessment: ContentQuality | null;
   /** Function to manually trigger content extraction */
   extractContent: (options?: ExtractContentOptions) => Promise<void>;
   /** Alias to extractContent for clarity */
   reextract: (options?: ExtractContentOptions) => Promise<void>;
+  /** Function to clear extracted content */
+  clearContent: () => void;
 }
 
 /**
@@ -43,7 +43,7 @@ const DEFAULT_OPTIONS: ExtractContentOptions = {
   includeLinks: false, // Disable links in extracted content
   timeout: 2000,
   maxLength: 200000, // Use maxLength per the type definition
-  mode: 'smart' as ExtractionMode, // Default to smart mode as per refactor
+  mode: ExtractionMode.DEFUDDLE, // Default to Defuddle mode
 };
 
 /**
@@ -60,7 +60,6 @@ export function useContentExtraction(auto: boolean = false): UseContentExtractio
   const [content, setContent] = useState<ExtractedContent | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<Error | null>(null);
-  const [qualityAssessment, setQualityAssessment] = useState<ContentQuality | null>(null);
 
   /**
    * Core extraction function that directly calls the content extractor
@@ -88,9 +87,7 @@ export function useContentExtraction(auto: boolean = false): UseContentExtractio
       // Update state with extracted content
       setContent(extractedContent);
 
-      // Calculate and set quality assessment
-      const quality = scoreContentQuality(extractedContent);
-      setQualityAssessment(quality);
+      // Quality assessment removed - no longer needed
 
       // Clear any previous errors
       setError(null);
@@ -98,7 +95,6 @@ export function useContentExtraction(auto: boolean = false): UseContentExtractio
       console.error('Content extraction failed:', err);
       setError(err instanceof Error ? err : new Error('Content extraction failed'));
       setContent(null);
-      setQualityAssessment(null);
     } finally {
       setLoading(false);
     }
@@ -128,7 +124,6 @@ export function useContentExtraction(auto: boolean = false): UseContentExtractio
     async (options?: ExtractContentOptions): Promise<void> => {
       // Clear existing content
       setContent(null);
-      setQualityAssessment(null);
       setError(null);
 
       // Extract new content
@@ -136,6 +131,19 @@ export function useContentExtraction(auto: boolean = false): UseContentExtractio
     },
     [extractContent]
   );
+
+  /**
+   * Clear content function - removes extracted content without re-extraction
+   */
+  const clearContent = useCallback(() => {
+    setContent(null);
+    setError(null);
+
+    // Also clear global extracted content if it exists
+    if (typeof window !== 'undefined' && (window as any).extractedContent) {
+      (window as any).extractedContent = null;
+    }
+  }, []);
 
   // Auto-extract on mount if requested
   useEffect(() => {
@@ -148,8 +156,8 @@ export function useContentExtraction(auto: boolean = false): UseContentExtractio
     content,
     loading,
     error,
-    qualityAssessment,
     extractContent,
     reextract,
+    clearContent,
   };
 }

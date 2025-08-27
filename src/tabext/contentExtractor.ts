@@ -12,7 +12,7 @@ import { getPageMetadata, clampText, normalizeUrls, cleanHtml } from './domUtils
 import { htmlToMarkdown } from './markdown/markdownConverter';
 
 // Debug flag - disable in production
-const DEBUG = typeof process !== 'undefined' && process.env?.['NODE_ENV'] !== 'production';
+const DEBUG = false; // Disable debug logging for production
 
 // =============================================================================
 // Error Classification
@@ -59,59 +59,7 @@ function classifyError(error: unknown): {
 // =============================================================================
 
 // Cache for dynamically imported modules to avoid reloading
-let fallbackExtractorModule: typeof import('./extractors/fallback') | null = null;
-let comprehensiveExtractorModule: typeof import('./extractors/comprehensive') | null = null;
 let defuddleExtractorModule: typeof import('./extractors/defuddle') | null = null;
-let contentQualityModule: typeof import('./contentQuality') | null = null;
-
-
-/**
- * Loads the fallback extractor with caching and error handling
- */
-async function getFallbackExtractor() {
-  if (!fallbackExtractorModule) {
-    try {
-      fallbackExtractorModule = await import('./extractors/fallback');
-    } catch (error) {
-      // Re-throw with more specific error information
-      if (error instanceof Error) {
-        if (error.message.includes('network') || error.message.includes('fetch')) {
-          throw new Error(`Network error loading fallback extractor: ${error.message}`);
-        } else if (error.message.includes('timeout')) {
-          throw new Error(`Timeout loading fallback extractor: ${error.message}`);
-        } else {
-          throw new Error(`Loading error for fallback extractor: ${error.message}`);
-        }
-      }
-      throw new Error(`Unknown error loading fallback extractor: ${error}`);
-    }
-  }
-  return fallbackExtractorModule;
-}
-
-/**
- * Loads the comprehensive extractor with caching and error handling
- */
-async function getComprehensiveExtractor() {
-  if (!comprehensiveExtractorModule) {
-    try {
-      comprehensiveExtractorModule = await import('./extractors/comprehensive');
-    } catch (error) {
-      // Re-throw with more specific error information
-      if (error instanceof Error) {
-        if (error.message.includes('network') || error.message.includes('fetch')) {
-          throw new Error(`Network error loading comprehensive extractor: ${error.message}`);
-        } else if (error.message.includes('timeout')) {
-          throw new Error(`Timeout loading comprehensive extractor: ${error.message}`);
-        } else {
-          throw new Error(`Loading error for comprehensive extractor: ${error.message}`);
-        }
-      }
-      throw new Error(`Unknown error loading comprehensive extractor: ${error}`);
-    }
-  }
-  return comprehensiveExtractorModule;
-}
 
 /**
  * Loads the Defuddle extractor with caching and error handling
@@ -131,22 +79,7 @@ async function getDefuddleExtractor() {
   return defuddleExtractorModule;
 }
 
-/**
- * Loads the content quality module with caching and error handling
- */
-async function getContentQualityModule() {
-  if (!contentQualityModule) {
-    try {
-      contentQualityModule = await import('./contentQuality');
-    } catch (error) {
-      if (error instanceof Error) {
-        throw new Error(`Loading error for content quality module: ${error.message}`);
-      }
-      throw new Error(`Unknown error loading content quality module: ${error}`);
-    }
-  }
-  return contentQualityModule;
-}
+// Removed unused getContentQualityModule function
 
 // =============================================================================
 // Main Extraction Function
@@ -162,12 +95,12 @@ async function getContentQualityModule() {
  * 4. Apply character limits and detect content features
  *
  * @param opts - Extraction configuration options
- * @param mode - Extraction mode (COMPREHENSIVE, ARTICLE, or MINIMAL)
+ * @param mode - Extraction mode (DEFUDDLE or SELECTION)
  * @returns Promise resolving to structured content data
  */
 export async function extractContent(
   opts?: ExtractionOptions,
-  mode: ExtractionMode = ExtractionMode.COMPREHENSIVE
+  mode: ExtractionMode = ExtractionMode.DEFUDDLE
 ): Promise<ExtractedContent> {
   const startTime = performance.now();
   let timeoutId: NodeJS.Timeout | null = null;
@@ -286,18 +219,18 @@ function captureSelection(): { html: string; text: string } | null {
     if (!selection || selection.rangeCount === 0 || selection.isCollapsed) {
       return null;
     }
-    
+
     const range = selection.getRangeAt(0);
     const container = document.createElement('div');
     container.appendChild(range.cloneContents());
-    
+
     const html = container.innerHTML;
     const text = selection.toString();
-    
+
     if (!text.trim()) {
       return null;
     }
-    
+
     return { html, text };
   } catch (error) {
     console.warn('Failed to capture selection:', error);
@@ -312,15 +245,15 @@ async function performExtraction(
   includeLinks: boolean,
   maxLength: number,
   timeoutMs: number,
-  mode: ExtractionMode = ExtractionMode.COMPREHENSIVE
+  mode: ExtractionMode = ExtractionMode.DEFUDDLE
 ): Promise<Omit<ExtractedContent, 'extractionTime'>> {
   const stepStartTime = performance.now();
   let htmlContent = '';
   let textContent = '';
   let author: string | undefined;
-  let extractionMethod: 'fallback' | 'comprehensive' | 'defuddle' | 'selection' = 'comprehensive';
+  let extractionMethod: 'defuddle' | 'selection' = 'defuddle';
   let metadata: ReturnType<typeof getPageMetadata>;
-  
+
   // Check for user selection first
   const selection = captureSelection();
   const hasSelection = selection !== null;
@@ -338,121 +271,76 @@ async function performExtraction(
 
   // Step 0: If we have a selection, prioritize it
   if (hasSelection && selection) {
-    // For selection mode or minimal mode with selection, only use the selected content
-    if (mode === ExtractionMode.SELECTION || mode === ExtractionMode.MINIMAL) {
+    // For selection mode, only use the selected content
+    if (mode === ExtractionMode.SELECTION) {
       htmlContent = selection.html;
       textContent = selection.text;
-      extractionMethod = mode === ExtractionMode.SELECTION ? 'selection' : 'fallback'; // Use appropriate method
+      extractionMethod = 'selection';
       if (DEBUG) console.log('Using user selection only');
     } else {
-      // For other modes, we'll extract full content but mark the selection
+      // For defuddle mode, we'll extract full content but mark the selection
       // This will be enhanced after full extraction
       if (DEBUG) console.log('Selection captured, will enhance extraction');
     }
   }
 
-  // Step 1: Try extraction based on mode (skip if we already have selection-only content)
-  if (!htmlContent && mode === ExtractionMode.COMPREHENSIVE) {
+  // Step 1: Use Defuddle for all extraction (unless we already have selection-only content)
+  if (!htmlContent) {
     try {
-      const comprehensiveExtractor = await getComprehensiveExtractor();
-      const comprehensiveResult = comprehensiveExtractor.extractComprehensive(document, maxLength);
-      
-      if (comprehensiveResult && comprehensiveResult.content && comprehensiveResult.content.trim()) {
-        htmlContent = comprehensiveResult.content;
-        textContent = comprehensiveResult.textContent || '';
-        extractionMethod = 'comprehensive';
-        
-        const comprehensiveTime = performance.now() - stepStartTime;
-        void comprehensiveTime; // Reference to avoid unused warning
-        if (DEBUG) console.log('Comprehensive extraction succeeded', comprehensiveResult.structure);
-      } else {
-        if (DEBUG) console.log('Comprehensive extraction returned empty content');
-      }
-    } catch (error) {
-      console.warn('Comprehensive extraction failed:', error);
-      // Don't fall back - comprehensive should always work
-    }
-  } 
-  // Article mode: Use Defuddle for article extraction
-  else if (mode === ExtractionMode.ARTICLE || mode === ExtractionMode.SMART) {
-    try {
-      // Use Defuddle for article extraction
       const defuddleExtractor = await getDefuddleExtractor();
       const defuddleResult = await defuddleExtractor.extractWithDefuddle();
-      
-      // Use the defuddle result
+
       if (defuddleResult.content && defuddleResult.content.trim()) {
         htmlContent = defuddleResult.content;
         textContent = defuddleResult.textContent || '';
         author = defuddleResult.author || undefined;
         extractionMethod = 'defuddle';
-        
-        if (DEBUG) console.log('Defuddle extraction succeeded');
-      } else {
-        if (DEBUG) console.log('Defuddle failed or returned empty content');
-      }
-      
-    } catch (error) {
-      console.warn('Defuddle extraction failed:', error);
-    }
-  } // Close the else-if for Article/Smart mode
 
-  // Step 2: Fall back to heuristic extraction if primary method failed
-  if (!htmlContent || !htmlContent.trim()) {
-    try {
-      const fallbackExtractor = await getFallbackExtractor();
-      const fallbackResult = fallbackExtractor.extractFallbackHTML(maxLength);
-
-      if (fallbackResult && fallbackResult.content && fallbackResult.content.trim()) {
-        htmlContent = fallbackResult.content;
-        textContent = fallbackResult.textContent || '';
-        extractionMethod = 'fallback';
-        if (DEBUG) console.log('Heuristic extraction succeeded');
+        console.log(
+          '[ContentExtractor] Defuddle extraction succeeded with content length:',
+          htmlContent.length
+        );
       } else {
-        console.warn('Heuristic extraction returned empty content');
+        console.log('[ContentExtractor] Defuddle extraction returned empty content');
       }
     } catch (error) {
-      if (error instanceof Error) {
-        if (error.message.includes('network') || error.message.includes('loading')) {
-          console.error('Network error during heuristic extractor import:', error.message);
-        } else if (error.message.includes('DOM')) {
-          console.error('DOM access error during heuristic extraction:', error.message);
-        } else if (error.message.includes('memory')) {
-          console.error('Memory error during heuristic extraction:', error.message);
-        } else {
-          console.error('Heuristic extraction failed:', error.message);
-        }
-      } else {
-        console.error('Unknown error during heuristic extraction:', error);
-      }
+      console.error('[ContentExtractor] Defuddle extraction failed:', error);
+      console.error(
+        '[ContentExtractor] Error stack:',
+        error instanceof Error ? error.stack : 'No stack available'
+      );
     }
   }
 
-  // Step 2.5: Clean and normalize URLs in HTML content
+  // Step 2: Clean and normalize URLs in HTML content
   if (htmlContent && htmlContent.trim()) {
     try {
       // First clean the HTML following Obsidian's proven order
       htmlContent = cleanHtml(htmlContent, false);
-      
+
       // Then normalize URLs - preserve links only if includeLinks is true
       // This ensures images are always normalized but links are only normalized when needed
       htmlContent = normalizeUrls(htmlContent, window.location.href, includeLinks);
-      
+
       if (DEBUG) console.log('HTML cleaning and URL normalization completed');
     } catch (error) {
       console.warn('HTML cleaning/normalization failed, using original content:', error);
     }
   }
 
-  // Step 2.6: If we have a selection and full content, add selection marker
+  // Step 2.5: If we have a selection and full content, add selection marker
   let selectionMarkdown = '';
-  if (hasSelection && selection && htmlContent && mode !== ExtractionMode.MINIMAL && mode !== ExtractionMode.SELECTION) {
+  if (hasSelection && selection && htmlContent && mode !== ExtractionMode.SELECTION) {
     try {
       // Convert selection to markdown
       const cleanedSelection = cleanHtml(selection.html, false);
-      const normalizedSelection = normalizeUrls(cleanedSelection, window.location.href, includeLinks);
+      const normalizedSelection = normalizeUrls(
+        cleanedSelection,
+        window.location.href,
+        includeLinks
+      );
       selectionMarkdown = await htmlToMarkdown(normalizedSelection, { includeLinks });
-      
+
       if (DEBUG) console.log('Selection enhanced in full extraction');
     } catch (error) {
       console.warn('Failed to process selection:', error);
@@ -464,13 +352,16 @@ async function performExtraction(
   if (htmlContent && htmlContent.trim()) {
     try {
       markdown = await htmlToMarkdown(htmlContent, { includeLinks });
-      
+
       // If we have a selection, prepend it with a marker
       if (selectionMarkdown) {
         markdown = `## Selected Content\n\n${selectionMarkdown}\n\n---\n\n## Full Page Content\n\n${markdown}`;
       }
-      
-      if (DEBUG) console.log('HTML to Markdown conversion succeeded');
+
+      console.log(
+        '[ContentExtractor] HTML to Markdown conversion succeeded, length:',
+        markdown.length
+      );
     } catch (error) {
       if (error instanceof Error) {
         if (error.message.includes('parsing')) {
@@ -818,7 +709,7 @@ function createFallbackContent(
     author: metadata?.author,
     publishedDate: metadata?.publishedDate,
     extractedAt: Date.now(),
-    extractionMethod: 'failed' as const,
+    extractionMethod: 'defuddle' as const, // Default to defuddle even on failure
     metadata: {
       wordCount,
       hasCodeBlocks: false,

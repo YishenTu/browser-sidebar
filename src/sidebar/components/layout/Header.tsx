@@ -82,10 +82,7 @@ export const Header: React.FC<HeaderProps> = ({
       const title = `Content extracted (${method}) • ${wordCount.toLocaleString()} words${truncated ? ' • Truncated' : ''}`;
 
       return (
-        <div
-          className={`extraction-status extraction-status--success ${method === 'fallback' ? 'extraction-status--fallback' : ''}`}
-          title={title}
-        >
+        <div className={`extraction-status extraction-status--success`} title={title}>
           <div className="extraction-status-dot"></div>
           {truncated && <div className="extraction-status-truncated">!</div>}
         </div>

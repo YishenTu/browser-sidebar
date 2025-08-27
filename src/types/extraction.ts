@@ -13,17 +13,14 @@
 /**
  * Method used to extract content from a web page
  */
-export type ExtractionMethod = 'fallback' | 'comprehensive' | 'defuddle' | 'selection' | 'failed';
+export type ExtractionMethod = 'defuddle' | 'selection';
 
 /**
  * Extraction mode for content capture
  */
 export enum ExtractionMode {
-  COMPREHENSIVE = 'comprehensive',  // Full content minus noise
-  ARTICLE = 'article',              // Defuddle article extraction
-  SMART = 'smart',                  // Defuddle with quality assessment
-  MINIMAL = 'minimal',              // Ultra-light extraction
-  SELECTION = 'selection'           // Selection-only extraction
+  DEFUDDLE = 'defuddle', // Defuddle extraction (default)
+  SELECTION = 'selection', // Selection-only extraction
 }
 
 // ============================================================================
@@ -155,7 +152,7 @@ export function isExtractedContent(obj: any): obj is ExtractedContent {
     (obj.author === undefined || typeof obj.author === 'string') &&
     (obj.publishedDate === undefined || typeof obj.publishedDate === 'string') &&
     typeof obj.extractedAt === 'number' &&
-    ['fallback', 'comprehensive', 'defuddle', 'selection', 'failed'].includes(obj.extractionMethod) &&
+    ['defuddle', 'selection'].includes(obj.extractionMethod) &&
     (obj.metadata === undefined ||
       (typeof obj.metadata === 'object' &&
         typeof obj.metadata.wordCount === 'number' &&

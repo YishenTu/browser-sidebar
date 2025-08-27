@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { Dropdown, DropdownGroup } from '@ui/Dropdown';
-import { getModelsByProvider } from '../../config/models';
+import { getModelsByProvider, getProviderTypeForModelId } from '../../config/models';
+import { useSettingsStore } from '@/data/store/settings';
 
 export interface ModelSelectorProps {
   /** Current selected model ID */
@@ -37,6 +38,20 @@ export function ModelSelector({
   className,
   'aria-label': ariaLabel = 'Select AI model',
 }: ModelSelectorProps) {
+  // Get API keys from settings store
+  const apiKeys = useSettingsStore(state => state.settings.apiKeys);
+
+  // Check if selected model's provider has an API key
+  const providerType = getProviderTypeForModelId(value);
+  const hasApiKey = useMemo(() => {
+    if (providerType === 'openai') {
+      return !!apiKeys?.openai;
+    } else if (providerType === 'gemini') {
+      return !!apiKeys?.google;
+    }
+    return false;
+  }, [providerType, apiKeys]);
+
   // Group models by provider for the dropdown
   const dropdownGroups = useMemo<DropdownGroup[]>(() => {
     const openaiModels = getModelsByProvider('openai');
@@ -67,6 +82,20 @@ export function ModelSelector({
     return groups;
   }, []);
 
+  // Custom render for trigger to show "Add API KEY" when no key is set
+  const renderTrigger = (selectedValue: string | undefined, selectedOption: any) => {
+    if (!hasApiKey && selectedValue) {
+      return <span className="dropdown__value dropdown__value--no-key">Add API KEY</span>;
+    }
+
+    // Default rendering for when API key exists
+    return (
+      <span className="dropdown__value">
+        {selectedOption ? selectedOption.label : 'Select model...'}
+      </span>
+    );
+  };
+
   return (
     <Dropdown
       value={value}
@@ -78,6 +107,7 @@ export function ModelSelector({
       triggerClassName="model-selector__trigger"
       menuClassName="model-selector__dropdown"
       aria-label={ariaLabel}
+      renderTrigger={renderTrigger}
     />
   );
 }

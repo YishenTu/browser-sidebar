@@ -15,9 +15,8 @@ import { ExtractionModeSelector } from './ExtractionModeSelector';
  * Example component showing useContentExtraction hook usage
  */
 export function ContentExtractionExample(): React.ReactElement {
-  const [extractionMode, setExtractionMode] = useState<ExtractionMode>(ExtractionMode.COMPREHENSIVE);
-  const { content, loading, error, qualityAssessment, extractContent, reextract } =
-    useContentExtraction();
+  const [extractionMode, setExtractionMode] = useState<ExtractionMode>(ExtractionMode.DEFUDDLE);
+  const { content, loading, error, extractContent, reextract } = useContentExtraction();
 
   return (
     <div className="content-extraction-example" style={{ padding: '16px' }}>
@@ -114,12 +113,6 @@ export function ContentExtractionExample(): React.ReactElement {
             <div>
               <strong>Extraction Time:</strong> {content.extractionTime ?? 0}ms
             </div>
-            {qualityAssessment && (
-              <div>
-                <strong>Quality Score:</strong> {qualityAssessment.score}/100 (
-                {qualityAssessment.qualityLevel})
-              </div>
-            )}
             {content.author && (
               <div>
                 <strong>Author:</strong> {content.author}
@@ -199,7 +192,7 @@ export function ContentExtractionExample(): React.ReactElement {
  */
 export function AutoContentExtractionExample(): React.ReactElement {
   // Auto-extract content on mount
-  const { content, loading, error, qualityAssessment } = useContentExtraction(true);
+  const { content, loading, error } = useContentExtraction(true);
 
   return (
     <div className="auto-content-extraction-example" style={{ padding: '16px' }}>
@@ -222,11 +215,6 @@ export function AutoContentExtractionExample(): React.ReactElement {
             <div>
               {content.metadata?.wordCount ?? content.wordCount ?? 0} words from {content.domain}
             </div>
-            {qualityAssessment && (
-              <div>
-                Quality: {qualityAssessment.score}/100 ({qualityAssessment.qualityLevel})
-              </div>
-            )}
             {content.author && <div>By {content.author}</div>}
           </div>
         </div>

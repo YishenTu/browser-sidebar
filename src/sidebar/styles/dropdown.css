@@ -54,6 +54,13 @@
   font-weight: 600;
 }
 
+.dropdown__value--no-key {
+  color: var(--warning-text, #f59e0b);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
 .dropdown__value-icon {
   display: flex;
   align-items: center;
