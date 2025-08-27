@@ -237,6 +237,34 @@ The provider includes automatic web search functionality:
 - Fallback metadata is created when citations aren't provided
 - Search metadata is included in both streaming and non-streaming responses
 
+### Response ID Management for Multi-Turn Conversations
+
+The OpenAI Response API uses response IDs to maintain conversation context server-side, reducing token usage and improving conversation continuity:
+
+#### How It Works
+
+1. **Response ID Capture**: When OpenAI responds, it provides a `response.id` (format: `resp_xxxxx`) that uniquely identifies that response
+2. **Storage**: The response ID is stored in the chat store's `lastResponseId` field
+3. **Reuse**: For consecutive OpenAI requests, this ID is passed as `previous_response_id` in the next request
+4. **Smart Input Selection**:
+   - **With Response ID**: Only sends the latest user message (server maintains full context)
+   - **Without Response ID**: Sends complete conversation history for context
+
+#### Provider Switching Behavior
+
+- **OpenAI → OpenAI models** (e.g., gpt-5 → gpt-5-mini): Response ID **persists**
+- **OpenAI → Gemini**: Response ID **clears** (different provider)
+- **Gemini → OpenAI**: Response ID is **null**, full history sent
+- **Message Editing**: Response ID **clears** (conversation branches)
+
+#### Implementation Files
+
+- **Response ID Capture**: `OpenAIProvider.ts:246-251` (streaming), `responseParser.ts` (non-streaming)
+- **Request Building**: `requestBuilder.ts:42-74` (decides input based on ID presence)
+- **State Management**: `chat.ts:131,349` (store methods), `chat.ts:265,301,312,323` (auto-clear scenarios)
+- **Provider Switching**: `useProviderManager.ts:195-197` (clears for non-OpenAI)
+- **Hook Integration**: `useMessageHandler.ts:44,53` and `useStreamHandler.ts:87,214`
+
 ### Compatibility
 
 This implementation maintains compatibility with:
@@ -244,6 +272,7 @@ This implementation maintains compatibility with:
 - Gemini's thinking budget feature
 - Standard OpenAI Chat Completions API (for older models)
 - The unified provider interface for all AI providers
+- Multi-turn conversations with automatic context management
 
 ## Development
 

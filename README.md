@@ -11,6 +11,7 @@ A privacy‑focused browser extension for AI‑powered chat with web content usi
 - 🌐 **Universal Compatibility**: Works in Chrome, Arc, Edge, and other Chromium browsers
 - 🧩 **Multi-Provider (BYOK)**: OpenAI and Google Gemini fully integrated
 - 🔍 **Web Search**: Automatic web search grounding for enhanced responses
+- 🔄 **Smart Context Management**: OpenAI Response API with intelligent conversation continuity
 - 📑 **Planned: Smart Content Extraction**: Extract/format page content (Stage 5)
 - 🎯 **Planned: Multi-Tab Context**: Aggregate information from multiple tabs (Stage 5)
 
@@ -138,6 +139,9 @@ MIT — see `package.json` for the license field (LICENSE file TBD)
 - **Stage 2**: Chat UI - Full React component suite with markdown, virtualization, thinking display
 - **Stage 3**: Storage & Security - Encrypted API key storage, Chrome storage integration
 - **Stage 4**: AI Providers - OpenAI and Gemini fully integrated with streaming
+  - OpenAI Response API with multi-turn conversation support via response IDs
+  - Intelligent context management: minimal tokens for consecutive OpenAI calls
+  - Smart provider switching: preserves context when needed, clears when appropriate
 
 ### 🚧 In Progress
 

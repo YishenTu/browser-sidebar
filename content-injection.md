@@ -29,15 +29,16 @@ This implementation integrates the completed Tab Content Extraction MVP (Phase 6
    - Content should be injected with first user message
    - Must remain in conversation history for context
 
-## Design Decision: Content as First Message Approach
+## Design Decision: Two Simple Rules
 
 ### Why This Approach?
 
-1. **Natural Context**: "I'm looking at this webpage" is natural user context
-2. **History Continuity**: Content stays in conversation for all messages
-3. **Clean UI**: Only show user's actual question in chat panel
-4. **Simple Implementation**: Leverages existing message infrastructure
-5. **No API Changes**: Works with current provider implementations
+1. **Dead Simple**: Just check if first message, inject if yes
+2. **Natural Context**: "I'm looking at this webpage" is natural first message
+3. **History Continuity**: Content stays for all follow-ups
+4. **Clean UI**: Only show user's actual question
+5. **No State Management**: No variables to track or sync
+6. **Foolproof**: Can't mess up two simple rules
 
 ## Implementation Pipeline
 
@@ -61,11 +62,32 @@ Subsequent messages sent normally
 (context maintained in history)
 ```
 
-## Core Approach
+## Core Approach - Two Simple Rules
 
-- **Inject tab content as part of the first user message** (not as a system message)
-- **Content stays in chat history** for API context continuity
-- **Hidden from chat panel display** to save UI space
+### Rule 1: Inject Once
+
+**Tab content is injected ONLY with the first user message**
+
+- Check: Is the chat history empty? (`messages.length === 0`)
+- If yes → This is the first message, inject content
+- If no → Send message normally
+
+### Rule 2: Persist in History
+
+**Content remains in chat history for all follow-up messages**
+
+- The injected content stays in the conversation
+- AI has full context for all subsequent messages
+- No need to track injection state
+
+### That's It!
+
+- No complex state management needed
+- No need to track `tabContextInjected`
+- No synchronization issues
+- No duplicate injection risks
+- URL changes don't matter (content already in history)
+- Multi-tab support is automatic (each tab has own message history)
 
 ## Implementation Strategy
 
@@ -92,16 +114,16 @@ export interface ChatMessage {
 **File**: `src/sidebar/ChatPanel.tsx`
 
 ```typescript
-const [tabContextInjected, setTabContextInjected] = useState(false);
-
 const handleSendMessage = useCallback(
   async (userInput: string) => {
     let actualContent = userInput;
     let displayContent = userInput;
     let metadata = {};
 
-    // Inject tab content with first user message
-    if (!tabContextInjected && extractedContent?.content) {
+    // SIMPLE RULE: Inject only if chat history is empty
+    const isFirstMessage = messages.length === 0;
+
+    if (isFirstMessage && extractedContent?.content) {
       // Format the full content for API
       actualContent = `I'm looking at a webpage with the following content:
 
@@ -125,8 +147,6 @@ My question: ${userInput}`;
         tabTitle: extractedContent.title,
         tabUrl: extractedContent.url,
       };
-
-      setTabContextInjected(true);
     }
 
     // Add message to store with both contents
@@ -141,7 +161,7 @@ My question: ${userInput}`;
     // Send to AI (will use the full content)
     await sendMessage(actualContent, { streaming: true });
   },
-  [extractedContent, tabContextInjected, addMessage, sendMessage]
+  [extractedContent, messages, addMessage, sendMessage]
 );
 ```
 
@@ -162,18 +182,19 @@ const messageText = message.displayContent || message.content;
 )}
 ```
 
-### Phase 4: Handle Tab Changes
+### Phase 4: Handle New Sessions (SIMPLIFIED)
 
 **File**: `src/sidebar/ChatPanel.tsx`
 
 ```typescript
-// Reset injection state when URL changes
-useEffect(() => {
-  if (extractedContent?.url !== previousUrl) {
-    setTabContextInjected(false);
-    setPreviousUrl(extractedContent?.url);
-  }
-}, [extractedContent?.url]);
+// New conversation = empty message history = next message is first
+const handleNewConversation = () => {
+  clearConversation(); // Empty messages array
+  // Next message will be first, so content will be injected
+};
+
+// URL changes? Don't care! Content already in history
+// Tab switches? Each tab has its own message history
 ```
 
 ### Phase 5: Provider Handling
@@ -211,10 +232,10 @@ Implement smart content injection on first user message
 
 #### Core Components
 
-1. **State Management** (`src/sidebar/ChatPanel.tsx`)
-   - Track injection status with `tabContextInjected` state
-   - Monitor URL changes to reset on tab switch
-   - Clear on conversation reset
+1. **Simple Check** (`src/sidebar/ChatPanel.tsx`)
+   - Check if chat history is empty: `messages.length === 0`
+   - No state tracking needed
+   - No resets needed
 
 2. **Message Formatting**
    - Create structured prompt with webpage context
@@ -243,16 +264,27 @@ Show clean UI while maintaining full context in background
 
 #### Objective
 
-Handle tab switches and conversation changes gracefully
+Handle new sessions and conversation changes gracefully
 
 #### Synchronization Points
 
-1. **Tab Changes**
-   - Reset injection flag when URL changes
-   - Clear for new conversations
-   - Preserve during message regeneration
+1. **New Sessions**
+   - Reset injection flag when chat panel opens
+   - Reset when user clicks new conversation button
+   - Each tab maintains independent injection state
 
-2. **Edge Cases**
+2. **URL Changes**
+   - **DO NOT** reset injection or conversation
+   - Preserve ongoing chat history
+   - Content remains from original extraction
+
+3. **Multi-Tab Support**
+   - Each tab has its own chat panel instance
+   - Tab-specific content extraction
+   - Independent injection states per tab
+   - Track tab ID in message metadata
+
+4. **Edge Cases**
    - No extraction available: proceed normally
    - Extraction failure: show warning
    - Message editing: preserve structure
@@ -278,11 +310,12 @@ Handle tab switches and conversation changes gracefully
 - Add subtle indicator for context inclusion
 - Ensure proper text rendering
 
-### Task 4: Handle State Management (15 min)
+### Task 4: Handle New Sessions (15 min)
 
-- Reset injection on tab changes
-- Track current tab URL
-- Clear injection flag on new conversations
+- Reset injection on new sessions (mount, new conversation)
+- Track tab ID for multi-tab support
+- DO NOT reset on URL changes
+- Clear injection flag only on new conversations
 
 ### Task 5: Test Integration (15 min)
 
@@ -298,14 +331,18 @@ Handle tab switches and conversation changes gracefully
 3. **Clean UI**: Users see only their input
 4. **API continuity**: Full context maintained in history
 5. **No provider changes**: Works with existing implementation
+6. **URL stability**: Conversations persist through navigation
+7. **Multi-tab support**: Independent chat sessions per tab
 
 ## Edge Cases
 
 - **No content extracted**: Send user message normally
-- **Multiple questions**: Only inject on first message
-- **Tab switches**: Reset injection for new tab
-- **Conversation clear**: Reset injection state
+- **Multiple questions**: Only inject on first message of each session
+- **URL changes**: DO NOT affect ongoing conversation
+- **New conversation**: Reset injection state for fresh context
+- **Multiple tabs**: Each maintains independent chat state
 - **Message editing**: Preserve original structure
+- **Tab closing**: Clean up tab-specific state
 
 ## Visual Design
 
@@ -359,9 +396,19 @@ My question: How does the authentication work?
    - Verify AI response uses page context
    - Ask follow-up → Verify context maintained
 
-2. **Tab Switching**
-   - Switch tabs → Verify context reset
-   - New conversation → Fresh injection
+2. **URL Changes**
+   - Change URL → Verify conversation preserved
+   - Content remains from original extraction
+   - No re-injection occurs
+
+3. **New Sessions**
+   - Click new conversation → Fresh injection
+   - Close and reopen panel → Fresh injection
+
+4. **Multi-Tab**
+   - Open multiple tabs with sidebars
+   - Verify independent content injection
+   - Each tab maintains own state
 
 ## Success Criteria
 
@@ -414,6 +461,25 @@ My question: How does the authentication work?
 2. **Phase 2**: UI polish (Tasks 3-4)
 3. **Phase 3**: Testing & refinement (Task 5)
 4. **Phase 4**: User feedback & iteration
+
+## Why This Simple Approach Works
+
+### No State Management Needed
+
+By following the two simple rules, we eliminate all state management complexity:
+
+1. **Empty History Check**: `messages.length === 0`
+2. **Inject if Empty**: Add content to the first message
+3. **Done**: Content stays in history for all future messages
+
+### Benefits
+
+- **Zero State Variables**: No `tabContextInjected` to track
+- **No Synchronization**: Nothing to keep in sync
+- **No Edge Cases**: Can't inject twice, can't lose state
+- **Automatic Persistence**: Content in history = context preserved
+- **URL Change Safe**: Content already captured, no re-injection needed
+- **Multi-tab Simple**: Each tab's message history is independent
 
 ## Technical Architecture
 
@@ -481,7 +547,7 @@ My question: How does the authentication work?
 1. **Content Isolation**
    - Tab content only accessible within conversation
    - No cross-tab content leakage
-   - Clear on tab switch
+   - Clear on new conversation only
 
 2. **API Security**
    - Content sent over HTTPS
