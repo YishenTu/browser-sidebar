@@ -1,0 +1,87 @@
+/**
+ * @file Extraction Mode Selector Component
+ * 
+ * UI component for selecting content extraction mode (Smart/Comprehensive/Article/Minimal/Selection).
+ * Allows users to choose how content should be extracted from web pages.
+ */
+
+import React from 'react';
+import { ExtractionMode } from '@/types/extraction';
+import { FileText, Layers, Zap, Brain, MousePointer } from './ui/Icons';
+
+interface ExtractionModeSelectorProps {
+  /** Current selected extraction mode */
+  mode: ExtractionMode;
+  /** Callback when extraction mode changes */
+  onModeChange: (mode: ExtractionMode) => void;
+  /** Whether the selector is disabled during extraction */
+  disabled?: boolean;
+}
+
+/**
+ * Mode selector component for content extraction
+ */
+export function ExtractionModeSelector({
+  mode,
+  onModeChange,
+  disabled = false
+}: ExtractionModeSelectorProps): React.ReactElement {
+  return (
+    <div className="extraction-mode-selector">
+      <button
+        className={`mode-btn ${mode === ExtractionMode.SMART ? 'active' : ''}`}
+        onClick={() => onModeChange(ExtractionMode.SMART)}
+        disabled={disabled}
+        title="Intelligent extraction with quality gates (default)"
+        aria-label="Smart extraction mode"
+      >
+        <Brain className="mode-icon" size={16} />
+        <span>Smart</span>
+      </button>
+
+      <button
+        className={`mode-btn ${mode === ExtractionMode.COMPREHENSIVE ? 'active' : ''}`}
+        onClick={() => onModeChange(ExtractionMode.COMPREHENSIVE)}
+        disabled={disabled}
+        title="Extract all content including comments and discussions"
+        aria-label="Comprehensive extraction mode"
+      >
+        <Layers className="mode-icon" size={16} />
+        <span>Full Content</span>
+      </button>
+
+      <button
+        className={`mode-btn ${mode === ExtractionMode.ARTICLE ? 'active' : ''}`}
+        onClick={() => onModeChange(ExtractionMode.ARTICLE)}
+        disabled={disabled}
+        title="Extract main article content only"
+        aria-label="Article extraction mode"
+      >
+        <FileText className="mode-icon" size={16} />
+        <span>Article Only</span>
+      </button>
+
+      <button
+        className={`mode-btn ${mode === ExtractionMode.MINIMAL ? 'active' : ''}`}
+        onClick={() => onModeChange(ExtractionMode.MINIMAL)}
+        disabled={disabled}
+        title="Minimal extraction for quick preview"
+        aria-label="Minimal extraction mode"
+      >
+        <Zap className="mode-icon" size={16} />
+        <span>Minimal</span>
+      </button>
+
+      <button
+        className={`mode-btn ${mode === ExtractionMode.SELECTION ? 'active' : ''}`}
+        onClick={() => onModeChange(ExtractionMode.SELECTION)}
+        disabled={disabled}
+        title="Extract only selected text"
+        aria-label="Selection extraction mode"
+      >
+        <MousePointer className="mode-icon" size={16} />
+        <span>Selection</span>
+      </button>
+    </div>
+  );
+}

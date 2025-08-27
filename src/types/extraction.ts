@@ -13,7 +13,18 @@
 /**
  * Method used to extract content from a web page
  */
-export type ExtractionMethod = 'readability' | 'fallback' | 'failed';
+export type ExtractionMethod = 'fallback' | 'comprehensive' | 'defuddle' | 'selection' | 'failed';
+
+/**
+ * Extraction mode for content capture
+ */
+export enum ExtractionMode {
+  COMPREHENSIVE = 'comprehensive',  // Full content minus noise
+  ARTICLE = 'article',              // Defuddle article extraction
+  SMART = 'smart',                  // Defuddle with quality assessment
+  MINIMAL = 'minimal',              // Ultra-light extraction
+  SELECTION = 'selection'           // Selection-only extraction
+}
 
 // ============================================================================
 // Extraction Interfaces
@@ -69,6 +80,10 @@ export interface ExtractedContent {
     truncated?: boolean;
     /** Effective timeout used in milliseconds */
     timeoutMs?: number;
+    /** Schema.org JSON-LD data (internal use) */
+    schemaOrgData?: unknown;
+    /** Meta tags extracted from the page (internal use) */
+    metaTags?: Array<Record<string, string>>;
   };
 
   // Backward compatibility fields (deprecated, will be removed in v2)
@@ -115,7 +130,7 @@ export interface ExtractionOptions {
  * Default extraction options
  */
 export const DEFAULT_EXTRACTION_OPTIONS = {
-  includeLinks: true,
+  includeLinks: false, // Default to removing links from content
   maxLength: 200000,
   timeout: 2000,
 };
@@ -140,7 +155,7 @@ export function isExtractedContent(obj: any): obj is ExtractedContent {
     (obj.author === undefined || typeof obj.author === 'string') &&
     (obj.publishedDate === undefined || typeof obj.publishedDate === 'string') &&
     typeof obj.extractedAt === 'number' &&
-    ['readability', 'fallback', 'failed'].includes(obj.extractionMethod) &&
+    ['fallback', 'comprehensive', 'defuddle', 'selection', 'failed'].includes(obj.extractionMethod) &&
     (obj.metadata === undefined ||
       (typeof obj.metadata === 'object' &&
         typeof obj.metadata.wordCount === 'number' &&

@@ -6,13 +6,16 @@
  * showing the hook's usage patterns.
  */
 
-import React from 'react';
+import React, { useState } from 'react';
 import { useContentExtraction } from '../hooks/useContentExtraction';
+import { ExtractionMode } from '@/types/extraction';
+import { ExtractionModeSelector } from './ExtractionModeSelector';
 
 /**
  * Example component showing useContentExtraction hook usage
  */
 export function ContentExtractionExample(): React.ReactElement {
+  const [extractionMode, setExtractionMode] = useState<ExtractionMode>(ExtractionMode.COMPREHENSIVE);
   const { content, loading, error, qualityAssessment, extractContent, reextract } =
     useContentExtraction();
 
@@ -20,10 +23,17 @@ export function ContentExtractionExample(): React.ReactElement {
     <div className="content-extraction-example" style={{ padding: '16px' }}>
       <h3>Content Extraction Demo</h3>
 
+      {/* Mode selector */}
+      <ExtractionModeSelector
+        mode={extractionMode}
+        onModeChange={setExtractionMode}
+        disabled={loading}
+      />
+
       {/* Control buttons */}
       <div style={{ marginBottom: '16px', display: 'flex', gap: '8px' }}>
         <button
-          onClick={() => extractContent()}
+          onClick={() => extractContent({ mode: extractionMode })}
           disabled={loading}
           style={{
             padding: '8px 16px',
@@ -38,7 +48,7 @@ export function ContentExtractionExample(): React.ReactElement {
         </button>
 
         <button
-          onClick={() => reextract()}
+          onClick={() => reextract({ mode: extractionMode })}
           disabled={loading || !content}
           style={{
             padding: '8px 16px',
@@ -97,6 +107,9 @@ export function ContentExtractionExample(): React.ReactElement {
             </div>
             <div>
               <strong>Extraction Method:</strong> {content.extractionMethod}
+            </div>
+            <div>
+              <strong>Extraction Mode:</strong> {extractionMode}
             </div>
             <div>
               <strong>Extraction Time:</strong> {content.extractionTime ?? 0}ms

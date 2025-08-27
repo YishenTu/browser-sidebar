@@ -31,5 +31,6 @@
 @import './edit-indicator.css'; /* Edit indicator for message editing */
 @import './tab-context-indicator.css'; /* Tab context indicator */
 @import './modal.css'; /* Modal component for full content display */
+@import './extraction-mode-selector.css'; /* Extraction mode selector */
 
 /* Any global overrides or additional styles can be added below if needed */

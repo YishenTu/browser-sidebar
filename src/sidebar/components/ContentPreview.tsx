@@ -85,33 +85,21 @@ export const ContentPreview: React.FC<ContentPreviewProps> = ({
       return (
         <div className="content-preview-header">
           <div className="content-preview-header-main">
-            <span className="content-preview-title">{content.title}</span>
-            <div className="content-preview-header-meta">
-              <span className="content-preview-domain">{content.domain}</span>
-              {qualityAssessment && (
-                <div title={`Content quality score: ${qualityAssessment.score}/100`}>
-                  <Badge
-                    variant={getQualityBadgeVariant(qualityAssessment.qualityLevel)}
-                    size="small"
-                    className="content-preview-quality-badge"
-                  >
-                    {getQualityDescription(qualityAssessment.qualityLevel)}
-                  </Badge>
-                </div>
-              )}
+            <div className="content-preview-title-wrapper">
+              <img 
+                src={`https://www.google.com/s2/favicons?domain=${content.domain}&sz=16`}
+                alt=""
+                className="content-preview-favicon"
+                width="16"
+                height="16"
+                onError={(e) => {
+                  // Fallback to a generic icon if favicon fails to load
+                  (e.target as HTMLImageElement).style.display = 'none';
+                }}
+              />
+              <span className="content-preview-title">{content.title}</span>
             </div>
           </div>
-          <button
-            onClick={e => {
-              e.stopPropagation();
-              onReextract();
-            }}
-            className="content-preview-refresh"
-            title="Re-extract content"
-            aria-label="Re-extract content"
-          >
-            <RegenerateIcon size={16} />
-          </button>
         </div>
       );
     }
@@ -148,8 +136,12 @@ export const ContentPreview: React.FC<ContentPreviewProps> = ({
         <Collapsible
           header={headerContent}
           initialCollapsed={true}
-          className="content-preview-collapsible"
-          showChevron={true}
+          className={`content-preview-collapsible ${
+            qualityAssessment
+              ? `content-preview-quality-${qualityAssessment.qualityLevel}`
+              : ''
+          }`}
+          showChevron={false}
           chevronPosition="right"
         >
           {loading ? (
@@ -157,50 +149,47 @@ export const ContentPreview: React.FC<ContentPreviewProps> = ({
               <p>Extracting webpage content...</p>
             </div>
           ) : content ? (
-            <div className="content-preview-content-wrapper">
-              <div className="content-preview-content">
-                {/* Content metadata */}
+            <div className="content-preview-content">
+              {/* Content metadata */}
               <div className="content-preview-stats">
-                <span>{wordCount.toLocaleString()} words</span>
-                {truncated && <span className="content-preview-truncated">Truncated</span>}
-                {hasCodeBlocks && <span>Code</span>}
-                {hasTables && <span>Tables</span>}
-                <span className="content-preview-method">
-                  {content.extractionMethod === 'readability' ? 'Readability' : 'Fallback'}
-                </span>
+                <div className="content-preview-stats-badges">
+                  <span>{wordCount.toLocaleString()} words</span>
+                  {truncated && <span className="content-preview-truncated">Truncated</span>}
+                  {hasCodeBlocks && <span>Code</span>}
+                  {hasTables && <span>Tables</span>}
+                  <span className="content-preview-method">
+                    {content.extractionMethod === 'readability' ? 'Readability' : 
+                     content.extractionMethod === 'defuddle' ? 'Smart' :
+                     content.extractionMethod === 'comprehensive' ? 'Full' :
+                     content.extractionMethod === 'selection' ? 'Selection' :
+                     content.extractionMethod === 'fallback' ? 'Fallback' : 
+                     'Unknown'}
+                  </span>
+                </div>
+                <div className="content-preview-stats-actions">
+                  <button
+                    onClick={e => {
+                      e.stopPropagation();
+                      onReextract();
+                    }}
+                    className="content-preview-refresh-inline"
+                    title="Re-extract content"
+                    aria-label="Re-extract content"
+                  >
+                    <RegenerateIcon size={14} />
+                  </button>
+                  <button
+                    onClick={() => setShowFullContent(true)}
+                    className="content-preview-expand-inline"
+                    title="View full content"
+                    aria-label="View full content"
+                  >
+                    <ExpandIcon size={14} />
+                  </button>
+                </div>
               </div>
 
-              {/* Quality assessment details */}
-              {qualityAssessment && (
-                <div className="content-preview-quality">
-                  <div className="content-preview-quality-score">
-                    <span className="content-preview-quality-label">Quality Score:</span>
-                    <Badge
-                      variant={getQualityBadgeVariant(qualityAssessment.qualityLevel)}
-                      size="small"
-                    >
-                      {qualityAssessment.score}/100
-                    </Badge>
-                  </div>
-                  {qualityAssessment.score < 70 && (
-                    <div className="content-preview-quality-signals">
-                      <span className="content-preview-quality-signals-label">
-                        Quality indicators:
-                      </span>
-                      <div className="content-preview-quality-signals-list">
-                        {!qualityAssessment.signals.hasTitle && <span>❌ Title</span>}
-                        {!qualityAssessment.signals.hasSufficientWordCount && (
-                          <span>❌ Word count</span>
-                        )}
-                        {!qualityAssessment.signals.hasStructure && <span>❌ Structure</span>}
-                        {qualityAssessment.signals.hasCode && <span>✅ Code</span>}
-                        {qualityAssessment.signals.hasTables && <span>✅ Tables</span>}
-                        {qualityAssessment.signals.hasAuthor && <span>✅ Author</span>}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )}
+              {/* Quality assessment removed - now shown via border color */}
 
               {/* Truncation warning */}
               {truncated && (
@@ -228,28 +217,7 @@ export const ContentPreview: React.FC<ContentPreviewProps> = ({
                 </div>
               )}
 
-              {/* Additional metadata if available */}
-              {(content.author || content.publishedDate) && (
-                <div className="content-preview-meta">
-                  {content.author && (
-                    <span className="content-preview-author">By {content.author}</span>
-                  )}
-                  {content.publishedDate && (
-                    <span className="content-preview-date">{content.publishedDate}</span>
-                  )}
-                </div>
-              )}
-
-              </div>
-              {/* Overlay expand button at bottom right */}
-              <button
-                onClick={() => setShowFullContent(true)}
-                className="content-preview-expand-overlay"
-                title="View full content"
-                aria-label="View full content"
-              >
-                <ExpandIcon size={16} />
-              </button>
+              {/* Removed author and date metadata */}
             </div>
           ) : null}
           </Collapsible>
@@ -260,7 +228,23 @@ export const ContentPreview: React.FC<ContentPreviewProps> = ({
       <Modal
         isOpen={showFullContent}
         onClose={() => setShowFullContent(false)}
-        title={content?.title || 'Page Content'}
+        title={
+          content ? (
+            <div className="content-full-modal-title">
+              <img 
+                src={`https://www.google.com/s2/favicons?domain=${content.domain}&sz=16`}
+                alt=""
+                className="content-full-modal-favicon"
+                width="16"
+                height="16"
+                onError={(e) => {
+                  (e.target as HTMLImageElement).style.display = 'none';
+                }}
+              />
+              <span>{content.title}</span>
+            </div>
+          ) : 'Page Content'
+        }
         maxWidth="80%"
         className="content-full-modal"
       >
@@ -274,8 +258,6 @@ export const ContentPreview: React.FC<ContentPreviewProps> = ({
                 {truncated && <span className="content-full-modal-truncated">Truncated</span>}
                 {hasCodeBlocks && <span>Contains code</span>}
                 {hasTables && <span>Contains tables</span>}
-                {content.author && <span>By {content.author}</span>}
-                {content.publishedDate && <span>{content.publishedDate}</span>}
               </div>
             </div>
 

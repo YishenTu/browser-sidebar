@@ -25,6 +25,14 @@
   background-color: transparent;
   padding: 4px;
   margin: 4px;
+  transition: border-color 0.2s ease;
+}
+
+/* Light blue border when editing a message */
+.chat-input.editing-mode .chat-input__main {
+  border-color: #60a5fa;
+  border-width: 2px;
+  padding: 3px; /* Adjust padding to compensate for thicker border */
 }
 
 .chat-input__textarea-container {

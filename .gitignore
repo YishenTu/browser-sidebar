@@ -79,4 +79,4 @@ docs/.vitepress/dist/
 *~
 
 .claude/
-tests.backup/
+tests.backup/tmp/

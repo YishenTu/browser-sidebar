@@ -67,15 +67,8 @@ export const Footer: React.FC<FooterProps> = ({
         loading={loading}
         placeholder={placeholder}
         defaultValue={editingMessage || ''}
+        className={editingMessage ? 'editing-mode' : ''}
       />
-      {editingMessage && (
-        <div className="edit-indicator">
-          <span>Editing message</span>
-          <button onClick={onClearEdit} className="edit-cancel-btn" aria-label="Cancel edit">
-            ×
-          </button>
-        </div>
-      )}
     </div>
   );
 };

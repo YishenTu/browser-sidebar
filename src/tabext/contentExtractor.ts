@@ -7,8 +7,8 @@
  */
 
 import type { ExtractedContent, ExtractionOptions } from '../types/extraction';
-import { validateExtractionOptions } from '../types/extraction';
-import { getPageMetadata, clampText } from './domUtils';
+import { validateExtractionOptions, ExtractionMode } from '../types/extraction';
+import { getPageMetadata, clampText, normalizeUrls, cleanHtml } from './domUtils';
 import { htmlToMarkdown } from './markdown/markdownConverter';
 
 // Debug flag - disable in production
@@ -59,32 +59,11 @@ function classifyError(error: unknown): {
 // =============================================================================
 
 // Cache for dynamically imported modules to avoid reloading
-let readabilityExtractorModule: typeof import('./extractors/readability') | null = null;
 let fallbackExtractorModule: typeof import('./extractors/fallback') | null = null;
+let comprehensiveExtractorModule: typeof import('./extractors/comprehensive') | null = null;
+let defuddleExtractorModule: typeof import('./extractors/defuddle') | null = null;
+let contentQualityModule: typeof import('./contentQuality') | null = null;
 
-/**
- * Loads the readability extractor with caching and error handling
- */
-async function getReadabilityExtractor() {
-  if (!readabilityExtractorModule) {
-    try {
-      readabilityExtractorModule = await import('./extractors/readability');
-    } catch (error) {
-      // Re-throw with more specific error information
-      if (error instanceof Error) {
-        if (error.message.includes('network') || error.message.includes('fetch')) {
-          throw new Error(`Network error loading readability extractor: ${error.message}`);
-        } else if (error.message.includes('timeout')) {
-          throw new Error(`Timeout loading readability extractor: ${error.message}`);
-        } else {
-          throw new Error(`Loading error for readability extractor: ${error.message}`);
-        }
-      }
-      throw new Error(`Unknown error loading readability extractor: ${error}`);
-    }
-  }
-  return readabilityExtractorModule;
-}
 
 /**
  * Loads the fallback extractor with caching and error handling
@@ -110,6 +89,65 @@ async function getFallbackExtractor() {
   return fallbackExtractorModule;
 }
 
+/**
+ * Loads the comprehensive extractor with caching and error handling
+ */
+async function getComprehensiveExtractor() {
+  if (!comprehensiveExtractorModule) {
+    try {
+      comprehensiveExtractorModule = await import('./extractors/comprehensive');
+    } catch (error) {
+      // Re-throw with more specific error information
+      if (error instanceof Error) {
+        if (error.message.includes('network') || error.message.includes('fetch')) {
+          throw new Error(`Network error loading comprehensive extractor: ${error.message}`);
+        } else if (error.message.includes('timeout')) {
+          throw new Error(`Timeout loading comprehensive extractor: ${error.message}`);
+        } else {
+          throw new Error(`Loading error for comprehensive extractor: ${error.message}`);
+        }
+      }
+      throw new Error(`Unknown error loading comprehensive extractor: ${error}`);
+    }
+  }
+  return comprehensiveExtractorModule;
+}
+
+/**
+ * Loads the Defuddle extractor with caching and error handling
+ */
+async function getDefuddleExtractor() {
+  if (!defuddleExtractorModule) {
+    try {
+      defuddleExtractorModule = await import('./extractors/defuddle');
+    } catch (error) {
+      // Re-throw with more specific error information
+      if (error instanceof Error) {
+        throw new Error(`Loading error for defuddle extractor: ${error.message}`);
+      }
+      throw new Error(`Unknown error loading defuddle extractor: ${error}`);
+    }
+  }
+  return defuddleExtractorModule;
+}
+
+/**
+ * Loads the content quality module with caching and error handling
+ */
+async function getContentQualityModule() {
+  if (!contentQualityModule) {
+    try {
+      contentQualityModule = await import('./contentQuality');
+    } catch (error) {
+      if (error instanceof Error) {
+        throw new Error(`Loading error for content quality module: ${error.message}`);
+      }
+      throw new Error(`Unknown error loading content quality module: ${error}`);
+    }
+  }
+  return contentQualityModule;
+}
+
 // =============================================================================
 // Main Extraction Function
 // =============================================================================
@@ -118,15 +156,19 @@ async function getFallbackExtractor() {
  * Extracts content from the current page using a tiered approach
  *
  * Extraction Pipeline:
- * 1. Try Readability.js for article-like content
- * 2. Fall back to heuristic extraction if Readability fails
+ * 1. Try extraction based on mode (Comprehensive by default)
+ * 2. Fall back to heuristic extraction if primary fails
  * 3. Convert HTML content to Markdown
  * 4. Apply character limits and detect content features
  *
  * @param opts - Extraction configuration options
+ * @param mode - Extraction mode (COMPREHENSIVE, ARTICLE, or MINIMAL)
  * @returns Promise resolving to structured content data
  */
-export async function extractContent(opts?: ExtractionOptions): Promise<ExtractedContent> {
+export async function extractContent(
+  opts?: ExtractionOptions,
+  mode: ExtractionMode = ExtractionMode.COMPREHENSIVE
+): Promise<ExtractedContent> {
   const startTime = performance.now();
   let timeoutId: NodeJS.Timeout | null = null;
 
@@ -152,7 +194,7 @@ export async function extractContent(opts?: ExtractionOptions): Promise<Extracte
     });
 
     // Run extraction with timeout
-    const extractionPromise = performExtraction(includeLinks, maxLength, timeout);
+    const extractionPromise = performExtraction(includeLinks, maxLength, timeout, mode);
     const result = await Promise.race([extractionPromise, timeoutPromise]);
 
     // Clear timeout if extraction completed successfully
@@ -236,19 +278,52 @@ export async function extractContent(opts?: ExtractionOptions): Promise<Extracte
 // =============================================================================
 
 /**
+ * Captures user-selected text if available
+ */
+function captureSelection(): { html: string; text: string } | null {
+  try {
+    const selection = window.getSelection();
+    if (!selection || selection.rangeCount === 0 || selection.isCollapsed) {
+      return null;
+    }
+    
+    const range = selection.getRangeAt(0);
+    const container = document.createElement('div');
+    container.appendChild(range.cloneContents());
+    
+    const html = container.innerHTML;
+    const text = selection.toString();
+    
+    if (!text.trim()) {
+      return null;
+    }
+    
+    return { html, text };
+  } catch (error) {
+    console.warn('Failed to capture selection:', error);
+    return null;
+  }
+}
+
+/**
  * Performs the actual extraction without timeout handling
  */
 async function performExtraction(
   includeLinks: boolean,
   maxLength: number,
-  timeoutMs: number
+  timeoutMs: number,
+  mode: ExtractionMode = ExtractionMode.COMPREHENSIVE
 ): Promise<Omit<ExtractedContent, 'extractionTime'>> {
   const stepStartTime = performance.now();
   let htmlContent = '';
   let textContent = '';
   let author: string | undefined;
-  let extractionMethod: 'readability' | 'fallback' = 'fallback';
+  let extractionMethod: 'fallback' | 'comprehensive' | 'defuddle' | 'selection' = 'comprehensive';
   let metadata: ReturnType<typeof getPageMetadata>;
+  
+  // Check for user selection first
+  const selection = captureSelection();
+  const hasSelection = selection !== null;
 
   // Early metadata extraction with error handling
   try {
@@ -261,53 +336,68 @@ async function performExtraction(
     };
   }
 
-  // Step 1: Try Readability first with comprehensive error handling
-  try {
-    const readabilityExtractor = await getReadabilityExtractor();
-    const readabilityResult = await readabilityExtractor.extractWithReadability();
-
-    if (readabilityResult && readabilityResult.content && readabilityResult.content.trim()) {
-      htmlContent = readabilityResult.content;
-      textContent = readabilityResult.textContent || '';
-      author = readabilityResult.byline || undefined;
-      extractionMethod = 'readability';
-
-      const readabilityTime = performance.now() - stepStartTime;
-      void readabilityTime; // Reference to avoid unused warning
-      if (DEBUG) console.log('Readability extraction succeeded');
+  // Step 0: If we have a selection, prioritize it
+  if (hasSelection && selection) {
+    // For selection mode or minimal mode with selection, only use the selected content
+    if (mode === ExtractionMode.SELECTION || mode === ExtractionMode.MINIMAL) {
+      htmlContent = selection.html;
+      textContent = selection.text;
+      extractionMethod = mode === ExtractionMode.SELECTION ? 'selection' : 'fallback'; // Use appropriate method
+      if (DEBUG) console.log('Using user selection only');
     } else {
-      if (DEBUG)
-        console.log('Readability extraction returned empty content, falling back to heuristic');
-    }
-  } catch (error) {
-    if (error instanceof Error) {
-      if (error.message.includes('network') || error.message.includes('loading')) {
-        console.warn(
-          'Network error during Readability import, falling back to heuristic:',
-          error.message
-        );
-      } else if (error.message.includes('memory')) {
-        console.warn(
-          'Memory error during Readability extraction, falling back to heuristic:',
-          error.message
-        );
-      } else if (error.message.includes('DOM')) {
-        console.warn(
-          'DOM access error during Readability extraction, falling back to heuristic:',
-          error.message
-        );
-      } else {
-        console.warn('Readability extraction failed, falling back to heuristic:', error.message);
-      }
-    } else {
-      console.warn(
-        'Unknown error during Readability extraction, falling back to heuristic:',
-        error
-      );
+      // For other modes, we'll extract full content but mark the selection
+      // This will be enhanced after full extraction
+      if (DEBUG) console.log('Selection captured, will enhance extraction');
     }
   }
 
-  // Step 2: Fall back to heuristic extraction if Readability failed
+  // Step 1: Try extraction based on mode (skip if we already have selection-only content)
+  if (!htmlContent && mode === ExtractionMode.COMPREHENSIVE) {
+    try {
+      const comprehensiveExtractor = await getComprehensiveExtractor();
+      const comprehensiveResult = comprehensiveExtractor.extractComprehensive(document, maxLength);
+      
+      if (comprehensiveResult && comprehensiveResult.content && comprehensiveResult.content.trim()) {
+        htmlContent = comprehensiveResult.content;
+        textContent = comprehensiveResult.textContent || '';
+        extractionMethod = 'comprehensive';
+        
+        const comprehensiveTime = performance.now() - stepStartTime;
+        void comprehensiveTime; // Reference to avoid unused warning
+        if (DEBUG) console.log('Comprehensive extraction succeeded', comprehensiveResult.structure);
+      } else {
+        if (DEBUG) console.log('Comprehensive extraction returned empty content');
+      }
+    } catch (error) {
+      console.warn('Comprehensive extraction failed:', error);
+      // Don't fall back - comprehensive should always work
+    }
+  } 
+  // Article mode: Use Defuddle for article extraction
+  else if (mode === ExtractionMode.ARTICLE || mode === ExtractionMode.SMART) {
+    try {
+      // Use Defuddle for article extraction
+      const defuddleExtractor = await getDefuddleExtractor();
+      const defuddleResult = await defuddleExtractor.extractWithDefuddle();
+      
+      // Use the defuddle result
+      if (defuddleResult.content && defuddleResult.content.trim()) {
+        htmlContent = defuddleResult.content;
+        textContent = defuddleResult.textContent || '';
+        author = defuddleResult.author || undefined;
+        extractionMethod = 'defuddle';
+        
+        if (DEBUG) console.log('Defuddle extraction succeeded');
+      } else {
+        if (DEBUG) console.log('Defuddle failed or returned empty content');
+      }
+      
+    } catch (error) {
+      console.warn('Defuddle extraction failed:', error);
+    }
+  } // Close the else-if for Article/Smart mode
+
+  // Step 2: Fall back to heuristic extraction if primary method failed
   if (!htmlContent || !htmlContent.trim()) {
     try {
       const fallbackExtractor = await getFallbackExtractor();
@@ -338,11 +428,48 @@ async function performExtraction(
     }
   }
 
+  // Step 2.5: Clean and normalize URLs in HTML content
+  if (htmlContent && htmlContent.trim()) {
+    try {
+      // First clean the HTML following Obsidian's proven order
+      htmlContent = cleanHtml(htmlContent, false);
+      
+      // Then normalize URLs - preserve links only if includeLinks is true
+      // This ensures images are always normalized but links are only normalized when needed
+      htmlContent = normalizeUrls(htmlContent, window.location.href, includeLinks);
+      
+      if (DEBUG) console.log('HTML cleaning and URL normalization completed');
+    } catch (error) {
+      console.warn('HTML cleaning/normalization failed, using original content:', error);
+    }
+  }
+
+  // Step 2.6: If we have a selection and full content, add selection marker
+  let selectionMarkdown = '';
+  if (hasSelection && selection && htmlContent && mode !== ExtractionMode.MINIMAL && mode !== ExtractionMode.SELECTION) {
+    try {
+      // Convert selection to markdown
+      const cleanedSelection = cleanHtml(selection.html, false);
+      const normalizedSelection = normalizeUrls(cleanedSelection, window.location.href, includeLinks);
+      selectionMarkdown = await htmlToMarkdown(normalizedSelection, { includeLinks });
+      
+      if (DEBUG) console.log('Selection enhanced in full extraction');
+    } catch (error) {
+      console.warn('Failed to process selection:', error);
+    }
+  }
+
   // Step 3: Convert HTML to Markdown with graceful degradation
   let markdown = '';
   if (htmlContent && htmlContent.trim()) {
     try {
       markdown = await htmlToMarkdown(htmlContent, { includeLinks });
+      
+      // If we have a selection, prepend it with a marker
+      if (selectionMarkdown) {
+        markdown = `## Selected Content\n\n${selectionMarkdown}\n\n---\n\n## Full Page Content\n\n${markdown}`;
+      }
+      
       if (DEBUG) console.log('HTML to Markdown conversion succeeded');
     } catch (error) {
       if (error instanceof Error) {

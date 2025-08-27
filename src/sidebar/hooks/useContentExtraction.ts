@@ -6,9 +6,17 @@
  */
 
 import { useState, useCallback, useEffect } from 'react';
-import type { ExtractedContent, ExtractionOptions } from '@/types/extraction';
+import type { ExtractedContent, ExtractionOptions, ExtractionMode } from '@/types/extraction';
 import { scoreContentQuality, type ContentQuality } from '@tabext/contentQuality';
 import { loadExtractor } from '@tabext/extractorLoader';
+
+/**
+ * Extended extraction options with mode
+ */
+export interface ExtractContentOptions extends ExtractionOptions {
+  /** Extraction mode to use */
+  mode?: ExtractionMode;
+}
 
 /**
  * Content extraction hook return type
@@ -23,18 +31,19 @@ export interface UseContentExtractionReturn {
   /** Content quality assessment or null if no content */
   qualityAssessment: ContentQuality | null;
   /** Function to manually trigger content extraction */
-  extractContent: (options?: ExtractionOptions) => Promise<void>;
+  extractContent: (options?: ExtractContentOptions) => Promise<void>;
   /** Alias to extractContent for clarity */
-  reextract: (options?: ExtractionOptions) => Promise<void>;
+  reextract: (options?: ExtractContentOptions) => Promise<void>;
 }
 
 /**
  * Default extraction options
  */
-const DEFAULT_OPTIONS: ExtractionOptions = {
-  includeLinks: true,
+const DEFAULT_OPTIONS: ExtractContentOptions = {
+  includeLinks: false, // Disable links in extracted content
   timeout: 2000,
   maxLength: 200000, // Use maxLength per the type definition
+  mode: 'smart' as ExtractionMode, // Default to smart mode as per refactor
 };
 
 /**
@@ -57,7 +66,7 @@ export function useContentExtraction(auto: boolean = false): UseContentExtractio
    * Core extraction function that directly calls the content extractor
    * For MVP, we use direct calls instead of message passing for simplicity and speed
    */
-  const run = useCallback(async (options?: ExtractionOptions): Promise<void> => {
+  const run = useCallback(async (options?: ExtractContentOptions): Promise<void> => {
     setLoading(true);
     setError(null);
 
@@ -72,8 +81,9 @@ export function useContentExtraction(auto: boolean = false): UseContentExtractio
         ...options,
       };
 
-      // Extract content from the current tab
-      const extractedContent = await extractContent(mergedOptions);
+      // Extract content from the current tab with specified mode
+      const { mode, ...extractionOptions } = mergedOptions;
+      const extractedContent = await extractContent(extractionOptions, mode);
 
       // Update state with extracted content
       setContent(extractedContent);
@@ -98,7 +108,7 @@ export function useContentExtraction(auto: boolean = false): UseContentExtractio
    * Public extraction function that prevents concurrent extractions
    */
   const extractContent = useCallback(
-    async (options?: ExtractionOptions): Promise<void> => {
+    async (options?: ExtractContentOptions): Promise<void> => {
       // Prevent concurrent extractions
       if (loading) {
         console.warn('Extraction already in progress');
@@ -115,7 +125,7 @@ export function useContentExtraction(auto: boolean = false): UseContentExtractio
    * Clears existing content before extracting
    */
   const reextract = useCallback(
-    async (options?: ExtractionOptions): Promise<void> => {
+    async (options?: ExtractContentOptions): Promise<void> => {
       // Clear existing content
       setContent(null);
       setQualityAssessment(null);

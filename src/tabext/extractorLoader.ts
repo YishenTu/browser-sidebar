@@ -6,7 +6,7 @@
  * dynamic imports in production for optimal bundle splitting.
  */
 
-import type { ExtractedContent, ExtractionOptions } from '@/types/extraction';
+import type { ExtractedContent, ExtractionOptions, ExtractionMode } from '@/types/extraction';
 
 /**
  * Dynamically loads the content extractor module
@@ -20,5 +20,5 @@ export const loadExtractor = async () => {
  * Type for the loaded extractor module
  */
 export interface ExtractorModule {
-  extractContent: (options?: ExtractionOptions) => Promise<ExtractedContent>;
+  extractContent: (options?: ExtractionOptions, mode?: ExtractionMode) => Promise<ExtractedContent>;
 }
