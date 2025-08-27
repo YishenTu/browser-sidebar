@@ -203,7 +203,7 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
                     <>
                       {/* Context indicator for messages with tab context */}
                       {message.metadata?.hasTabContext && (
-                        <div 
+                        <div
                           className="tab-context-indicator"
                           aria-label="Includes page context"
                           tabIndex={0}
@@ -212,9 +212,8 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
                             <DocumentIcon size={10} />
                           </span>
                           <div className="tab-context-tooltip">
-                            Includes page: {message.metadata.tabTitle || 
-                              message.metadata.tabUrl || 
-                              'Unknown page'}
+                            Includes page:{' '}
+                            {message.metadata.tabTitle || message.metadata.tabUrl || 'Unknown page'}
                           </div>
                         </div>
                       )}

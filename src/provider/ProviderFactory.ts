@@ -129,7 +129,7 @@ export class ProviderFactory {
    * @param type Provider type to check
    * @returns True if the provider type is supported
    */
-  isProviderSupported(type: any): type is ProviderType {
+  isProviderSupported(type: unknown): type is ProviderType {
     if (!type || typeof type !== 'string') {
       return false;
     }

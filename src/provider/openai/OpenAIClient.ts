@@ -3,14 +3,14 @@
  *
  * OpenAI client configuration and initialization for the browser extension.
  * Provides secure API key management, configuration validation, and connection testing.
- * 
+ *
  * Features:
  * - Secure API key initialization and validation
  * - Custom configuration support (base URL, headers, timeout, retries)
  * - Connection testing with model listing
  * - Authentication handling
  * - Response API readiness
- * 
+ *
  * Supports BYOK (Bring Your Own Key) model for privacy-focused usage.
  */
 
@@ -36,7 +36,7 @@ export interface ExtendedOpenAIConfig extends Omit<OpenAIConfig, 'customOptions'
 
 /**
  * OpenAI Client for browser extension
- * 
+ *
  * Handles OpenAI SDK initialization, configuration management, and connection testing.
  * Designed for privacy-focused BYOK (Bring Your Own Key) usage.
  */
@@ -69,7 +69,7 @@ export class OpenAIClient {
 
   /**
    * Initialize the OpenAI client with configuration
-   * 
+   *
    * @param config - OpenAI configuration including API key and optional custom options
    * @throws Error if configuration is invalid or initialization fails
    */
@@ -107,7 +107,6 @@ export class OpenAIClient {
 
       // Store configuration (deep copy to prevent external modifications)
       this.currentConfig = JSON.parse(JSON.stringify(config));
-
     } catch (error) {
       // Clean up on failure
       this.openaiInstance = null;
@@ -118,7 +117,7 @@ export class OpenAIClient {
 
   /**
    * Validate OpenAI configuration
-   * 
+   *
    * @param config - Configuration to validate
    * @returns Validation result with errors if any
    */
@@ -171,7 +170,11 @@ export class OpenAIClient {
 
       // Validate headers
       if (customOptions.headers !== undefined) {
-        if (typeof customOptions.headers !== 'object' || customOptions.headers === null || Array.isArray(customOptions.headers)) {
+        if (
+          typeof customOptions.headers !== 'object' ||
+          customOptions.headers === null ||
+          Array.isArray(customOptions.headers)
+        ) {
           errors.push('Headers must be an object');
         } else {
           // Check for disallowed headers
@@ -190,7 +193,7 @@ export class OpenAIClient {
 
   /**
    * Test connection to OpenAI API
-   * 
+   *
    * @returns Promise that resolves to true if connection is successful
    * @throws Error if client is not initialized
    */
@@ -211,7 +214,7 @@ export class OpenAIClient {
 
   /**
    * Get current configuration
-   * 
+   *
    * @returns Current configuration or null if not initialized
    */
   public getConfiguration(): ExtendedOpenAIConfig | null {

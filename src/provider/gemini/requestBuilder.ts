@@ -85,9 +85,13 @@ export function convertMessages(messages: ProviderChatMessage[]): GeminiContent[
 /**
  * Process image attachment into Gemini format
  */
-function processImageAttachment(attachment: any): GeminiPart | null {
+function processImageAttachment(attachment: unknown): GeminiPart | null {
+  const att = attachment as { data?: string };
+  if (!att.data) {
+    return null;
+  }
   // Extract base64 data and mime type
-  const matches = attachment.data.match(/^data:([^;]+);base64,(.+)$/);
+  const matches = att.data.match(/^data:([^;]+);base64,(.+)$/);
   if (!matches) {
     return null;
   }

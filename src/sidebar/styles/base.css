@@ -55,6 +55,10 @@
   min-height: 42px;
 }
 
+.ai-sidebar-header--dragging {
+  cursor: grabbing;
+}
+
 .ai-sidebar-header-title {
   display: flex;
   align-items: center;

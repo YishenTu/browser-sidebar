@@ -20,7 +20,7 @@ import { useAIChat } from '@hooks/useAIChat';
 import { useContentExtraction } from '@hooks/useContentExtraction';
 import { ContentPreview } from '@components/ContentPreview';
 // Import for Task 2.2: Content Injection with Tab ID tracking
-import { getCurrentTabIdSafe } from '@tabext/tabUtils';
+import { getCurrentTabIdSafe } from '@tabext/utils/tabUtils';
 
 // Layout components
 import { Header } from '@components/layout/Header';

@@ -7,7 +7,7 @@
  */
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { extractContent } from '@tabext/contentExtractor';
+import { extractContent } from '@tabext/extraction/orchestrator';
 import type { ExtractedContent, ExtractionOptions } from '@types/extraction';
 
 // =============================================================================

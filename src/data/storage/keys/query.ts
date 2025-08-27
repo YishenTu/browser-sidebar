@@ -95,7 +95,7 @@ export async function listAPIKeys(
     const hasMore = offset + limit < results.length;
 
     // Return metadata-only results (no encrypted payloads)
-    const keys: any[] = paginatedResults.map(metadata => ({
+    const keys: Array<{ id: string; metadata: APIKeyMetadata }> = paginatedResults.map(metadata => ({
       id: metadata.id,
       metadata,
     }));

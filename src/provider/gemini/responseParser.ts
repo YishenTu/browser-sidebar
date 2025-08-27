@@ -70,8 +70,16 @@ export function parseResponse(
 /**
  * Convert Gemini streaming response to StreamChunk format
  */
-export function convertToStreamChunk(geminiResponse: any, model: string): StreamChunk {
-  const candidate = geminiResponse.candidates?.[0];
+export function convertToStreamChunk(geminiResponse: unknown, model: string): StreamChunk {
+  const response = geminiResponse as {
+    candidates?: Array<unknown>;
+    usageMetadata?: {
+      promptTokenCount?: number;
+      candidatesTokenCount?: number;
+      totalTokenCount?: number;
+    };
+  };
+  const candidate = response.candidates?.[0];
 
   // Extract content and thinking
   const { content, thinking } = extractContentAndThinking(candidate);
@@ -97,11 +105,11 @@ export function convertToStreamChunk(geminiResponse: any, model: string): Stream
   };
 
   // Add usage metadata if present
-  if (geminiResponse.usageMetadata) {
+  if (response.usageMetadata) {
     chunk.usage = {
-      promptTokens: geminiResponse.usageMetadata.promptTokenCount,
-      completionTokens: geminiResponse.usageMetadata.candidatesTokenCount,
-      totalTokens: geminiResponse.usageMetadata.totalTokenCount,
+      promptTokens: response.usageMetadata.promptTokenCount,
+      completionTokens: response.usageMetadata.candidatesTokenCount,
+      totalTokens: response.usageMetadata.totalTokenCount,
     };
   }
 
@@ -177,12 +185,12 @@ function buildUsageMetadata(data: GeminiResponse): Usage {
 /**
  * Extract search metadata from response (handles multiple field names)
  */
-function extractSearchMetadata(data: GeminiResponse): any {
+function extractSearchMetadata(data: GeminiResponse): unknown {
   const groundingData =
-    (data as any).groundingMetadata ||
-    (data as any).grounding_metadata ||
-    (data as any).searchMetadata ||
-    (data as any).search_metadata;
+    (data as { groundingMetadata?: unknown }).groundingMetadata ||
+    (data as { grounding_metadata?: unknown }).grounding_metadata ||
+    (data as { searchMetadata?: unknown }).searchMetadata ||
+    (data as { search_metadata?: unknown }).search_metadata;
 
   if (groundingData) {
     return formatSearchMetadata(groundingData);
@@ -194,13 +202,20 @@ function extractSearchMetadata(data: GeminiResponse): any {
 /**
  * Extract search metadata from streaming response
  */
-function extractStreamingSearchMetadata(geminiResponse: any): any {
+function extractStreamingSearchMetadata(geminiResponse: unknown): unknown {
+  const response = geminiResponse as {
+    candidates?: Array<{ groundingMetadata?: unknown }>;
+    groundingMetadata?: unknown;
+    grounding_metadata?: unknown;
+    searchMetadata?: unknown;
+    search_metadata?: unknown;
+  };
   const groundingData =
-    geminiResponse.candidates?.[0]?.groundingMetadata ||
-    geminiResponse.groundingMetadata ||
-    geminiResponse.grounding_metadata ||
-    geminiResponse.searchMetadata ||
-    geminiResponse.search_metadata;
+    response.candidates?.[0]?.groundingMetadata ||
+    response.groundingMetadata ||
+    response.grounding_metadata ||
+    response.searchMetadata ||
+    response.search_metadata;
 
   if (groundingData && Object.keys(groundingData).length > 0) {
     return formatSearchMetadata(groundingData);

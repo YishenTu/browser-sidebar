@@ -74,7 +74,7 @@ export const ContentPreview: React.FC<ContentPreviewProps> = ({
               aria-label="Clear content"
               title="Clear content"
             >
-              <CancelIcon size={10} />
+              <CancelIcon size={12} />
             </button>
           )}
         </div>
@@ -97,7 +97,7 @@ export const ContentPreview: React.FC<ContentPreviewProps> = ({
               aria-label="Clear content"
               title="Clear content"
             >
-              <CancelIcon size={10} />
+              <CancelIcon size={12} />
             </button>
           )}
         </div>
@@ -135,7 +135,7 @@ export const ContentPreview: React.FC<ContentPreviewProps> = ({
               aria-label="Clear content"
               title="Clear content"
             >
-              <CancelIcon size={10} />
+              <CancelIcon size={12} />
             </button>
           )}
         </div>

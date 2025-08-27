@@ -229,7 +229,7 @@ export async function clearCache(): Promise<void> {
 
   // Best-effort removal using prefix marker for environments without listing
   try {
-    await chromeStorage.remove(`${STORAGE_KEYS.API_KEY_CACHE}*` as any);
+    await chromeStorage.remove(`${STORAGE_KEYS.API_KEY_CACHE}*`);
   } catch (e) {
     // noop: prefix removal is best-effort
     void e;
@@ -243,7 +243,7 @@ export async function clearCache(): Promise<void> {
 /**
  * Export API keys with optional secret inclusion
  */
-export async function exportKeys(includeSecrets: boolean = false): Promise<Record<string, any>> {
+export async function exportKeys(includeSecrets: boolean = false): Promise<Record<string, unknown>> {
   return importExport.exportKeys(serviceState, includeSecrets);
 }
 

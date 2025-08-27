@@ -237,16 +237,16 @@ export async function getAPIKey(state: ServiceState, id: string): Promise<Encryp
 
     // Ensure metadata exists, fallback to embedded metadata if DB read fails
     const metadata = dbInstance ? await dbInstance.get(DB_STORES.METADATA, id) : null;
-    const effectiveMetadata = (encryptedKey.metadata as any) || metadata || ({} as any);
+    const effectiveMetadata = (encryptedKey.metadata as APIKeyMetadata) || metadata || ({} as APIKeyMetadata);
 
     // Update last used timestamp
     await updateLastUsed(id);
 
     // Cache the result (ensure metadata is up to date)
     const keyForCache: EncryptedAPIKey = {
-      ...(encryptedKey as any),
+      ...(encryptedKey as EncryptedAPIKey),
       metadata: effectiveMetadata,
-      usageStats: (encryptedKey as any).usageStats || {
+      usageStats: (encryptedKey as EncryptedAPIKey).usageStats || {
         totalRequests: 0,
         successfulRequests: 0,
         failedRequests: 0,

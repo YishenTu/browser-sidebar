@@ -17,7 +17,7 @@ import { requireInitialized, auditLog } from './utils';
 export async function exportKeys(
   state: ServiceState,
   includeSecrets: boolean = false
-): Promise<Record<string, any>> {
+): Promise<Record<string, unknown>> {
   requireInitialized(state);
   const dbInstance = getDatabase();
 

@@ -114,7 +114,7 @@ export function convertMessagesToInput(messages: ProviderChatMessage[]): string 
 /**
  * Build request options for fetch
  */
-export function buildRequestOptions(apiKey: string, body: any, signal?: AbortSignal): RequestInit {
+export function buildRequestOptions(apiKey: string, body: unknown, signal?: AbortSignal): RequestInit {
   if (!apiKey) {
     throw new Error('OpenAI API key is not configured. Please add your API key in settings.');
   }

@@ -10,3 +10,4 @@
 [x] 8. openai use response id to maintain chat history
 [ ] 9. system prompt
 [ ] 10. slash command
+[ ] 11. multi tab extraction with `@`command

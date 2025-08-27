@@ -87,7 +87,7 @@ export class GeminiClient extends BaseProvider {
   /**
    * Validate Gemini-specific configuration
    */
-  validateConfig(config: any): ProviderValidationResult {
+  validateConfig(config: Record<string, unknown>): ProviderValidationResult {
     const errors: string[] = [];
 
     // Check if config exists
@@ -193,7 +193,7 @@ export class GeminiClient extends BaseProvider {
    * Send chat messages and get response
    * TODO: Full implementation in Task 4.2.2b
    */
-  async chat(messages: ProviderChatMessage[], _config?: any): Promise<ProviderResponse> {
+  async chat(messages: ProviderChatMessage[], _config?: Record<string, unknown>): Promise<ProviderResponse> {
     this.ensureConfigured();
     this.validateMessages(messages);
 
@@ -205,7 +205,7 @@ export class GeminiClient extends BaseProvider {
    * Stream chat messages
    * TODO: Full implementation in Task 4.2.2b
    */
-  async *streamChat(messages: ProviderChatMessage[], _config?: any): AsyncIterable<StreamChunk> {
+  async *streamChat(messages: ProviderChatMessage[], _config?: Record<string, unknown>): AsyncIterable<StreamChunk> {
     this.ensureConfigured();
     this.validateMessages(messages);
 
@@ -241,12 +241,12 @@ export class GeminiClient extends BaseProvider {
   /**
    * Format error into provider error structure
    */
-  formatError(error: any): ProviderError {
+  formatError(error: unknown): ProviderError {
     let errorType: ErrorType = 'unknown';
     let message = 'An unexpected error occurred';
     let code = 'GEMINI_ERROR';
     let retryAfter: number | undefined;
-    let details: any = {
+    let details: Record<string, unknown> = {
       timestamp: new Date(),
     };
 

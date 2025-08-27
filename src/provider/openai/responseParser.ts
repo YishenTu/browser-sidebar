@@ -152,13 +152,22 @@ export function extractContentAndMetadata(response: OpenAIResponse): {
 /**
  * Extract reasoning summary from response
  */
-export function extractReasoningSummary(payload: any): string | undefined {
+export function extractReasoningSummary(payload: unknown): string | undefined {
+  const data = payload as {
+    type?: string;
+    summary?: unknown[];
+    output?: unknown[];
+    outputs?: unknown[];
+    response?: { output?: unknown[] };
+    reasoning?: { summary?: unknown[] };
+  };
+
   try {
     // Direct reasoning event (streaming format from Response API)
-    if (payload?.type === 'reasoning' && payload?.summary) {
-      if (Array.isArray(payload.summary)) {
-        const parts = payload.summary
-          .map((s: any) => {
+    if (data?.type === 'reasoning' && data?.summary) {
+      if (Array.isArray(data.summary)) {
+        const parts = data.summary
+          .map((s: { type?: string; text?: string; content?: string }) => {
             // Handle { type: 'summary_text', text: '...' } format
             if (s?.type === 'summary_text' && s?.text) {
               return s.text;
@@ -174,14 +183,14 @@ export function extractReasoningSummary(payload: any): string | undefined {
     }
 
     // Prefer explicit reasoning output item
-    const outputs = payload?.output || payload?.outputs || payload?.response?.output;
+    const outputs = data?.output || data?.outputs || data?.response?.output;
     if (Array.isArray(outputs)) {
-      const reasoningItem = outputs.find((o: any) => (o?.type || o?.item_type) === 'reasoning');
+      const reasoningItem = outputs.find((o: { type?: string; item_type?: string }) => (o?.type || o?.item_type) === 'reasoning');
       if (reasoningItem) {
         const summaryArr = reasoningItem.summary || reasoningItem?.data?.summary;
         if (Array.isArray(summaryArr)) {
           const parts = summaryArr
-            .map((s: any) => {
+            .map((s: { type?: string; text?: string; content?: string }) => {
               // Handle { type: 'summary_text', text: '...' } format
               if (s?.type === 'summary_text' && s?.text) {
                 return s.text;
@@ -197,9 +206,9 @@ export function extractReasoningSummary(payload: any): string | undefined {
     }
 
     // Some SDKs may surface reasoning directly under payload.reasoning
-    const directSummary = payload?.reasoning?.summary;
+    const directSummary = data?.reasoning?.summary;
     if (Array.isArray(directSummary)) {
-      const parts = directSummary.map((s: any) => s?.text || '').filter(Boolean);
+      const parts = directSummary.map((s: { text?: string }) => s?.text || '').filter(Boolean);
       if (parts.length) return parts.join('\n');
     }
 

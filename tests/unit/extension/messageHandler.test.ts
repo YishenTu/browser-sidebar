@@ -13,9 +13,9 @@ describe('MessageHandlerRegistry', () => {
   test('should register and retrieve handlers correctly', () => {
     const registry = new MessageHandlerRegistry();
     const mockHandler = vi.fn().mockResolvedValue('test response');
-    
+
     registry.registerHandler('PING', mockHandler, 'Test handler');
-    
+
     expect(registry.hasHandler('PING')).toBe(true);
     expect(registry.hasHandler('INVALID_TYPE' as any)).toBe(false);
     expect(registry.getRegisteredTypes()).toContain('PING');
@@ -24,10 +24,10 @@ describe('MessageHandlerRegistry', () => {
   test('should unregister handlers correctly', () => {
     const registry = new MessageHandlerRegistry();
     const mockHandler = vi.fn();
-    
+
     registry.registerHandler('PING', mockHandler);
     expect(registry.hasHandler('PING')).toBe(true);
-    
+
     const result = registry.unregisterHandler('PING');
     expect(result).toBe(true);
     expect(registry.hasHandler('PING')).toBe(false);
@@ -48,7 +48,7 @@ describe('DefaultHandlers', () => {
     };
 
     const response = await DefaultHandlers.handlePing(message, sender);
-    
+
     expect(response.type).toBe('PONG');
     expect(response.source).toBe('background');
     expect(response.target).toBe('content');
@@ -67,7 +67,7 @@ describe('DefaultHandlers', () => {
     };
 
     const response = await DefaultHandlers.handleGetTabId(message, sender);
-    
+
     expect(response.type).toBe('GET_TAB_ID');
     expect(response.source).toBe('background');
     expect(response.target).toBe('content');
@@ -86,9 +86,9 @@ describe('DefaultHandlers', () => {
       // No tab property
     };
 
-    await expect(
-      DefaultHandlers.handleGetTabId(message, sender)
-    ).rejects.toThrow('Unable to determine tab ID from sender');
+    await expect(DefaultHandlers.handleGetTabId(message, sender)).rejects.toThrow(
+      'Unable to determine tab ID from sender'
+    );
   });
 
   test('should throw error when sender tab has no ID', async () => {
@@ -105,9 +105,9 @@ describe('DefaultHandlers', () => {
       id: 'test-extension-id',
     };
 
-    await expect(
-      DefaultHandlers.handleGetTabId(message, sender)
-    ).rejects.toThrow('Unable to determine tab ID from sender');
+    await expect(DefaultHandlers.handleGetTabId(message, sender)).rejects.toThrow(
+      'Unable to determine tab ID from sender'
+    );
   });
 });
 
@@ -142,7 +142,7 @@ describe('Message Handler Integration', () => {
 
   test('should handle invalid messages gracefully', async () => {
     const registry = new MessageHandlerRegistry();
-    
+
     const invalidMessage = {
       // Missing required fields
       type: 'GET_TAB_ID',
@@ -170,7 +170,7 @@ describe('Message Handler Integration', () => {
     const registry = new MessageHandlerRegistry();
     // Register one handler but not GET_TAB_ID
     registry.registerHandler('PING', DefaultHandlers.handlePing);
-    
+
     const unknownMessage = createMessage({
       type: 'GET_TAB_ID',
       source: 'content',

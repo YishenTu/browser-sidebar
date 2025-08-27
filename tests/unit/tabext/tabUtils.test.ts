@@ -1,7 +1,7 @@
 /**
  * @file Tab Utilities Tests
  *
- * Unit tests for the tab utility functions that interact with 
+ * Unit tests for the tab utility functions that interact with
  * the background script to retrieve tab information.
  */
 
@@ -90,9 +90,7 @@ describe('Tab Utilities', () => {
     test('should handle non-Error exceptions', async () => {
       mockMessageBus.sendWithRetry.mockRejectedValue('String error');
 
-      await expect(getCurrentTabId()).rejects.toThrow(
-        'Unable to get current tab ID: String error'
-      );
+      await expect(getCurrentTabId()).rejects.toThrow('Unable to get current tab ID: String error');
     });
   });
 
@@ -171,10 +169,7 @@ describe('Tab Utilities', () => {
       await exampleUsage();
 
       expect(console.log).toHaveBeenCalledWith('Getting current tab ID...');
-      expect(console.error).toHaveBeenCalledWith(
-        'Failed to get tab ID:',
-        expect.any(Error)
-      );
+      expect(console.error).toHaveBeenCalledWith('Failed to get tab ID:', expect.any(Error));
       expect(console.log).toHaveBeenCalledWith('Got tab ID via safe method:', 999);
     });
 
@@ -193,10 +188,7 @@ describe('Tab Utilities', () => {
       await exampleUsage();
 
       expect(console.log).toHaveBeenCalledWith('Getting current tab ID...');
-      expect(console.error).toHaveBeenCalledWith(
-        'Failed to get tab ID:',
-        expect.any(Error)
-      );
+      expect(console.error).toHaveBeenCalledWith('Failed to get tab ID:', expect.any(Error));
       expect(console.warn).toHaveBeenCalledWith('Unable to determine tab ID');
     });
   });

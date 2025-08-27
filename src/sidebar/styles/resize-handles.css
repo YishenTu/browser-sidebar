@@ -55,22 +55,26 @@
   left: -6px;
   width: 12px;
   height: 12px;
+  cursor: nwse-resize;
 }
 .ai-sidebar-resize-handle--ne {
   top: -6px;
   right: -6px;
   width: 12px;
   height: 12px;
+  cursor: nesw-resize;
 }
 .ai-sidebar-resize-handle--sw {
   bottom: -6px;
   left: -6px;
   width: 12px;
   height: 12px;
+  cursor: nesw-resize;
 }
 .ai-sidebar-resize-handle--se {
   bottom: -6px;
   right: -6px;
   width: 12px;
   height: 12px;
+  cursor: nwse-resize;
 }

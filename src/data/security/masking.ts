@@ -139,7 +139,7 @@ export interface DocumentMaskingResult {
  */
 export interface JSONMaskingResult {
   /** The masked JSON data */
-  maskedData: any;
+  maskedData: unknown;
   /** Total number of fields masked */
   totalMasked: number;
   /** Fields that were masked */
@@ -181,7 +181,7 @@ export interface BatchMaskingResult {
   /** Total number of items masked */
   totalMasked: number;
   /** Errors encountered */
-  errors: Array<{ item: any; error: Error }>;
+  errors: Array<{ item: unknown; error: Error }>;
 }
 
 /**
@@ -433,14 +433,14 @@ export async function maskDocument(
  * Mask sensitive data in JSON objects recursively
  */
 export async function maskJSON(
-  data: any,
+  data: unknown,
   config: MaskingConfig,
   options: MaskingOptions = {}
 ): Promise<JSONMaskingResult> {
   // Check for circular references
   const seen = new WeakSet();
 
-  function detectCircular(obj: any): void {
+  function detectCircular(obj: unknown): void {
     if (obj && typeof obj === 'object') {
       if (seen.has(obj)) {
         throw new Error('Circular reference detected in JSON data');
@@ -460,7 +460,7 @@ export async function maskJSON(
   const maskedFields: string[] = [];
   let totalMasked = 0;
 
-  async function maskRecursive(obj: any, path = ''): Promise<any> {
+  async function maskRecursive(obj: unknown, path = ''): Promise<unknown> {
     if (obj === null || obj === undefined) {
       return obj;
     }
@@ -474,7 +474,7 @@ export async function maskJSON(
     }
 
     if (typeof obj === 'object') {
-      const maskedObj: any = {};
+      const maskedObj: Record<string, unknown> = {};
       for (const [key, value] of Object.entries(obj)) {
         const currentPath = path ? `${path}.${key}` : key;
         maskedObj[key] = await maskRecursive(value, currentPath);
@@ -674,7 +674,7 @@ export async function performBatchMasking(
   const { batchSize = DEFAULT_BATCH_SIZE, failOnError = false, ...maskingOptions } = options;
 
   const results: MaskingResult[] = [];
-  const errors: Array<{ item: any; error: Error }> = [];
+  const errors: Array<{ item: unknown; error: Error }> = [];
   let totalMasked = 0;
 
   // Process items in batches

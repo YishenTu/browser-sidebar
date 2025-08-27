@@ -24,7 +24,11 @@
   background: var(--background-elevated, #1f2937);
   border: 1px solid var(--border-secondary, rgba(75, 85, 99, 0.3));
   border-radius: var(--radius-lg, 12px);
-  box-shadow: var(--shadow-xl, 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04));
+  box-shadow: var(
+    --shadow-xl,
+    0 20px 25px -5px rgba(0, 0, 0, 0.1),
+    0 10px 10px -5px rgba(0, 0, 0, 0.04)
+  );
   z-index: 9999;
   max-height: 90vh;
   overflow: hidden;
@@ -259,7 +263,7 @@
     width: 95%;
     height: 90vh;
   }
-  
+
   .modal-title {
     font-size: 16px;
   }

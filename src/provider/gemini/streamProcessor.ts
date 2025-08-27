@@ -1,6 +1,6 @@
 /**
  * @file Gemini Stream Processor
- * 
+ *
  * Processes streaming responses from Gemini API incrementally without
  * buffering the entire response. Supports both JSON array and SSE formats.
  */
@@ -58,35 +58,35 @@ export class GeminiStreamProcessor {
    */
   private extractJsonObjects(): any[] {
     const results: any[] = [];
-    
+
     while (this.state.buffer.length > 0) {
       // Skip whitespace
       this.state.buffer = this.state.buffer.trimStart();
-      
+
       if (this.state.buffer.length === 0) break;
-      
+
       // Check for array end
       if (this.state.buffer[0] === ']') {
         // End of array
         this.state.buffer = '';
         break;
       }
-      
+
       // Skip comma separators
       if (this.state.buffer[0] === ',') {
         this.state.buffer = this.state.buffer.substring(1);
         continue;
       }
-      
+
       // Look for complete JSON object
       if (this.state.buffer[0] === '{') {
         const objectEnd = this.findObjectEnd();
-        
+
         if (objectEnd !== -1) {
           // Found complete object
           const objectStr = this.state.buffer.substring(0, objectEnd + 1);
           this.state.buffer = this.state.buffer.substring(objectEnd + 1);
-          
+
           try {
             const obj = JSON.parse(objectStr);
             results.push(obj);
@@ -102,7 +102,7 @@ export class GeminiStreamProcessor {
         this.state.buffer = this.state.buffer.substring(1);
       }
     }
-    
+
     return results;
   }
 
@@ -114,25 +114,25 @@ export class GeminiStreamProcessor {
     let depth = 0;
     let inString = false;
     let escapeNext = false;
-    
+
     for (let i = 0; i < this.state.buffer.length; i++) {
       const char = this.state.buffer[i];
-      
+
       if (escapeNext) {
         escapeNext = false;
         continue;
       }
-      
+
       if (char === '\\') {
         escapeNext = true;
         continue;
       }
-      
+
       if (char === '"' && !escapeNext) {
         inString = !inString;
         continue;
       }
-      
+
       if (!inString) {
         if (char === '{') {
           depth++;
@@ -144,7 +144,7 @@ export class GeminiStreamProcessor {
         }
       }
     }
-    
+
     return -1; // Incomplete object
   }
 
@@ -154,19 +154,19 @@ export class GeminiStreamProcessor {
   private extractSseObjects(): any[] {
     const results: any[] = [];
     const lines = this.state.buffer.split('\n');
-    
+
     // Keep incomplete line in buffer
     this.state.buffer = lines.pop() || '';
-    
+
     for (const line of lines) {
       const trimmed = line.trim();
       if (!trimmed) continue;
-      
+
       // Handle SSE format
       if (trimmed.startsWith('data: ')) {
         const jsonStr = trimmed.slice(6);
         if (jsonStr === '[DONE]') continue;
-        
+
         try {
           const obj = JSON.parse(jsonStr);
           results.push(obj);
@@ -183,7 +183,7 @@ export class GeminiStreamProcessor {
         }
       }
     }
-    
+
     return results;
   }
 

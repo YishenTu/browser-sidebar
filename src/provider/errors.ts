@@ -1,6 +1,6 @@
 /**
  * @file Provider Error Taxonomy
- * 
+ *
  * Comprehensive error classification and recovery strategies for AI providers.
  * Implements exponential backoff with jitter and user-facing error guidance.
  */
@@ -13,25 +13,25 @@ import type { ProviderError, ProviderType } from '../types/providers';
 export enum ErrorType {
   // Authentication errors (401, 403)
   AUTHENTICATION = 'authentication',
-  
+
   // Rate limiting errors (429)
   RATE_LIMIT = 'rate_limit',
-  
+
   // Network errors (connection, timeout)
   NETWORK = 'network',
-  
+
   // Server errors (500, 502, 503)
   SERVER = 'server',
-  
+
   // Validation errors (400, 422)
   VALIDATION = 'validation',
-  
+
   // Context size errors
   CONTEXT_EXCEEDED = 'context_exceeded',
-  
+
   // Cancellation (user-initiated)
   CANCELLED = 'cancelled',
-  
+
   // Unknown errors
   UNKNOWN = 'unknown',
 }
@@ -57,36 +57,40 @@ export const ERROR_RECOVERY_STRATEGIES: Record<ErrorType, RecoveryStrategy> = {
     maxRetries: 0,
     backoffMultiplier: 0,
     jitterRange: [0, 0],
-    userGuidance: 'Please check your API key in settings. Make sure it\'s valid and has the necessary permissions.',
+    userGuidance:
+      "Please check your API key in settings. Make sure it's valid and has the necessary permissions.",
   },
-  
+
   [ErrorType.RATE_LIMIT]: {
     shouldRetry: true,
     retryAfter: 60000, // 1 minute default
     maxRetries: 3,
     backoffMultiplier: 2,
     jitterRange: [0.8, 1.2],
-    userGuidance: 'Rate limit reached. The request will retry automatically. Consider upgrading your API plan for higher limits.',
+    userGuidance:
+      'Rate limit reached. The request will retry automatically. Consider upgrading your API plan for higher limits.',
   },
-  
+
   [ErrorType.NETWORK]: {
     shouldRetry: true,
     retryAfter: 1000, // 1 second initial
     maxRetries: 5,
     backoffMultiplier: 1.5,
     jitterRange: [0.5, 1.5],
-    userGuidance: 'Network connection issue. Please check your internet connection. The request will retry automatically.',
+    userGuidance:
+      'Network connection issue. Please check your internet connection. The request will retry automatically.',
   },
-  
+
   [ErrorType.SERVER]: {
     shouldRetry: true,
     retryAfter: 2000, // 2 seconds initial
     maxRetries: 3,
     backoffMultiplier: 2,
     jitterRange: [0.7, 1.3],
-    userGuidance: 'The AI service is temporarily unavailable. The request will retry automatically.',
+    userGuidance:
+      'The AI service is temporarily unavailable. The request will retry automatically.',
   },
-  
+
   [ErrorType.VALIDATION]: {
     shouldRetry: false,
     maxRetries: 0,
@@ -94,7 +98,7 @@ export const ERROR_RECOVERY_STRATEGIES: Record<ErrorType, RecoveryStrategy> = {
     jitterRange: [0, 0],
     userGuidance: 'Invalid request parameters. Please check your input and try again.',
   },
-  
+
   [ErrorType.CONTEXT_EXCEEDED]: {
     shouldRetry: false,
     maxRetries: 0,
@@ -102,7 +106,7 @@ export const ERROR_RECOVERY_STRATEGIES: Record<ErrorType, RecoveryStrategy> = {
     jitterRange: [0, 0],
     userGuidance: 'Message too long. Please shorten your input or start a new conversation.',
   },
-  
+
   [ErrorType.CANCELLED]: {
     shouldRetry: false,
     maxRetries: 0,
@@ -110,7 +114,7 @@ export const ERROR_RECOVERY_STRATEGIES: Record<ErrorType, RecoveryStrategy> = {
     jitterRange: [0, 0],
     userGuidance: 'Request cancelled.',
   },
-  
+
   [ErrorType.UNKNOWN]: {
     shouldRetry: true,
     retryAfter: 3000,
@@ -128,21 +132,23 @@ export class ErrorClassifier {
   /**
    * Classify error based on status code and error object
    */
-  static classify(error: any, provider?: ProviderType): ErrorType {
+  static classify(error: unknown, provider?: ProviderType): ErrorType {
     // Handle cancellation
     if (error.name === 'AbortError' || error.code === 'CANCELLED') {
       return ErrorType.CANCELLED;
     }
-    
+
     // Handle network errors
-    if (error.code === 'ECONNREFUSED' || 
-        error.code === 'ETIMEDOUT' ||
-        error.code === 'ENOTFOUND' ||
-        error.message?.includes('network') ||
-        error.message?.includes('fetch')) {
+    if (
+      error.code === 'ECONNREFUSED' ||
+      error.code === 'ETIMEDOUT' ||
+      error.code === 'ENOTFOUND' ||
+      error.message?.includes('network') ||
+      error.message?.includes('fetch')
+    ) {
       return ErrorType.NETWORK;
     }
-    
+
     // Handle HTTP status codes
     const status = error.status || error.statusCode || error.response?.status;
     if (status) {
@@ -159,7 +165,7 @@ export class ErrorClassifier {
         return ErrorType.SERVER;
       }
     }
-    
+
     // Provider-specific error codes
     if (provider === 'openai') {
       if (error.code === 'invalid_api_key') {
@@ -172,94 +178,93 @@ export class ErrorClassifier {
         return ErrorType.CONTEXT_EXCEEDED;
       }
     }
-    
+
     if (provider === 'gemini') {
-      if (error.code === 'UNAUTHENTICATED') {
+      if (err.code === 'UNAUTHENTICATED') {
         return ErrorType.AUTHENTICATION;
       }
-      if (error.code === 'RESOURCE_EXHAUSTED') {
+      if (err.code === 'RESOURCE_EXHAUSTED') {
         return ErrorType.RATE_LIMIT;
       }
-      if (error.code === 'INVALID_ARGUMENT' && error.message?.includes('context')) {
+      if (err.code === 'INVALID_ARGUMENT' && err.message?.includes('context')) {
         return ErrorType.CONTEXT_EXCEEDED;
       }
     }
-    
+
     return ErrorType.UNKNOWN;
   }
-  
+
   /**
    * Get recovery strategy for error
    */
   static getRecoveryStrategy(errorType: ErrorType): RecoveryStrategy {
     return ERROR_RECOVERY_STRATEGIES[errorType];
   }
-  
+
   /**
    * Calculate retry delay with exponential backoff and jitter
    */
   static calculateRetryDelay(
-    attempt: number, 
+    attempt: number,
     strategy: RecoveryStrategy,
     baseDelay?: number
   ): number {
     if (!strategy.shouldRetry || attempt >= strategy.maxRetries) {
       return -1; // No retry
     }
-    
+
     const base = baseDelay || strategy.retryAfter || 1000;
     const exponentialDelay = base * Math.pow(strategy.backoffMultiplier, attempt);
-    
+
     // Apply jitter
     const [minJitter, maxJitter] = strategy.jitterRange;
     const jitter = minJitter + Math.random() * (maxJitter - minJitter);
-    
+
     return Math.floor(exponentialDelay * jitter);
   }
-  
+
   /**
    * Extract retry-after header value
    */
   static extractRetryAfter(headers: Headers | Record<string, string>): number | undefined {
-    const retryAfter = headers instanceof Headers 
-      ? headers.get('retry-after')
-      : headers['retry-after'];
-    
+    const retryAfter =
+      headers instanceof Headers ? headers.get('retry-after') : headers['retry-after'];
+
     if (!retryAfter) return undefined;
-    
+
     // Parse as seconds or HTTP date
     const seconds = parseInt(retryAfter, 10);
     if (!isNaN(seconds)) {
       return seconds * 1000; // Convert to milliseconds
     }
-    
+
     // Try parsing as date
     const retryDate = new Date(retryAfter);
     if (!isNaN(retryDate.getTime())) {
       return Math.max(0, retryDate.getTime() - Date.now());
     }
-    
+
     return undefined;
   }
-  
+
   /**
    * Format error for user display
    */
   static formatUserError(error: ProviderError, errorType: ErrorType): string {
     const strategy = this.getRecoveryStrategy(errorType);
     let message = strategy.userGuidance;
-    
+
     // Add specific error details if available
     if (error.message && errorType === ErrorType.VALIDATION) {
       message += ` Details: ${error.message}`;
     }
-    
+
     // Add retry information
     if (strategy.shouldRetry && error.retryAfter) {
       const seconds = Math.ceil(error.retryAfter / 1000);
       message += ` Retrying in ${seconds} seconds...`;
     }
-    
+
     return message;
   }
 }
@@ -270,7 +275,7 @@ export class ErrorClassifier {
 export class RetryManager {
   private retryAttempts = new Map<string, number>();
   private retryTimers = new Map<string, NodeJS.Timeout>();
-  
+
   /**
    * Execute with retry logic
    */
@@ -281,7 +286,7 @@ export class RetryManager {
     onRetry?: (attempt: number, delay: number) => void
   ): Promise<T> {
     const attempt = this.retryAttempts.get(key) || 0;
-    
+
     try {
       const result = await fn();
       this.retryAttempts.delete(key);
@@ -289,24 +294,24 @@ export class RetryManager {
     } catch (error) {
       const errorType = ErrorClassifier.classify(error, provider);
       const strategy = ErrorClassifier.getRecoveryStrategy(errorType);
-      
+
       if (!strategy.shouldRetry || attempt >= strategy.maxRetries) {
         this.retryAttempts.delete(key);
         throw error;
       }
-      
+
       const delay = ErrorClassifier.calculateRetryDelay(attempt, strategy);
       if (delay < 0) {
         this.retryAttempts.delete(key);
         throw error;
       }
-      
+
       this.retryAttempts.set(key, attempt + 1);
-      
+
       if (onRetry) {
         onRetry(attempt + 1, delay);
       }
-      
+
       return new Promise((resolve, reject) => {
         const timer = setTimeout(async () => {
           this.retryTimers.delete(key);
@@ -317,12 +322,12 @@ export class RetryManager {
             reject(err);
           }
         }, delay);
-        
+
         this.retryTimers.set(key, timer);
       });
     }
   }
-  
+
   /**
    * Cancel retry for a key
    */
@@ -334,7 +339,7 @@ export class RetryManager {
     }
     this.retryAttempts.delete(key);
   }
-  
+
   /**
    * Clear all retries
    */

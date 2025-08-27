@@ -128,7 +128,6 @@ const VALIDATION_ENDPOINTS = {
   gemini: 'https://generativelanguage.googleapis.com/v1beta/models',
 } as const;
 
-
 // ============================================================================
 // Cache Implementation
 // ============================================================================
@@ -392,7 +391,6 @@ export class APIKeyValidationService {
     };
   }
 
-
   /**
    * Validate API key with live API call
    */
@@ -418,7 +416,7 @@ export class APIKeyValidationService {
         response = await fetch(endpoint, {
           method: 'POST',
           headers: {
-            'Authorization': `Bearer ${key}`,
+            Authorization: `Bearer ${key}`,
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
@@ -506,13 +504,12 @@ export class APIKeyValidationService {
       return {
         isValid: false,
         responseTime,
-        endpoint: endpoint || VALIDATION_ENDPOINTS[provider as keyof typeof VALIDATION_ENDPOINTS] || '',
+        endpoint:
+          endpoint || VALIDATION_ENDPOINTS[provider as keyof typeof VALIDATION_ENDPOINTS] || '',
         error: errorMessage,
       };
     }
   }
-
-
 
   /**
    * Get cache key for a validation request
@@ -541,7 +538,6 @@ export class APIKeyValidationService {
   private isValidProvider(provider: string): provider is ProviderType {
     return ['openai', 'gemini'].includes(provider);
   }
-
 
   /**
    * Limit concurrency of promises

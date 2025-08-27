@@ -8,29 +8,29 @@ import type { DatabaseService } from './types';
 
 /** Stub IndexedDB helper - simplified database operations */
 export class DatabaseServiceStub implements DatabaseService {
-  async add(_storeName: string, _data: any): Promise<void> {
+  async add(_storeName: string, _data: unknown): Promise<void> {
     // Stub implementation
   }
 
-  async get(_storeName: string, _key: any): Promise<any> {
+  async get(_storeName: string, _key: unknown): Promise<unknown> {
     // Stub implementation
     return null;
   }
 
-  async update(_storeName: string, _data: any): Promise<void> {
+  async update(_storeName: string, _data: unknown): Promise<void> {
     // Stub implementation
   }
 
-  async delete(_storeName: string, _key: any): Promise<void> {
+  async delete(_storeName: string, _key: unknown): Promise<void> {
     // Stub implementation
   }
 
-  async getAll(_storeName: string): Promise<any[]> {
+  async getAll(_storeName: string): Promise<unknown[]> {
     // Stub implementation
     return [];
   }
 
-  async query(_storeName: string, _filter: any): Promise<any[]> {
+  async query(_storeName: string, _filter: unknown): Promise<unknown[]> {
     // Stub implementation
     return [];
   }

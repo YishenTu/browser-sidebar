@@ -1,6 +1,6 @@
 /**
  * @file Modal Component
- * 
+ *
  * A reusable modal/popup component for displaying content in an overlay
  */
 
@@ -26,7 +26,7 @@ export interface ModalProps {
 
 /**
  * Modal Component
- * 
+ *
  * Displays content in a centered overlay with backdrop
  */
 export const Modal: React.FC<ModalProps> = ({
@@ -66,14 +66,10 @@ export const Modal: React.FC<ModalProps> = ({
   return (
     <>
       {/* Backdrop */}
-      <div 
-        className="modal-backdrop" 
-        onClick={onClose}
-        aria-hidden="true"
-      />
-      
+      <div className="modal-backdrop" onClick={onClose} aria-hidden="true" />
+
       {/* Modal Container */}
-      <div 
+      <div
         className={`modal-container ${className}`}
         role="dialog"
         aria-modal="true"
@@ -100,11 +96,9 @@ export const Modal: React.FC<ModalProps> = ({
             )}
           </div>
         )}
-        
+
         {/* Modal Content */}
-        <div className="modal-content">
-          {children}
-        </div>
+        <div className="modal-content">{children}</div>
       </div>
     </>
   );

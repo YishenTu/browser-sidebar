@@ -11,15 +11,25 @@ import type { OpenAIError } from './types';
 /**
  * Format OpenAI error into provider error structure
  */
-export function formatError(error: any): ProviderError {
+export function formatError(error: unknown): ProviderError {
   let errorType: ErrorType = 'unknown';
   let message = 'Unknown error occurred';
   let code = 'UNKNOWN_ERROR';
   let retryAfter: number | undefined;
 
+  const err = error as {
+    error?: { message?: string; code?: string; type?: string };
+    headers?: Record<string, string>;
+    status?: number;
+    statusCode?: number;
+    code?: string;
+    name?: string;
+    message?: string;
+  };
+
   // Handle OpenAI API errors
-  if (error?.error) {
-    const apiError = error.error;
+  if (err?.error) {
+    const apiError = err.error;
     message = apiError.message || message;
     code = apiError.code || code;
 
@@ -29,22 +39,22 @@ export function formatError(error: any): ProviderError {
     } else if (apiError.type === 'rate_limit_error' || apiError.code?.includes('rate_limit')) {
       errorType = 'rate_limit';
       // Extract retry-after from headers if available
-      if (error.headers?.['retry-after']) {
-        retryAfter = parseInt(error.headers['retry-after'], 10);
+      if (err.headers?.['retry-after']) {
+        retryAfter = parseInt(err.headers['retry-after'], 10);
       }
-    } else if (apiError.type?.includes('network') || error.code === 'ECONNREFUSED') {
+    } else if (apiError.type?.includes('network') || err.code === 'ECONNREFUSED') {
       errorType = 'network';
     } else if (apiError.type?.includes('validation')) {
       errorType = 'validation';
     }
-  } else if (error instanceof Error) {
-    message = error.message;
+  } else if (err instanceof Error) {
+    message = err.message;
 
     // Handle common JavaScript/network errors
-    if (error.name === 'NetworkError' || error.message.includes('network')) {
+    if (err.name === 'NetworkError' || err.message?.includes('network')) {
       errorType = 'network';
       code = 'NETWORK_ERROR';
-    } else if (error.message.includes('abort')) {
+    } else if (err.message?.includes('abort')) {
       errorType = 'network';
       code = 'REQUEST_ABORTED';
     }
@@ -53,8 +63,8 @@ export function formatError(error: any): ProviderError {
   return createProviderError(errorType, message, code, {
     retryAfter,
     details: {
-      statusCode: error?.status || error?.statusCode,
-      originalError: error,
+      statusCode: err?.status || err?.statusCode,
+      originalError: err,
     },
   });
 }
@@ -68,7 +78,7 @@ export function createProviderError(
   code: string,
   details?: {
     retryAfter?: number;
-    details?: any;
+    details?: unknown;
   }
 ): ProviderError {
   const error: ProviderError = {

@@ -1,0 +1,120 @@
+/* Settings Component Styles */
+
+.settings-container {
+  padding: 20px;
+  max-width: 100%;
+}
+
+.settings-title {
+  font-size: 18px;
+  font-weight: 600;
+  margin-bottom: 24px;
+  color: #e5e7eb;
+}
+
+.settings-section {
+  margin-bottom: 20px;
+}
+
+.settings-section--gemini {
+  margin-bottom: 24px;
+}
+
+.settings-label {
+  display: block;
+  font-size: 14px;
+  font-weight: 500;
+  margin-bottom: 8px;
+  color: #9ca3af;
+}
+
+.settings-input-group {
+  display: flex;
+  gap: 8px;
+  align-items: stretch;
+}
+
+.settings-input-wrapper {
+  flex: 1;
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.settings-input {
+  width: 100%;
+  padding: 8px 12px;
+  background-color: rgba(31, 41, 55, 0.5);
+  border: 1px solid rgba(75, 85, 99, 0.3);
+  border-radius: 6px;
+  font-size: 14px;
+  color: #e5e7eb;
+  outline: none;
+}
+
+.settings-input--masked {
+  font-family: monospace;
+}
+
+.settings-button {
+  padding: 8px 16px;
+  background-color: rgba(75, 85, 99, 0.3);
+  color: #e5e7eb;
+  border: 1px solid rgba(75, 85, 99, 0.3);
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+  transition:
+    background-color 0.2s,
+    color 0.2s;
+}
+
+.settings-button:hover:not(:disabled) {
+  background-color: rgba(75, 85, 99, 0.5);
+}
+
+.settings-button:disabled {
+  color: #6b7280;
+  cursor: not-allowed;
+}
+
+.settings-status {
+  font-size: 12px;
+  margin-top: 6px;
+}
+
+.settings-status--verifying {
+  color: #9ca3af;
+}
+
+.settings-status--valid {
+  color: #34d399;
+}
+
+.settings-status--invalid {
+  color: #f87171;
+}
+
+.settings-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-start;
+}
+
+.settings-reset-button {
+  padding: 8px 16px;
+  background-color: rgba(239, 68, 68, 0.2);
+  color: #f87171;
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.settings-reset-button:hover {
+  background-color: rgba(239, 68, 68, 0.3);
+}

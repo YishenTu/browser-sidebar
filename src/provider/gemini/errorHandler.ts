@@ -120,54 +120,65 @@ function getRateLimitMessage(errorData: GeminiErrorResponse): string {
 /**
  * Format error into provider error structure
  */
-export function formatError(error: any): ProviderError {
+export function formatError(error: unknown): ProviderError {
   let errorType: ErrorType = 'unknown';
   let message = 'An unexpected error occurred';
   let code = 'GEMINI_ERROR';
   let retryAfter: number | undefined;
-  let details: any = {
+  let details: Record<string, unknown> = {
     timestamp: new Date(),
   };
 
+  const err = error as {
+    message?: string;
+    error?: { message?: string; code?: string; retry_after?: number };
+    status?: number;
+    code?: string;
+    details?: Record<string, unknown>;
+    field?: string;
+    value?: unknown;
+    name?: string;
+  };
+
   // Handle different error structures
-  if (error) {
+  if (err) {
     // Extract message
-    if (error.message) {
-      message = error.message;
-    } else if (error.error?.message) {
-      message = error.error.message;
+    if (err.message) {
+      message = err.message;
+    } else if (err.error?.message) {
+      message = err.error.message;
     }
 
     // Determine error type based on status or code
-    errorType = determineErrorType(error);
+    errorType = determineErrorType(err);
     code = getErrorCode(errorType);
 
     // Set retry after for rate limits
     if (errorType === 'rate_limit') {
-      retryAfter = error.error?.retry_after || GEMINI_API_CONFIG.DEFAULT_RETRY_AFTER;
+      retryAfter = err.error?.retry_after || GEMINI_API_CONFIG.DEFAULT_RETRY_AFTER;
     }
 
     // Add status code to details if available
-    if (error.status) {
-      details.statusCode = error.status;
+    if (err.status) {
+      details.statusCode = err.status;
     }
 
     // Add additional error details
-    if (error.details) {
-      details = { ...details, ...error.details };
+    if (err.details) {
+      details = { ...details, ...err.details };
     }
 
     // Add error-specific details
-    if (error.field) {
-      details.field = error.field;
+    if (err.field) {
+      details.field = err.field;
     }
-    if (error.value) {
-      details.value = error.value;
+    if (err.value) {
+      details.value = err.value;
     }
 
     // Add original error code if present
-    if (error.error?.code) {
-      details.originalCode = error.error.code;
+    if (err.error?.code) {
+      details.originalCode = err.error.code;
     }
   }
 
@@ -189,24 +200,31 @@ export function formatError(error: any): ProviderError {
 /**
  * Determine error type from error object
  */
-function determineErrorType(error: any): ErrorType {
+function determineErrorType(error: unknown): ErrorType {
+  const err = error as {
+    status?: number;
+    code?: string;
+    message?: string;
+    name?: string;
+  };
+
   // Check by HTTP status
-  if (error.status === 401 || error.code === 'UNAUTHENTICATED') {
+  if (err.status === 401 || err.code === 'UNAUTHENTICATED') {
     return 'authentication';
   }
-  if (error.status === 429 || error.code === 'RESOURCE_EXHAUSTED') {
+  if (err.status === 429 || err.code === 'RESOURCE_EXHAUSTED') {
     return 'rate_limit';
   }
-  if (error.status === 400 || error.code === 'INVALID_ARGUMENT') {
+  if (err.status === 400 || err.code === 'INVALID_ARGUMENT') {
     return 'validation';
   }
-  if (error.status === 403 || error.code === 'PERMISSION_DENIED') {
+  if (err.status === 403 || err.code === 'PERMISSION_DENIED') {
     return 'authentication';
   }
 
   // Check by error message content
-  if (error.message) {
-    const lowerMessage = error.message.toLowerCase();
+  if (err.message) {
+    const lowerMessage = err.message.toLowerCase();
     if (lowerMessage.includes('network') || lowerMessage.includes('fetch')) {
       return 'network';
     }
@@ -222,7 +240,7 @@ function determineErrorType(error: any): ErrorType {
   }
 
   // Check for abort errors
-  if (error.name === 'AbortError') {
+  if (err.name === 'AbortError') {
     return 'network';
   }
 
@@ -247,7 +265,7 @@ function getErrorCode(errorType: ErrorType): string {
 /**
  * Check if error is already formatted as ProviderError
  */
-export function isProviderError(error: any): error is ProviderError {
+export function isProviderError(error: unknown): error is ProviderError {
   return (
     error &&
     typeof error === 'object' &&

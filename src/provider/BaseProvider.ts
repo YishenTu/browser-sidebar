@@ -105,7 +105,7 @@ export abstract class BaseProvider implements AIProvider {
    * Validate provider configuration
    * Must be implemented by concrete providers
    */
-  abstract validateConfig(config: any): ProviderValidationResult;
+  abstract validateConfig(config: Record<string, unknown>): ProviderValidationResult;
 
   /**
    * Test connection to provider
@@ -121,13 +121,13 @@ export abstract class BaseProvider implements AIProvider {
    * Send chat messages and get response
    * Must be implemented by concrete providers
    */
-  abstract chat(messages: ProviderChatMessage[], config?: any): Promise<ProviderResponse>;
+  abstract chat(messages: ProviderChatMessage[], config?: Record<string, unknown>): Promise<ProviderResponse>;
 
   /**
    * Stream chat messages
    * Must be implemented by concrete providers
    */
-  abstract streamChat(messages: ProviderChatMessage[], config?: any): AsyncIterable<StreamChunk>;
+  abstract streamChat(messages: ProviderChatMessage[], config?: Record<string, unknown>): AsyncIterable<StreamChunk>;
 
   // ============================================================================
   // Model Methods
@@ -153,7 +153,7 @@ export abstract class BaseProvider implements AIProvider {
    * Format error into provider error structure
    * Must be implemented by concrete providers
    */
-  abstract formatError(error: any): ProviderError;
+  abstract formatError(error: unknown): ProviderError;
 
   // ============================================================================
   // Shared Functionality
@@ -168,7 +168,7 @@ export abstract class BaseProvider implements AIProvider {
     code: string,
     options: {
       retryAfter?: number;
-      details?: Record<string, any>;
+      details?: Record<string, unknown>;
     } = {}
   ): ProviderError {
     const error: ProviderError = {
@@ -218,7 +218,7 @@ export abstract class BaseProvider implements AIProvider {
   /**
    * Check if message has valid format
    */
-  private isValidMessage(message: any): message is ProviderChatMessage {
+  private isValidMessage(message: unknown): message is ProviderChatMessage {
     return (
       typeof message === 'object' &&
       message !== null &&
@@ -318,9 +318,9 @@ export abstract class BaseProvider implements AIProvider {
     messages: ProviderChatMessage[],
     chatImplementation: (
       messages: ProviderChatMessage[],
-      config?: any
+      config?: Record<string, unknown>
     ) => Promise<ProviderResponse>,
-    config?: any
+    config?: Record<string, unknown>
   ): Promise<ProviderResponse> {
     this.validateMessages(messages);
     this.trackRequest();
@@ -334,9 +334,9 @@ export abstract class BaseProvider implements AIProvider {
     messages: ProviderChatMessage[],
     streamImplementation: (
       messages: ProviderChatMessage[],
-      config?: any
+      config?: Record<string, unknown>
     ) => AsyncIterable<StreamChunk>,
-    config?: any
+    config?: Record<string, unknown>
   ): AsyncIterable<StreamChunk> {
     this.validateMessages(messages);
     this.trackRequest();

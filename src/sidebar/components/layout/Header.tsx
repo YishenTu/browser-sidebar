@@ -93,9 +93,8 @@ export const Header: React.FC<HeaderProps> = ({
   };
   return (
     <div
-      className="ai-sidebar-header"
+      className={`ai-sidebar-header ${isDragging ? 'ai-sidebar-header--dragging' : ''}`}
       onMouseDown={onMouseDown}
-      style={{ cursor: isDragging ? 'grabbing' : 'grab' }}
       data-testid="sidebar-header"
     >
       <div className="ai-sidebar-header-title">

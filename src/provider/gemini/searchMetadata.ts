@@ -12,7 +12,7 @@ import type { GeminiSearchMetadata, FormattedSearchMetadata } from './types';
  * Handles both camelCase and snake_case field names
  */
 export function formatSearchMetadata(
-  metadata: GeminiSearchMetadata | any
+  metadata: GeminiSearchMetadata | unknown
 ): FormattedSearchMetadata | undefined {
   const searchInfo: FormattedSearchMetadata = {};
 
@@ -46,24 +46,26 @@ export function formatSearchMetadata(
 /**
  * Extract search queries from metadata
  */
-function extractQueries(metadata: any): string[] {
-  const queries = metadata.webSearchQueries || metadata.web_search_queries;
+function extractQueries(metadata: unknown): string[] {
+  const meta = metadata as { webSearchQueries?: string[]; web_search_queries?: string[] };
+  const queries = meta.webSearchQueries || meta.web_search_queries;
   return queries || [];
 }
 
 /**
  * Extract sources from grounding chunks
  */
-function extractSources(metadata: any): Array<{ url: string; title: string }> {
-  const chunks = metadata.groundingChunks || metadata.grounding_chunks;
+function extractSources(metadata: unknown): Array<{ url: string; title: string }> {
+  const meta = metadata as { groundingChunks?: unknown[]; grounding_chunks?: unknown[] };
+  const chunks = meta.groundingChunks || meta.grounding_chunks;
 
   if (!chunks?.length) {
     return [];
   }
 
   return chunks
-    .filter((chunk: any) => chunk.web?.uri)
-    .map((chunk: any) => ({
+    .filter((chunk: { web?: { uri?: string } }) => chunk.web?.uri)
+    .map((chunk: { web: { uri: string; title?: string } }) => ({
       url: chunk.web.uri,
       title: chunk.web.title || 'Untitled',
     }));
@@ -72,19 +74,24 @@ function extractSources(metadata: any): Array<{ url: string; title: string }> {
 /**
  * Extract citations from grounding supports
  */
-function extractCitations(metadata: any): Array<{
+function extractCitations(metadata: unknown): Array<{
   text: string;
   startIndex?: number;
   endIndex?: number;
   sourceIndices: number[];
 }> {
-  const supports = metadata.groundingSupports || metadata.grounding_supports;
+  const meta = metadata as { groundingSupports?: unknown[]; grounding_supports?: unknown[] };
+  const supports = meta.groundingSupports || meta.grounding_supports;
 
   if (!supports?.length) {
     return [];
   }
 
-  return supports.map((support: any) => ({
+  return supports.map((support: {
+    segment?: { text?: string; startIndex?: number; start_index?: number; endIndex?: number; end_index?: number };
+    groundingChunkIndices?: number[];
+    grounding_chunk_indices?: number[];
+  }) => ({
     text: support.segment?.text || '',
     startIndex: support.segment?.startIndex || support.segment?.start_index,
     endIndex: support.segment?.endIndex || support.segment?.end_index,
@@ -95,8 +102,9 @@ function extractCitations(metadata: any): Array<{
 /**
  * Extract search widget content
  */
-function extractSearchWidget(metadata: any): string | undefined {
-  const entryPoint = metadata.searchEntryPoint || metadata.search_entry_point;
+function extractSearchWidget(metadata: unknown): string | undefined {
+  const meta = metadata as { searchEntryPoint?: { renderedContent?: string; rendered_content?: string }; search_entry_point?: { renderedContent?: string; rendered_content?: string } };
+  const entryPoint = meta.searchEntryPoint || meta.search_entry_point;
 
   if (entryPoint) {
     return entryPoint.renderedContent || entryPoint.rendered_content;
@@ -108,18 +116,29 @@ function extractSearchWidget(metadata: any): string | undefined {
 /**
  * Check if metadata has search results
  */
-export function hasSearchResults(metadata: any): boolean {
+export function hasSearchResults(metadata: unknown): boolean {
   if (!metadata) return false;
+
+  const meta = metadata as {
+    webSearchQueries?: unknown[];
+    web_search_queries?: unknown[];
+    groundingChunks?: unknown[];
+    grounding_chunks?: unknown[];
+    groundingSupports?: unknown[];
+    grounding_supports?: unknown[];
+    searchEntryPoint?: unknown;
+    search_entry_point?: unknown;
+  };
 
   // Check for any search-related fields
   return !!(
-    metadata.webSearchQueries?.length ||
-    metadata.web_search_queries?.length ||
-    metadata.groundingChunks?.length ||
-    metadata.grounding_chunks?.length ||
-    metadata.groundingSupports?.length ||
-    metadata.grounding_supports?.length ||
-    metadata.searchEntryPoint ||
-    metadata.search_entry_point
+    meta.webSearchQueries?.length ||
+    meta.web_search_queries?.length ||
+    meta.groundingChunks?.length ||
+    meta.grounding_chunks?.length ||
+    meta.groundingSupports?.length ||
+    meta.grounding_supports?.length ||
+    meta.searchEntryPoint ||
+    meta.search_entry_point
   );
 }

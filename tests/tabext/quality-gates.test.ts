@@ -38,7 +38,8 @@ describe('Quality Gates', () => {
             <p>Even more content...</p>
           </article>
         `,
-        textContent: 'Main Title Section 1 Content with multiple paragraphs... Section 2 More content here... Subsection Even more content...',
+        textContent:
+          'Main Title Section 1 Content with multiple paragraphs... Section 2 More content here... Subsection Even more content...',
         extractionMethod: 'defuddle',
         metadata: {
           wordCount: 300,
@@ -82,9 +83,13 @@ describe('Quality Gates', () => {
             <p>${'Final thoughts. '.repeat(10)}</p>
           </article>
         `,
-        textContent: 'Article Title Introduction ' + 'Long paragraph content. '.repeat(20) + 
-                      'Main Section ' + 'Another paragraph. '.repeat(20) + 
-                      'Conclusion ' + 'Final thoughts. '.repeat(10),
+        textContent:
+          'Article Title Introduction ' +
+          'Long paragraph content. '.repeat(20) +
+          'Main Section ' +
+          'Another paragraph. '.repeat(20) +
+          'Conclusion ' +
+          'Final thoughts. '.repeat(10),
         extractionMethod: 'defuddle',
         metadata: {
           wordCount: 500,
@@ -160,7 +165,8 @@ describe('Quality Gates', () => {
             <p>Explanation text</p>
           </article>
         `,
-        textContent: 'Technical Guide function example() { return true; } Header Data Explanation text',
+        textContent:
+          'Technical Guide function example() { return true; } Header Data Explanation text',
         metadata: {
           wordCount: 150,
           hasCodeBlocks: true,

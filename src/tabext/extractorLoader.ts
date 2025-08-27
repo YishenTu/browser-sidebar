@@ -13,7 +13,7 @@ import type { ExtractedContent, ExtractionOptions, ExtractionMode } from '@/type
  * @returns Promise resolving to the content extractor module
  */
 export const loadExtractor = async () => {
-  return import('@tabext/contentExtractor');
+  return import('@tabext/extraction/orchestrator');
 };
 
 /**

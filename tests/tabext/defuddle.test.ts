@@ -15,9 +15,9 @@ vi.mock('defuddle', () => ({
       parseTime: 123,
       schemaOrgData: { '@type': 'Article', name: 'Test Article' },
       metaTags: [{ property: 'og:title', content: 'Test Article Title' }],
-      site: 'example.com'
-    })
-  }))
+      site: 'example.com',
+    }),
+  })),
 }));
 
 describe('Defuddle Extractor', () => {
@@ -28,25 +28,27 @@ describe('Defuddle Extractor', () => {
   it('should extract content successfully with defuddle', async () => {
     // Import after mocking
     const { extractWithDefuddle } = await import('@tabext/extractors/defuddle');
-    
+
     const result = await extractWithDefuddle();
-    
+
     // Check basic fields
     expect(result.title).toBe('Test Article Title');
     expect(result.author).toBe('John Doe');
     expect(result.publishedDate).toBe('2024-01-15');
     expect(result.extractionMethod).toBe('defuddle');
-    
+
     // Check content
     expect(result.content).toContain('Test article content');
     expect(result.textContent).toContain('Test article content');
-    
+
     // Check metadata
     expect(result.metadata?.wordCount).toBe(10);
     expect(result.metadata?.timeoutMs).toBe(123);
     expect(result.metadata?.schemaOrgData).toEqual({ '@type': 'Article', name: 'Test Article' });
-    expect(result.metadata?.metaTags).toEqual([{ property: 'og:title', content: 'Test Article Title' }]);
-    
+    expect(result.metadata?.metaTags).toEqual([
+      { property: 'og:title', content: 'Test Article Title' },
+    ]);
+
     // Check backward compatibility
     expect(result.wordCount).toBe(10);
   });
@@ -57,13 +59,13 @@ describe('Defuddle Extractor', () => {
     vi.mock('defuddle', () => ({
       default: vi.fn().mockImplementation(() => {
         throw new Error('Defuddle parsing failed');
-      })
+      }),
     }));
-    
+
     const { extractWithDefuddle } = await import('@tabext/extractors/defuddle');
-    
+
     const result = await extractWithDefuddle();
-    
+
     // Should return failure result
     expect(result.extractionMethod).toBe('failed');
     expect(result.title).toBe('');
@@ -80,7 +82,8 @@ describe('Defuddle Extractor', () => {
           title: 'Technical Article',
           author: '',
           published: '',
-          content: '<pre>const x = 1;</pre><code>inline</code><table><tr><td>Data</td></tr></table>',
+          content:
+            '<pre>const x = 1;</pre><code>inline</code><table><tr><td>Data</td></tr></table>',
           description: '',
           favicon: '',
           image: '',
@@ -88,15 +91,15 @@ describe('Defuddle Extractor', () => {
           parseTime: 50,
           schemaOrgData: undefined,
           metaTags: undefined,
-          site: ''
-        })
-      }))
+          site: '',
+        }),
+      })),
     }));
-    
+
     const { extractWithDefuddle } = await import('@tabext/extractors/defuddle');
-    
+
     const result = await extractWithDefuddle();
-    
+
     expect(result.metadata?.hasCodeBlocks).toBe(true);
     expect(result.metadata?.hasTables).toBe(true);
     expect(result.hasCode).toBe(true);

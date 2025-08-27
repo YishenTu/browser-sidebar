@@ -96,7 +96,7 @@ export interface ProviderMetadata {
 export class ProviderRegistry {
   private providers: Map<ProviderType, AIProvider> = new Map();
   private activeProviderType: ProviderType | null = null;
-  private eventListeners: Map<RegistryEventType, Set<EventListener<any>>> = new Map();
+  private eventListeners: Map<RegistryEventType, Set<EventListener<unknown>>> = new Map();
 
   constructor() {
     // Initialize event listener maps
@@ -335,7 +335,7 @@ export class ProviderRegistry {
    * @param provider The provider to validate
    * @throws Error if provider is invalid
    */
-  private validateProvider(provider: any): asserts provider is AIProvider {
+  private validateProvider(provider: unknown): asserts provider is AIProvider {
     if (!provider) {
       throw new Error('Invalid provider: missing required properties');
     }
@@ -398,7 +398,7 @@ export class ProviderRegistry {
     }
 
     // Validate provider type
-    if (!validationSchema.validTypes.includes(provider.type as any)) {
+    if (!validationSchema.validTypes.includes((provider as AIProvider).type as ProviderType)) {
       throw new Error(`Invalid provider: missing required properties`);
     }
 

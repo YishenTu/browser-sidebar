@@ -17,7 +17,7 @@
 /* @import './icon-button.css'; - Removed: Only animation needed, moved to animations.css */
 @import './model-selector.css'; /* Model selection dropdown */
 @import './markdown-content.css'; /* Markdown rendering styles */
-/* @import './provider-settings.css'; - REMOVED: Unused component */
+@import './settings.css'; /* Settings component styles */
 @import './katex-math.css'; /* Mathematical equation rendering */
 @import './thinking-wrapper.css'; /* Thinking/reasoning display wrapper */
 
@@ -28,9 +28,8 @@
 @import './dropdown.css'; /* Generic dropdown component */
 @import './search-sources.css'; /* Search sources display */
 @import './copy-button.css'; /* Copy button component */
-@import './edit-indicator.css'; /* Edit indicator for message editing */
 @import './tab-context-indicator.css'; /* Tab context indicator */
 @import './modal.css'; /* Modal component for full content display */
-@import './extraction-mode-selector.css'; /* Extraction mode selector */
+/* @import './extraction-mode-selector.css'; - Extraction mode selector - not yet implemented */
 
 /* Any global overrides or additional styles can be added below if needed */

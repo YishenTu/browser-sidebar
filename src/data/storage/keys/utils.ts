@@ -60,7 +60,7 @@ export async function findKeyByHash(keyHash: string): Promise<string | null> {
           'keyHash' in keyData &&
           keyData.keyHash === keyHash
         ) {
-          return (keyData as any).id;
+          return (keyData as { id: string }).id;
         }
       }
     }
@@ -80,7 +80,7 @@ export async function updateLastUsed(id: string): Promise<void> {
       await dbInstance.update(DB_STORES.METADATA, {
         id,
         lastUsed: Date.now(),
-      } as any);
+      } as APIKeyMetadata);
     }
   } catch {
     // Ignore errors in last used updates
@@ -115,7 +115,7 @@ export function incrementOperationCount(metrics: ServiceMetrics, operation: stri
 export async function auditLog(
   event: string,
   keyId: string,
-  details: Record<string, any>
+  details: Record<string, unknown>
 ): Promise<void> {
   try {
     const auditEntry = {
@@ -138,11 +138,11 @@ export async function auditLog(
 /**
  * Perform data migrations from older versions
  */
-export async function performMigrations(encryptionService: any): Promise<void> {
+export async function performMigrations(encryptionService: EncryptionService): Promise<void> {
   try {
     const migrationStatus = await chromeStorage.get(STORAGE_KEYS.MIGRATION_STATUS);
 
-    if (!migrationStatus || (migrationStatus as any).version < 1) {
+    if (!migrationStatus || (migrationStatus as { version: number }).version < 1) {
       // Perform migration from unencrypted storage
       const legacyKeys = await chromeStorage.getBatch([]);
 
@@ -156,7 +156,7 @@ export async function performMigrations(encryptionService: any): Promise<void> {
           !('encryptedData' in value)
         ) {
           // This is legacy unencrypted data
-          const legacyKey = value as any;
+          const legacyKey = value as { key: string; provider?: string; metadata?: unknown };
 
           try {
             // Encrypt the key

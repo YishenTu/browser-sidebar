@@ -73,8 +73,10 @@ Prevent memory leaks by:
 | Minification | 20-30% size reduction | Build tools |
 
 These techniques can dramatically improve your application performance.`,
-  textContent: 'Advanced JavaScript Performance Optimization Techniques JavaScript performance optimization is crucial for modern web applications...',
-  excerpt: 'JavaScript performance optimization is crucial for modern web applications. Here are the most effective techniques for DOM manipulation...',
+  textContent:
+    'Advanced JavaScript Performance Optimization Techniques JavaScript performance optimization is crucial for modern web applications...',
+  excerpt:
+    'JavaScript performance optimization is crucial for modern web applications. Here are the most effective techniques for DOM manipulation...',
   author: 'Performance Expert',
   publishedDate: '2024-08-27',
   extractedAt: Date.now(),
@@ -259,7 +261,7 @@ This comprehensive optimization technique demonstrates significant improvements 
   // Repeat the content multiple times to ensure we exceed 200K characters
   const sections = Array.from({ length: 150 }, () => baseText).join('\n');
   const content = `# Comprehensive JavaScript Performance Guide\n\n${sections}`;
-  
+
   return {
     ...mockExtractedContent,
     title: 'Comprehensive JavaScript Performance Guide - 200K Characters',
@@ -282,20 +284,21 @@ function createMessageWithInjectedContent(
   extractedContent: ExtractedContent,
   includeFullContext = true
 ): ProviderChatMessage[] {
-  const contextInfo = includeFullContext ? 
-    `Context from web page "${extractedContent.title}" (${extractedContent.url}):\n\n${extractedContent.content}\n\n---\n\n` :
-    `Context from web page "${extractedContent.title}": ${extractedContent.excerpt}\n\n---\n\n`;
+  const contextInfo = includeFullContext
+    ? `Context from web page "${extractedContent.title}" (${extractedContent.url}):\n\n${extractedContent.content}\n\n---\n\n`
+    : `Context from web page "${extractedContent.title}": ${extractedContent.excerpt}\n\n---\n\n`;
 
   return [
     {
       id: 'msg-system',
       role: 'system',
-      content: 'You are a helpful AI assistant. When provided with web page content, analyze it to answer user questions accurately.',
+      content:
+        'You are a helpful AI assistant. When provided with web page content, analyze it to answer user questions accurately.',
       timestamp: new Date(),
     },
     {
       id: 'msg-user',
-      role: 'user', 
+      role: 'user',
       content: `${contextInfo}${userQuery}`,
       timestamp: new Date(),
     },
@@ -380,7 +383,8 @@ describe('Provider Streaming with Injected Content - Integration Tests', () => {
       const mockStreamEvents = [
         {
           type: 'response.output_text.delta',
-          delta: 'Based on the content provided, there are three main performance optimization techniques:',
+          delta:
+            'Based on the content provided, there are three main performance optimization techniques:',
           response: { id: 'resp-123' },
         },
         {
@@ -414,7 +418,7 @@ describe('Provider Streaming with Injected Content - Integration Tests', () => {
 
       const startTime = performance.now();
       const chunks: StreamChunk[] = [];
-      
+
       for await (const chunk of openaiProvider.streamChat(messages)) {
         chunks.push(chunk);
       }
@@ -428,9 +432,7 @@ describe('Provider Streaming with Injected Content - Integration Tests', () => {
       expect(chunks[0].choices[0]).toHaveProperty('delta');
 
       // Verify content handling
-      const fullContent = chunks
-        .map(chunk => chunk.choices[0]?.delta?.content || '')
-        .join('');
+      const fullContent = chunks.map(chunk => chunk.choices[0]?.delta?.content || '').join('');
       expect(fullContent).toContain('DOM Manipulation Optimization');
       expect(fullContent).toContain('Memory Management');
       expect(fullContent).toContain('Bundle Optimization');
@@ -460,7 +462,8 @@ describe('Provider Streaming with Injected Content - Integration Tests', () => {
         object: 'response',
         created: Date.now(),
         model: 'gpt-5-nano',
-        output_text: 'The key JavaScript performance techniques include: 1) DOM manipulation optimization using document fragments, 2) Memory management through proper cleanup, and 3) Bundle optimization via tree shaking and code splitting.',
+        output_text:
+          'The key JavaScript performance techniques include: 1) DOM manipulation optimization using document fragments, 2) Memory management through proper cleanup, and 3) Bundle optimization via tree shaking and code splitting.',
         finish_reason: 'stop',
         usage: {
           input_tokens: 250, // Increased due to injected content
@@ -479,7 +482,7 @@ describe('Provider Streaming with Injected Content - Integration Tests', () => {
       expect(response).toBeDefined();
       expect(response.content).toContain('JavaScript performance techniques');
       expect(response.usage.promptTokens).toBeGreaterThan(200); // Should include injected content tokens
-      
+
       // Verify performance overhead
       expect(overhead).toBeLessThan(100); // Should be under 100ms overhead
     });
@@ -494,10 +497,11 @@ describe('Provider Streaming with Injected Content - Integration Tests', () => {
 
       const mockResponse = {
         id: 'resp-large',
-        object: 'response', 
+        object: 'response',
         created: Date.now(),
         model: 'gpt-5-nano',
-        output_text: 'This comprehensive guide focuses on JavaScript performance optimization techniques, covering 100 different strategies including DOM manipulation, memory management, and bundle optimization.',
+        output_text:
+          'This comprehensive guide focuses on JavaScript performance optimization techniques, covering 100 different strategies including DOM manipulation, memory management, and bundle optimization.',
         finish_reason: 'stop',
         usage: {
           input_tokens: 50000, // Large number due to injected content
@@ -519,7 +523,7 @@ describe('Provider Streaming with Injected Content - Integration Tests', () => {
 
       // Verify the provider can handle large content without errors
       expect(response.finishReason).toBe('stop');
-      
+
       // Performance should still be reasonable
       expect(overhead).toBeLessThan(100); // 100ms overhead max
     });
@@ -536,21 +540,45 @@ describe('Provider Streaming with Injected Content - Integration Tests', () => {
 
       // Mock Gemini streaming response
       const mockStreamData = [
-        { candidates: [{ content: { parts: [{ text: 'Based on the provided content, DOM optimization involves' }] } }] },
-        { candidates: [{ content: { parts: [{ text: ' using document fragments to batch DOM updates.' }] } }] },
-        { candidates: [{ content: { parts: [{ text: ' This approach significantly reduces browser reflow and repaint operations.' }] }, finishReason: 'STOP' }] },
+        {
+          candidates: [
+            {
+              content: {
+                parts: [{ text: 'Based on the provided content, DOM optimization involves' }],
+              },
+            },
+          ],
+        },
+        {
+          candidates: [
+            { content: { parts: [{ text: ' using document fragments to batch DOM updates.' }] } },
+          ],
+        },
+        {
+          candidates: [
+            {
+              content: {
+                parts: [
+                  {
+                    text: ' This approach significantly reduces browser reflow and repaint operations.',
+                  },
+                ],
+              },
+              finishReason: 'STOP',
+            },
+          ],
+        },
       ];
 
       // Convert to streaming format
-      const streamChunks = mockStreamData
-        .map(data => `data: ${JSON.stringify(data)}\n\n`)
-        .join('');
+      const streamChunks = mockStreamData.map(data => `data: ${JSON.stringify(data)}\n\n`).join('');
 
       const mockResponse = {
         ok: true,
         body: {
           getReader: () => ({
-            read: vi.fn()
+            read: vi
+              .fn()
               .mockResolvedValueOnce({ done: false, value: new TextEncoder().encode(streamChunks) })
               .mockResolvedValueOnce({ done: true, value: null }),
             releaseLock: vi.fn(),
@@ -571,10 +599,8 @@ describe('Provider Streaming with Injected Content - Integration Tests', () => {
       const overhead = endTime - startTime;
 
       expect(chunks.length).toBeGreaterThan(0);
-      
-      const fullContent = chunks
-        .map(chunk => chunk.choices[0]?.delta?.content || '')
-        .join('');
+
+      const fullContent = chunks.map(chunk => chunk.choices[0]?.delta?.content || '').join('');
       expect(fullContent).toContain('DOM optimization');
       expect(fullContent).toContain('document fragments');
 
@@ -596,17 +622,23 @@ describe('Provider Streaming with Injected Content - Integration Tests', () => {
       const messages = createMessageWithInjectedContent(userQuery, mockExtractedContent);
 
       const mockResponseData = {
-        candidates: [{
-          content: {
-            parts: [{ text: 'The content mentions three key memory management techniques: cleaning up event listeners, avoiding global variables, and using WeakMap for object associations.' }]
+        candidates: [
+          {
+            content: {
+              parts: [
+                {
+                  text: 'The content mentions three key memory management techniques: cleaning up event listeners, avoiding global variables, and using WeakMap for object associations.',
+                },
+              ],
+            },
+            finishReason: 'STOP',
           },
-          finishReason: 'STOP'
-        }],
+        ],
         usageMetadata: {
           promptTokenCount: 220,
           candidatesTokenCount: 25,
           totalTokenCount: 245,
-        }
+        },
       };
 
       mockFetch.mockResolvedValue({
@@ -633,17 +665,23 @@ describe('Provider Streaming with Injected Content - Integration Tests', () => {
       const messages = createMessageWithInjectedContent(userQuery, largeContent);
 
       const mockResponseData = {
-        candidates: [{
-          content: {
-            parts: [{ text: 'This is a comprehensive JavaScript performance guide covering 100 different optimization techniques across DOM manipulation, memory management, and bundle optimization strategies.' }]
+        candidates: [
+          {
+            content: {
+              parts: [
+                {
+                  text: 'This is a comprehensive JavaScript performance guide covering 100 different optimization techniques across DOM manipulation, memory management, and bundle optimization strategies.',
+                },
+              ],
+            },
+            finishReason: 'STOP',
           },
-          finishReason: 'STOP'
-        }],
+        ],
         usageMetadata: {
           promptTokenCount: 45000,
           candidatesTokenCount: 30,
           totalTokenCount: 45030,
-        }
+        },
       };
 
       mockFetch.mockResolvedValue({
@@ -673,16 +711,17 @@ describe('Provider Streaming with Injected Content - Integration Tests', () => {
     it('should maintain conversation history with injected content - OpenAI', async () => {
       const initialQuery = 'What performance techniques are mentioned?';
       const followupQuery = 'Can you elaborate on the DOM technique?';
-      
+
       // First message with injected content
       const initialMessages = createMessageWithInjectedContent(initialQuery, mockExtractedContent);
-      
+
       const mockInitialResponse = {
         id: 'resp-1',
         object: 'response',
         created: Date.now(),
         model: 'gpt-5-nano',
-        output_text: 'The content mentions three main techniques: DOM manipulation optimization, memory management, and bundle optimization.',
+        output_text:
+          'The content mentions three main techniques: DOM manipulation optimization, memory management, and bundle optimization.',
         finish_reason: 'stop',
         usage: { input_tokens: 200, output_tokens: 20, total_tokens: 220 },
       };
@@ -701,7 +740,7 @@ describe('Provider Streaming with Injected Content - Integration Tests', () => {
           timestamp: new Date(),
         },
         {
-          id: 'msg-user-2', 
+          id: 'msg-user-2',
           role: 'user' as const,
           content: followupQuery,
           timestamp: new Date(),
@@ -713,7 +752,8 @@ describe('Provider Streaming with Injected Content - Integration Tests', () => {
         object: 'response',
         created: Date.now(),
         model: 'gpt-5-nano',
-        output_text: 'DOM optimization involves using document fragments to batch DOM updates, avoiding multiple reflows and repaints.',
+        output_text:
+          'DOM optimization involves using document fragments to batch DOM updates, avoiding multiple reflows and repaints.',
         finish_reason: 'stop',
         usage: { input_tokens: 250, output_tokens: 25, total_tokens: 275 },
       };
@@ -727,12 +767,12 @@ describe('Provider Streaming with Injected Content - Integration Tests', () => {
 
       // Verify both requests were made with proper history
       expect(mockOpenAIInstance.responses.create).toHaveBeenCalledTimes(2);
-      
+
       // Second call should include the assistant's previous response in the input array
       const secondCallArgs = mockOpenAIInstance.responses.create.mock.calls[1][0];
       expect(Array.isArray(secondCallArgs.input)).toBe(true);
       expect(secondCallArgs.input.length).toBeGreaterThan(2); // Should have multiple messages
-      
+
       // Should contain the injected content and conversation history
       const inputContent = secondCallArgs.input.map((msg: any) => msg.content).join(' ');
       expect(inputContent).toContain('Context from web page');
@@ -741,21 +781,32 @@ describe('Provider Streaming with Injected Content - Integration Tests', () => {
     it('should maintain conversation history with injected content - Gemini', async () => {
       const initialQuery = 'What are the bundle optimization strategies?';
       const followupQuery = 'How much size reduction can I expect?';
-      
+
       const initialMessages = createMessageWithInjectedContent(initialQuery, mockExtractedContent);
 
       // Mock initial response
       mockFetch.mockResolvedValueOnce({
         ok: true,
-        json: () => Promise.resolve({
-          candidates: [{
-            content: {
-              parts: [{ text: 'The bundle optimization strategies include tree shaking, code splitting, and minification as shown in the table.' }]
+        json: () =>
+          Promise.resolve({
+            candidates: [
+              {
+                content: {
+                  parts: [
+                    {
+                      text: 'The bundle optimization strategies include tree shaking, code splitting, and minification as shown in the table.',
+                    },
+                  ],
+                },
+                finishReason: 'STOP',
+              },
+            ],
+            usageMetadata: {
+              promptTokenCount: 180,
+              candidatesTokenCount: 18,
+              totalTokenCount: 198,
             },
-            finishReason: 'STOP'
-          }],
-          usageMetadata: { promptTokenCount: 180, candidatesTokenCount: 18, totalTokenCount: 198 }
-        })
+          }),
       });
 
       const initialResponse = await geminiProvider.chat(initialMessages);
@@ -771,7 +822,7 @@ describe('Provider Streaming with Injected Content - Integration Tests', () => {
         },
         {
           id: 'msg-user-2',
-          role: 'user' as const, 
+          role: 'user' as const,
           content: followupQuery,
           timestamp: new Date(),
         },
@@ -780,15 +831,26 @@ describe('Provider Streaming with Injected Content - Integration Tests', () => {
       // Mock follow-up response
       mockFetch.mockResolvedValueOnce({
         ok: true,
-        json: () => Promise.resolve({
-          candidates: [{
-            content: {
-              parts: [{ text: 'According to the performance table, you can expect 30-50% size reduction with tree shaking, and 20-30% with minification.' }]
+        json: () =>
+          Promise.resolve({
+            candidates: [
+              {
+                content: {
+                  parts: [
+                    {
+                      text: 'According to the performance table, you can expect 30-50% size reduction with tree shaking, and 20-30% with minification.',
+                    },
+                  ],
+                },
+                finishReason: 'STOP',
+              },
+            ],
+            usageMetadata: {
+              promptTokenCount: 220,
+              candidatesTokenCount: 22,
+              totalTokenCount: 242,
             },
-            finishReason: 'STOP'
-          }],
-          usageMetadata: { promptTokenCount: 220, candidatesTokenCount: 22, totalTokenCount: 242 }
-        })
+          }),
       });
 
       const followupResponse = await geminiProvider.chat(followupMessages);
@@ -799,7 +861,7 @@ describe('Provider Streaming with Injected Content - Integration Tests', () => {
 
       // Verify conversation history was preserved
       expect(mockFetch).toHaveBeenCalledTimes(2);
-      
+
       const secondRequestBody = JSON.parse(mockFetch.mock.calls[1][1].body);
       expect(secondRequestBody.contents).toHaveLength(4); // system + user + assistant + user
     });
@@ -817,12 +879,14 @@ describe('Provider Streaming with Injected Content - Integration Tests', () => {
       );
 
       // Baseline - measure without injected content
-      const baselineMessages: ProviderChatMessage[] = [{
-        id: 'msg-baseline',
-        role: 'user',
-        content: 'Analyze this simple query',
-        timestamp: new Date(),
-      }];
+      const baselineMessages: ProviderChatMessage[] = [
+        {
+          id: 'msg-baseline',
+          role: 'user',
+          content: 'Analyze this simple query',
+          timestamp: new Date(),
+        },
+      ];
 
       // Mock responses for both scenarios
       async function* mockStream() {
@@ -863,10 +927,10 @@ describe('Provider Streaming with Injected Content - Integration Tests', () => {
 
       expect(baselineChunks.length).toBeGreaterThan(0);
       expect(injectedChunks.length).toBeGreaterThan(0);
-      
+
       // Overhead should be minimal (under 100ms as specified)
       expect(Math.abs(overhead)).toBeLessThan(100);
-      
+
       // In test environment, overhead should be very minimal
       expect(Math.abs(overhead)).toBeLessThan(50); // Even more strict for tests
     });
@@ -877,7 +941,7 @@ describe('Provider Streaming with Injected Content - Integration Tests', () => {
       const messages3 = createMessageWithInjectedContent('Query 3', mockExtractedContent);
 
       // Mock responses
-      mockOpenAIInstance.responses.create.mockImplementation(() => 
+      mockOpenAIInstance.responses.create.mockImplementation(() =>
         Promise.resolve({
           id: 'concurrent-test',
           output_text: 'Concurrent response',
@@ -887,7 +951,7 @@ describe('Provider Streaming with Injected Content - Integration Tests', () => {
       );
 
       const startTime = performance.now();
-      
+
       // Run concurrent requests
       const responses = await Promise.all([
         openaiProvider.chat(messages1),
@@ -946,7 +1010,7 @@ describe('Provider Streaming with Injected Content - Integration Tests', () => {
 
       const stream = openaiProvider.streamChat(messages);
       const chunks = [];
-      
+
       try {
         for await (const chunk of stream) {
           chunks.push(chunk);
@@ -961,7 +1025,7 @@ describe('Provider Streaming with Injected Content - Integration Tests', () => {
   });
 
   // ============================================================================
-  // Content Truncation Tests  
+  // Content Truncation Tests
   // ============================================================================
 
   describe('Content Truncation Handling', () => {
@@ -982,7 +1046,8 @@ describe('Provider Streaming with Injected Content - Integration Tests', () => {
 
       mockOpenAIInstance.responses.create.mockResolvedValue({
         id: 'truncated-test',
-        output_text: 'Based on the provided content (note: content appears to be truncated), the main topics covered include JavaScript performance optimization techniques.',
+        output_text:
+          'Based on the provided content (note: content appears to be truncated), the main topics covered include JavaScript performance optimization techniques.',
         finish_reason: 'stop',
         usage: { input_tokens: 150, output_tokens: 25, total_tokens: 175 },
       });
@@ -991,7 +1056,7 @@ describe('Provider Streaming with Injected Content - Integration Tests', () => {
 
       expect(response).toBeDefined();
       expect(response.content).toContain('performance optimization');
-      
+
       // Should handle truncated content without errors
       expect(response.finishReason).toBe('stop');
     });

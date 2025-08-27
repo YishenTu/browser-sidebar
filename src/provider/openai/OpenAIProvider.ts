@@ -80,7 +80,7 @@ export class OpenAIProvider extends BaseProvider {
       customOptions: {
         timeout: 120000, // 2 minutes for Response API
         maxRetries: 3,
-        ...(openaiConfig as any).customOptions,
+        ...(openaiConfig as { customOptions?: Record<string, unknown> }).customOptions,
       },
     };
 
@@ -91,7 +91,7 @@ export class OpenAIProvider extends BaseProvider {
   /**
    * Validate OpenAI configuration
    */
-  validateConfig(config: any): ProviderValidationResult {
+  validateConfig(config: Record<string, unknown>): ProviderValidationResult {
     const errors: string[] = [];
 
     // Validate API key
@@ -189,7 +189,7 @@ export class OpenAIProvider extends BaseProvider {
 
     return withErrorHandling(async () => {
       // Use Responses API with AbortSignal passed via RequestOptions
-      const response = await (openaiInstance as any).responses.create(request, {
+      const response = await (openaiInstance as { responses: { create: (req: unknown, opts: unknown) => Promise<unknown> } }).responses.create(request, {
         signal: config?.signal,
       });
 
@@ -227,7 +227,7 @@ export class OpenAIProvider extends BaseProvider {
         });
 
         // Use responses.create with stream: true (there is no separate stream method)
-        const asyncIterable = await (openaiInstance as any).responses.create(request, {
+        const asyncIterable = await (openaiInstance as { responses: { create: (req: unknown, opts: unknown) => Promise<unknown> } }).responses.create(request, {
           signal: config?.signal,
         });
 
@@ -239,7 +239,7 @@ export class OpenAIProvider extends BaseProvider {
 
         let capturedResponseId: string | null = null;
 
-        for await (const event of asyncIterable as any) {
+        for await (const event of asyncIterable as AsyncIterable<unknown>) {
           try {
             // Capture the real response ID from OpenAI's response.created event
             // This is the ACTUAL response ID from OpenAI, not our generated chunk IDs
@@ -303,7 +303,7 @@ export class OpenAIProvider extends BaseProvider {
   /**
    * Format error into provider error structure
    */
-  formatError(error: any) {
+  formatError(error: unknown) {
     return formatOpenAIError(error);
   }
 }

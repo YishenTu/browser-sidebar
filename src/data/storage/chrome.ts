@@ -106,7 +106,7 @@ export async function set<T = unknown>(
     const storageAPI = getStorageAreaAPI(area);
 
     // Serialize complex objects
-    let serializedValue: any = value;
+    let serializedValue: unknown = value;
     if (
       value !== null &&
       typeof value === 'object' &&
@@ -155,13 +155,13 @@ export async function clear(area: StorageArea = 'local'): Promise<void> {
 export async function getBatch(
   keys: string[],
   area: StorageArea = 'local'
-): Promise<Record<string, any>> {
+): Promise<Record<string, unknown>> {
   return withRetry(async () => {
     const storageAPI = getStorageAreaAPI(area);
     const result = await storageAPI.get(keys);
 
     // Deserialize any serialized values
-    const deserializedResult: Record<string, any> = {};
+    const deserializedResult: Record<string, unknown> = {};
     for (const [key, value] of Object.entries(result)) {
       if (typeof value === 'string') {
         try {
@@ -182,14 +182,14 @@ export async function getBatch(
  * Set multiple values in storage
  */
 export async function setBatch(
-  items: Record<string, any>,
+  items: Record<string, unknown>,
   area: StorageArea = 'local'
 ): Promise<void> {
   return withRetry(async () => {
     const storageAPI = getStorageAreaAPI(area);
 
     // Serialize complex objects
-    const serializedItems: Record<string, any> = {};
+    const serializedItems: Record<string, unknown> = {};
     for (const [key, value] of Object.entries(items)) {
       if (
         value !== null &&
@@ -219,10 +219,10 @@ export async function setBatch(
  * Listen for storage changes with deserialized values
  */
 export function onChanged(
-  callback: (changes: Record<string, { oldValue?: any; newValue?: any }>, area: string) => void
+  callback: (changes: Record<string, { oldValue?: unknown; newValue?: unknown }>, area: string) => void
 ): () => void {
   const listener = (changes: Record<string, chrome.storage.StorageChange>) => {
-    const deserializedChanges: Record<string, { oldValue?: any; newValue?: any }> = {};
+    const deserializedChanges: Record<string, { oldValue?: unknown; newValue?: unknown }> = {};
 
     for (const [key, change] of Object.entries(changes)) {
       deserializedChanges[key] = {};
@@ -280,7 +280,7 @@ export async function migrate(migrations: MigrationScript[]): Promise<StorageSch
     // Get current storage schema
     const existingData = await get<StorageSchema>('storage-schema');
 
-    let currentData: any;
+    let currentData: unknown;
     let needsDefaultCreation = false;
 
     if (!existingData) {
@@ -358,7 +358,7 @@ export async function getStorageInfo(area: StorageArea = 'local'): Promise<Stora
     }
 
     // Get quota from storage API constants
-    const quota = (storageAPI as any).QUOTA_BYTES || 5242880; // Default 5MB for local
+    const quota = (storageAPI as chrome.storage.StorageArea & { QUOTA_BYTES?: number }).QUOTA_BYTES || 5242880; // Default 5MB for local
 
     const available = quota - used;
     const usagePercentage = (used / quota) * 100;

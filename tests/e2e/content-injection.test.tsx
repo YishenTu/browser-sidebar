@@ -102,7 +102,10 @@ describe('E2E: Content Injection Workflow', () => {
     const settingsStore = useSettingsStore.getState();
     if ('resetSettings' in settingsStore && typeof settingsStore.resetSettings === 'function') {
       settingsStore.resetSettings();
-    } else if ('resetToDefaults' in settingsStore && typeof settingsStore.resetToDefaults === 'function') {
+    } else if (
+      'resetToDefaults' in settingsStore &&
+      typeof settingsStore.resetToDefaults === 'function'
+    ) {
       await settingsStore.resetToDefaults();
     }
 
@@ -121,22 +124,22 @@ describe('E2E: Content Injection Workflow', () => {
     // Setup mock AI response
     mockStreamingResponse = [
       'Based on the content from ',
-      'the webpage you\'re viewing, ',
+      "the webpage you're viewing, ",
       'I can see this is about ',
       'test page content. ',
       'The main information discusses ',
       'important details that ',
-      'help answer your question.'
+      'help answer your question.',
     ];
 
     mockSendMessage = vi.fn().mockImplementation(async (content, options) => {
       const startTime = performance.now();
-      
+
       // Simulate content injection processing time
       if (content.includes("I'm looking at a webpage")) {
         performanceMetrics.injectionTime = performance.now() - startTime;
       }
-      
+
       // Add user message to store if not skipped
       if (!options?.skipUserMessage) {
         useChatStore.getState().addMessage({
@@ -157,7 +160,7 @@ describe('E2E: Content Injection Workflow', () => {
       // Stream response with delay
       for (let i = 0; i < mockStreamingResponse.length; i++) {
         await new Promise(resolve => setTimeout(resolve, mockResponseDelay));
-        
+
         act(() => {
           useChatStore.getState().appendToMessage(assistantMessage.id, mockStreamingResponse[i]);
         });
@@ -188,7 +191,7 @@ describe('E2E: Content Injection Workflow', () => {
     if (typeof performance !== 'undefined' && performance.memory) {
       currentMemoryUsage = performance.memory.usedJSHeapSize;
     }
-    
+
     cleanup();
     vi.clearAllMocks();
   });
@@ -219,7 +222,7 @@ describe('E2E: Content Injection Workflow', () => {
       await waitFor(() => {
         const messages = useChatStore.getState().messages;
         expect(messages).toHaveLength(2); // User message + AI response
-        
+
         // Check user message has injected content but displays only user input
         const userMessage = messages.find(m => m.role === 'user');
         expect(userMessage).toBeTruthy();
@@ -227,7 +230,7 @@ describe('E2E: Content Injection Workflow', () => {
         expect(userMessage?.content).toContain('Test Page Title');
         expect(userMessage?.content).toContain('What is this page about?');
         expect(userMessage?.displayContent).toBe('What is this page about?');
-        
+
         // Check metadata
         expect(userMessage?.metadata).toMatchObject({
           hasTabContext: true,
@@ -239,13 +242,16 @@ describe('E2E: Content Injection Workflow', () => {
       });
 
       // 5. Verify AI response references the injected content
-      await waitFor(() => {
-        const messages = useChatStore.getState().messages;
-        const aiMessage = messages.find(m => m.role === 'assistant');
-        expect(aiMessage).toBeTruthy();
-        expect(aiMessage?.content).toContain('Based on the content');
-        expect(aiMessage?.status).toBe('received');
-      }, { timeout: 5000 });
+      await waitFor(
+        () => {
+          const messages = useChatStore.getState().messages;
+          const aiMessage = messages.find(m => m.role === 'assistant');
+          expect(aiMessage).toBeTruthy();
+          expect(aiMessage?.content).toContain('Based on the content');
+          expect(aiMessage?.status).toBe('received');
+        },
+        { timeout: 5000 }
+      );
 
       // 6. Verify UI shows only user input, not injected content
       const userMessageBubble = screen.getByText('What is this page about?');
@@ -299,12 +305,13 @@ describe('E2E: Content Injection Workflow', () => {
   describe('Multi-Tab Independence', () => {
     it('maintains independent contexts across multiple tabs', async () => {
       const user = userEvent.setup({ delay: null });
-      
+
       // Simulate Tab 1
-      vi.mocked(require('@tabext/tabUtils').getCurrentTabIdSafe).mockResolvedValueOnce(111);
-      
+      const { getCurrentTabIdSafe } = await import('@tabext/tabUtils');
+      vi.mocked(getCurrentTabIdSafe).mockResolvedValueOnce(111);
+
       render(<ChatPanel onClose={vi.fn()} />);
-      
+
       const chatInput = screen.getByRole('textbox', { name: /type your message/i });
       const sendButton = screen.getByRole('button', { name: /send/i });
 
@@ -322,8 +329,9 @@ describe('E2E: Content Injection Workflow', () => {
       act(() => {
         useChatStore.getState().clearConversation();
       });
-      
-      vi.mocked(require('@tabext/tabUtils').getCurrentTabIdSafe).mockResolvedValueOnce(222);
+
+      const { getCurrentTabIdSafe: getCurrentTabIdSafe2 } = await import('@tabext/tabUtils');
+      vi.mocked(getCurrentTabIdSafe2).mockResolvedValueOnce(222);
 
       // Clear input and send message in tab 2
       await user.clear(chatInput);
@@ -347,9 +355,9 @@ describe('E2E: Content Injection Workflow', () => {
       // This test simulates the behavior when user switches between tabs
       // In reality, each tab would have its own store instance, but we simulate
       // by managing conversation state
-      
+
       const user = userEvent.setup({ delay: null });
-      
+
       // Tab 1 conversation
       const tab1Messages = [
         { role: 'user' as const, content: 'Tab 1 first message', id: 'msg1' },
@@ -396,7 +404,7 @@ describe('E2E: Content Injection Workflow', () => {
   describe('New Conversation Reset Flow', () => {
     it('allows fresh injection after clearing conversation', async () => {
       const user = userEvent.setup({ delay: null });
-      
+
       render(<ChatPanel onClose={vi.fn()} />);
 
       const chatInput = screen.getByRole('textbox', { name: /type your message/i });
@@ -424,7 +432,7 @@ describe('E2E: Content Injection Workflow', () => {
       await waitFor(() => {
         const messages = useChatStore.getState().messages;
         expect(messages).toHaveLength(2);
-        
+
         // Verify injection occurred again
         const userMessage = messages[0];
         expect(userMessage?.content).toContain("I'm looking at a webpage");
@@ -435,7 +443,7 @@ describe('E2E: Content Injection Workflow', () => {
 
     it('handles conversation reset via store method', async () => {
       const user = userEvent.setup({ delay: null });
-      
+
       render(<ChatPanel onClose={vi.fn()} />);
 
       // Add some messages
@@ -509,7 +517,7 @@ describe('E2E: Content Injection Workflow', () => {
 
     it('preserves conversation state during panel lifecycle', async () => {
       const user = userEvent.setup({ delay: null });
-      
+
       const { rerender } = render(<ChatPanel onClose={vi.fn()} />);
 
       // Send message
@@ -542,7 +550,7 @@ describe('E2E: Content Injection Workflow', () => {
   describe('URL Changes Preserve Conversation', () => {
     it('maintains conversation when URL changes', async () => {
       const user = userEvent.setup({ delay: null });
-      
+
       render(<ChatPanel onClose={vi.fn()} />);
 
       // Initial message with injection
@@ -563,7 +571,7 @@ describe('E2E: Content Injection Workflow', () => {
         url: 'https://example.com/new-page',
         title: 'New Page Title',
       };
-      
+
       vi.mocked(require('@hooks/useContentExtraction').useContentExtraction).mockReturnValue({
         content: updatedContent,
         loading: false,
@@ -590,7 +598,7 @@ describe('E2E: Content Injection Workflow', () => {
 
     it('handles URL change with manual conversation reset', async () => {
       const user = userEvent.setup({ delay: null });
-      
+
       render(<ChatPanel onClose={vi.fn()} />);
 
       // Initial conversation
@@ -614,7 +622,7 @@ describe('E2E: Content Injection Workflow', () => {
         title: 'Different Page Title',
         content: 'This is content from a different page entirely.',
       };
-      
+
       vi.mocked(require('@hooks/useContentExtraction').useContentExtraction).mockReturnValue({
         content: newUrlContent,
         loading: false,
@@ -641,7 +649,7 @@ describe('E2E: Content Injection Workflow', () => {
   describe('Edit and Resend First Message', () => {
     it('re-injects content when editing and resending first message', async () => {
       const user = userEvent.setup({ delay: null });
-      
+
       render(<ChatPanel onClose={vi.fn()} />);
 
       // Send initial message
@@ -667,14 +675,14 @@ describe('E2E: Content Injection Workflow', () => {
       // Modify and resend
       await user.clear(editInput);
       await user.type(editInput, 'Edited question');
-      
+
       const resendButton = screen.getByRole('button', { name: /send|resend/i });
       await user.click(resendButton);
 
       await waitFor(() => {
         const messages = useChatStore.getState().messages;
         expect(messages).toHaveLength(2); // Should replace, not add
-        
+
         // Verify re-injection occurred
         const editedMessage = messages[0];
         expect(editedMessage?.content).toContain("I'm looking at a webpage");
@@ -687,7 +695,7 @@ describe('E2E: Content Injection Workflow', () => {
 
     it('preserves edit behavior for subsequent messages', async () => {
       const user = userEvent.setup({ delay: null });
-      
+
       render(<ChatPanel onClose={vi.fn()} />);
 
       // Send first message (with injection)
@@ -713,7 +721,7 @@ describe('E2E: Content Injection Workflow', () => {
       // Modify and resend
       const editInput = screen.getByRole('textbox');
       expect(editInput).toHaveValue('Second message');
-      
+
       await user.clear(editInput);
       await user.type(editInput, 'Edited second message');
       await user.click(screen.getByRole('button', { name: /send|resend/i }));
@@ -722,7 +730,7 @@ describe('E2E: Content Injection Workflow', () => {
         const messages = useChatStore.getState().messages;
         // Should have: first message + AI response + edited second message + new AI response
         expect(messages).toHaveLength(4);
-        
+
         // Verify no re-injection for second message edit
         const editedSecondMessage = messages[2];
         expect(editedSecondMessage?.content).toBe('Edited second message');
@@ -732,7 +740,7 @@ describe('E2E: Content Injection Workflow', () => {
 
     it('handles edit with different content extraction results', async () => {
       const user = userEvent.setup({ delay: null });
-      
+
       render(<ChatPanel onClose={vi.fn()} />);
 
       // Initial message
@@ -749,7 +757,7 @@ describe('E2E: Content Injection Workflow', () => {
         title: 'Updated Page Title',
         content: 'Updated page content with new information.',
       };
-      
+
       vi.mocked(require('@hooks/useContentExtraction').useContentExtraction).mockReturnValue({
         content: updatedContent,
         loading: false,
@@ -770,7 +778,7 @@ describe('E2E: Content Injection Workflow', () => {
       await waitFor(() => {
         const messages = useChatStore.getState().messages;
         const editedMessage = messages[0];
-        
+
         // Should use current content extraction (updated content)
         expect(editedMessage?.content).toContain('Updated Page Title');
         expect(editedMessage?.content).toContain('Updated page content');
@@ -783,11 +791,11 @@ describe('E2E: Content Injection Workflow', () => {
     it('maintains performance impact under 100ms for content injection', async () => {
       const user = userEvent.setup({ delay: null });
       const performanceStart = performance.now();
-      
+
       render(<ChatPanel onClose={vi.fn()} />);
 
       const injectionStart = performance.now();
-      
+
       await user.type(screen.getByRole('textbox'), 'Performance test message');
       await user.click(screen.getByRole('button', { name: /send/i }));
 
@@ -824,7 +832,7 @@ describe('E2E: Content Injection Workflow', () => {
 
       const user = userEvent.setup({ delay: null });
       const performanceStart = performance.now();
-      
+
       render(<ChatPanel onClose={vi.fn()} />);
 
       await user.type(screen.getByRole('textbox'), 'Question about large content');
@@ -847,20 +855,23 @@ describe('E2E: Content Injection Workflow', () => {
       // Reduce response delay to measure streaming performance
       mockResponseDelay = 10;
       const user = userEvent.setup({ delay: null });
-      
+
       render(<ChatPanel onClose={vi.fn()} />);
 
       const streamStart = performance.now();
-      
+
       await user.type(screen.getByRole('textbox'), 'Streaming performance test');
       await user.click(screen.getByRole('button', { name: /send/i }));
 
       // Wait for streaming to complete
-      await waitFor(() => {
-        const messages = useChatStore.getState().messages;
-        const aiMessage = messages.find(m => m.role === 'assistant');
-        return aiMessage?.status === 'received';
-      }, { timeout: 3000 });
+      await waitFor(
+        () => {
+          const messages = useChatStore.getState().messages;
+          const aiMessage = messages.find(m => m.role === 'assistant');
+          return aiMessage?.status === 'received';
+        },
+        { timeout: 3000 }
+      );
 
       const streamTime = performance.now() - streamStart;
       expect(streamTime).toBeLessThan(1000); // Full streaming should be under 1s
@@ -878,7 +889,7 @@ describe('E2E: Content Injection Workflow', () => {
 
       for (let i = 0; i < cycles; i++) {
         const { unmount } = render(<ChatPanel onClose={vi.fn()} />);
-        
+
         // Trigger some interactions
         const user = userEvent.setup({ delay: null });
         await user.type(screen.getByRole('textbox'), `Cycle ${i} message`);
@@ -910,7 +921,7 @@ describe('E2E: Content Injection Workflow', () => {
     it('cleans up event listeners and timeouts on unmount', async () => {
       const addEventListenerSpy = vi.spyOn(document, 'addEventListener');
       const removeEventListenerSpy = vi.spyOn(document, 'removeEventListener');
-      
+
       const { unmount } = render(<ChatPanel onClose={vi.fn()} />);
 
       // Trigger some interactions that might add listeners
@@ -933,13 +944,13 @@ describe('E2E: Content Injection Workflow', () => {
     it('handles rapid tab switches without memory accumulation', async () => {
       const user = userEvent.setup({ delay: null });
       const tabSwitches = 5;
-      
+
       for (let i = 0; i < tabSwitches; i++) {
         // Simulate tab switch by clearing conversation and changing tab ID
         act(() => {
           useChatStore.getState().clearConversation();
         });
-        
+
         vi.mocked(require('@tabext/tabUtils').getCurrentTabIdSafe).mockResolvedValue(100 + i);
 
         render(<ChatPanel onClose={vi.fn()} />);
@@ -984,7 +995,7 @@ describe('E2E: Content Injection Workflow', () => {
       await waitFor(() => {
         const messages = useChatStore.getState().messages;
         expect(messages).toHaveLength(1);
-        
+
         // Should send without injection
         const userMessage = messages[0];
         expect(userMessage?.content).toBe('Question without context');
@@ -997,7 +1008,9 @@ describe('E2E: Content Injection Workflow', () => {
 
     it('handles tab ID retrieval failure', async () => {
       // Mock tab ID failure
-      vi.mocked(require('@tabext/tabUtils').getCurrentTabIdSafe).mockRejectedValue(new Error('Tab access denied'));
+      vi.mocked(require('@tabext/tabUtils').getCurrentTabIdSafe).mockRejectedValue(
+        new Error('Tab access denied')
+      );
 
       const user = userEvent.setup({ delay: null });
       render(<ChatPanel onClose={vi.fn()} />);
@@ -1008,7 +1021,7 @@ describe('E2E: Content Injection Workflow', () => {
       await waitFor(() => {
         const messages = useChatStore.getState().messages;
         expect(messages).toHaveLength(2); // User + AI messages
-        
+
         // Should still inject content but without tab ID
         const userMessage = messages[0];
         expect(userMessage?.content).toContain("I'm looking at a webpage");

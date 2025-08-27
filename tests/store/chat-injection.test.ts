@@ -29,11 +29,11 @@ describe('Chat Store - Injection Functionality', () => {
 
   describe('Message Creation with displayContent', () => {
     test('should create message with displayContent field', () => {
-      const { result: message, store } = withFreshStore(store => 
+      const { result: message, store } = withFreshStore(store =>
         store.addMessage({
           role: 'user',
           content: 'Original content with tab context injected',
-          displayContent: 'Original user input'
+          displayContent: 'Original user input',
         })
       );
 
@@ -44,10 +44,10 @@ describe('Chat Store - Injection Functionality', () => {
     });
 
     test('should create message without displayContent when not provided', () => {
-      const { result: message, store } = withFreshStore(store => 
+      const { result: message, store } = withFreshStore(store =>
         store.addMessage({
           role: 'user',
-          content: 'Simple user message'
+          content: 'Simple user message',
         })
       );
 
@@ -57,11 +57,11 @@ describe('Chat Store - Injection Functionality', () => {
     });
 
     test('should handle empty displayContent', () => {
-      const { result: message, store } = withFreshStore(store => 
+      const { result: message, store } = withFreshStore(store =>
         store.addMessage({
           role: 'user',
           content: 'Content with empty display',
-          displayContent: ''
+          displayContent: '',
         })
       );
 
@@ -70,12 +70,12 @@ describe('Chat Store - Injection Functionality', () => {
     });
 
     test('should handle null displayContent gracefully', () => {
-      const { result: message, store } = withFreshStore(store => 
+      const { result: message, store } = withFreshStore(store =>
         // @ts-expect-error: Testing null handling
         store.addMessage({
           role: 'user',
           content: 'Content with null display',
-          displayContent: null
+          displayContent: null,
         })
       );
 
@@ -92,15 +92,15 @@ describe('Chat Store - Injection Functionality', () => {
         tabId: 123,
         tabTitle: 'Test Page Title',
         tabUrl: 'https://example.com',
-        customField: 'custom value'
+        customField: 'custom value',
       };
-      
-      const { result: message, store } = withFreshStore(store => 
+
+      const { result: message, store } = withFreshStore(store =>
         store.addMessage({
           role: 'user',
           content: 'Enhanced content',
           displayContent: 'User typed this',
-          metadata
+          metadata,
         })
       );
 
@@ -112,14 +112,14 @@ describe('Chat Store - Injection Functionality', () => {
     });
 
     test('should handle partial metadata', () => {
-      const { result: message, store } = withFreshStore(store => 
+      const { result: message, store } = withFreshStore(store =>
         store.addMessage({
           role: 'user',
           content: 'Content',
           metadata: {
             tabId: 456,
-            hasTabContext: true
-          }
+            hasTabContext: true,
+          },
         })
       );
 
@@ -130,14 +130,14 @@ describe('Chat Store - Injection Functionality', () => {
     });
 
     test('should handle string tabId', () => {
-      const { result: message, store } = withFreshStore(store => 
+      const { result: message, store } = withFreshStore(store =>
         store.addMessage({
           role: 'user',
           content: 'Content',
           metadata: {
             tabId: 'tab-string-id',
-            hasTabContext: true
-          }
+            hasTabContext: true,
+          },
         })
       );
 
@@ -146,11 +146,11 @@ describe('Chat Store - Injection Functionality', () => {
     });
 
     test('should handle empty metadata object', () => {
-      const { result: message, store } = withFreshStore(store => 
+      const { result: message, store } = withFreshStore(store =>
         store.addMessage({
           role: 'user',
           content: 'Content',
-          metadata: {}
+          metadata: {},
         })
       );
 
@@ -158,10 +158,10 @@ describe('Chat Store - Injection Functionality', () => {
     });
 
     test('should handle undefined metadata', () => {
-      const { result: message, store } = withFreshStore(store => 
+      const { result: message, store } = withFreshStore(store =>
         store.addMessage({
           role: 'user',
-          content: 'Content'
+          content: 'Content',
         })
       );
 
@@ -171,21 +171,21 @@ describe('Chat Store - Injection Functionality', () => {
 
   describe('First Message Injection Logic', () => {
     test('should identify first user message in conversation', () => {
-      const { result: firstMessage, store } = withFreshStore(store => 
+      const { result: firstMessage, store } = withFreshStore(store =>
         store.addMessage({
           role: 'user',
           content: 'First user message',
           metadata: {
             hasTabContext: true,
-            tabId: 123
-          }
+            tabId: 123,
+          },
         })
       );
 
       expect(store.messages).toHaveLength(1);
       expect(store.getUserMessages()).toHaveLength(1);
       expect(firstMessage.metadata?.hasTabContext).toBe(true);
-      
+
       // This would be the first message that could trigger injection
       const userMessages = store.getUserMessages();
       expect(userMessages[0]?.id).toBe(firstMessage.id);
@@ -193,22 +193,22 @@ describe('Chat Store - Injection Functionality', () => {
 
     test('should handle system message before first user message', () => {
       // Add system message first
-      withFreshStore(store => 
+      withFreshStore(store =>
         store.addMessage({
           role: 'system',
-          content: 'System initialization'
+          content: 'System initialization',
         })
       );
 
       // Add first user message
-      const { result: firstUserMessage, store } = withFreshStore(store => 
+      const { result: firstUserMessage, store } = withFreshStore(store =>
         store.addMessage({
           role: 'user',
           content: 'First user input',
           metadata: {
             hasTabContext: true,
-            tabId: 123
-          }
+            tabId: 123,
+          },
         })
       );
 
@@ -220,7 +220,7 @@ describe('Chat Store - Injection Functionality', () => {
 
     test('should distinguish first message from subsequent messages', () => {
       // First message with injection
-      const { result: firstMessage } = withFreshStore(store => 
+      const { result: firstMessage } = withFreshStore(store =>
         store.addMessage({
           role: 'user',
           content: 'First with tab context',
@@ -228,28 +228,28 @@ describe('Chat Store - Injection Functionality', () => {
           metadata: {
             hasTabContext: true,
             originalUserContent: 'First message',
-            tabId: 123
-          }
+            tabId: 123,
+          },
         })
       );
 
       // Assistant response
-      withFreshStore(store => 
+      withFreshStore(store =>
         store.addMessage({
           role: 'assistant',
-          content: 'AI response'
+          content: 'AI response',
         })
       );
 
       // Second user message without injection
-      const { result: secondMessage, store } = withFreshStore(store => 
+      const { result: secondMessage, store } = withFreshStore(store =>
         store.addMessage({
           role: 'user',
           content: 'Second message',
           metadata: {
             hasTabContext: false,
-            tabId: 123
-          }
+            tabId: 123,
+          },
         })
       );
 
@@ -265,27 +265,27 @@ describe('Chat Store - Injection Functionality', () => {
   describe('Subsequent Message Handling', () => {
     test('should handle subsequent messages without injection', () => {
       // Set up initial conversation
-      withFreshStore(store => 
+      withFreshStore(store =>
         store.addMessage({
           role: 'user',
           content: 'First message with context',
-          metadata: { hasTabContext: true, tabId: 123 }
+          metadata: { hasTabContext: true, tabId: 123 },
         })
       );
-      
-      withFreshStore(store => 
+
+      withFreshStore(store =>
         store.addMessage({
           role: 'assistant',
-          content: 'AI response'
+          content: 'AI response',
         })
       );
 
       // Add subsequent user message
-      const { result: subsequentMessage, store } = withFreshStore(store => 
+      const { result: subsequentMessage, store } = withFreshStore(store =>
         store.addMessage({
           role: 'user',
           content: 'Follow-up question',
-          metadata: { hasTabContext: false, tabId: 123 }
+          metadata: { hasTabContext: false, tabId: 123 },
         })
       );
 
@@ -296,11 +296,23 @@ describe('Chat Store - Injection Functionality', () => {
 
     test('should maintain conversation context across multiple messages', () => {
       const messages = [
-        { role: 'user' as MessageRole, content: 'First', metadata: { tabId: 123, hasTabContext: true } },
+        {
+          role: 'user' as MessageRole,
+          content: 'First',
+          metadata: { tabId: 123, hasTabContext: true },
+        },
         { role: 'assistant' as MessageRole, content: 'Response 1' },
-        { role: 'user' as MessageRole, content: 'Second', metadata: { tabId: 123, hasTabContext: false } },
+        {
+          role: 'user' as MessageRole,
+          content: 'Second',
+          metadata: { tabId: 123, hasTabContext: false },
+        },
         { role: 'assistant' as MessageRole, content: 'Response 2' },
-        { role: 'user' as MessageRole, content: 'Third', metadata: { tabId: 123, hasTabContext: false } }
+        {
+          role: 'user' as MessageRole,
+          content: 'Third',
+          metadata: { tabId: 123, hasTabContext: false },
+        },
       ];
 
       let store;
@@ -312,7 +324,7 @@ describe('Chat Store - Injection Functionality', () => {
       expect(store!.messages).toHaveLength(5);
       expect(store!.getUserMessages()).toHaveLength(3);
       expect(store!.getAssistantMessages()).toHaveLength(2);
-      
+
       const userMessages = store!.getUserMessages();
       expect(userMessages[0]?.metadata?.hasTabContext).toBe(true);
       expect(userMessages[1]?.metadata?.hasTabContext).toBe(false);
@@ -322,12 +334,12 @@ describe('Chat Store - Injection Functionality', () => {
 
   describe('Edge Cases', () => {
     test('should handle null content gracefully', () => {
-      const { result: message, store } = withFreshStore(store => 
+      const { result: message, store } = withFreshStore(store =>
         // @ts-expect-error: Testing null handling
         store.addMessage({
           role: 'user',
           content: null,
-          metadata: { tabId: 123 }
+          metadata: { tabId: 123 },
         })
       );
 
@@ -336,12 +348,12 @@ describe('Chat Store - Injection Functionality', () => {
     });
 
     test('should handle undefined content gracefully', () => {
-      const { result: message, store } = withFreshStore(store => 
+      const { result: message, store } = withFreshStore(store =>
         // @ts-expect-error: Testing undefined handling
         store.addMessage({
           role: 'user',
           content: undefined,
-          metadata: { tabId: 123 }
+          metadata: { tabId: 123 },
         })
       );
 
@@ -350,12 +362,12 @@ describe('Chat Store - Injection Functionality', () => {
     });
 
     test('should handle empty content string', () => {
-      const { result: message, store } = withFreshStore(store => 
+      const { result: message, store } = withFreshStore(store =>
         store.addMessage({
           role: 'user',
           content: '',
           displayContent: 'User input was empty',
-          metadata: { tabId: 123, hasTabContext: true }
+          metadata: { tabId: 123, hasTabContext: true },
         })
       );
 
@@ -367,13 +379,13 @@ describe('Chat Store - Injection Functionality', () => {
     test('should handle very long content', () => {
       const longContent = 'A'.repeat(10000);
       const longDisplayContent = 'B'.repeat(5000);
-      
-      const { result: message, store } = withFreshStore(store => 
+
+      const { result: message, store } = withFreshStore(store =>
         store.addMessage({
           role: 'user',
           content: longContent,
           displayContent: longDisplayContent,
-          metadata: { tabId: 123, hasTabContext: true }
+          metadata: { tabId: 123, hasTabContext: true },
         })
       );
 
@@ -385,13 +397,13 @@ describe('Chat Store - Injection Functionality', () => {
 
     test('should handle special characters in content', () => {
       const specialContent = 'Content with 🎉 emojis and \n newlines \t tabs "quotes" <tags>';
-      
-      const { result: message, store } = withFreshStore(store => 
+
+      const { result: message, store } = withFreshStore(store =>
         store.addMessage({
           role: 'user',
           content: specialContent,
           displayContent: 'Clean display',
-          metadata: { tabId: 123, hasTabContext: true }
+          metadata: { tabId: 123, hasTabContext: true },
         })
       );
 
@@ -402,17 +414,17 @@ describe('Chat Store - Injection Functionality', () => {
 
   describe('Message Updates with Injection Fields', () => {
     test('should update displayContent via updateMessage', () => {
-      const { result: message } = withFreshStore(store => 
+      const { result: message } = withFreshStore(store =>
         store.addMessage({
           role: 'user',
           content: 'Original content',
-          displayContent: 'Original display'
+          displayContent: 'Original display',
         })
       );
 
-      const { store } = withFreshStore(store => 
+      const { store } = withFreshStore(store =>
         store.updateMessage(message.id, {
-          displayContent: 'Updated display'
+          displayContent: 'Updated display',
         })
       );
 
@@ -422,24 +434,24 @@ describe('Chat Store - Injection Functionality', () => {
     });
 
     test('should update metadata preserving existing fields', () => {
-      const { result: message } = withFreshStore(store => 
+      const { result: message } = withFreshStore(store =>
         store.addMessage({
           role: 'user',
           content: 'Content',
           metadata: {
             tabId: 123,
             hasTabContext: true,
-            originalUserContent: 'Original'
-          }
+            originalUserContent: 'Original',
+          },
         })
       );
 
-      const { store } = withFreshStore(store => 
+      const { store } = withFreshStore(store =>
         store.updateMessage(message.id, {
           metadata: {
             hasTabContext: false,
-            newField: 'new value'
-          }
+            newField: 'new value',
+          },
         })
       );
 
@@ -451,17 +463,17 @@ describe('Chat Store - Injection Functionality', () => {
     });
 
     test('should handle clearing displayContent', () => {
-      const { result: message } = withFreshStore(store => 
+      const { result: message } = withFreshStore(store =>
         store.addMessage({
           role: 'user',
           content: 'Content',
-          displayContent: 'Display'
+          displayContent: 'Display',
         })
       );
 
-      const { store } = withFreshStore(store => 
+      const { store } = withFreshStore(store =>
         store.updateMessage(message.id, {
-          displayContent: undefined
+          displayContent: undefined,
         })
       );
 
@@ -473,34 +485,34 @@ describe('Chat Store - Injection Functionality', () => {
   describe('Conversation Management with Injection Data', () => {
     test('should preserve injection data across conversation operations', () => {
       // Add messages with injection data
-      const { result: message1 } = withFreshStore(store => 
+      const { result: message1 } = withFreshStore(store =>
         store.addMessage({
           role: 'user',
           content: 'Message 1 with context',
           displayContent: 'Message 1',
-          metadata: { hasTabContext: true, tabId: 123 }
+          metadata: { hasTabContext: true, tabId: 123 },
         })
       );
 
-      withFreshStore(store => 
+      withFreshStore(store =>
         store.addMessage({
           role: 'assistant',
-          content: 'Response 1'
+          content: 'Response 1',
         })
       );
 
-      const { result: message2 } = withFreshStore(store => 
+      const { result: message2 } = withFreshStore(store =>
         store.addMessage({
           role: 'user',
           content: 'Message 2',
-          metadata: { hasTabContext: false, tabId: 123 }
+          metadata: { hasTabContext: false, tabId: 123 },
         })
       );
 
       // Edit first message should preserve structure
       const { store } = withFreshStore(store => store.editMessage(message1.id));
       const editedMessage = store.editMessage(message1.id);
-      
+
       expect(editedMessage?.displayContent).toBe('Message 1');
       expect(editedMessage?.metadata?.hasTabContext).toBe(true);
       expect(store.messages).toHaveLength(1); // Should remove everything after
@@ -508,7 +520,7 @@ describe('Chat Store - Injection Functionality', () => {
 
     test('should handle clearConversation with injection data', () => {
       // Add messages with complex injection data
-      const { store: initialStore } = withFreshStore(store => 
+      const { store: initialStore } = withFreshStore(store =>
         store.addMessage({
           role: 'user',
           content: 'Complex message',
@@ -518,15 +530,15 @@ describe('Chat Store - Injection Functionality', () => {
             tabId: 123,
             tabTitle: 'Test',
             tabUrl: 'https://example.com',
-            customData: { nested: 'object' }
-          }
+            customData: { nested: 'object' },
+          },
         })
       );
 
       expect(initialStore.messages).toHaveLength(1);
-      
+
       const { store } = withFreshStore(store => store.clearConversation());
-      
+
       expect(store.messages).toHaveLength(0);
       expect(store.error).toBeNull();
       expect(store.isLoading).toBe(false);
@@ -537,13 +549,13 @@ describe('Chat Store - Injection Functionality', () => {
     test('should simulate typical injection workflow', () => {
       // Step 1: User types message
       const userInput = 'What is this page about?';
-      
+
       // Step 2: Content extraction adds tab context
       const extractedContent = 'Page Title: Example\nContent: This is a sample page about...';
       const enhancedContent = `${userInput}\n\n--- Tab Content ---\n${extractedContent}`;
-      
+
       // Step 3: Store the message with injection data
-      const { result: message, store } = withFreshStore(store => 
+      const { result: message, store } = withFreshStore(store =>
         store.addMessage({
           role: 'user',
           content: enhancedContent,
@@ -553,8 +565,8 @@ describe('Chat Store - Injection Functionality', () => {
             originalUserContent: userInput,
             tabId: 123,
             tabTitle: 'Example Page',
-            tabUrl: 'https://example.com'
-          }
+            tabUrl: 'https://example.com',
+          },
         })
       );
 
@@ -564,7 +576,7 @@ describe('Chat Store - Injection Functionality', () => {
       expect(message.displayContent).toBe(userInput);
       expect(message.metadata?.hasTabContext).toBe(true);
       expect(message.metadata?.originalUserContent).toBe(userInput);
-      
+
       // Verify it's the first message
       expect(store.getUserMessages()).toHaveLength(1);
       expect(store.getUserMessages()[0]?.id).toBe(message.id);
@@ -572,7 +584,7 @@ describe('Chat Store - Injection Functionality', () => {
 
     test('should simulate subsequent message without injection', () => {
       // Set up first message with injection
-      withFreshStore(store => 
+      withFreshStore(store =>
         store.addMessage({
           role: 'user',
           content: 'First with context\n--- Tab Content ---\nPage data...',
@@ -580,29 +592,29 @@ describe('Chat Store - Injection Functionality', () => {
           metadata: {
             hasTabContext: true,
             originalUserContent: 'First message',
-            tabId: 123
-          }
+            tabId: 123,
+          },
         })
       );
 
-      withFreshStore(store => 
+      withFreshStore(store =>
         store.addMessage({
           role: 'assistant',
-          content: 'AI response to first message'
+          content: 'AI response to first message',
         })
       );
 
       // Second message - no injection needed
       const followUp = 'Can you explain more about that?';
-      const { result: secondMessage, store } = withFreshStore(store => 
+      const { result: secondMessage, store } = withFreshStore(store =>
         store.addMessage({
           role: 'user',
           content: followUp, // No tab content added
           // No displayContent since content === user input
           metadata: {
             hasTabContext: false,
-            tabId: 123
-          }
+            tabId: 123,
+          },
         })
       );
 
@@ -616,32 +628,35 @@ describe('Chat Store - Injection Functionality', () => {
   describe('Performance and Memory', () => {
     test('should handle large number of messages with injection data efficiently', () => {
       const startTime = performance.now();
-      
+
       let store;
       // Add 100 messages with injection data
       for (let i = 0; i < 100; i++) {
-        const result = withFreshStore(s => 
+        const result = withFreshStore(s =>
           s.addMessage({
             role: i % 2 === 0 ? 'user' : 'assistant',
             content: `Message ${i} content`,
             displayContent: i % 2 === 0 ? `User message ${i}` : undefined,
-            metadata: i % 2 === 0 ? {
-              hasTabContext: i === 0, // Only first message has tab context
-              tabId: 123,
-              messageIndex: i
-            } : undefined
+            metadata:
+              i % 2 === 0
+                ? {
+                    hasTabContext: i === 0, // Only first message has tab context
+                    tabId: 123,
+                    messageIndex: i,
+                  }
+                : undefined,
           })
         );
         store = result.store;
       }
-      
+
       const endTime = performance.now();
-      
+
       expect(store!.messages).toHaveLength(100);
       expect(store!.getUserMessages()).toHaveLength(50);
       expect(store!.getAssistantMessages()).toHaveLength(50);
       expect(endTime - startTime).toBeLessThan(200); // Should be reasonably fast
-      
+
       // Verify first message still has injection data
       const firstUserMessage = store!.getUserMessages()[0];
       expect(firstUserMessage?.metadata?.hasTabContext).toBe(true);
@@ -651,7 +666,7 @@ describe('Chat Store - Injection Functionality', () => {
       // Add messages with large metadata objects
       let store;
       for (let i = 0; i < 10; i++) {
-        const result = withFreshStore(s => 
+        const result = withFreshStore(s =>
           s.addMessage({
             role: 'user',
             content: `Message ${i}`,
@@ -663,20 +678,20 @@ describe('Chat Store - Injection Functionality', () => {
               complexObject: {
                 nested: {
                   deep: {
-                    data: `value-${i}`
-                  }
-                }
-              }
-            }
+                    data: `value-${i}`,
+                  },
+                },
+              },
+            },
           })
         );
         store = result.store;
       }
 
       expect(store!.messages).toHaveLength(10);
-      
+
       const { store: clearedStore } = withFreshStore(store => store.clearConversation());
-      
+
       expect(clearedStore.messages).toHaveLength(0);
       // All metadata should be cleared from memory
     });

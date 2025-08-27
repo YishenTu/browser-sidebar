@@ -98,7 +98,7 @@ describe('Simplified E2E: Content Injection', () => {
 
     // Reset stores
     useChatStore.getState().clearConversation();
-    
+
     // Setup model without causing errors
     try {
       await act(async () => {
@@ -117,7 +117,7 @@ describe('Simplified E2E: Content Injection', () => {
 
   it('injects content on first message', async () => {
     const user = userEvent.setup({ delay: null });
-    
+
     render(<ChatPanel onClose={vi.fn()} />);
 
     // Wait for component to mount
@@ -128,7 +128,7 @@ describe('Simplified E2E: Content Injection', () => {
     // Type and send first message
     const input = screen.getByRole('textbox');
     await user.type(input, 'What is this page about?');
-    
+
     const sendButton = screen.getByRole('button', { name: /send/i });
     await user.click(sendButton);
 
@@ -136,14 +136,14 @@ describe('Simplified E2E: Content Injection', () => {
     await waitFor(() => {
       const messages = useChatStore.getState().messages;
       expect(messages).toHaveLength(2); // User + AI messages
-      
+
       // Check user message has injected content
       const userMessage = messages[0];
       expect(userMessage?.content).toContain("I'm looking at a webpage");
       expect(userMessage?.content).toContain('Test Page Title');
       expect(userMessage?.content).toContain('What is this page about?');
       expect(userMessage?.displayContent).toBe('What is this page about?');
-      
+
       // Check metadata
       expect(userMessage?.metadata?.hasTabContext).toBe(true);
       expect(userMessage?.metadata?.originalUserContent).toBe('What is this page about?');
@@ -152,7 +152,7 @@ describe('Simplified E2E: Content Injection', () => {
 
   it('does not inject on subsequent messages', async () => {
     const user = userEvent.setup({ delay: null });
-    
+
     render(<ChatPanel onClose={vi.fn()} />);
 
     // Send first message
@@ -172,7 +172,7 @@ describe('Simplified E2E: Content Injection', () => {
     await waitFor(() => {
       const messages = useChatStore.getState().messages;
       expect(messages).toHaveLength(4);
-      
+
       // Check second user message doesn't have injection
       const secondUserMessage = messages[2];
       expect(secondUserMessage?.content).toBe('Second message');
@@ -183,7 +183,7 @@ describe('Simplified E2E: Content Injection', () => {
 
   it('re-injects after conversation reset', async () => {
     const user = userEvent.setup({ delay: null });
-    
+
     render(<ChatPanel onClose={vi.fn()} />);
 
     // Send first message
@@ -208,7 +208,7 @@ describe('Simplified E2E: Content Injection', () => {
     await waitFor(() => {
       const messages = useChatStore.getState().messages;
       expect(messages).toHaveLength(2);
-      
+
       // Should inject again
       const userMessage = messages[0];
       expect(userMessage?.content).toContain("I'm looking at a webpage");

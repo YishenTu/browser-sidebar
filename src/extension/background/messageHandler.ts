@@ -269,11 +269,7 @@ export function createDefaultMessageHandler(): MessageHandlerRegistry {
     DefaultHandlers.handleSidebarState,
     'Sidebar state ack'
   );
-  registry.registerHandler(
-    'GET_TAB_ID',
-    DefaultHandlers.handleGetTabId,
-    'Return sender tab ID'
-  );
+  registry.registerHandler('GET_TAB_ID', DefaultHandlers.handleGetTabId, 'Return sender tab ID');
 
   return registry;
 }

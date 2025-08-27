@@ -24,12 +24,12 @@ export interface EncryptionService {
 
 /** Database interface */
 export interface DatabaseService {
-  add(_storeName: string, _data: any): Promise<void>;
-  get(_storeName: string, _key: any): Promise<any>;
-  update(_storeName: string, _data: any): Promise<void>;
-  delete(_storeName: string, _key: any): Promise<void>;
-  getAll(_storeName: string): Promise<any[]>;
-  query(_storeName: string, _filter: any): Promise<any[]>;
+  add(_storeName: string, _data: unknown): Promise<void>;
+  get(_storeName: string, _key: unknown): Promise<unknown>;
+  update(_storeName: string, _data: unknown): Promise<void>;
+  delete(_storeName: string, _key: unknown): Promise<void>;
+  getAll(_storeName: string): Promise<unknown[]>;
+  query(_storeName: string, _filter: unknown): Promise<unknown[]>;
   openDatabase(): Promise<void>;
 }
 
