@@ -55,9 +55,8 @@ export const TabContentItem: React.FC<TabContentItemProps> = ({
   const hasCodeBlocks = content?.metadata?.hasCodeBlocks ?? content?.hasCode ?? false;
   const truncated = content?.metadata?.truncated ?? content?.isTruncated ?? false;
 
-  // Generate excerpt if not provided
-  const excerpt =
-    content?.excerpt || (content?.textContent ? content.textContent.substring(0, 200) + '...' : '');
+  // Use full text content, let CSS handle truncation
+  const excerpt = content?.excerpt || content?.textContent || '';
 
   // Create header content for collapsible
   const headerContent = (isCollapsed: boolean) => {
@@ -176,10 +175,7 @@ export const TabContentItem: React.FC<TabContentItemProps> = ({
 
   return (
     <>
-      <div 
-        className={`content-preview ${className}`}
-        data-tab-id={tabId}
-      >
+      <div className={`content-preview ${className}`} data-tab-id={tabId}>
         {error ? (
           // Show error as Alert instead of collapsible
           <Alert
@@ -215,41 +211,69 @@ export const TabContentItem: React.FC<TabContentItemProps> = ({
                   <p>Extracting webpage content...</p>
                 </div>
               ) : content ? (
-                <div className="content-preview-content">
-                  {/* Content excerpt - moved to top */}
+                <div className="content-preview-content" style={{ position: 'relative' }}>
+                  {/* Content excerpt */}
                   {excerpt && (
                     <div className="content-preview-excerpt">
                       <p>{excerpt}</p>
                     </div>
                   )}
-
-                  {/* Content metadata */}
-                  <div className="content-preview-stats">
-                    <div className="content-preview-stats-badges">
-                      {truncated && <span className="content-preview-truncated">Truncated</span>}
-                      {hasCodeBlocks && <span>Code</span>}
-                    </div>
-                    <div className="content-preview-stats-actions">
-                      <button
-                        onClick={e => {
-                          e.stopPropagation();
-                          onReextract();
-                        }}
-                        className="content-preview-refresh-inline"
-                        title="Re-extract content"
-                        aria-label="Re-extract content"
+                  {/* Overlay badges and actions on bottom right corner */}
+                  <div
+                    className="content-preview-overlay-actions"
+                    style={{
+                      position: 'absolute',
+                      bottom: '8px',
+                      right: '8px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      background: 'transparent',
+                      padding: '0',
+                    }}
+                  >
+                    {truncated && (
+                      <span
+                        className="content-preview-truncated"
+                        style={{ fontSize: '10px', opacity: 0.7 }}
                       >
-                        <RegenerateIcon size={14} />
-                      </button>
-                      <button
-                        onClick={() => setShowFullContent(true)}
-                        className="content-preview-expand-inline"
-                        title="View full content"
-                        aria-label="View full content"
-                      >
-                        <ExpandIcon size={14} />
-                      </button>
-                    </div>
+                        Truncated
+                      </span>
+                    )}
+                    {hasCodeBlocks && <span style={{ fontSize: '10px', opacity: 0.7 }}>Code</span>}
+                    <button
+                      onClick={e => {
+                        e.stopPropagation();
+                        onReextract();
+                      }}
+                      className="content-preview-refresh-inline"
+                      title="Re-extract content"
+                      aria-label="Re-extract content"
+                      style={{
+                        padding: '4px',
+                        opacity: 0.6,
+                        transition: 'opacity 0.2s',
+                      }}
+                      onMouseEnter={e => (e.currentTarget.style.opacity = '1')}
+                      onMouseLeave={e => (e.currentTarget.style.opacity = '0.6')}
+                    >
+                      <RegenerateIcon size={14} />
+                    </button>
+                    <button
+                      onClick={() => setShowFullContent(true)}
+                      className="content-preview-expand-inline"
+                      title="View full content"
+                      aria-label="View full content"
+                      style={{
+                        padding: '4px',
+                        opacity: 0.6,
+                        transition: 'opacity 0.2s',
+                      }}
+                      onMouseEnter={e => (e.currentTarget.style.opacity = '1')}
+                      onMouseLeave={e => (e.currentTarget.style.opacity = '0.6')}
+                    >
+                      <ExpandIcon size={14} />
+                    </button>
                   </div>
 
                   {/* Truncation warning */}
@@ -290,42 +314,52 @@ export const TabContentItem: React.FC<TabContentItemProps> = ({
         className="content-full-modal"
       >
         {content && (
-          <div style={{
-            display: 'flex',
-            flexDirection: 'column',
-            height: '100%',
-            color: '#ffffff',
-          }}>
+          <div
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              height: '100%',
+              color: '#ffffff',
+            }}
+          >
             {/* Content metadata */}
-            <div style={{
-              marginBottom: '16px',
-            }}>
-              <div style={{
-                display: 'flex',
-                gap: '10px',
-                flexWrap: 'wrap',
-              }}>
+            <div
+              style={{
+                marginBottom: '16px',
+              }}
+            >
+              <div
+                style={{
+                  display: 'flex',
+                  gap: '10px',
+                  flexWrap: 'wrap',
+                }}
+              >
                 {truncated && (
-                  <span style={{
-                    background: '#dc2626',
-                    color: '#ffffff',
-                    padding: '4px 8px',
-                    borderRadius: '4px',
-                    fontSize: '12px',
-                    fontWeight: 500,
-                  }}>
+                  <span
+                    style={{
+                      background: '#dc2626',
+                      color: '#ffffff',
+                      padding: '4px 8px',
+                      borderRadius: '4px',
+                      fontSize: '12px',
+                      fontWeight: 500,
+                    }}
+                  >
                     Truncated
                   </span>
                 )}
                 {hasCodeBlocks && (
-                  <span style={{
-                    background: '#2563eb',
-                    color: '#ffffff',
-                    padding: '4px 8px',
-                    borderRadius: '4px',
-                    fontSize: '12px',
-                    fontWeight: 500,
-                  }}>
+                  <span
+                    style={{
+                      background: '#2563eb',
+                      color: '#ffffff',
+                      padding: '4px 8px',
+                      borderRadius: '4px',
+                      fontSize: '12px',
+                      fontWeight: 500,
+                    }}
+                  >
                     Contains code
                   </span>
                 )}
@@ -333,28 +367,32 @@ export const TabContentItem: React.FC<TabContentItemProps> = ({
             </div>
 
             {/* Full content with better formatting */}
-            <div style={{
-              flex: 1,
-              overflow: 'auto',
-              background: 'rgba(26, 26, 26, 0.8)', /* Match chat panel background */
-              borderRadius: '8px',
-              padding: '20px',
-            }}>
-              <pre style={{
-                margin: 0,
-                padding: 0,
-                fontFamily: 'Consolas, Monaco, "Courier New", monospace',
-                fontSize: '14px',
-                lineHeight: '1.6',
-                whiteSpace: 'pre-wrap',
-                wordWrap: 'break-word',
-                color: '#e5e7eb',
-                // Prevent host page CSS from forcing a white card look
-                background: 'transparent',
-                border: 'none',
-                boxShadow: 'none',
-                borderRadius: 0,
-              }}>
+            <div
+              style={{
+                flex: 1,
+                overflow: 'auto',
+                background: 'rgba(26, 26, 26, 0.8)' /* Match chat panel background */,
+                borderRadius: '8px',
+                padding: '20px',
+              }}
+            >
+              <pre
+                style={{
+                  margin: 0,
+                  padding: 0,
+                  fontFamily: 'Consolas, Monaco, "Courier New", monospace',
+                  fontSize: '14px',
+                  lineHeight: '1.6',
+                  whiteSpace: 'pre-wrap',
+                  wordWrap: 'break-word',
+                  color: '#e5e7eb',
+                  // Prevent host page CSS from forcing a white card look
+                  background: 'transparent',
+                  border: 'none',
+                  boxShadow: 'none',
+                  borderRadius: 0,
+                }}
+              >
                 {content.content || content.markdown || content.textContent || ''}
               </pre>
             </div>
