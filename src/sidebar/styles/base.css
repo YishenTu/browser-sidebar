@@ -222,7 +222,8 @@
 /* Content Extraction Preview */
 .ai-sidebar-content-preview {
   background: transparent; /* Inherit from container */
-  margin: 8px 12px;
+  margin: 8px 10px; /* Reduced right margin to prevent border cutoff */
+  padding-right: 2px; /* Small padding to ensure border visibility */
 }
 
 .content-preview {
@@ -263,7 +264,7 @@
 .content-preview-collapsible {
   width: 100%;
   /* No background needed - parent handles it */
-  border: 1px solid rgba(75, 85, 99, 0.3);
+  /* Border moved to .content-preview-wrapper in tab-content-item.css */
   border-radius: 8px;
   transition:
     border-color 0.3s ease,
@@ -389,22 +390,19 @@
   min-width: 0;
 }
 
-/* Quality-based border colors for content preview */
-.content-preview-collapsible.content-preview-quality-high {
+/* Quality-based border colors for content preview - now on wrapper */
+.content-preview-wrapper.content-preview-quality-high {
   border: 1px solid #10b981; /* Green for high quality - thinner border */
-  border-radius: 8px;
   box-shadow: 0 0 8px rgba(16, 185, 129, 0.2);
 }
 
-.content-preview-collapsible.content-preview-quality-medium {
+.content-preview-wrapper.content-preview-quality-medium {
   border: 1px solid #f59e0b; /* Yellow/amber for medium quality - thinner border */
-  border-radius: 8px;
   box-shadow: 0 0 8px rgba(245, 158, 11, 0.2);
 }
 
-.content-preview-collapsible.content-preview-quality-low {
+.content-preview-wrapper.content-preview-quality-low {
   border: 1px solid #ef4444; /* Red for low quality - thinner border */
-  border-radius: 8px;
   box-shadow: 0 0 8px rgba(239, 68, 68, 0.2);
 }
 

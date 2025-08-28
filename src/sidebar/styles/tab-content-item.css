@@ -14,18 +14,14 @@
 .content-preview-wrapper {
   border-radius: 8px;
   background: rgba(30, 30, 30, 0.6);
-  overflow: hidden;
+  border: 1px solid rgba(75, 85, 99, 0.3); /* Move border here from collapsible */
+  overflow: hidden; /* Keep overflow hidden for clean corners */
   margin: 0;
   padding: 0;
 }
 
-/* Collapsible container */
-.content-preview-collapsible {
-  border-radius: 6px;
-  overflow: hidden;
-  margin: 0;
-  padding: 0;
-}
+/* Collapsible container - styles moved to base.css to avoid conflicts */
+/* .content-preview-collapsible styles are defined in base.css */
 
 /* Header section */
 .content-preview-collapsible .collapsible-header {
