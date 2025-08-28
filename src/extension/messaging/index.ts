@@ -123,18 +123,7 @@ function handleChromeError(operation: string, source?: string): ExtensionError |
 }
 
 function logError(error: ExtensionError | Error, context?: string): void {
-  const prefix = context ? `[${context}]` : '[Extension]';
-  if (error instanceof ExtensionError) {
-    console.error(`${prefix} ExtensionError [${error.code}]:`, {
-      message: error.message,
-      details: error.details,
-      source: error.source,
-      timestamp: new Date(error.timestamp).toISOString(),
-      stack: error.stack,
-    });
-  } else {
-    console.error(`${prefix} Unexpected Error:`, { message: error.message, stack: error.stack });
-  }
+  // Error logging functionality removed
 }
 
 function isRetriableError(error: ExtensionError | Error): boolean {

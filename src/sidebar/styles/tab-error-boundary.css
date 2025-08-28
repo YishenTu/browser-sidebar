@@ -1,0 +1,145 @@
+/* Tab Error Boundary Styles */
+
+.tab-error-boundary {
+  width: 100%;
+  margin: 8px 0;
+}
+
+.tab-error-boundary__alert {
+  border-radius: 6px;
+  border: 1px solid;
+  margin-bottom: 0;
+}
+
+.tab-error-boundary__retry-info {
+  margin-top: 6px;
+  font-size: 12px;
+  opacity: 0.8;
+  font-style: italic;
+}
+
+.tab-error-boundary__debug {
+  margin-top: 12px;
+  font-size: 11px;
+}
+
+.tab-error-boundary__debug summary {
+  cursor: pointer;
+  padding: 4px 0;
+  font-weight: 500;
+  user-select: none;
+}
+
+.tab-error-boundary__debug summary:hover {
+  opacity: 0.8;
+}
+
+.tab-error-boundary__error-details {
+  margin: 8px 0 0 0;
+  padding: 8px 12px;
+  background-color: rgba(0, 0, 0, 0.05);
+  border-radius: 4px;
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+  font-size: 10px;
+  line-height: 1.4;
+  color: var(--text-secondary, #666);
+  overflow-x: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+  max-height: 200px;
+  overflow-y: auto;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+/* Fallback styles for custom error UI */
+.tab-error-boundary__fallback {
+  padding: 16px;
+  border: 1px solid #f5c6cb;
+  background-color: #f8d7da;
+  border-radius: 6px;
+  color: #721c24;
+}
+
+.tab-error-boundary__fallback h3 {
+  margin: 0 0 8px 0;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.tab-error-boundary__fallback p {
+  margin: 0 0 12px 0;
+  line-height: 1.4;
+}
+
+.tab-error-boundary__fallback-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.tab-error-boundary__fallback-button {
+  padding: 6px 12px;
+  border: 1px solid #721c24;
+  background-color: transparent;
+  color: #721c24;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+  transition: all 0.2s;
+}
+
+.tab-error-boundary__fallback-button:hover {
+  background-color: #721c24;
+  color: white;
+}
+
+.tab-error-boundary__fallback-button--secondary {
+  border-color: #6c757d;
+  color: #6c757d;
+}
+
+.tab-error-boundary__fallback-button--secondary:hover {
+  background-color: #6c757d;
+  color: white;
+}
+
+/* Responsive adjustments */
+@media (max-width: 480px) {
+  .tab-error-boundary__alert {
+    font-size: 12px;
+  }
+  
+  .tab-error-boundary__error-details {
+    font-size: 9px;
+    max-height: 150px;
+  }
+  
+  .tab-error-boundary__fallback-actions {
+    flex-direction: column;
+  }
+  
+  .tab-error-boundary__fallback-button {
+    width: 100%;
+  }
+}
+
+/* Integration with existing multi-tab styles */
+.multi-tab-content-preview .tab-error-boundary {
+  margin: 4px 0;
+}
+
+.multi-tab-content-preview .tab-error-boundary__alert {
+  font-size: 12px;
+  padding: 8px 12px;
+}
+
+/* Integration with tab mention dropdown */
+.tab-mention-dropdown .tab-error-boundary {
+  margin: 0;
+  padding: 8px;
+}
+
+.tab-mention-dropdown .tab-error-boundary__alert {
+  font-size: 11px;
+  padding: 6px 8px;
+}

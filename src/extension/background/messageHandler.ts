@@ -13,7 +13,12 @@ import {
   createMessage,
   ErrorPayload,
   GetTabIdPayload,
+  GetAllTabsResponsePayload,
+  ExtractTabPayload,
+  ExtractTabContentResponsePayload,
+  CleanupTabCachePayload,
 } from '@/types/messages';
+import { TabManager } from './tabManager';
 
 /**
  * Type for message handler functions
@@ -96,7 +101,6 @@ export class MessageHandlerRegistry {
     try {
       // Validate message format
       if (!isValidMessage(message)) {
-        console.warn('Invalid message format received:', message);
         this.sendErrorResponse(sendResponse, 'Invalid message format', 'INVALID_MESSAGE');
         return false;
       }
@@ -104,7 +108,6 @@ export class MessageHandlerRegistry {
       // Check if handler exists
       const handlerRegistration = this.handlers.get(message.type);
       if (!handlerRegistration) {
-        console.warn('No handler registered for message type:', message.type);
         this.sendErrorResponse(
           sendResponse,
           `No handler for message type: ${message.type}`,
@@ -113,7 +116,6 @@ export class MessageHandlerRegistry {
         return false;
       }
 
-      console.log(`Handling message type: ${message.type}`, { message, sender });
 
       // Execute handler
       const result = await handlerRegistration.handler(message, sender);
@@ -122,7 +124,6 @@ export class MessageHandlerRegistry {
       sendResponse(result);
       return true;
     } catch (error) {
-      console.error('Error handling message:', error, { message, sender });
       this.sendErrorResponse(
         sendResponse,
         error instanceof Error ? error.message : String(error),
@@ -173,7 +174,6 @@ export class DefaultHandlers {
     message: Message<void>,
     sender: chrome.runtime.MessageSender
   ): Promise<Message<void>> {
-    console.log('PING received from:', sender.tab?.id || sender.id);
 
     return createMessage<void>({
       type: 'PONG',
@@ -189,7 +189,6 @@ export class DefaultHandlers {
     message: Message<ErrorPayload>,
     sender: chrome.runtime.MessageSender
   ): Promise<void> {
-    console.error('Error message received:', message.payload, 'from:', sender);
   }
 
   /**
@@ -230,7 +229,6 @@ export class DefaultHandlers {
     message: Message<void>,
     sender: chrome.runtime.MessageSender
   ): Promise<Message<GetTabIdPayload>> {
-    console.log('GET_TAB_ID request from:', sender.tab?.id || 'unknown tab');
 
     // Ensure sender has a tab ID
     if (!sender.tab?.id) {
@@ -245,6 +243,144 @@ export class DefaultHandlers {
       source: 'background',
       target: message.source,
     });
+  }
+
+  /**
+   * Handler for GET_ALL_TABS requests - returns all accessible tabs
+   */
+  static async handleGetAllTabs(
+    message: Message<void>,
+    sender: chrome.runtime.MessageSender
+  ): Promise<Message<GetAllTabsResponsePayload>> {
+
+    try {
+      // Get TabManager instance
+      const tabManager = TabManager.getInstance();
+      
+      // Get all accessible tabs
+      const tabs = await tabManager.getAllTabs();
+      
+      // Sort by lastAccessed (most recent first)
+      const sortedTabs = tabs.sort((a, b) => b.lastAccessed - a.lastAccessed);
+
+
+      return createMessage<GetAllTabsResponsePayload>({
+        type: 'GET_ALL_TABS',
+        payload: {
+          tabs: sortedTabs,
+        },
+        source: 'background',
+        target: message.source,
+      });
+    } catch (error) {
+      throw new Error(`Failed to get all tabs: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  }
+
+  /**
+   * Handler for EXTRACT_TAB_CONTENT requests - extracts content from a specific tab
+   */
+  static async handleExtractTabContent(
+    message: Message<ExtractTabPayload>,
+    sender: chrome.runtime.MessageSender
+  ): Promise<Message<ExtractTabContentResponsePayload>> {
+
+    if (!message.payload || typeof message.payload.tabId !== 'number') {
+      throw new Error('Invalid EXTRACT_TAB_CONTENT payload: tabId is required');
+    }
+
+    const { tabId, options } = message.payload;
+    
+    try {
+      // Get TabManager instance
+      const tabManager = TabManager.getInstance();
+
+      // Set timeout to 5 seconds as per requirements, or use provided timeout
+      const extractionOptions = {
+        ...options,
+        timeout: options?.timeout || 5000, // 5-second timeout as per requirements
+      };
+
+
+      // Use TabManager's extractTabContent method which handles cache checking and updating
+      const content = await tabManager.extractTabContent(tabId, extractionOptions);
+
+      if (!content) {
+        // TabManager returns null for various failure cases (tab closed, restricted URL, etc.)
+        throw new Error(`Failed to extract content from tab ${tabId}: tab may be closed, restricted, or content script unavailable`);
+      }
+
+
+      return createMessage<ExtractTabContentResponsePayload>({
+        type: 'EXTRACT_TAB_CONTENT',
+        payload: {
+          content,
+          tabId,
+        },
+        source: 'background',
+        target: message.source,
+      });
+    } catch (error) {
+
+      // Provide descriptive error messages based on common failure scenarios
+      let errorMessage = `Failed to extract content from tab ${tabId}`;
+
+      if (error instanceof Error) {
+        const msg = error.message || '';
+        if (msg.includes('Could not establish connection') || msg.includes('Receiving end does not exist')) {
+          errorMessage = `Tab ${tabId} does not have a content script available or is not accessible`;
+        } else if (msg.includes('restricted URL') || msg.includes('Cannot extract from restricted URL')) {
+          // Only classify as restricted when we have a clear restricted URL signal
+          errorMessage = `Tab ${tabId} contains a restricted URL that cannot be accessed`;
+        } else if (msg.includes('timeout') || msg.includes('timed out')) {
+          errorMessage = `Content extraction from tab ${tabId} timed out after ${options?.timeout || 5000}ms`;
+        } else {
+          errorMessage = `${errorMessage}: ${msg}`;
+        }
+      }
+
+      throw new Error(errorMessage);
+    }
+  }
+
+  /**
+   * Handler for CLEANUP_TAB_CACHE requests - clears cache for specified tabs
+   */
+  static async handleCleanupTabCache(
+    message: Message<CleanupTabCachePayload>,
+    sender: chrome.runtime.MessageSender
+  ): Promise<Message<void>> {
+
+    if (!message.payload) {
+      throw new Error('Invalid CLEANUP_TAB_CACHE payload: payload is required');
+    }
+
+    const { tabIds } = message.payload;
+
+    try {
+      // Get TabManager instance
+      const tabManager = TabManager.getInstance();
+      const cache = tabManager.getTabContentCache();
+
+      if (tabIds.length === 0) {
+        // Clear all cache if no specific tab IDs provided
+        await cache.clear();
+      } else {
+        // Clear specific tab IDs
+        for (const tabId of tabIds) {
+          await cache.clear(tabId);
+        }
+      }
+
+
+      return createMessage<void>({
+        type: 'CLEANUP_TAB_CACHE',
+        source: 'background',
+        target: message.source,
+      });
+    } catch (error) {
+      throw new Error(`Failed to cleanup tab cache: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
   }
 }
 
@@ -270,6 +406,9 @@ export function createDefaultMessageHandler(): MessageHandlerRegistry {
     'Sidebar state ack'
   );
   registry.registerHandler('GET_TAB_ID', DefaultHandlers.handleGetTabId, 'Return sender tab ID');
+  registry.registerHandler('GET_ALL_TABS', DefaultHandlers.handleGetAllTabs, 'Return all accessible tabs');
+  registry.registerHandler('EXTRACT_TAB_CONTENT', DefaultHandlers.handleExtractTabContent, 'Extract content from specific tab with cache and timeout handling');
+  registry.registerHandler('CLEANUP_TAB_CACHE', DefaultHandlers.handleCleanupTabCache, 'Clear cached content for specified tabs');
 
   return registry;
 }

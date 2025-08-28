@@ -183,7 +183,6 @@ export function normalizeUrls(
             }
           }
         } catch (error) {
-          console.warn(`Failed to normalize URL attribute ${attr}:`, error);
         }
       });
     });
@@ -211,7 +210,6 @@ export function normalizeUrls(
 
     return doc.body.innerHTML;
   } catch (error) {
-    console.error('Failed to normalize URLs:', error);
     return html; // Return original HTML if normalization fails
   }
 }
@@ -285,7 +283,6 @@ export function cleanHtml(html: string, preserveStyles: boolean = false): string
 
     return doc.body.innerHTML;
   } catch (error) {
-    console.error('Failed to clean HTML:', error);
     return html; // Return original HTML if cleaning fails
   }
 }

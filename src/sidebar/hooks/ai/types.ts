@@ -6,6 +6,7 @@
 
 import type { AIProvider, ProviderType } from '../../../types/providers';
 import type { ChatMessage } from '@store/chat';
+import type { UseMultiTabExtractionReturn } from '../useMultiTabExtraction';
 
 /**
  * Options for sending messages
@@ -47,6 +48,8 @@ export interface UseAIChatReturn {
   isStreaming: () => boolean;
   /** Get current provider statistics */
   getStats: () => AIStats;
+  /** Multi-tab extraction functionality */
+  multiTabExtraction: UseMultiTabExtractionReturn;
 }
 
 /**

@@ -6,7 +6,7 @@
  */
 
 /* eslint-disable no-console */
-import { createMessage, isValidMessage, Message } from '@/types/messages';
+import { createMessage, isValidMessage, Message, ExtractTabPayload } from '../../types/messages';
 import { SidebarController } from './sidebarController';
 
 /**
@@ -26,7 +26,7 @@ async function handleContentExtraction(message: Message): Promise<Message> {
       if (isExtractionOptions(message.payload)) {
         extractionOptions = validateExtractionOptions(message.payload);
       } else {
-        console.warn('Invalid extraction options provided, using defaults:', message.payload);
+        // Invalid extraction options provided, using defaults
       }
     }
 
@@ -81,7 +81,94 @@ async function handleContentExtraction(message: Message): Promise<Message> {
       }
     }
 
-    console.error(`Content extraction failed [${errorCode}]:`, error);
+
+    return createMessage({
+      type: 'ERROR',
+      payload: {
+        message: errorMessage,
+        code: errorCode,
+        details: {
+          timestamp: Date.now(),
+          url: typeof window !== 'undefined' ? window.location?.href : undefined,
+          userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : undefined,
+        },
+      },
+      source: 'content',
+      target: message.source,
+    });
+  }
+}
+
+/**
+ * Handles tab content extraction request
+ */
+async function handleTabContentExtraction(message: Message): Promise<Message> {
+  try {
+    // Import extraction modules with better error handling
+    const { extractContent } = await import('../extraction/orchestrator');
+    const { isExtractionOptions, validateExtractionOptions } = await import(
+      '../../types/extraction'
+    );
+
+    // Extract the ExtractTabPayload from the message
+    const tabPayload = message.payload as ExtractTabPayload;
+    
+    if (!tabPayload || typeof tabPayload.tabId !== 'number') {
+      return createMessage({
+        type: 'ERROR',
+        payload: {
+          message: 'Invalid EXTRACT_TAB_CONTENT payload - missing or invalid tabId',
+          code: 'INVALID_PAYLOAD',
+        },
+        source: 'content',
+        target: message.source,
+      });
+    }
+
+    // Validate and normalize extraction options from the tab payload
+    let extractionOptions = undefined;
+    if (tabPayload.options && typeof tabPayload.options === 'object') {
+      if (isExtractionOptions(tabPayload.options)) {
+        extractionOptions = validateExtractionOptions(tabPayload.options);
+      } else {
+        // Invalid extraction options provided in EXTRACT_TAB_CONTENT, using defaults
+      }
+    }
+
+    // Perform extraction with validated options
+    const extractedContent = await extractContent(extractionOptions);
+
+    // Return the extracted content in the expected format
+    return createMessage({
+      type: 'CONTENT_EXTRACTED',
+      payload: {
+        content: extractedContent,
+        tabId: tabPayload.tabId,
+      },
+      source: 'content',
+      target: message.source,
+    });
+  } catch (error) {
+    // Enhanced error classification and reporting
+    let errorCode = 'TAB_EXTRACTION_FAILED';
+    const errorMessage = error instanceof Error ? error.message : String(error);
+
+    // Classify specific error types for better handling
+    if (error instanceof Error) {
+      const msg = error.message.toLowerCase();
+      if (msg.includes('timeout')) {
+        errorCode = 'TAB_EXTRACTION_TIMEOUT';
+      } else if (msg.includes('network') || msg.includes('loading')) {
+        errorCode = 'TAB_EXTRACTION_NETWORK_ERROR';
+      } else if (msg.includes('dom') || msg.includes('document')) {
+        errorCode = 'TAB_EXTRACTION_DOM_ERROR';
+      } else if (msg.includes('memory')) {
+        errorCode = 'TAB_EXTRACTION_MEMORY_ERROR';
+      } else if (msg.includes('parsing')) {
+        errorCode = 'TAB_EXTRACTION_PARSING_ERROR';
+      }
+    }
+
 
     return createMessage({
       type: 'ERROR',
@@ -116,7 +203,6 @@ export class MessageHandler {
   async handleMessage(message: Message): Promise<Message> {
     // Validate message structure
     if (!isValidMessage(message)) {
-      console.error('Invalid message received:', message);
       return createMessage({
         type: 'ERROR',
         payload: { message: 'Invalid message format', code: 'INVALID_MESSAGE' },
@@ -197,6 +283,10 @@ export class MessageHandler {
         return await handleContentExtraction(message);
       }
 
+      case 'EXTRACT_TAB_CONTENT': {
+        return await handleTabContentExtraction(message);
+      }
+
       case 'PING':
         return createMessage({
           type: 'PONG',
@@ -227,7 +317,6 @@ export class MessageHandler {
       this.handleMessage(message)
         .then(response => sendResponse(response))
         .catch(error => {
-          console.error('Message handling error:', error);
           sendResponse(
             createMessage({
               type: 'ERROR',

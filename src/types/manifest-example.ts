@@ -97,12 +97,12 @@ export function updateManifestPermissions(
  * const result = validateExtensionManifest(loadedManifest);
  *
  * if (result.success) {
- *   console.log('Manifest is valid!');
+ *   // Manifest is valid!
  *   if (result.issues.length > 0) {
- *     console.warn('Warnings:', result.issues);
+ *     // Warnings: result.issues
  *   }
  * } else {
- *   console.error('Invalid manifest:', result.issues);
+ *   // Invalid manifest: result.issues
  * }
  * ```
  */

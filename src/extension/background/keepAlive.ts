@@ -1,4 +1,3 @@
-/* eslint-disable no-console */
 /**
  * @file Keep Alive System
  *
@@ -39,14 +38,7 @@ export class KeepAlive {
    */
   start(): boolean {
     if (this.isRunning) {
-      if (this.verbose) {
-        console.log('KeepAlive: Already running');
-      }
       return false;
-    }
-
-    if (this.verbose) {
-      console.log(`KeepAlive: Starting with ${this.interval}ms interval`);
     }
 
     this.isRunning = true;
@@ -67,14 +59,7 @@ export class KeepAlive {
    */
   stop(): boolean {
     if (!this.isRunning) {
-      if (this.verbose) {
-        console.log('KeepAlive: Not running');
-      }
       return false;
-    }
-
-    if (this.verbose) {
-      console.log('KeepAlive: Stopping');
     }
 
     if (this.intervalId !== null) {
@@ -123,15 +108,10 @@ export class KeepAlive {
       // Use a lightweight Chrome API call to maintain activity
       const platformInfo = await chrome.runtime.getPlatformInfo();
 
-      if (this.verbose) {
-        console.log(`KeepAlive: Ping #${this.pingCount} - Platform: ${platformInfo.os}`);
-      }
 
       // Additional lightweight operations to ensure activity
       await this.performAdditionalPings();
     } catch (error) {
-      console.error('KeepAlive: Ping failed:', error);
-
       // If the primary method fails, try alternative approaches
       this.performFallbackPing();
     }
@@ -153,9 +133,6 @@ export class KeepAlive {
       }
     } catch (error) {
       // These are optional operations, so we don't need to handle failures
-      if (this.verbose) {
-        console.log('KeepAlive: Additional ping operations failed (non-critical):', error);
-      }
     }
   }
 
@@ -168,11 +145,8 @@ export class KeepAlive {
       const timestamp = Date.now();
       const calculation = Math.sqrt(timestamp) + Math.random();
 
-      if (this.verbose) {
-        console.log(`KeepAlive: Fallback ping #${this.pingCount} - Result: ${calculation}`);
-      }
     } catch (error) {
-      console.error('KeepAlive: Even fallback ping failed:', error);
+      // Even fallback ping failed
     }
   }
 }
@@ -226,4 +200,3 @@ export function stopKeepAlive(): boolean {
 export function isKeepAliveActive(): boolean {
   return globalKeepAlive?.isActive() || false;
 }
-/* eslint-disable no-console */

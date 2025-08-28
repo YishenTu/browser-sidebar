@@ -1,0 +1,511 @@
+/* ============================================================================
+ * Multi-Tab Content Preview Component Styles
+ * ============================================================================ */
+
+.multi-tab-content-preview {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* Warning Alert */
+.multi-tab-warning {
+  margin-bottom: 8px;
+}
+
+/* Controls Section */
+.multi-tab-controls {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 8px;
+}
+
+.multi-tab-controls-group {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.multi-tab-clear-all-button {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  font-size: 12px;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.multi-tab-clear-all-button:hover {
+  background: var(--color-bg-hover);
+  border-color: var(--color-border-hover);
+  color: var(--color-text-primary);
+}
+
+.multi-tab-clear-all-button:active {
+  transform: translateY(1px);
+}
+
+/* Section Headers */
+.multi-tab-section-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 0 4px 0;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.025em;
+  border-bottom: 1px solid var(--color-border);
+  margin-bottom: 8px;
+}
+
+/* Current Tab Section */
+.multi-tab-current {
+  margin-bottom: 8px;
+}
+
+/* Additional Tabs Section */
+.multi-tab-additional {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* Individual Tab Item */
+.multi-tab-item {
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  background: var(--background-primary);
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast), transform var(--transition-fast);
+  animation: tabSlideIn var(--transition-medium) ease-out;
+}
+
+.multi-tab-item:hover {
+  border-color: var(--border-secondary);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-md);
+}
+
+.multi-tab-item:focus-within {
+  border-color: var(--border-focus);
+  box-shadow: var(--focus-ring);
+}
+
+/* Tab Toggle Button */
+.multi-tab-toggle {
+  width: 100%;
+  padding: 0;
+  background: none;
+  border: none;
+  cursor: pointer;
+  text-align: left;
+  transition: background-color 0.2s ease;
+}
+
+.multi-tab-toggle:hover {
+  background: var(--color-bg-hover);
+}
+
+.multi-tab-toggle:focus {
+  outline: none;
+  background: var(--color-bg-hover);
+}
+
+.multi-tab-toggle.expanded {
+  border-bottom: 1px solid var(--color-border);
+}
+
+/* Tab Header */
+.multi-tab-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  gap: 12px;
+}
+
+.multi-tab-header-content {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+  min-width: 0; /* Allow text truncation */
+}
+
+/* Tab Info */
+.multi-tab-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  min-width: 0;
+}
+
+.multi-tab-favicon {
+  flex-shrink: 0;
+  border-radius: 2px;
+}
+
+.multi-tab-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+}
+
+.multi-tab-title {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--color-text-primary);
+  line-height: 1.2;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.multi-tab-domain {
+  font-size: 11px;
+  color: var(--color-text-tertiary);
+  line-height: 1.2;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Status Indicators */
+.multi-tab-status {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.multi-tab-spinner {
+  color: var(--color-primary);
+}
+
+.multi-tab-error-icon {
+  color: var(--color-error);
+}
+
+.multi-tab-completed-indicator {
+  color: var(--color-success);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+/* Remove Button */
+.multi-tab-remove-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  background: none;
+  border: none;
+  border-radius: 4px;
+  color: var(--color-text-tertiary);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+}
+
+.multi-tab-remove-button:hover {
+  background: var(--color-bg-error);
+  color: var(--color-error);
+}
+
+.multi-tab-remove-button:active {
+  transform: scale(0.95);
+}
+
+/* Tab Content */
+.multi-tab-content {
+  padding: 0 16px 16px 16px;
+  background: var(--color-bg-secondary);
+}
+
+.multi-tab-content-preview-item {
+  margin: 0;
+}
+
+/* Responsive Design */
+@media (max-width: 400px) {
+  .multi-tab-header {
+    padding: 10px 12px;
+  }
+  
+  .multi-tab-content {
+    padding: 0 12px 12px 12px;
+  }
+  
+  .multi-tab-title {
+    font-size: 12px;
+  }
+  
+  .multi-tab-domain {
+    font-size: 10px;
+  }
+}
+
+/* Animation for expanding/collapsing */
+.multi-tab-content {
+  animation: expandContent var(--transition-medium) ease-out;
+}
+
+/* Tab removal animation */
+.multi-tab-item--removing {
+  animation: tabRemovalSlide var(--transition-medium) ease-in-out forwards;
+}
+
+/* Staggered animation for multiple tabs loading */
+.multi-tab-additional .multi-tab-item:nth-child(1) {
+  animation-delay: 0.1s;
+}
+
+.multi-tab-additional .multi-tab-item:nth-child(2) {
+  animation-delay: 0.2s;
+}
+
+.multi-tab-additional .multi-tab-item:nth-child(3) {
+  animation-delay: 0.3s;
+}
+
+.multi-tab-additional .multi-tab-item:nth-child(4) {
+  animation-delay: 0.4s;
+}
+
+.multi-tab-additional .multi-tab-item:nth-child(n+5) {
+  animation-delay: 0.5s;
+}
+
+/* Loading state for entire component */
+.multi-tab-content-preview--loading {
+  opacity: 0.7;
+  pointer-events: none;
+  position: relative;
+}
+
+.multi-tab-content-preview--loading::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    var(--primary-400) 50%,
+    transparent 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s ease-in-out infinite;
+  z-index: 1;
+}
+
+/* Empty state styling */
+.multi-tab-content-preview:empty {
+  display: none;
+}
+
+/* ============================================================================
+ * Skeleton Loaders for Multi-Tab Content Preview
+ * ============================================================================ */
+
+.multi-tab-skeleton-item {
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  background: var(--background-primary);
+  animation: tabFadeIn var(--transition-medium) ease-out;
+  margin-bottom: var(--spacing-sm);
+}
+
+.multi-tab-skeleton-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--spacing-md) var(--spacing-lg);
+  gap: var(--spacing-md);
+}
+
+.multi-tab-skeleton-info {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  flex: 1;
+  min-width: 0;
+}
+
+.multi-tab-skeleton-favicon {
+  width: 16px;
+  height: 16px;
+  background: linear-gradient(
+    90deg,
+    var(--background-muted) 0%,
+    var(--background-elevated) 50%,
+    var(--background-muted) 100%
+  );
+  background-size: 200px 100%;
+  animation: shimmer 1.5s ease-in-out infinite;
+  border-radius: var(--radius-sm);
+  flex-shrink: 0;
+}
+
+.multi-tab-skeleton-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.multi-tab-skeleton-title {
+  height: 14px;
+  background: linear-gradient(
+    90deg,
+    var(--background-muted) 0%,
+    var(--background-elevated) 50%,
+    var(--background-muted) 100%
+  );
+  background-size: 200px 100%;
+  animation: shimmer 1.5s ease-in-out infinite;
+  animation-delay: 0.1s;
+  border-radius: var(--radius-sm);
+  margin-bottom: var(--spacing-xs);
+}
+
+.multi-tab-skeleton-domain {
+  height: 12px;
+  width: 70%;
+  background: linear-gradient(
+    90deg,
+    var(--background-muted) 0%,
+    var(--background-elevated) 50%,
+    var(--background-muted) 100%
+  );
+  background-size: 200px 100%;
+  animation: shimmer 1.5s ease-in-out infinite;
+  animation-delay: 0.2s;
+  border-radius: var(--radius-sm);
+}
+
+.multi-tab-skeleton-status {
+  width: 16px;
+  height: 16px;
+  background: linear-gradient(
+    90deg,
+    var(--background-muted) 0%,
+    var(--background-elevated) 50%,
+    var(--background-muted) 100%
+  );
+  background-size: 200px 100%;
+  animation: shimmer 1.5s ease-in-out infinite;
+  animation-delay: 0.3s;
+  border-radius: var(--radius-full);
+  flex-shrink: 0;
+}
+
+/* Skeleton content area (for expanded tabs) */
+.multi-tab-skeleton-content {
+  padding: 0 var(--spacing-lg) var(--spacing-lg) var(--spacing-lg);
+  background: var(--background-secondary);
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xs);
+}
+
+.multi-tab-skeleton-content-line {
+  height: 12px;
+  background: linear-gradient(
+    90deg,
+    var(--background-muted) 0%,
+    var(--background-elevated) 50%,
+    var(--background-muted) 100%
+  );
+  background-size: 200px 100%;
+  animation: shimmer 1.5s ease-in-out infinite;
+  border-radius: var(--radius-sm);
+}
+
+.multi-tab-skeleton-content-line:nth-child(1) {
+  width: 100%;
+  animation-delay: 0.4s;
+}
+
+.multi-tab-skeleton-content-line:nth-child(2) {
+  width: 85%;
+  animation-delay: 0.5s;
+}
+
+.multi-tab-skeleton-content-line:nth-child(3) {
+  width: 70%;
+  animation-delay: 0.6s;
+}
+
+/* ============================================================================
+ * Accessibility and Performance Enhancements
+ * ============================================================================ */
+
+/* Reduced motion accessibility */
+@media (prefers-reduced-motion: reduce) {
+  .multi-tab-item,
+  .multi-tab-item--removing,
+  .multi-tab-content,
+  .multi-tab-additional .multi-tab-item,
+  .multi-tab-skeleton-item,
+  .multi-tab-skeleton-favicon,
+  .multi-tab-skeleton-title,
+  .multi-tab-skeleton-domain,
+  .multi-tab-skeleton-status,
+  .multi-tab-skeleton-content-line,
+  .multi-tab-content-preview--loading::before {
+    animation: none !important;
+    transition: opacity var(--transition-fast) !important;
+  }
+  
+  .multi-tab-item:hover {
+    transform: none !important;
+  }
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+  .multi-tab-item {
+    border-width: 2px;
+  }
+  
+  .multi-tab-item:hover {
+    border-color: var(--text-primary);
+  }
+  
+  .multi-tab-item:focus-within {
+    border-color: var(--border-focus);
+    border-width: 3px;
+  }
+}
+
+/* Performance optimization for GPU acceleration */
+.multi-tab-item {
+  will-change: transform, opacity;
+}
+
+.multi-tab-item--removing {
+  will-change: transform, opacity, max-height;
+}
+
+/* Ensure smooth animations on low-end devices */
+@media (prefers-reduced-motion: no-preference) and (pointer: coarse) {
+  .multi-tab-item {
+    animation-duration: calc(var(--transition-medium) * 0.8);
+  }
+  
+  .multi-tab-content {
+    animation-duration: calc(var(--transition-medium) * 0.8);
+  }
+}

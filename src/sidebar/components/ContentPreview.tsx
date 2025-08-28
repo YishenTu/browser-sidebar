@@ -13,6 +13,7 @@ import { Alert } from '@ui/Alert';
 import { Collapsible } from '@ui/Collapsible';
 import { RegenerateIcon, ExpandIcon, CancelIcon } from '@ui/Icons';
 import { Modal } from '@ui/Modal';
+import { getFaviconUrlSync } from '@/sidebar/utils/favicon';
 
 export interface ContentPreviewProps {
   /** Extracted content data */
@@ -27,6 +28,8 @@ export interface ContentPreviewProps {
   onClearContent?: () => void;
   /** Custom CSS class */
   className?: string;
+  /** Optional tab identifier for multi-tab scenarios */
+  tabId?: number | string;
 }
 
 /**
@@ -42,6 +45,7 @@ export const ContentPreview: React.FC<ContentPreviewProps> = ({
   onReextract,
   onClearContent,
   className = '',
+  tabId,
 }) => {
   const [showFullContent, setShowFullContent] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
@@ -110,14 +114,15 @@ export const ContentPreview: React.FC<ContentPreviewProps> = ({
             <div className="content-preview-header-main">
               <div className="content-preview-title-wrapper">
                 <img
-                  src={`https://www.google.com/s2/favicons?domain=${content.domain}&sz=16`}
+                  src={getFaviconUrlSync(content.url || '', undefined, { size: 16 }).url}
                   alt=""
                   className="content-preview-favicon"
                   width="16"
                   height="16"
                   onError={e => {
-                    // Fallback to a generic icon if favicon fails to load
-                    (e.target as HTMLImageElement).style.display = 'none';
+                    // Use fallback from favicon utility
+                    const fallback = getFaviconUrlSync('', undefined, { size: 16 });
+                    (e.target as HTMLImageElement).src = fallback.url;
                   }}
                 />
                 <span className="content-preview-title">{content.title}</span>
@@ -170,7 +175,10 @@ export const ContentPreview: React.FC<ContentPreviewProps> = ({
 
   return (
     <>
-      <div className={`content-preview ${className}`}>
+      <div 
+        className={`content-preview ${className}`}
+        data-tab-id={tabId}
+      >
         {error ? (
           // Show error as Alert instead of collapsible
           <Alert

@@ -3,7 +3,7 @@ import { ChatMessage, MessageRole, MessageStatus } from '@store/chat';
 import { MarkdownRenderer } from './MarkdownRenderer';
 import { ThinkingWrapper } from './ThinkingWrapper';
 import { SearchSources } from './SearchSources';
-import { Spinner, CopyButton, EditIcon, RegenerateIcon } from './ui';
+import { Spinner, CopyButton, EditIcon, RegenerateIcon, WarningIcon } from './ui';
 
 /**
  * MessageBubble Props Interface
@@ -120,6 +120,16 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
             className=""
           />
         ) : null}
+
+        {/* Truncation warning for user messages with truncated tab content */}
+        {message.role === 'user' && message.metadata?.['truncation'] && (
+          <div className="message-truncation-warning">
+            <WarningIcon size={14} />
+            <span>
+              {message.metadata['truncation'].truncatedTabCount} tab{message.metadata['truncation'].truncatedTabCount > 1 ? 's' : ''} excluded due to size limits
+            </span>
+          </div>
+        )}
 
         {/* Hover container for bubble and footer */}
         <div className={`message-hover-container message-hover-container--${message.role}`}>

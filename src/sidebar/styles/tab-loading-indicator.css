@@ -1,0 +1,379 @@
+/* ============================================================================
+ * Tab Loading Indicator Styles
+ * Visual indicator components for tab loading states with smooth transitions
+ * ============================================================================ */
+
+/* Tab Loading Indicator Styles */
+.tab-loading-indicator {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  transition: all var(--transition-fast);
+  animation: tabFadeIn var(--transition-medium) ease-out;
+}
+
+.tab-loading-indicator__content {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  animation: slideDown var(--transition-fast) ease-out;
+}
+
+.tab-loading-indicator__content--error {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--spacing-xs);
+}
+
+/* Size variants */
+.tab-loading-indicator--small {
+  font-size: var(--font-size-xs);
+  gap: var(--spacing-xs);
+}
+
+.tab-loading-indicator--small .tab-loading-indicator__content {
+  gap: var(--spacing-xs);
+}
+
+.tab-loading-indicator--medium {
+  font-size: var(--font-size-sm);
+  gap: var(--spacing-sm);
+}
+
+.tab-loading-indicator--large {
+  font-size: var(--font-size-base);
+  gap: var(--spacing-md);
+}
+
+/* Text styling */
+.tab-loading-indicator__text {
+  color: var(--text-secondary);
+  font-weight: var(--font-weight-medium);
+  line-height: var(--line-height-tight);
+}
+
+/* Loading state */
+.tab-loading-indicator__spinner {
+  color: var(--primary-400);
+  flex-shrink: 0;
+}
+
+/* Error state */
+.tab-loading-indicator__error-content {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+}
+
+.tab-loading-indicator__error-icon {
+  color: var(--error-500);
+  flex-shrink: 0;
+}
+
+.tab-loading-indicator__content--error .tab-loading-indicator__text {
+  color: var(--error-500);
+}
+
+/* Retry button */
+.tab-loading-indicator__retry-button {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+  padding: var(--spacing-xs) var(--spacing-sm);
+  background-color: transparent;
+  border: 1px solid var(--border-secondary);
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  outline: none;
+}
+
+.tab-loading-indicator__retry-button:hover {
+  background-color: var(--hover-overlay);
+  border-color: var(--border-focus);
+  color: var(--text-primary);
+}
+
+.tab-loading-indicator__retry-button:focus {
+  box-shadow: var(--focus-ring);
+  border-color: var(--border-focus);
+}
+
+.tab-loading-indicator__retry-button:active {
+  background-color: var(--active-overlay);
+  transform: translateY(1px);
+}
+
+.tab-loading-indicator__retry-icon {
+  color: inherit;
+  flex-shrink: 0;
+}
+
+.tab-loading-indicator__retry-text {
+  color: inherit;
+  white-space: nowrap;
+}
+
+/* Error shake animation on mount */
+.tab-loading-indicator__content--error {
+  animation: slideDown var(--transition-fast) ease-out, shake 0.5s ease-in-out 0.2s;
+}
+
+/* Responsive adjustments */
+@media (max-width: 400px) {
+  .tab-loading-indicator--medium {
+    font-size: var(--font-size-xs);
+  }
+  
+  .tab-loading-indicator__retry-button {
+    padding: var(--spacing-xs);
+    min-width: auto;
+  }
+  
+  .tab-loading-indicator__retry-text {
+    display: none;
+  }
+}
+
+/* Accessibility improvements */
+@media (prefers-reduced-motion: reduce) {
+  .tab-loading-indicator__content,
+  .tab-loading-indicator__content--error,
+  .tab-loading-indicator__retry-button,
+  .tab-loading-indicator,
+  .tab-loading-skeleton,
+  .tab-loading-skeleton__favicon,
+  .tab-loading-skeleton__title,
+  .tab-loading-skeleton__domain,
+  .tab-loading-skeleton__content-line,
+  .tab-loading-dots__dot,
+  .tab-content-loading-stagger > *,
+  .tab-loading-indicator__spinner--enhanced::before,
+  .tab-loading-progress__bar {
+    animation: none !important;
+    transition: none !important;
+  }
+  
+  .tab-loading-indicator__spinner {
+    animation: none;
+  }
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+  .tab-loading-indicator__error-icon {
+    color: var(--error-700);
+  }
+  
+  .tab-loading-indicator__retry-button {
+    border-width: 2px;
+  }
+}
+
+/* ============================================================================
+ * Skeleton Loader Styles for Tab Loading States  
+ * ============================================================================ */
+
+/* Skeleton loader base styles */
+.tab-loading-skeleton {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-md);
+  animation: tabFadeIn var(--transition-medium) ease-out;
+}
+
+.tab-loading-skeleton__header {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+}
+
+.tab-loading-skeleton__favicon {
+  width: 16px;
+  height: 16px;
+  background: linear-gradient(
+    90deg,
+    var(--background-muted) 0%,
+    var(--background-elevated) 50%,
+    var(--background-muted) 100%
+  );
+  background-size: 200px 100%;
+  animation: shimmer 1.5s ease-in-out infinite;
+  border-radius: var(--radius-sm);
+  flex-shrink: 0;
+}
+
+.tab-loading-skeleton__title {
+  height: 14px;
+  background: linear-gradient(
+    90deg,
+    var(--background-muted) 0%,
+    var(--background-elevated) 50%,
+    var(--background-muted) 100%
+  );
+  background-size: 200px 100%;
+  animation: shimmer 1.5s ease-in-out infinite;
+  border-radius: var(--radius-sm);
+  flex: 1;
+}
+
+.tab-loading-skeleton__domain {
+  height: 12px;
+  width: 80px;
+  background: linear-gradient(
+    90deg,
+    var(--background-muted) 0%,
+    var(--background-elevated) 50%,
+    var(--background-muted) 100%
+  );
+  background-size: 200px 100%;
+  animation: shimmer 1.5s ease-in-out infinite;
+  animation-delay: 0.1s;
+  border-radius: var(--radius-sm);
+  margin-top: var(--spacing-xs);
+}
+
+.tab-loading-skeleton__content {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xs);
+  margin-top: var(--spacing-sm);
+}
+
+.tab-loading-skeleton__content-line {
+  height: 12px;
+  background: linear-gradient(
+    90deg,
+    var(--background-muted) 0%,
+    var(--background-elevated) 50%,
+    var(--background-muted) 100%
+  );
+  background-size: 200px 100%;
+  animation: shimmer 1.5s ease-in-out infinite;
+  border-radius: var(--radius-sm);
+}
+
+.tab-loading-skeleton__content-line:nth-child(1) {
+  animation-delay: 0.2s;
+}
+
+.tab-loading-skeleton__content-line:nth-child(2) {
+  width: 85%;
+  animation-delay: 0.3s;
+}
+
+.tab-loading-skeleton__content-line:nth-child(3) {
+  width: 70%;
+  animation-delay: 0.4s;
+}
+
+/* Loading dots animation for tab extraction */
+.tab-loading-dots {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  margin-left: var(--spacing-xs);
+}
+
+.tab-loading-dots__dot {
+  width: 4px;
+  height: 4px;
+  background-color: var(--primary-400);
+  border-radius: var(--radius-full);
+  animation: loadingDots 1.4s ease-in-out infinite;
+}
+
+.tab-loading-dots__dot:nth-child(1) {
+  animation-delay: 0s;
+}
+
+.tab-loading-dots__dot:nth-child(2) {
+  animation-delay: 0.2s;
+}
+
+.tab-loading-dots__dot:nth-child(3) {
+  animation-delay: 0.4s;
+}
+
+/* Staggered content loading animation */
+.tab-content-loading-stagger > * {
+  animation: contentStagger var(--transition-medium) ease-out;
+}
+
+.tab-content-loading-stagger > *:nth-child(1) {
+  animation-delay: 0.1s;
+}
+
+.tab-content-loading-stagger > *:nth-child(2) {
+  animation-delay: 0.2s;
+}
+
+.tab-content-loading-stagger > *:nth-child(3) {
+  animation-delay: 0.3s;
+}
+
+.tab-content-loading-stagger > *:nth-child(4) {
+  animation-delay: 0.4s;
+}
+
+/* Enhanced loading spinner with smoother animation */
+.tab-loading-indicator__spinner--enhanced {
+  position: relative;
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+}
+
+.tab-loading-indicator__spinner--enhanced::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  border: 2px solid var(--background-elevated);
+  border-top-color: var(--primary-400);
+  border-radius: var(--radius-full);
+  animation: spin 0.8s cubic-bezier(0.68, -0.55, 0.265, 1.55) infinite;
+}
+
+/* Progress bar for tab loading */
+.tab-loading-progress {
+  width: 100%;
+  height: 2px;
+  background-color: var(--background-elevated);
+  border-radius: var(--radius-full);
+  overflow: hidden;
+  margin-top: var(--spacing-xs);
+}
+
+.tab-loading-progress__bar {
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    var(--primary-400) 0%,
+    var(--primary-500) 50%,
+    var(--primary-600) 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.2s ease-in-out infinite;
+  border-radius: var(--radius-full);
+  transform: translateX(-100%);
+  animation: tabLoadingProgress 2s ease-in-out infinite;
+}
+
+@keyframes tabLoadingProgress {
+  0% {
+    transform: translateX(-100%);
+  }
+  50% {
+    transform: translateX(0%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}

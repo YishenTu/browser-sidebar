@@ -13,7 +13,7 @@ A privacy‑focused browser extension for AI‑powered chat with web content usi
 - 🔍 **Web Search**: Automatic web search grounding for enhanced responses
 - 🔄 **Smart Context Management**: OpenAI Response API with intelligent conversation continuity
 - 📑 **Content Extraction**: Smart page content capture with markdown conversion
-- 🎯 **Multi-Tab Context**: Aggregate information from multiple browser tabs
+- 🎯 **Multi-Tab Context**: Smart @ mention system to aggregate content from multiple browser tabs with visual management
 
 ## Tech Stack
 
@@ -86,6 +86,109 @@ npm run test:ui
    - Drag the left edge to resize (300-800px width)
    - Click the X button or extension icon to close
 4. **Configure AI providers**: Add your API keys in the extension settings (coming soon)
+
+## Multi-Tab Content Injection
+
+The extension supports aggregating content from multiple browser tabs in your conversations with AI. This powerful feature allows you to provide comprehensive context from different sources.
+
+### How It Works
+
+- **Automatic Current Tab**: The content from your current tab is automatically loaded when you open the sidebar
+- **@ Mention System**: Type `@` in the chat input to search and select additional tabs
+- **Smart Content Extraction**: Uses advanced algorithms to extract clean, readable content from web pages
+- **Structured Delivery**: All tab contents are sent to AI in a structured XML format for better understanding
+
+### Using the @ Mention System
+
+1. **Open the Chat Input**: Click in the message input area at the bottom of the sidebar
+2. **Type @**: Start typing the `@` symbol to trigger the tab selection dropdown
+3. **Search Tabs**: Continue typing to filter available tabs by title, domain, or URL
+4. **Navigate**: Use arrow keys to navigate through the list, or click with your mouse
+5. **Select**: Press Enter or click to select a tab - its content will be loaded
+6. **Send**: Compose your message and send - all loaded tab content is included automatically
+
+### Visual Indicators
+
+- **Tab Chips**: Selected tabs appear as removable chips above the input
+- **Content Previews**: Expandable content previews show what will be sent to AI
+- **Loading States**: Visual indicators show when content is being extracted
+- **Status Icons**: ✓ for completed, spinner for loading, warning for errors
+
+### Keyboard Shortcuts
+
+- `@` - Open tab selection dropdown
+- `↑/↓` - Navigate dropdown options
+- `Enter` - Select highlighted tab
+- `Escape` - Close dropdown
+- `Tab` - Navigate between UI elements
+
+### Content Management
+
+- **View Content**: Click tab headers in the preview area to expand/collapse content
+- **Remove Tabs**: Click the X button on individual tab chips or preview headers
+- **Clear All**: Use the "Clear All" button to remove all loaded tabs at once
+- **Re-extract**: Refresh content if a page has been updated
+
+### Best Practices
+
+- **Relevant Content**: Select tabs that are relevant to your question for better AI responses
+- **Performance**: Keep the number of tabs reasonable (recommended: 5-10 tabs max)
+- **Content Quality**: The AI works best with text-heavy pages rather than media-heavy sites
+- **Context**: Provide context about why you're including multiple tabs in your question
+
+### Supported Content Types
+
+- **Articles & Blogs**: News articles, blog posts, documentation
+- **Reference Materials**: Wikipedia, Stack Overflow, technical docs
+- **Product Pages**: E-commerce listings, software descriptions
+- **Forums & Discussions**: Reddit threads, forum posts (where accessible)
+- **Academic Content**: Research papers, educational resources
+
+### Limitations
+
+- **Restricted URLs**: Cannot access `chrome://`, `file://`, or extension pages
+- **Authentication**: Cannot access content behind login walls
+- **Dynamic Content**: Some JavaScript-heavy sites may have limited content extraction
+- **Size Limits**: Very large pages may be truncated for performance
+- **Rate Limits**: Extraction is throttled to prevent overwhelming the browser
+
+### Troubleshooting
+
+#### Tab Content Not Loading
+
+- **Check URL**: Ensure the tab URL is accessible (not chrome:// or extension:// pages)
+- **Reload Page**: Try refreshing the page if content seems incomplete
+- **Network Issues**: Check if the page loads normally in the browser
+- **Content Scripts**: Some sites may block content script injection
+
+#### Dropdown Not Appearing
+
+- **Permissions**: Ensure the extension has access to the tab's domain
+- **Focus**: Make sure the input field is focused when typing `@`
+- **Spelling**: Ensure you're typing the `@` symbol correctly
+- **Browser Compatibility**: Verify you're using a supported Chromium-based browser
+
+#### Performance Issues
+
+- **Reduce Tabs**: Try using fewer tabs if the sidebar becomes slow
+- **Clear Cache**: Close and reopen the sidebar to clear cached content
+- **Browser Memory**: Close unused browser tabs to free up memory
+- **Content Size**: Avoid selecting very large documents
+
+#### Content Quality Issues
+
+- **Page Structure**: Some sites may not extract content cleanly
+- **Re-extract**: Try using the re-extract button if content looks wrong
+- **Manual Selection**: Consider copying and pasting specific content if needed
+- **Alternative Sources**: Try finding the same information on a different site
+
+### Privacy & Security
+
+- **Local Processing**: All content extraction happens locally in your browser
+- **No Data Collection**: Tab content is never sent to extension servers
+- **Encrypted Storage**: Content is cached locally with encryption
+- **Automatic Cleanup**: Cache is cleared when you close the sidebar
+- **BYOK**: Your API keys remain under your control
 
 ## Project Structure
 

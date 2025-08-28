@@ -1,4 +1,3 @@
-/* eslint-disable no-console */
 /**
  * @file Background Service Worker
  *
@@ -11,7 +10,6 @@ import { startKeepAlive } from './keepAlive';
 import { getSidebarManager } from './sidebarManager';
 import { createMessage, Message, ToggleSidebarPayload } from '@/types/messages';
 
-console.log('Background service worker initialized');
 
 // Initialize subsystems
 const messageHandler = createDefaultMessageHandler();
@@ -41,21 +39,13 @@ function initializeServiceWorker(): void {
     verbose: false, // Set to true for debugging
   });
 
-  if (keepAliveStarted) {
-    console.log('Keep-alive system started');
-  } else {
-    console.warn('Keep-alive system failed to start');
-  }
 
-  console.log('Service worker initialization complete');
-  console.log('Registered message types:', messageHandler.getRegisteredTypes());
 }
 
 /**
  * Handle extension installation and updates
  */
 chrome.runtime.onInstalled.addListener(async details => {
-  console.log('Extension installed/updated:', details);
 
   try {
     // Set default extension settings
@@ -69,16 +59,8 @@ chrome.runtime.onInstalled.addListener(async details => {
       },
     });
 
-    console.log('Default settings initialized');
-
-    // Show installation/update notification if needed
-    if (details.reason === 'install') {
-      console.log('Extension installed for the first time');
-    } else if (details.reason === 'update') {
-      console.log('Extension updated from version:', details.previousVersion);
-    }
   } catch (error) {
-    console.error('Error during installation setup:', error);
+    // Error during installation setup
   }
 });
 
@@ -87,11 +69,8 @@ chrome.runtime.onInstalled.addListener(async details => {
  */
 chrome.action.onClicked.addListener(async tab => {
   if (!tab.id) {
-    console.warn('No tab ID available for action click');
     return;
   }
-
-  console.log('Extension icon clicked for tab:', tab.id);
 
   try {
     // Create a toggle sidebar message
@@ -104,7 +83,7 @@ chrome.action.onClicked.addListener(async tab => {
     // Handle through sidebar manager (which will handle content script injection if needed)
     await sidebarManager.handleToggleSidebar(toggleMessage, { tab });
   } catch (error) {
-    console.error('Error handling extension icon click:', error);
+    // Error handling extension icon click
   }
 });
 
@@ -123,16 +102,12 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
  * Handle service worker startup
  */
 chrome.runtime.onStartup.addListener(() => {
-  console.log('Service worker started');
   initializeServiceWorker();
 });
 
 /**
  * Handle service worker suspension (for debugging)
  */
-self.addEventListener('beforeunload', () => {
-  console.log('Service worker being suspended');
-});
 
 // Initialize the service worker
 initializeServiceWorker();

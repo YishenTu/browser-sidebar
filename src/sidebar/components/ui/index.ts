@@ -27,3 +27,15 @@ export type { DropdownProps, DropdownOption, DropdownGroup } from './Dropdown';
 // CopyButton exports
 export { CopyButton } from './CopyButton';
 export type { CopyButtonProps } from './CopyButton';
+
+// TabLoadingIndicator exports
+export { TabLoadingIndicator } from '../TabLoadingIndicator';
+export type { 
+  TabLoadingIndicatorProps, 
+  TabLoadingIndicatorStatus, 
+  TabLoadingIndicatorSize 
+} from '../TabLoadingIndicator';
+
+// Tooltip exports
+export { Tooltip } from './Tooltip';
+export type { TooltipProps } from './Tooltip';

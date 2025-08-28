@@ -149,6 +149,24 @@
   --sidebar-width-max: 800px;
   --sidebar-height: 85vh;
   --header-height: 3rem; /* 48px */
+
+  /* Component-specific Variables */
+  /* Tooltip */
+  --tooltip-bg: var(--background-elevated);
+  --tooltip-text: var(--text-primary);
+  --tooltip-border: var(--border-primary);
+  
+  /* Button States */
+  --bg-hover: var(--hover-overlay);
+  
+  /* Code Styling */
+  --code-bg: var(--background-muted);
+  --code-text: var(--text-secondary);
+  
+  /* Aliases for consistency */
+  --border-radius-xs: var(--radius-sm);
+  --border-radius-sm: var(--radius-md);
+  --font-mono: var(--font-family-mono);
 }
 
 /* Light Theme Overrides (since dark is now default) */

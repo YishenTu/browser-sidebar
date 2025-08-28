@@ -71,8 +71,6 @@ export async function extractWithDefuddle(): Promise<ExtractedContent> {
 
     return result;
   } catch (error) {
-    console.error('[Defuddle] Extraction failed with error:', error);
-    console.error('[Defuddle] Error stack:', error instanceof Error ? error.stack : 'No stack');
 
     // Return a basic fallback with document content
     const fallbackContent = document.body?.textContent || 'Content extraction failed';

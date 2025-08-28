@@ -316,7 +316,6 @@ const saveToStorage = async (settings: Settings): Promise<void> => {
 const loadFromStorage = async (): Promise<{ settings: Settings; migrated: boolean }> => {
   // Check if chrome.storage is available
   if (typeof chrome === 'undefined' || !chrome.storage) {
-    console.warn('Chrome storage API not available, using defaults');
     return { settings: { ...DEFAULT_SETTINGS }, migrated: false };
   }
 
@@ -335,7 +334,6 @@ const loadFromStorage = async (): Promise<{ settings: Settings; migrated: boolea
       !rawSettings || (rawSettings as Partial<Settings> | undefined)?.version !== SETTINGS_VERSION;
     return { settings: migrateSettings(rawSettings), migrated };
   } catch (error) {
-    console.warn('Failed to load from sync storage, trying local storage:', error);
 
     // Fallback to local storage
     try {
@@ -346,7 +344,6 @@ const loadFromStorage = async (): Promise<{ settings: Settings; migrated: boolea
         (rawSettings as Partial<Settings> | undefined)?.version !== SETTINGS_VERSION;
       return { settings: migrateSettings(rawSettings), migrated };
     } catch (localError) {
-      console.warn('Failed to load from local storage, using defaults:', localError);
       // Return defaults if all storage options fail
       return { settings: { ...DEFAULT_SETTINGS }, migrated: false };
     }

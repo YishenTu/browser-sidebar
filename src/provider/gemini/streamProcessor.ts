@@ -91,7 +91,6 @@ export class GeminiStreamProcessor {
             const obj = JSON.parse(objectStr);
             results.push(obj);
           } catch (e) {
-            console.warn('Failed to parse JSON object:', e);
           }
         } else {
           // Incomplete object, wait for more data
@@ -171,7 +170,6 @@ export class GeminiStreamProcessor {
           const obj = JSON.parse(jsonStr);
           results.push(obj);
         } catch (e) {
-          console.warn('Failed to parse SSE data:', e);
         }
       } else {
         // Try parsing as NDJSON

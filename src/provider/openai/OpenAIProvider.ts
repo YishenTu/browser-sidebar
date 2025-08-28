@@ -278,7 +278,6 @@ export class OpenAIProvider extends BaseProvider {
               processor.setSearchMetadata(updatedMetadata);
             }
           } catch (parseError) {
-            console.warn('Error parsing stream chunk:', parseError);
             continue;
           }
         }

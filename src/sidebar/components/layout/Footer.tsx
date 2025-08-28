@@ -6,6 +6,7 @@
 
 import React, { useEffect, useRef } from 'react';
 import { ChatInput } from '@components/ChatInput';
+import type { TabInfo, TabContent } from '@/types/tabs';
 
 export interface FooterProps {
   /** Send message handler */
@@ -20,6 +21,14 @@ export interface FooterProps {
   editingMessage?: string;
   /** Clear edit mode */
   onClearEdit?: () => void;
+  /** Available tabs for @ mention functionality */
+  availableTabs?: TabInfo[];
+  /** Loaded tabs to display as chips */
+  loadedTabs?: Record<number, TabContent>;
+  /** Callback fired when a tab chip is removed */
+  onTabRemove?: (tabId: number) => void;
+  /** Callback when a tab is selected from @ mention dropdown */
+  onMentionSelectTab?: (tabId: number) => void;
 }
 
 /**
@@ -33,6 +42,10 @@ export const Footer: React.FC<FooterProps> = ({
   placeholder = 'Ask about this webpage...',
   editingMessage,
   onClearEdit,
+  availableTabs = [],
+  loadedTabs = {},
+  onTabRemove,
+  onMentionSelectTab,
 }) => {
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
@@ -68,6 +81,11 @@ export const Footer: React.FC<FooterProps> = ({
         placeholder={placeholder}
         defaultValue={editingMessage || ''}
         className={editingMessage ? 'editing-mode' : ''}
+        availableTabs={availableTabs}
+        enableMentions={true}
+        loadedTabs={loadedTabs}
+        onTabRemove={onTabRemove}
+        onMentionSelectTab={onMentionSelectTab}
       />
     </div>
   );

@@ -1,0 +1,208 @@
+/* Tab Chip Component Styles */
+
+.tab-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+  padding: var(--spacing-xs) var(--spacing-sm);
+  background-color: var(--background-elevated);
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius-lg);
+  font-size: 12px;
+  line-height: 1;
+  color: var(--text-secondary);
+  transition: all 0.15s ease;
+  max-width: 200px; /* Prevent chips from getting too wide */
+}
+
+.tab-chip:hover {
+  background-color: var(--background-secondary);
+  border-color: var(--border-secondary);
+}
+
+/* Favicon container */
+.tab-chip__favicon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 12px;
+  height: 12px;
+}
+
+.tab-chip__favicon-image {
+  width: 12px;
+  height: 12px;
+  border-radius: var(--radius-sm);
+}
+
+.tab-chip__favicon-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 12px;
+  height: 12px;
+  color: var(--text-muted);
+}
+
+/* Tab title */
+.tab-chip__title {
+  flex: 1;
+  min-width: 0; /* Allow text to truncate */
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 12px;
+  color: var(--text-primary);
+}
+
+/* Remove button */
+.tab-chip__remove {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 16px;
+  height: 16px;
+  padding: 0;
+  background: none;
+  border: none;
+  border-radius: var(--radius-sm);
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.tab-chip__remove:hover {
+  background-color: var(--hover-overlay);
+  color: var(--text-primary);
+}
+
+.tab-chip__remove:focus {
+  outline: none;
+  background-color: var(--active-overlay);
+  box-shadow: var(--focus-ring);
+}
+
+.tab-chip__remove:active {
+  background-color: var(--active-overlay);
+  transform: scale(0.95);
+}
+
+.tab-chip__remove svg {
+  width: 10px;
+  height: 10px;
+}
+
+/* Focus state for the entire chip */
+.tab-chip:focus-within {
+  border-color: var(--border-focus);
+  box-shadow: var(--focus-ring);
+}
+
+/* Hover state for remove button when chip is hovered */
+.tab-chip:hover .tab-chip__remove {
+  color: var(--text-secondary);
+}
+
+.tab-chip:hover .tab-chip__remove:hover {
+  color: var(--error-500);
+  background-color: var(--error-100);
+}
+
+/* Disabled state */
+.tab-chip--disabled {
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+/* Loading state */
+.tab-chip--loading .tab-chip__favicon {
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+/* Enhanced animation for chip removal */
+.tab-chip--removing {
+  animation: chipFadeOut var(--transition-medium) ease-in-out forwards;
+}
+
+.tab-chip--adding {
+  animation: chipFadeIn var(--transition-medium) ease-out forwards;
+}
+
+@keyframes chipFadeOut {
+  0% {
+    opacity: 1;
+    transform: scale(1);
+    max-width: 200px;
+  }
+  50% {
+    opacity: 0.5;
+    transform: scale(0.9) translateX(-5px);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(0.8) translateX(-10px);
+    max-width: 0;
+    padding-left: 0;
+    padding-right: 0;
+    margin-right: 0;
+  }
+}
+
+@keyframes chipFadeIn {
+  0% {
+    opacity: 0;
+    transform: scale(0.8) translateX(-10px);
+    max-width: 0;
+  }
+  50% {
+    opacity: 0.5;
+    transform: scale(0.9) translateX(-5px);
+    max-width: 100px;
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) translateX(0);
+    max-width: 200px;
+  }
+}
+
+/* ============================================================================
+ * Accessibility and Performance Enhancements
+ * ============================================================================ */
+
+/* Reduced motion accessibility */
+@media (prefers-reduced-motion: reduce) {
+  .tab-chip--removing,
+  .tab-chip--adding,
+  .tab-chip--loading .tab-chip__favicon {
+    animation: none !important;
+  }
+  
+  .tab-chip__remove:active {
+    transform: none !important;
+  }
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+  .tab-chip {
+    border-width: 2px;
+  }
+  
+  .tab-chip:hover .tab-chip__remove:hover {
+    background-color: var(--error-600);
+    color: white;
+  }
+}
+
+/* Performance optimization */
+.tab-chip--removing,
+.tab-chip--adding {
+  will-change: transform, opacity, max-width;
+}
+
+.tab-chip__remove {
+  will-change: transform, background-color;
+}

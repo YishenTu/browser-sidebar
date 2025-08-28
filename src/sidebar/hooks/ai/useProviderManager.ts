@@ -57,7 +57,6 @@ export function useProviderManager(enabled = true): UseProviderManagerReturn {
 
       const { settings } = settingsStore;
       if (!settings || !settings.apiKeys) {
-        console.warn('No settings or API keys available for provider initialization');
         return;
       }
 
@@ -147,7 +146,6 @@ export function useProviderManager(enabled = true): UseProviderManagerReturn {
           const provider = await factoryRef.current.createProvider(config);
           registryRef.current.register(provider);
         } catch (error) {
-          console.warn(`Failed to initialize ${config.type} provider:`, error);
         }
       }
 
@@ -161,7 +159,6 @@ export function useProviderManager(enabled = true): UseProviderManagerReturn {
         }
       }
     } catch (error) {
-      console.error('Failed to initialize providers:', error);
     } finally {
       isInitializingRef.current = false;
     }
@@ -184,7 +181,6 @@ export function useProviderManager(enabled = true): UseProviderManagerReturn {
         // Switch provider in registry
         if (registryRef.current) {
           if (!registryRef.current.hasProvider(providerType)) {
-            console.warn(`Provider ${providerType} is not registered yet`);
             return;
           }
           registryRef.current.setActiveProvider(providerType);

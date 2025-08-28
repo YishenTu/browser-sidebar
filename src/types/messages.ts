@@ -5,6 +5,9 @@
  * the extension's background script, content script, and sidebar.
  */
 
+import { TabInfo } from './tabs';
+import { ExtractedContent } from './extraction';
+
 /**
  * Available message types for inter-component communication
  */
@@ -18,6 +21,9 @@ export type MessageType =
   | 'SEND_TO_AI'
   | 'AI_RESPONSE'
   | 'GET_TAB_ID'
+  | 'GET_ALL_TABS'
+  | 'EXTRACT_TAB_CONTENT'
+  | 'CLEANUP_TAB_CACHE'
   | 'ERROR'
   | 'PING'
   | 'PONG';
@@ -116,6 +122,48 @@ export interface GetTabIdPayload {
   tabId: number;
 }
 
+export interface ExtractTabPayload {
+  /** ID of the tab to extract content from */
+  tabId: number;
+  /** Optional extraction configuration */
+  options?: {
+    /** Specific content selectors to extract */
+    selectors?: string[];
+    /** Whether to include images */
+    includeImages?: boolean;
+    /** Maximum content length */
+    maxLength?: number;
+    /** Extraction timeout in milliseconds */
+    timeout?: number;
+  };
+}
+
+/**
+ * Response payload for GET_ALL_TABS message
+ */
+export interface GetAllTabsResponsePayload {
+  /** Array of tab information */
+  tabs: TabInfo[];
+}
+
+/**
+ * Response payload for EXTRACT_TAB_CONTENT message
+ */
+export interface ExtractTabContentResponsePayload {
+  /** Extracted content from the specified tab */
+  content: ExtractedContent;
+  /** Source tab ID */
+  tabId: number;
+}
+
+/**
+ * Payload for CLEANUP_TAB_CACHE message
+ */
+export interface CleanupTabCachePayload {
+  /** Array of tab IDs to clean up from cache. If empty, clears all cache */
+  tabIds: number[];
+}
+
 export interface ErrorPayload {
   /** Error message */
   message: string;
@@ -172,6 +220,18 @@ export interface GetTabIdMessage extends Message<void> {
   type: 'GET_TAB_ID';
 }
 
+export interface GetAllTabsMessage extends Message<void> {
+  type: 'GET_ALL_TABS';
+}
+
+export interface ExtractTabContentMessage extends Message<ExtractTabPayload> {
+  type: 'EXTRACT_TAB_CONTENT';
+}
+
+export interface CleanupTabCacheMessage extends Message<CleanupTabCachePayload> {
+  type: 'CLEANUP_TAB_CACHE';
+}
+
 export interface PongMessage extends Message<void> {
   type: 'PONG';
 }
@@ -189,6 +249,9 @@ export type TypedMessage =
   | SendToAIMessage
   | AIResponseMessage
   | GetTabIdMessage
+  | GetAllTabsMessage
+  | ExtractTabContentMessage
+  | CleanupTabCacheMessage
   | ErrorMessage
   | PingMessage
   | PongMessage;
@@ -285,6 +348,9 @@ export function isValidMessage(obj: unknown): obj is Message {
     'SEND_TO_AI',
     'AI_RESPONSE',
     'GET_TAB_ID',
+    'GET_ALL_TABS',
+    'EXTRACT_TAB_CONTENT',
+    'CLEANUP_TAB_CACHE',
     'ERROR',
     'PING',
     'PONG',

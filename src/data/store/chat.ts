@@ -1,10 +1,11 @@
 import { create } from 'zustand';
+import { TabContent } from '../../types/tabs';
 
 /**
  * @file Chat Store Implementation
  *
  * Manages chat conversation state including messages, loading states,
- * and streaming support using Zustand for state management.
+ * streaming support, and multi-tab content state using Zustand for state management.
  */
 
 /**
@@ -139,6 +140,16 @@ export interface ChatState {
   /** Last OpenAI response ID for conversation continuity */
   lastResponseId: string | null;
 
+  // Multi-tab state
+  /** Loaded tab content indexed by tab ID (serializable Record) */
+  loadedTabs: Record<number, TabContent>;
+  /** Currently active/selected tab ID for context */
+  currentTabId: number | null;
+  /** Whether the current tab has been auto-loaded in this session */
+  hasAutoLoaded: boolean;
+  /** Order in which tabs were selected/loaded (for deterministic truncation) */
+  tabSelectionOrder: number[];
+
   // Actions for message management
   /** Add a new message to the conversation */
   addMessage: (options: CreateMessageOptions) => ChatMessage;
@@ -177,6 +188,20 @@ export interface ChatState {
   /** Get last response ID */
   getLastResponseId: () => string | null;
 
+  // Actions for multi-tab state management
+  /** Set all loaded tabs (replaces existing loadedTabs) */
+  setLoadedTabs: (tabs: Record<number, TabContent>) => void;
+  /** Add or update a single tab's content */
+  addLoadedTab: (tabId: number, tabContent: TabContent) => void;
+  /** Remove a tab from loaded tabs */
+  removeLoadedTab: (tabId: number) => void;
+  /** Set the currently active tab ID */
+  setCurrentTabId: (tabId: number | null) => void;
+  /** Mark that auto-load has been performed */
+  setHasAutoLoaded: (value: boolean) => void;
+  /** Get whether auto-load has been performed */
+  getHasAutoLoaded: () => boolean;
+
   // Selectors for accessing data
   /** Get all user messages */
   getUserMessages: () => ChatMessage[];
@@ -190,6 +215,22 @@ export interface ChatState {
   hasMessages: () => boolean;
   /** Get total message count */
   getMessageCount: () => number;
+
+  // Selectors for multi-tab data
+  /** Get all loaded tabs */
+  getLoadedTabs: () => Record<number, TabContent>;
+  /** Get tab content by tab ID */
+  getTabContent: (tabId: number) => TabContent | undefined;
+  /** Get currently active tab content */
+  getCurrentTabContent: () => TabContent | undefined;
+  /** Get current tab ID */
+  getCurrentTabId: () => number | null;
+  /** Check if a specific tab is loaded */
+  isTabLoaded: (tabId: number) => boolean;
+  /** Get loaded tab IDs */
+  getLoadedTabIds: () => number[];
+  /** Get loaded tab count */
+  getLoadedTabCount: () => number;
 }
 
 /**
@@ -233,6 +274,11 @@ export const useChatStore = create<ChatState>((set, get) => ({
   error: null,
   activeMessageId: null,
   lastResponseId: null,
+  // Multi-tab initial state
+  loadedTabs: {},
+  currentTabId: null,
+  hasAutoLoaded: false,
+  tabSelectionOrder: [],
 
   // Message management actions
   addMessage: (options: CreateMessageOptions) => {
@@ -360,6 +406,11 @@ export const useChatStore = create<ChatState>((set, get) => ({
       isLoading: false,
       activeMessageId: null,
       lastResponseId: null,
+      // Reset multi-tab state
+      loadedTabs: {},
+      currentTabId: null,
+      hasAutoLoaded: false,
+      tabSelectionOrder: [],
     });
   },
 
@@ -371,6 +422,11 @@ export const useChatStore = create<ChatState>((set, get) => ({
       isLoading: false,
       activeMessageId: null,
       lastResponseId: null,
+      // Reset multi-tab state
+      loadedTabs: {},
+      currentTabId: null,
+      hasAutoLoaded: false,
+      tabSelectionOrder: [],
     });
   },
 
@@ -404,6 +460,55 @@ export const useChatStore = create<ChatState>((set, get) => ({
     return get().lastResponseId;
   },
 
+  // Multi-tab state management actions
+  setLoadedTabs: (tabs: Record<number, TabContent>) => {
+    set(state => ({ ...state, loadedTabs: tabs }));
+  },
+
+  addLoadedTab: (tabId: number, tabContent: TabContent) => {
+    set(state => {
+      // Update selection order - remove if exists and add to end
+      const newOrder = state.tabSelectionOrder.filter(id => id !== tabId);
+      newOrder.push(tabId);
+      
+      return {
+        ...state,
+        loadedTabs: {
+          ...state.loadedTabs,
+          [tabId]: tabContent,
+        },
+        tabSelectionOrder: newOrder,
+      };
+    });
+  },
+
+  removeLoadedTab: (tabId: number) => {
+    set(state => {
+      const { [tabId]: removed, ...remainingTabs } = state.loadedTabs;
+      const newOrder = state.tabSelectionOrder.filter(id => id !== tabId);
+      
+      return {
+        ...state,
+        loadedTabs: remainingTabs,
+        // Clear currentTabId if it was the removed tab
+        currentTabId: state.currentTabId === tabId ? null : state.currentTabId,
+        tabSelectionOrder: newOrder,
+      };
+    });
+  },
+
+  setCurrentTabId: (tabId: number | null) => {
+    set(state => ({ ...state, currentTabId: tabId }));
+  },
+
+  setHasAutoLoaded: (value: boolean) => {
+    set(state => ({ ...state, hasAutoLoaded: value }));
+  },
+
+  getHasAutoLoaded: () => {
+    return get().hasAutoLoaded;
+  },
+
   // Selectors
   getUserMessages: () => {
     return get().messages.filter(message => message.role === 'user');
@@ -428,6 +533,36 @@ export const useChatStore = create<ChatState>((set, get) => ({
 
   getMessageCount: () => {
     return get().messages.length;
+  },
+
+  // Multi-tab selectors
+  getLoadedTabs: () => {
+    return get().loadedTabs;
+  },
+
+  getTabContent: (tabId: number) => {
+    return get().loadedTabs[tabId];
+  },
+
+  getCurrentTabContent: () => {
+    const state = get();
+    return state.currentTabId ? state.loadedTabs[state.currentTabId] : undefined;
+  },
+
+  getCurrentTabId: () => {
+    return get().currentTabId;
+  },
+
+  isTabLoaded: (tabId: number) => {
+    return tabId in get().loadedTabs;
+  },
+
+  getLoadedTabIds: () => {
+    return Object.keys(get().loadedTabs).map(id => parseInt(id, 10));
+  },
+
+  getLoadedTabCount: () => {
+    return Object.keys(get().loadedTabs).length;
   },
 }));
 

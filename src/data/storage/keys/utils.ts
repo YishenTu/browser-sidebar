@@ -183,7 +183,6 @@ export async function performMigrations(encryptionService: EncryptionService): P
               });
             }
           } catch (error) {
-            console.warn(`Failed to migrate key ${key}:`, error);
           }
         }
       }
@@ -195,7 +194,6 @@ export async function performMigrations(encryptionService: EncryptionService): P
       });
     }
   } catch (error) {
-    console.warn('Migration failed:', error);
     // Don't fail initialization due to migration errors
   }
 }

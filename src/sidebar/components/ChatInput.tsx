@@ -1,9 +1,17 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { TextArea, TextAreaProps, CancelIcon } from '@ui/index';
+import { useTabMention } from '@hooks/useTabMention';
+import { TabMentionDropdown } from './TabMentionDropdown';
+import { TabErrorBoundary } from './TabErrorBoundary';
+import { TabChip } from './TabChip';
+import { calculateCaretDropdownPosition } from '@sidebar/utils/dropdownPosition';
+import type { TabInfo, TabContent } from '@/types/tabs';
 
 export interface ChatInputProps extends Omit<TextAreaProps, 'onKeyDown' | 'value' | 'onChange'> {
   /** Callback fired when message is sent */
   onSend: (message: string) => void;
+  /** Callback fired when a tab is selected via @ mention */
+  onMentionSelectTab?: (tabId: number) => void;
   /** Current message value (controlled) */
   value?: string;
   /** Default message value (uncontrolled) */
@@ -22,6 +30,14 @@ export interface ChatInputProps extends Omit<TextAreaProps, 'onKeyDown' | 'value
   ariaLabel?: string;
   /** Additional CSS classes for the container */
   className?: string;
+  /** Available tabs for @ mention functionality */
+  availableTabs?: TabInfo[];
+  /** Whether @ mention functionality is enabled */
+  enableMentions?: boolean;
+  /** Loaded tabs to display as chips */
+  loadedTabs?: Record<number, TabContent>;
+  /** Callback fired when a tab chip is removed */
+  onTabRemove?: (tabId: number) => void;
 }
 
 /**
@@ -43,7 +59,12 @@ export const ChatInput = React.forwardRef<HTMLTextAreaElement, ChatInputProps>(
       cancelButtonLabel = 'Cancel',
       ariaLabel = 'Chat message input',
       className,
-      placeholder = 'Type your message here...',
+      placeholder = 'Type your message here... (use @ to mention tabs)',
+      availableTabs = [],
+      enableMentions = true,
+      loadedTabs = {},
+      onTabRemove,
+      onMentionSelectTab,
       ...textAreaProps
     },
     ref
@@ -62,8 +83,81 @@ export const ChatInput = React.forwardRef<HTMLTextAreaElement, ChatInputProps>(
     // Ref for textarea
     const textAreaRef = useRef<HTMLTextAreaElement>(null);
 
+    // @ Mention functionality state
+    const [dropdownPosition, setDropdownPosition] = useState<{ x: number; y: number; width?: number } | null>(null);
+    const [filteredTabs, setFilteredTabs] = useState<TabInfo[]>([]);
+  const [highlightedTabId, setHighlightedTabId] = useState<number | null>(null);
+    
+    // @ Mention hook
+    const {
+      mention,
+      showDropdown,
+      detectMention,
+      insertTab,
+      clearMention,
+    } = useTabMention({
+      enabled: enableMentions,
+    });
+
+
     // Merge refs
     React.useImperativeHandle(ref, () => textAreaRef.current!, []);
+
+    // Filter tabs based on mention query
+    const filterTabsByQuery = useCallback(
+      (query: string): TabInfo[] => {
+        if (!query.trim()) {
+          return availableTabs.slice(0, 10); // Show first 10 tabs if no query
+        }
+        
+        const lowerQuery = query.toLowerCase();
+        return availableTabs
+          .filter(tab => 
+            tab.title.toLowerCase().includes(lowerQuery) ||
+            tab.domain.toLowerCase().includes(lowerQuery) ||
+            tab.url.toLowerCase().includes(lowerQuery)
+          )
+          .slice(0, 10); // Limit to 10 results
+      },
+      [availableTabs]
+    );
+
+    // Handle cursor position change for mention detection
+    const handleCursorPositionChange = useCallback(() => {
+      const textarea = textAreaRef.current;
+      if (!textarea || !enableMentions) {
+        return;
+      }
+
+      const cursorPosition = textarea.selectionStart || 0;
+      // Call detectMention which returns the immediate result
+      const detectedMention = detectMention(currentValue, cursorPosition);
+      
+      // Use the immediate detection result, not the hook state
+      if (detectedMention) {
+        // Filter tabs based on query
+        const filtered = filterTabsByQuery(detectedMention.query);
+        setFilteredTabs(filtered);
+        
+        // Calculate dropdown position (above input)
+        try {
+          // Align dropdown with the bordered input container rather than the textarea
+          const containerEl = textarea.closest('.chat-input__main') as HTMLElement | null;
+          const rect = (containerEl || textarea).getBoundingClientRect();
+          // Position above the textarea
+          const dropdownHeight = Math.min(filtered.length * 36 + 8, 300);
+          const x = rect.left;
+          // Keep a small top boundary to avoid clipping at viewport top
+          const y = Math.max(8, rect.top - dropdownHeight - 4); // 4px gap above input
+          setDropdownPosition({ x, y, width: rect.width });
+        } catch (error) {
+          setDropdownPosition(null);
+        }
+      } else {
+        setFilteredTabs([]);
+        setDropdownPosition(null);
+      }
+    }, [currentValue, detectMention, filterTabsByQuery, enableMentions, calculateCaretDropdownPosition]);
 
     // Handle value changes
     const handleValueChange = useCallback(
@@ -81,8 +175,38 @@ export const ChatInput = React.forwardRef<HTMLTextAreaElement, ChatInputProps>(
       (event: React.ChangeEvent<HTMLTextAreaElement>) => {
         const newValue = event.target.value;
         handleValueChange(newValue);
+        
+        // Trigger mention detection immediately with the new value
+        const textarea = textAreaRef.current;
+        if (textarea && enableMentions) {
+          const cursorPosition = textarea.selectionStart || 0;
+          const detectedMention = detectMention(newValue, cursorPosition);
+          
+          if (detectedMention) {
+            // Filter tabs and set up dropdown immediately
+            const filtered = filterTabsByQuery(detectedMention.query);
+            setFilteredTabs(filtered);
+            
+            // Calculate dropdown position (above input)
+            try {
+              // Align dropdown with the bordered input container rather than the textarea
+              const containerEl = textarea.closest('.chat-input__main') as HTMLElement | null;
+              const rect = (containerEl || textarea).getBoundingClientRect();
+              // Position above the textarea
+              const dropdownHeight = Math.min(filtered.length * 36 + 8, 300);
+              const x = rect.left;
+              const y = Math.max(8, rect.top - dropdownHeight - 4); // 4px gap above input
+              setDropdownPosition({ x, y, width: rect.width });
+            } catch (error) {
+              setDropdownPosition(null);
+            }
+          } else {
+            setFilteredTabs([]);
+            setDropdownPosition(null);
+          }
+        }
       },
-      [handleValueChange]
+      [handleValueChange, detectMention, filterTabsByQuery, enableMentions, calculateCaretDropdownPosition]
     );
 
     // Send message
@@ -113,11 +237,74 @@ export const ChatInput = React.forwardRef<HTMLTextAreaElement, ChatInputProps>(
       }
     }, [onCancel]);
 
+    // Handle tab selection from mention dropdown
+    const handleTabSelect = useCallback(
+      (tabId: number) => {
+        const textarea = textAreaRef.current;
+        if (!textarea || !mention) return;
+
+        // Remove the @mention text from the input (do not insert any placeholder)
+        const startIndex = mention.startIndex;
+        const endIndex = startIndex + 1 + (mention.query?.length || 0); // @ + query
+
+        const before = currentValue.slice(0, startIndex);
+        const after = currentValue.slice(endIndex);
+        const newText = before + after;
+
+        // Update the text value without the mention
+        handleValueChange(newText);
+
+        // Invoke callback to trigger extraction of the selected tab
+        if (onMentionSelectTab) {
+          onMentionSelectTab(tabId);
+        }
+
+        // Clear mention and dropdown
+        clearMention();
+        setFilteredTabs([]);
+        setDropdownPosition(null);
+
+        // Restore cursor position at the place where mention began
+        setTimeout(() => {
+          if (textAreaRef.current) {
+            textAreaRef.current.setSelectionRange(startIndex, startIndex);
+            textAreaRef.current.focus();
+          }
+        }, 0);
+      },
+      [mention, currentValue, handleValueChange, clearMention, onMentionSelectTab]
+    );
+
+    // Handle mention dropdown close
+    const handleMentionClose = useCallback(() => {
+      clearMention();
+      setFilteredTabs([]);
+      setDropdownPosition(null);
+      
+      // Return focus to textarea
+      setTimeout(() => {
+        if (textAreaRef.current) {
+          textAreaRef.current.focus();
+        }
+      }, 0);
+    }, [clearMention]);
+
     // Handle keyboard shortcuts
     const handleKeyDown = useCallback(
       (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
         // Always stop propagation to prevent webpage shortcuts from being triggered
         event.stopPropagation();
+
+        // If mention dropdown is showing, let it handle certain keys
+        if (showDropdown && dropdownPosition && filteredTabs.length > 0) {
+          // Let the dropdown handle navigation keys
+          if (['ArrowDown', 'ArrowUp', 'Enter', 'Escape', 'Tab', 'Home', 'End'].includes(event.key)) {
+            // Don't prevent default - let TabMentionDropdown handle these
+            // Also trigger cursor position check after key handling
+            setTimeout(handleCursorPositionChange, 0);
+            return;
+          }
+        }
 
         if (loading || isSending) {
           if (event.key === 'Enter' && !event.shiftKey && !event.ctrlKey && !event.metaKey) {
@@ -149,8 +336,13 @@ export const ChatInput = React.forwardRef<HTMLTextAreaElement, ChatInputProps>(
           }
           // Shift+Enter allows default new line behavior
         }
+        
+        // Trigger mention detection on cursor movement keys (@ is handled by onChange)
+        if (['ArrowLeft', 'ArrowRight', 'Home', 'End', 'PageUp', 'PageDown'].includes(event.key)) {
+          setTimeout(handleCursorPositionChange, 0);
+        }
       },
-      [handleSend, loading, isSending, currentValue, handleValueChange]
+      [handleSend, loading, isSending, currentValue, handleValueChange, showDropdown, dropdownPosition, filteredTabs, handleCursorPositionChange]
     );
 
     // Stop all keyboard event propagation when the input is focused
@@ -162,8 +354,33 @@ export const ChatInput = React.forwardRef<HTMLTextAreaElement, ChatInputProps>(
       event.stopPropagation();
     }, []);
 
+    // Handle textarea clicks to update cursor position for mention detection
+    const handleTextAreaClick = useCallback(() => {
+      // Delay to ensure cursor position is updated
+      setTimeout(handleCursorPositionChange, 10);
+    }, [handleCursorPositionChange]);
+
+    // Handle textarea selection changes
+    const handleTextAreaSelect = useCallback(() => {
+      handleCursorPositionChange();
+    }, [handleCursorPositionChange]);
+
     // Determine if buttons should be disabled
     const isDisabled = loading || isSending;
+
+    // Get loaded tab info for display as chips
+    const loadedTabsArray = Object.values(loadedTabs || {});
+    const hasLoadedTabs = loadedTabsArray.length > 0;
+
+    // Handle tab chip removal
+    const handleTabChipRemove = useCallback(
+      (tabId: number) => {
+        if (onTabRemove) {
+          onTabRemove(tabId);
+        }
+      },
+      [onTabRemove]
+    );
 
     // Focus textarea when component mounts
     useEffect(() => {
@@ -174,6 +391,7 @@ export const ChatInput = React.forwardRef<HTMLTextAreaElement, ChatInputProps>(
 
     return (
       <div className={`chat-input${className ? ` ${className}` : ''}`}>
+
         {/* Main input area with border */}
         <div className="chat-input__main">
           <div className="chat-input__textarea-container">
@@ -184,15 +402,43 @@ export const ChatInput = React.forwardRef<HTMLTextAreaElement, ChatInputProps>(
               onKeyDown={handleKeyDown}
               onKeyUp={handleKeyUp}
               onKeyPress={handleKeyPress}
+              onClick={handleTextAreaClick}
+              onSelect={handleTextAreaSelect}
               placeholder={placeholder}
               disabled={isDisabled}
               aria-label={ariaLabel}
+              aria-autocomplete={enableMentions ? "list" : undefined}
+              aria-controls={enableMentions ? "tab-mention-listbox" : undefined}
+              aria-activedescendant={enableMentions && showDropdown && highlightedTabId ? `tab-option-${highlightedTabId}` : undefined}
               minRows={1}
               maxRows={8}
               tabIndex={0}
               {...textAreaProps}
             />
           </div>
+
+          {/* @ Mention dropdown */}
+          {enableMentions && showDropdown && dropdownPosition && filteredTabs.length > 0 && (
+            <TabErrorBoundary
+              boundaryId="tab-mention-dropdown"
+              maxRetries={1}
+              onError={(error, errorInfo) => {
+                // Close dropdown on error to prevent UI issues
+                handleMentionClose();
+              }}
+            >
+              <TabMentionDropdown
+                tabs={filteredTabs}
+                onSelect={handleTabSelect}
+                position={dropdownPosition}
+                isOpen={true}
+                onClose={handleMentionClose}
+                onHighlightChange={setHighlightedTabId}
+                maxVisibleTabs={10}
+                maxHeight={300}
+              />
+            </TabErrorBoundary>
+          )}
 
           {/* Action buttons row - only show cancel when loading */}
           {loading && onCancel && (

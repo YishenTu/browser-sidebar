@@ -48,13 +48,12 @@ export function Settings() {
 
       // If valid, save the key
       if (isValid) {
-        const settings = useSettingsStore.getState();
-        const currentApiKeys = settings.settings.apiKeys || {};
+        const state = useSettingsStore.getState();
+        const currentApiKeys = state.settings.apiKeys || {};
         const updatedApiKeys = { ...currentApiKeys, openai: openaiKey };
-        await settings.updateAPIKeyReferences(updatedApiKeys);
+        await state.updateAPIKeyReferences(updatedApiKeys);
       }
     } catch (error) {
-      console.error('OpenAI verification error:', error);
       setOpenaiValid(false);
     } finally {
       setOpenaiVerifying(false);
@@ -81,13 +80,12 @@ export function Settings() {
 
       // If valid, save the key
       if (isValid) {
-        const settings = useSettingsStore.getState();
-        const currentApiKeys = settings.settings.apiKeys || {};
+        const state = useSettingsStore.getState();
+        const currentApiKeys = state.settings.apiKeys || {};
         const updatedApiKeys = { ...currentApiKeys, google: geminiKey };
-        await settings.updateAPIKeyReferences(updatedApiKeys);
+        await state.updateAPIKeyReferences(updatedApiKeys);
       }
     } catch (error) {
-      console.error('Gemini verification error:', error);
       setGeminiValid(false);
     } finally {
       setGeminiVerifying(false);

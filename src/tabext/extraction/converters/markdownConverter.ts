@@ -297,7 +297,6 @@ export async function htmlToMarkdown(
 
     return markdown;
   } catch (error) {
-    console.error('Error converting HTML to Markdown:', error);
 
     // Return a basic text extraction as fallback
     try {
@@ -305,7 +304,6 @@ export async function htmlToMarkdown(
       const doc = parser.parseFromString(html, 'text/html');
       return doc.body.textContent || doc.body.innerText || '';
     } catch (fallbackError) {
-      console.error('Fallback text extraction failed:', fallbackError);
       return '';
     }
   }

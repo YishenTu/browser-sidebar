@@ -115,3 +115,145 @@
     transform: translateY(0);
   }
 }
+
+/* Tab loading animations */
+@keyframes tabSlideIn {
+  from {
+    opacity: 0;
+    transform: translateX(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes tabSlideOut {
+  from {
+    opacity: 1;
+    transform: translateX(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateX(20px);
+  }
+}
+
+/* Tab fade in animation for smoother loading */
+@keyframes tabFadeIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* Skeleton loading shimmer animation */
+@keyframes shimmer {
+  0% {
+    background-position: -200px 0;
+  }
+  100% {
+    background-position: calc(200px + 100%) 0;
+  }
+}
+
+/* Content loading stagger animation */
+@keyframes contentStagger {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Loading dots animation */
+@keyframes loadingDots {
+  0%, 20% {
+    opacity: 0;
+  }
+  50% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+/* Smooth height transition animation */
+@keyframes expandHeight {
+  from {
+    height: 0;
+    opacity: 0;
+  }
+  to {
+    height: auto;
+    opacity: 1;
+  }
+}
+
+/* Tab removal slide out animation */
+@keyframes tabRemovalSlide {
+  from {
+    opacity: 1;
+    transform: translateX(0);
+    max-height: 200px;
+    margin-bottom: var(--spacing-sm);
+  }
+  50% {
+    opacity: 0.5;
+    transform: translateX(-10px);
+  }
+  to {
+    opacity: 0;
+    transform: translateX(-30px);
+    max-height: 0;
+    margin-bottom: 0;
+  }
+}
+
+/* ============================================================================
+ * Global Accessibility and Performance Rules for Animations
+ * ============================================================================ */
+
+/* Respect users' motion preferences globally */
+@media (prefers-reduced-motion: reduce) {
+  /* Disable all new tab-related animations */
+  [class*="tab-"]:not([class*="content"]) {
+    animation: none !important;
+  }
+  
+  /* Keep essential opacity transitions but remove transforms */
+  [class*="tab-"] {
+    transition: opacity var(--transition-fast) !important;
+  }
+  
+  /* Override specific animations that shouldn't run */
+  *[class*="slide"],
+  *[class*="fade"],
+  *[class*="shimmer"],
+  *[class*="pulse"],
+  *[class*="loading"],
+  *[class*="stagger"] {
+    animation: none !important;
+  }
+}
+
+/* Performance optimization: use GPU acceleration for transforms */
+[class*="tab-"] {
+  backface-visibility: hidden;
+  perspective: 1000px;
+}
+
+/* Optimize for touch devices */
+@media (pointer: coarse) {
+  [class*="tab-"] {
+    animation-duration: calc(var(--transition-fast) * 0.8);
+  }
+}

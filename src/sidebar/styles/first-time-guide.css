@@ -1,0 +1,118 @@
+/* ============================================================================
+ * First Time Guide Component Styles
+ * Styles for the FirstTimeGuide and MultiTabFeatureGuide components
+ * ============================================================================ */
+
+.first-time-guide {
+  margin-bottom: var(--spacing-md);
+}
+
+.first-time-guide-trigger {
+  background: none;
+  border: none;
+  padding: var(--spacing-xs);
+  cursor: pointer;
+  border-radius: var(--border-radius-sm);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted);
+  transition: all 0.15s ease-in-out;
+}
+
+.first-time-guide-trigger:hover {
+  color: var(--text-primary);
+  background-color: var(--bg-hover);
+}
+
+.first-time-guide-trigger:focus-visible {
+  outline: 2px solid var(--accent-color);
+  outline-offset: 1px;
+}
+
+.first-time-guide-alert {
+  border: 1px solid var(--primary-300);
+  background-color: var(--primary-50);
+}
+
+/* Dark theme overrides for the guide alert */
+[data-theme='dark'] .first-time-guide-alert,
+.dark .first-time-guide-alert {
+  border-color: var(--primary-700);
+  background-color: rgba(59, 130, 246, 0.1);
+}
+
+.first-time-guide-content {
+  width: 100%;
+}
+
+.first-time-guide-header {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  margin-bottom: var(--spacing-sm);
+}
+
+.first-time-guide-header strong {
+  flex: 1;
+  color: var(--text-primary);
+  font-weight: var(--font-weight-semibold);
+}
+
+.first-time-guide-close {
+  background: none;
+  border: none;
+  padding: var(--spacing-xs);
+  cursor: pointer;
+  border-radius: var(--border-radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted);
+  transition: all 0.15s ease-in-out;
+  margin-left: auto;
+}
+
+.first-time-guide-close:hover {
+  color: var(--text-primary);
+  background-color: var(--bg-hover);
+}
+
+.first-time-guide-close:focus-visible {
+  outline: 2px solid var(--accent-color);
+  outline-offset: 1px;
+}
+
+.first-time-guide-body {
+  font-size: var(--font-size-sm);
+  line-height: var(--line-height-normal);
+  color: var(--text-secondary);
+}
+
+.first-time-guide-body p {
+  margin: 0 0 var(--spacing-sm) 0;
+}
+
+.first-time-guide-body p:last-child {
+  margin-bottom: 0;
+}
+
+.first-time-guide-body ul {
+  margin: var(--spacing-sm) 0;
+  padding-left: var(--spacing-xl);
+}
+
+.first-time-guide-body li {
+  margin-bottom: var(--spacing-xs);
+  color: var(--text-secondary);
+}
+
+.first-time-guide-body code {
+  background: var(--code-bg);
+  color: var(--code-text);
+  padding: 0.125rem 0.25rem;
+  border-radius: var(--border-radius-xs);
+  font-size: var(--font-size-xs);
+  font-family: var(--font-mono);
+  font-weight: var(--font-weight-medium);
+}

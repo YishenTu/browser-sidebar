@@ -17,10 +17,14 @@ import { getErrorSource } from '@contexts/errorUtils';
 import { ErrorBanner } from '@components/ErrorBanner';
 import { useChatStore, type ChatMessage } from '@store/chat';
 import { useAIChat } from '@hooks/useAIChat';
-import { useContentExtraction } from '@hooks/useContentExtraction';
+import { useMultiTabExtraction } from '@hooks/useMultiTabExtraction';
 import { ContentPreview } from '@components/ContentPreview';
+import { MultiTabContentPreview } from '@components/MultiTabContentPreview';
+import { TabErrorBoundary } from '@components/TabErrorBoundary';
 // Import for Task 2.2: Content Injection with Tab ID tracking
 import { getCurrentTabIdSafe } from '@tabext/utils/tabUtils';
+// Import for Task 4.4: Session State Management - Cleanup message
+import { createMessage } from '@/types/messages';
 
 // Layout components
 import { Header } from '@components/layout/Header';
@@ -146,7 +150,6 @@ const ChatPanelInner: React.FC<ChatPanelProps> = ({ className, onClose }) => {
         setSettingsInitialized(true);
       })
       .catch((error: unknown) => {
-        console.error('Failed to load settings:', error);
         // Still initialize even if settings fail to load
         // This allows the app to work with default settings
         setSettingsInitialized(true);
@@ -184,14 +187,22 @@ const ChatPanelInner: React.FC<ChatPanelProps> = ({ className, onClose }) => {
     clearConversation();
   }, [clearConversation]);
 
-  // Content extraction integration
+
+  // Multi-tab extraction integration (handles both current tab and additional tabs)
   const {
-    content: extractedContent,
-    loading: contentLoading,
-    error: contentError,
-    reextract,
-    clearContent,
-  } = useContentExtraction(true); // Auto-extract content when sidebar opens
+    currentTabContent,
+    currentTabId,
+    loadedTabs,
+    availableTabs,
+    hasAutoLoaded,
+    extractCurrentTab,
+    extractTabById,
+    removeLoadedTab,
+    refreshAvailableTabs,
+    loading: multiTabLoading,
+    loadingTabIds,
+    error: multiTabError,
+  } = useMultiTabExtraction();
 
   // Settings panel state
   const [showSettings, setShowSettings] = useState(false);
@@ -235,13 +246,13 @@ const ChatPanelInner: React.FC<ChatPanelProps> = ({ className, onClose }) => {
 
         // Handle content extraction errors or missing content for first message
         if (isFirstMessage) {
-          if (contentError) {
+          if (multiTabError) {
             // Show warning about extraction failure, but allow message to proceed
             showError(
-              `Failed to extract webpage content: ${contentError.message}. Your message will be sent without webpage context.`,
+              `Failed to extract webpage content: ${multiTabError.message}. Your message will be sent without webpage context.`,
               'warning'
             );
-          } else if (!extractedContent && !contentLoading) {
+          } else if (!currentTabContent && !multiTabLoading) {
             // Show warning about missing content, but allow message to proceed
             showError(
               'No webpage content available. Your message will be sent without webpage context.',
@@ -251,7 +262,7 @@ const ChatPanelInner: React.FC<ChatPanelProps> = ({ className, onClose }) => {
         }
 
         // Inject content on first message with tab tracking
-        if (isFirstMessage && extractedContent) {
+        if (isFirstMessage && currentTabContent) {
           try {
             // Get tab ID for metadata
             const tabId = await getCurrentTabIdSafe();
@@ -259,12 +270,12 @@ const ChatPanelInner: React.FC<ChatPanelProps> = ({ className, onClose }) => {
             // Format content with webpage metadata and user question
             const injectedContent = `I'm looking at a webpage with the following content:
 
-Title: ${extractedContent.title}
-URL: ${extractedContent.url}
-Domain: ${extractedContent.domain}
+Title: ${currentTabContent.title}
+URL: ${currentTabContent.url}
+Domain: ${currentTabContent.domain}
 
 Content:
-${extractedContent.content}
+${currentTabContent.content}
 
 ---
 My question: ${userInput}`;
@@ -280,21 +291,20 @@ My question: ${userInput}`;
               hasTabContext: true,
               originalUserContent: userInput,
               tabId: tabId,
-              tabTitle: extractedContent.title,
-              tabUrl: extractedContent.url,
+              tabTitle: currentTabContent.title,
+              tabUrl: currentTabContent.url,
             };
           } catch (tabError) {
             // If tab ID retrieval fails, continue without it but still inject content
-            console.warn('Failed to get tab ID for content injection:', tabError);
 
             const injectedContent = `I'm looking at a webpage with the following content:
 
-Title: ${extractedContent.title}
-URL: ${extractedContent.url}
-Domain: ${extractedContent.domain}
+Title: ${currentTabContent.title}
+URL: ${currentTabContent.url}
+Domain: ${currentTabContent.domain}
 
 Content:
-${extractedContent.content}
+${currentTabContent.content}
 
 ---
 My question: ${userInput}`;
@@ -305,8 +315,8 @@ My question: ${userInput}`;
               ...messageMetadata, // Preserve existing metadata
               hasTabContext: true,
               originalUserContent: userInput,
-              tabTitle: extractedContent.title,
-              tabUrl: extractedContent.url,
+              tabTitle: currentTabContent.title,
+              tabUrl: currentTabContent.url,
             };
           }
         }
@@ -352,9 +362,9 @@ My question: ${userInput}`;
       editMessage,
       updateMessage,
       messages,
-      extractedContent,
-      contentError,
-      contentLoading,
+      currentTabContent,
+      multiTabError,
+      multiTabLoading,
       showError,
     ]
   );
@@ -435,8 +445,8 @@ My question: ${userInput}`;
         const providerType = getProviderTypeForModel(modelId);
 
         // Check if the API key exists for this provider
-        const settings = useSettingsStore.getState();
-        const apiKeys = settings.settings.apiKeys;
+        const state = useSettingsStore.getState();
+        const apiKeys = state.settings.apiKeys;
 
         let hasApiKey = false;
         if (providerType === 'openai') {
@@ -464,7 +474,6 @@ My question: ${userInput}`;
           }
         } catch (switchError) {
           // Rollback: Restore previous model if provider switch failed
-          console.error('Provider switch failed, rolling back model selection:', switchError);
           await updateSelectedModel(previousModel);
 
           // Show error to user
@@ -474,12 +483,30 @@ My question: ${userInput}`;
           throw switchError; // Re-throw to be caught by outer catch
         }
       } catch (err) {
-        // Log error but don't show additional alert if we already showed one
-        console.warn('Failed to switch model/provider:', err);
+        // Error switching model/provider
       }
     },
     [selectedModel, getProviderTypeForModel, updateSelectedModel, switchProvider, showError]
   );
+
+  // Multi-tab callback handlers
+  const handleRemoveTab = useCallback((tabId: number) => {
+    removeLoadedTab(tabId);
+  }, [removeLoadedTab]);
+
+  const handleReextractTab = useCallback((tabId: number) => {
+    // Re-extract tab content
+    extractTabById(tabId);
+  }, [extractTabById]);
+
+  // Add a new tab via @ mention selection
+  const handleAddTab = useCallback((tabId: number) => {
+    extractTabById(tabId);
+  }, [extractTabById]);
+
+  const handleClearTabContent = useCallback((tabId: number) => {
+    removeLoadedTab(tabId);
+  }, [removeLoadedTab]);
 
   // Update bounds when window resizes
   useEffect(() => {
@@ -511,10 +538,17 @@ My question: ${userInput}`;
   // Cleanup is handled by useAIChat hook internally
   // No need for additional cleanup here
 
-  // Handle Escape key to close sidebar
+  // Handle Escape key to close sidebar (but not if dropdown is open)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
+        // Don't close if the dropdown handled the event or if dropdown is visible
+        if (e.defaultPrevented) return;
+        
+        // Check if dropdown is open by looking for the element
+        const dropdown = document.querySelector('.tab-mention-dropdown');
+        if (dropdown) return;
+        
         handleClose();
       }
     };
@@ -531,6 +565,38 @@ My question: ${userInput}`;
       sidebar.focus();
     }
   }, []);
+
+  // Session state management: Cleanup on unmount
+  useEffect(() => {
+    // Cleanup function that runs when component unmounts
+    return () => {
+      try {
+        // Get loaded tab IDs from the Zustand store for cache cleanup
+        const loadedTabIds = useChatStore.getState().getLoadedTabIds();
+        
+        // Clear multi-tab state from Zustand store
+        const { clearConversation } = useChatStore.getState();
+        clearConversation(); // This already clears multi-tab state per the store implementation
+        
+        // Send cleanup message to background to clear cache for loaded tab IDs
+        if (loadedTabIds.length > 0) {
+          const cleanupMessage = createMessage({
+            type: 'CLEANUP_TAB_CACHE',
+            payload: { tabIds: loadedTabIds },
+            source: 'sidebar',
+            target: 'background',
+          });
+          
+          // Send cleanup message (fire and forget - no need to wait for response on unmount)
+          chrome.runtime.sendMessage(cleanupMessage).catch((error) => {
+            // Failed to send cleanup message on unmount
+          });
+        }
+      } catch (error) {
+        // Error during session state cleanup
+      }
+    };
+  }, []); // Empty dependency array - cleanup only runs on unmount
 
   // Handle header mouse down for dragging
   const handleHeaderMouseDown = useCallback(
@@ -610,23 +676,58 @@ My question: ${userInput}`;
           onClose={handleClose}
           onMouseDown={handleHeaderMouseDown}
           isDragging={isDragging}
-          extractedContent={extractedContent}
-          contentLoading={contentLoading}
-          contentError={contentError}
+          extractedContent={currentTabContent}
+          contentLoading={multiTabLoading}
+          contentError={multiTabError}
         />
 
         {/* Centralized Error Banner */}
         <ErrorBanner />
 
-        {/* Content Extraction Preview */}
-        <ContentPreview
-          content={extractedContent}
-          loading={contentLoading}
-          error={contentError}
-          onReextract={reextract}
-          onClearContent={clearContent}
-          className="ai-sidebar-content-preview"
-        />
+
+        {/* Content Extraction Preview - Multi-tab or Single-tab */}
+        {currentTabContent || Object.keys(loadedTabs).length > 0 ? (
+          // Multi-tab mode: show MultiTabContentPreview with error boundary
+          <TabErrorBoundary
+            boundaryId="multi-tab-content-preview"
+            maxRetries={2}
+            onError={(error, errorInfo) => {
+              // Error caught by boundary
+            }}
+          >
+            <MultiTabContentPreview
+              currentTabContent={currentTabContent ? {
+                tabInfo: {
+                  id: currentTabId || 0,
+                  title: currentTabContent.title || 'Current Tab',
+                  url: currentTabContent.url || '',
+                  domain: currentTabContent.metadata?.domain || new URL(currentTabContent.url || 'https://example.com').hostname,
+                  favIconUrl: currentTabContent.metadata?.favIconUrl as string,
+                },
+                extractedContent: currentTabContent,
+                extractionStatus: multiTabLoading ? 'extracting' : 'completed',
+                isStale: false,
+              } : null}
+              additionalTabsContent={Object.entries(loadedTabs)
+                .filter(([tabId]) => Number(tabId) !== currentTabId) // Filter out current tab from additional tabs
+                .map(([, tabContent]) => tabContent)}
+              onRemoveTab={handleRemoveTab}
+              onReextractTab={handleReextractTab}
+              onClearTabContent={handleClearTabContent}
+              className="ai-sidebar-content-preview"
+            />
+          </TabErrorBoundary>
+        ) : (
+          // Fallback to single-tab mode: show original ContentPreview
+          <ContentPreview
+            content={currentTabContent}
+            loading={multiTabLoading}
+            error={multiTabError}
+            onReextract={() => extractCurrentTab()}
+            onClearContent={() => currentTabId && removeLoadedTab(currentTabId)}
+            className="ai-sidebar-content-preview"
+          />
+        )}
 
         {showSettings ? (
           <div className="ai-sidebar-settings-panel">
@@ -650,6 +751,10 @@ My question: ${userInput}`;
           placeholder={editingMessage ? 'Edit your message...' : 'Ask about this webpage...'}
           editingMessage={editingMessage?.content}
           onClearEdit={handleClearEdit}
+          availableTabs={availableTabs}
+          loadedTabs={loadedTabs}
+          onTabRemove={handleRemoveTab}
+          onMentionSelectTab={handleAddTab}
         />
       </div>
 

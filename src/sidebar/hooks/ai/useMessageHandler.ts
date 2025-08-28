@@ -8,6 +8,7 @@ import { useCallback } from 'react';
 import { useChatStore } from '@store/chat';
 import { useSettingsStore } from '@store/settings';
 import { getModelById } from '@/config/models';
+import { formatMultiTabContent } from '../../utils/contentFormatter';
 import type { AIProvider } from '../../../types/providers';
 import type { SendMessageOptions, UseMessageHandlerReturn } from './types';
 import { useStreamHandler } from './useStreamHandler';
@@ -23,7 +24,7 @@ export function useMessageHandler({
 }: MessageHandlerDeps): UseMessageHandlerReturn {
   const chatStore = useChatStore();
   const settingsStore = useSettingsStore();
-  const { handleStreamingResponse, cancelStreaming, isStreaming } = useStreamHandler();
+  const { handleStreamingResponse, cancelStreaming } = useStreamHandler();
 
   /**
    * Handle non-streaming response from provider
@@ -103,15 +104,78 @@ export function useMessageHandler({
           throw new Error('No active AI provider configured. Please add an API key in settings.');
         }
 
+        // Prepare message content with multi-tab context if available
+        let finalContent = trimmedContent;
+        let finalDisplayContent = displayContent || trimmedContent;
+        let hasTabContext = false;
+        let formatResult: ReturnType<typeof formatMultiTabContent> | undefined;
+        
+        // Check if we have loaded tabs to include
+        const loadedTabs = chatStore.getLoadedTabs();
+        const loadedTabIds = Object.keys(loadedTabs).map(id => parseInt(id, 10));
+        
+        if (loadedTabIds.length > 0) {
+          // We have loaded tabs, format the content with multi-tab structure
+          const currentTabId = chatStore.getCurrentTabId();
+          const currentTabContent = currentTabId ? loadedTabs[currentTabId] : null;
+          
+          // Get additional tabs (all tabs except current)
+          const additionalTabs = loadedTabIds
+            .filter(tabId => tabId !== currentTabId)
+            .map(tabId => loadedTabs[tabId])
+            .filter(Boolean);
+          
+          // Format the multi-tab content
+          formatResult = formatMultiTabContent(
+            trimmedContent,
+            currentTabContent,
+            additionalTabs,
+            {
+              // Get selection order from store for deterministic truncation
+              selectionOrder: chatStore.tabSelectionOrder,
+            }
+          );
+          
+          // Use formatted content for AI but keep original for display
+          finalContent = formatResult.formatted;
+          hasTabContext = true;
+          
+          // Log the exact content being sent to the API for examination
+          console.log('=== Multi-Tab Content Being Sent to API ===');
+          console.log('User Input:', trimmedContent);
+          console.log('Number of tabs included:', loadedTabIds.length);
+          console.log('Tab IDs:', loadedTabIds);
+          console.log('Content Length:', finalContent.length, 'characters');
+          console.log('Full Content to API:\n', finalContent);
+          console.log('==========================================');
+          
+          // Log truncation warning if content was truncated
+          if (formatResult.truncated && formatResult.truncatedTabs.length > 0) {
+            console.warn('Content was truncated. Truncated tabs:', formatResult.truncatedTabs);
+          }
+        }
+
         // Add user message to chat store (unless we're regenerating)
         let userMessage;
         if (!skipUserMessage) {
           userMessage = chatStore.addMessage({
             role: 'user',
-            content: trimmedContent,
-            displayContent: displayContent,
+            content: finalContent,
+            displayContent: finalDisplayContent,
             status: 'sending',
-            metadata: metadata,
+            metadata: {
+              ...metadata,
+              hasTabContext,
+              originalUserContent: hasTabContext ? trimmedContent : undefined,
+              // Include truncation info in metadata for UI to display
+              ...(formatResult?.truncated && {
+                truncation: {
+                  truncated: true,
+                  truncatedTabCount: formatResult.truncatedTabs.length,
+                  truncatedTabIds: formatResult.truncatedTabs,
+                }
+              }),
+            },
           });
         } else {
           // For regeneration, get the last user message
@@ -120,6 +184,18 @@ export function useMessageHandler({
             throw new Error('No user message found for regeneration');
           }
           userMessage = lastUserMessage;
+          
+          // Update the user message with new content if multi-tab context changed
+          if (hasTabContext && userMessage.content !== finalContent) {
+            chatStore.updateMessage(userMessage.id, {
+              content: finalContent,
+              metadata: {
+                ...userMessage.metadata,
+                hasTabContext,
+                originalUserContent: trimmedContent,
+              },
+            });
+          }
         }
 
         try {
@@ -193,6 +269,6 @@ export function useMessageHandler({
   return {
     sendMessage,
     cancelMessage,
-    isStreaming: () => isStreaming,
+    isStreaming: () => useChatStore.getState().activeMessageId !== null,
   };
 }

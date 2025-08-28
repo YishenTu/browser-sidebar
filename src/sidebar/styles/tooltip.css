@@ -1,0 +1,67 @@
+/* ============================================================================
+ * Tooltip Component Styles
+ * Styles for the Tooltip component
+ * ============================================================================ */
+
+.tooltip {
+  background: var(--tooltip-bg);
+  color: var(--tooltip-text);
+  border: 1px solid var(--tooltip-border);
+  border-radius: var(--border-radius-sm);
+  box-shadow: var(--shadow-lg);
+  font-size: var(--font-size-sm);
+  line-height: 1.4;
+  max-width: 300px;
+  padding: var(--spacing-sm);
+  word-wrap: break-word;
+  z-index: 10000;
+  opacity: 1;
+  visibility: visible;
+  transition: opacity 0.15s ease-in-out;
+  pointer-events: auto;
+}
+
+.tooltip__content {
+  position: relative;
+  z-index: 1;
+}
+
+/* Tooltip arrow */
+.tooltip__arrow {
+  position: absolute;
+  width: 0;
+  height: 0;
+  border: 6px solid transparent;
+}
+
+.tooltip__arrow--top {
+  bottom: -12px;
+  left: 50%;
+  transform: translateX(-50%);
+  border-top-color: var(--tooltip-bg);
+  border-bottom: none;
+}
+
+.tooltip__arrow--bottom {
+  top: -12px;
+  left: 50%;
+  transform: translateX(-50%);
+  border-bottom-color: var(--tooltip-bg);
+  border-top: none;
+}
+
+.tooltip__arrow--left {
+  right: -12px;
+  top: 50%;
+  transform: translateY(-50%);
+  border-left-color: var(--tooltip-bg);
+  border-right: none;
+}
+
+.tooltip__arrow--right {
+  left: -12px;
+  top: 50%;
+  transform: translateY(-50%);
+  border-right-color: var(--tooltip-bg);
+  border-left: none;
+}

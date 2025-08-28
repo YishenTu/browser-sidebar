@@ -320,7 +320,6 @@ export class ProviderRegistry {
         try {
           listener(eventData);
         } catch (error) {
-          console.error(`Error in registry event listener for ${eventType}:`, error);
         }
       });
     }

@@ -1,0 +1,332 @@
+/* Tab Mention Dropdown Styles */
+
+.tab-mention-dropdown {
+  /* Position is controlled inline (fixed) to align with viewport coords */
+  min-width: 320px;
+  max-width: 500px;
+  font-family: var(--font-family-base);
+  font-size: var(--font-size-base);
+  color: var(--text-primary);
+  z-index: 2147483647; /* match overlay to avoid stacking issues */
+  pointer-events: auto; /* ensure interactions regardless of ancestor settings */
+}
+
+.tab-mention-dropdown__menu {
+  /* Exact chat panel background (matches .ai-sidebar-container) */
+  background: rgba(26, 26, 26, 0.8) !important;
+  /* Match input area border exactly */
+  border: 1px solid rgba(75, 85, 99, 0.3);
+  /* Match input radius (12px) */
+  border-radius: 12px;
+  box-shadow: 
+    0 0 0 1px rgba(255, 255, 255, 0.1),
+    0 -4px 12px rgba(0, 0, 0, 0.15);
+  overflow-y: auto;
+  overflow-x: hidden;
+  animation: tabDropdownSlideUp 0.15s ease-out;
+  margin: 0;
+  padding: 4px;
+  list-style: none;
+  min-height: 100%;
+}
+
+/* Animation for dropdown appearing above input (slide up) */
+@keyframes tabDropdownSlideUp {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.96);
+    filter: blur(2px);
+  }
+  50% {
+    opacity: 0.8;
+    transform: translateY(4px) scale(0.99);
+    filter: blur(1px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    filter: blur(0);
+  }
+}
+
+/* Menu scrollbar styling */
+.tab-mention-dropdown__menu::-webkit-scrollbar {
+  width: 6px;
+}
+
+.tab-mention-dropdown__menu::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.tab-mention-dropdown__menu::-webkit-scrollbar-thumb {
+  background: var(--border-secondary);
+  border-radius: 3px;
+}
+
+.tab-mention-dropdown__menu::-webkit-scrollbar-thumb:hover {
+  background: var(--text-muted);
+}
+
+
+.tab-mention-dropdown__option {
+  display: flex;
+  align-items: center;
+  padding: 8px 12px;
+  margin: 2px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: background-color var(--transition-fast);
+  list-style: none;
+  /* Style like collapsed ContentPreview header */
+  min-height: 36px;
+}
+
+.tab-mention-dropdown__option:hover,
+.tab-mention-dropdown__option--highlighted {
+  /* More visible hover state */
+  background-color: rgba(255, 255, 255, 0.08);
+  transition: background-color var(--transition-fast);
+}
+
+.tab-mention-dropdown__option--active {
+  background-color: rgba(59, 130, 246, 0.1);
+}
+
+.tab-mention-dropdown__option--active.tab-mention-dropdown__option--highlighted {
+  background-color: rgba(59, 130, 246, 0.2);
+}
+
+.tab-mention-dropdown__option-content {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  padding: 0;
+  width: 100%;
+  min-height: 32px;
+}
+
+.tab-mention-dropdown__favicon {
+  position: relative;
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.tab-mention-dropdown__favicon-img {
+  width: 16px;
+  height: 16px;
+  border-radius: var(--radius-xs);
+  object-fit: contain;
+  flex-shrink: 0;
+}
+
+.tab-mention-dropdown__favicon-fallback {
+  width: 16px;
+  height: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  opacity: 0.6;
+}
+
+/* New classes to match ContentPreview collapsed header */
+.tab-mention-dropdown__header-main {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  min-width: 0;
+}
+
+.tab-mention-dropdown__title-wrapper {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  min-width: 0;
+  flex: 1;
+}
+
+.tab-mention-dropdown__title {
+  /* Match ContentPreview title style */
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  line-height: var(--line-height-tight);
+  color: var(--text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Indicators section */
+.tab-mention-dropdown__indicators {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
+.tab-mention-dropdown__active-indicator {
+  flex-shrink: 0;
+  color: var(--primary-500);
+  font-size: 12px;
+  line-height: 1;
+}
+
+.tab-mention-dropdown__audio-indicator {
+  flex-shrink: 0;
+  font-size: 12px;
+  opacity: 0.8;
+}
+
+.tab-mention-dropdown__description {
+  padding: var(--spacing-xs) var(--spacing-md);
+  border-top: 1px solid var(--border-secondary);
+  background: var(--background-secondary);
+  font-size: var(--font-size-xs);
+  color: var(--text-muted);
+  line-height: var(--line-height-tight);
+  text-align: center;
+}
+
+.tab-mention-dropdown__help-text {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+  font-weight: var(--font-weight-normal);
+}
+
+/* Hidden version for screen readers (keeping for accessibility) */
+.tab-mention-dropdown__description--sr-only {
+  position: absolute;
+  left: -9999px;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+}
+
+/* Focus and accessibility states */
+.tab-mention-dropdown__option:focus-visible {
+  outline: 2px solid var(--border-focus);
+  outline-offset: -2px;
+}
+
+/* Empty state (when no tabs available) */
+.tab-mention-dropdown__empty {
+  padding: var(--spacing-lg) var(--spacing-md);
+  text-align: center;
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+/* Loading state */
+.tab-mention-dropdown__loading {
+  padding: var(--spacing-lg) var(--spacing-md);
+  text-align: center;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-sm);
+}
+
+.tab-mention-dropdown__loading::before {
+  content: '';
+  width: 14px;
+  height: 14px;
+  border: 2px solid var(--border-primary);
+  border-top-color: var(--primary-500);
+  border-radius: var(--radius-full);
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Virtualization spacers */
+.tab-mention-dropdown__virtual-spacer {
+  height: 0;
+  pointer-events: none;
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+  .tab-mention-dropdown__option:hover,
+  .tab-mention-dropdown__option--highlighted {
+    background-color: rgba(75, 85, 99, 0.4);
+    border: 1px solid var(--border-focus);
+  }
+  
+  .tab-mention-dropdown__active-indicator {
+    border: 1px solid var(--primary-500);
+  }
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+  .tab-mention-dropdown__menu {
+    animation: none !important;
+    filter: none !important;
+  }
+  
+  .tab-mention-dropdown__loading::before {
+    animation: none !important;
+  }
+  
+  .tab-mention-dropdown__option:hover,
+  .tab-mention-dropdown__option--highlighted {
+    transform: none !important;
+    transition: background-color var(--transition-fast) !important;
+  }
+}
+
+/* Performance optimization */
+.tab-mention-dropdown__menu {
+  will-change: transform, opacity, filter;
+}
+
+.tab-mention-dropdown__option {
+  will-change: transform, background-color;
+}
+
+/* Dark theme specific adjustments */
+.ai-sidebar-container[data-theme='dark'] .tab-mention-dropdown__menu {
+  /* Match chat panel dark theme background */
+  background: rgba(26, 26, 26, 0.8) !important;
+  /* Keep border same as input area */
+  border-color: rgba(75, 85, 99, 0.3);
+  box-shadow: 
+    0 0 0 1px rgba(255, 255, 255, 0.1),
+    0 -4px 12px rgba(0, 0, 0, 0.3);
+}
+
+/* Light theme specific adjustments */
+.ai-sidebar-container[data-theme='light'] .tab-mention-dropdown__menu {
+  /* Match chat panel light theme background */
+  background: rgba(26, 26, 26, 0.8) !important; /* keep consistent with panel */
+  /* Keep border same as input area */
+  border-color: rgba(75, 85, 99, 0.3);
+  box-shadow: 
+    0 0 0 1px rgba(0, 0, 0, 0.05),
+    0 -4px 12px rgba(0, 0, 0, 0.08);
+}
+
+/* Extra specificity to defeat any generic dropdown menu styles */
+.ai-sidebar-container .tab-mention-dropdown .tab-mention-dropdown__menu {
+  background: rgba(26, 26, 26, 0.8) !important;
+  border: 1px solid rgba(75, 85, 99, 0.3) !important;
+  border-radius: 12px !important;
+}
+
+.ai-sidebar-container[data-theme='light'] .tab-mention-dropdown__option:hover,
+.ai-sidebar-container[data-theme='light'] .tab-mention-dropdown__option--highlighted {
+  background-color: rgba(0, 0, 0, 0.05);
+}

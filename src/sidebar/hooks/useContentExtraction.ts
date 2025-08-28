@@ -92,7 +92,6 @@ export function useContentExtraction(auto: boolean = false): UseContentExtractio
       // Clear any previous errors
       setError(null);
     } catch (err) {
-      console.error('Content extraction failed:', err);
       setError(err instanceof Error ? err : new Error('Content extraction failed'));
       setContent(null);
     } finally {
@@ -107,7 +106,6 @@ export function useContentExtraction(auto: boolean = false): UseContentExtractio
     async (options?: ExtractContentOptions): Promise<void> => {
       // Prevent concurrent extractions
       if (loading) {
-        console.warn('Extraction already in progress');
         return;
       }
 

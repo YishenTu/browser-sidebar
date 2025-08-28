@@ -12,6 +12,26 @@
   text-rendering: optimizeLegibility;
 }
 
+/* Truncation warning for messages with truncated tab content */
+.message-truncation-warning {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  margin-bottom: 8px;
+  background-color: var(--warning-bg, #fff3cd);
+  color: var(--warning-text, #856404);
+  border: 1px solid var(--warning-border, #ffeeba);
+  border-radius: 4px;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.message-truncation-warning svg {
+  flex-shrink: 0;
+  color: var(--warning-icon, #f0ad4e);
+}
+
 /* Message bubble styling for modern dark chat interface */
 .message-bubble {
   background: var(--background-secondary);

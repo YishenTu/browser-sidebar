@@ -107,10 +107,7 @@ export const storeUtils = {
    */
   destroy: () => {
     // Custom cleanup if needed in the future
-    // In development, log that destroy was called
-    if (process.env['NODE_ENV'] === 'development') {
-      console.warn('Store destroy called - implement cleanup logic here');
-    }
+    // Store destroy called - implement cleanup logic here
   },
 };
 

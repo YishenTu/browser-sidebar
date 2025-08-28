@@ -126,5 +126,25 @@ export {
   validateExtractionOptions,
 } from './extraction';
 
+// Tab types and interfaces
+export type {
+  TabInfo,
+  TabContent,
+  MultiTabExtractionState,
+  TabSelectionCriteria,
+  TabGrouping,
+} from './tabs';
+
+export {
+  isTabInfo,
+  isTabContent,
+  isMultiTabExtractionState,
+  createTabInfoFromChromeTab,
+  filterTabs,
+  createEmptyMultiTabState,
+  serializeMultiTabState,
+  deserializeMultiTabState,
+} from './tabs';
+
 // Note: CSS module declarations are in css.d.ts as ambient declarations
 // and don't need to be re-exported here

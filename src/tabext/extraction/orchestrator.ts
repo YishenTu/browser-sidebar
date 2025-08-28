@@ -114,9 +114,6 @@ export async function extractContent(
       throw new Error('Document is not available - extraction cannot proceed');
     }
 
-    if (document.readyState === 'loading' && DEBUG) {
-      console.warn('Document is still loading, extraction may be incomplete');
-    }
 
     // Validate and normalize options with defaults
     const options = validateExtractionOptions(opts);
@@ -142,7 +139,6 @@ export async function extractContent(
     // Calculate final extraction time and reference to avoid unused warning
     const extractionTime = performance.now() - startTime;
     if (DEBUG) {
-      // console.log(`Content extraction completed successfully in ${extractionTime.toFixed(2)}ms`);
     }
 
     return {
@@ -162,41 +158,6 @@ export async function extractContent(
     const errorInfo = classifyError(error);
 
     switch (errorInfo.type) {
-      case 'timeout':
-        console.error(
-          `Content extraction timed out after ${elapsed.toFixed(2)}ms:`,
-          errorInfo.message
-        );
-        break;
-      case 'network':
-        console.error(
-          `Network error during extraction after ${elapsed.toFixed(2)}ms:`,
-          errorInfo.message
-        );
-        break;
-      case 'dom':
-        console.error(
-          `DOM access error during extraction after ${elapsed.toFixed(2)}ms:`,
-          errorInfo.message
-        );
-        break;
-      case 'memory':
-        console.error(
-          `Memory error during extraction after ${elapsed.toFixed(2)}ms:`,
-          errorInfo.message
-        );
-        break;
-      case 'parsing':
-        console.error(
-          `Parsing error during extraction after ${elapsed.toFixed(2)}ms:`,
-          errorInfo.message
-        );
-        break;
-      default:
-        console.error(
-          `Content extraction failed after ${elapsed.toFixed(2)}ms:`,
-          errorInfo.message
-        );
     }
 
     // Always return valid fallback content
@@ -236,7 +197,6 @@ function captureSelection(): { html: string; text: string } | null {
 
     return { html, text };
   } catch (error) {
-    console.warn('Failed to capture selection:', error);
     return null;
   }
 }
@@ -265,7 +225,6 @@ async function performExtraction(
   try {
     metadata = getPageMetadata(document);
   } catch (error) {
-    console.warn('Failed to extract page metadata, using defaults:', error);
     metadata = {
       title: document.title || 'Untitled',
       publishedDate: undefined,
@@ -279,11 +238,9 @@ async function performExtraction(
       htmlContent = selection.html;
       textContent = selection.text;
       extractionMethod = 'selection';
-      // if (DEBUG) console.log('Using user selection only');
     } else {
       // For defuddle mode, we'll extract full content but mark the selection
       // This will be enhanced after full extraction
-      // if (DEBUG) console.log('Selection captured, will enhance extraction');
     }
   }
 
@@ -299,19 +256,10 @@ async function performExtraction(
         author = defuddleResult.author || undefined;
         extractionMethod = 'defuddle';
 
-        // console.log(
-        //   '[ContentExtractor] Defuddle extraction succeeded with content length:',
-        //   htmlContent.length
-        // );
       } else {
-        // console.log('[ContentExtractor] Defuddle extraction returned empty content');
       }
     } catch (error) {
-      console.error('[ContentExtractor] Defuddle extraction failed:', error);
-      console.error(
-        '[ContentExtractor] Error stack:',
-        error instanceof Error ? error.stack : 'No stack available'
-      );
+      // Defuddle extraction failed, will use fallback
     }
   }
 
@@ -325,9 +273,8 @@ async function performExtraction(
       // This ensures images are always normalized but links are only normalized when needed
       htmlContent = normalizeUrls(htmlContent, window.location.href, includeLinks);
 
-      // if (DEBUG) console.log('HTML cleaning and URL normalization completed');
     } catch (error) {
-      console.warn('HTML cleaning/normalization failed, using original content:', error);
+      // HTML cleaning/normalization failed, using original content
     }
   }
 
@@ -344,9 +291,8 @@ async function performExtraction(
       );
       selectionMarkdown = await htmlToMarkdown(normalizedSelection, { includeLinks });
 
-      // if (DEBUG) console.log('Selection enhanced in full extraction');
     } catch (error) {
-      console.warn('Failed to process selection:', error);
+      // Failed to process selection
     }
   }
 
@@ -361,37 +307,15 @@ async function performExtraction(
         markdown = `## Selected Content\n\n${selectionMarkdown}\n\n---\n\n## Full Page Content\n\n${markdown}`;
       }
 
-      // console.log(
-      //   '[ContentExtractor] HTML to Markdown conversion succeeded, length:',
-      //   markdown.length
-      // );
     } catch (error) {
-      if (error instanceof Error) {
-        if (error.message.includes('parsing')) {
-          console.warn('Markdown parsing error, falling back to text extraction:', error.message);
-        } else {
-          console.warn(
-            'HTML to Markdown conversion failed, falling back to text extraction:',
-            error.message
-          );
-        }
-      } else {
-        console.warn(
-          'Unknown error during HTML to Markdown conversion, falling back to text extraction:',
-          error
-        );
-      }
+      // HTML to Markdown conversion failed, falling back to text extraction
 
       // Graceful fallback to basic text extraction
       try {
         const parser = new DOMParser();
         const doc = parser.parseFromString(htmlContent, 'text/html');
         markdown = doc.body?.textContent || doc.body?.innerText || '';
-        if (markdown.trim()) {
-          // console.log('Text extraction fallback succeeded');
-        }
       } catch (parseError) {
-        console.error('Even text extraction fallback failed:', parseError);
         markdown = '';
       }
     }
@@ -399,12 +323,10 @@ async function performExtraction(
 
   // Step 4: Final fallback if no content extracted
   if (!markdown || !markdown.trim()) {
-    console.warn('All extraction methods failed, using basic document text');
     try {
       markdown = document.body?.textContent || document.body?.innerText || 'No content available';
       textContent = markdown; // Use the same content for text
     } catch (domError) {
-      console.error('Failed to access document.body for final fallback:', domError);
       markdown = 'Content extraction failed - unable to access page content';
       textContent = markdown;
     }
@@ -426,7 +348,7 @@ async function performExtraction(
     hasCode = detectCodeBlocks(markdown);
     hasTables = detectTables(markdown);
   } catch (error) {
-    console.warn('Feature detection failed, defaulting to false:', error);
+    // Feature detection failed, defaulting to false
   }
 
   // Step 6: Apply character limits with error handling
@@ -438,7 +360,6 @@ async function performExtraction(
     clampedMarkdown = clampResult.text;
     isTruncated = clampResult.isTruncated;
   } catch (error) {
-    console.warn('Text clamping failed, using original content:', error);
     // If clamping fails, manually truncate as a last resort
     if (markdown.length > maxLength) {
       clampedMarkdown = markdown.substring(0, maxLength) + '...';
@@ -452,7 +373,6 @@ async function performExtraction(
   try {
     excerpt = generateExcerpt(clampedMarkdown);
   } catch (error) {
-    console.warn('Excerpt generation failed:', error);
     // Simple fallback excerpt
     const cleanText = clampedMarkdown.replace(/[#*_`]/g, '').trim();
     excerpt = cleanText.length > 200 ? cleanText.substring(0, 197) + '...' : cleanText;
@@ -500,7 +420,6 @@ async function performExtraction(
 
   const totalTime = performance.now() - stepStartTime;
   if (DEBUG) {
-    // console.log(`Content processing completed in ${totalTime.toFixed(2)}ms`);
   } else {
     void totalTime; // Reference to avoid unused warning in production
   }
@@ -527,7 +446,6 @@ function createFallbackContent(
   timeoutMs: number = 2000
 ): ExtractedContent {
   if (DEBUG) {
-    // console.log('Creating fallback content due to extraction failure');
   }
 
   // Safe metadata extraction
@@ -535,7 +453,6 @@ function createFallbackContent(
   try {
     metadata = getPageMetadata(document);
   } catch (error) {
-    console.warn('Failed to extract metadata for fallback content:', error);
     metadata = {
       title: 'Untitled',
       publishedDate: undefined,
@@ -550,12 +467,10 @@ function createFallbackContent(
       fallbackText = document.documentElement?.textContent || 'No content available';
     }
   } catch (error) {
-    console.warn('Failed to extract body text for fallback content:', error);
     try {
       // Try title as absolute last resort
       fallbackText = document.title || 'Page content unavailable';
     } catch (titleError) {
-      console.error('Even document.title access failed:', titleError);
       fallbackText = 'Content extraction completely failed';
     }
   }
@@ -568,7 +483,6 @@ function createFallbackContent(
     clampedText = clampResult.text;
     isTruncated = clampResult.isTruncated;
   } catch (error) {
-    console.warn('Text clamping failed in fallback, using manual truncation:', error);
     if (fallbackText.length > maxLength) {
       clampedText = fallbackText.substring(0, maxLength - 3) + '...';
       isTruncated = true;
@@ -582,7 +496,6 @@ function createFallbackContent(
     url = window.location.href;
     domain = window.location.hostname || 'unknown';
   } catch (error) {
-    console.warn('Failed to access location in fallback content:', error);
     url = 'about:blank';
     domain = 'unknown';
   }
@@ -592,7 +505,6 @@ function createFallbackContent(
   try {
     title = metadata?.title || document.title || 'Untitled';
   } catch (error) {
-    console.warn('Failed to access title in fallback content:', error);
     title = 'Untitled';
   }
 
@@ -601,7 +513,6 @@ function createFallbackContent(
   try {
     excerpt = generateExcerpt(clampedText);
   } catch (error) {
-    console.warn('Excerpt generation failed in fallback:', error);
     // Simple fallback excerpt
     const cleanText = clampedText.replace(/[#*_`]/g, '').trim();
     excerpt = cleanText.length > 200 ? cleanText.substring(0, 197) + '...' : cleanText;

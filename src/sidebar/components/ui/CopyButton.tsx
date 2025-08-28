@@ -36,7 +36,6 @@ export const CopyButton: React.FC<CopyButtonProps> = ({
       onCopy?.();
       setTimeout(() => setCopied(false), 2000);
     } catch (err) {
-      console.error('Failed to copy text:', err);
     }
   };
 

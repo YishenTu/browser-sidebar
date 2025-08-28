@@ -21,6 +21,12 @@ const mockChromeStorage = {
     remove: vi.fn(),
     clear: vi.fn(),
   },
+  session: {
+    get: vi.fn(),
+    set: vi.fn(),
+    remove: vi.fn(),
+    clear: vi.fn(),
+  },
 };
 
 const mockChromeRuntime = {

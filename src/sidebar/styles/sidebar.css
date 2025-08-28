@@ -29,6 +29,12 @@
 @import './search-sources.css'; /* Search sources display */
 @import './copy-button.css'; /* Copy button component */
 @import './modal.css'; /* Modal component for full content display */
+@import './multi-tab-content.css'; /* Multi-tab content preview component */
+@import './tab-loading-indicator.css'; /* Tab loading indicators for multi-tab feature */
+@import './tab-chip.css'; /* Tab chip component for showing loaded tabs */
+@import './tab-error-boundary.css'; /* Tab error boundary for tab extraction errors */
+@import './tooltip.css'; /* Tooltip and HelpTooltip components */
+@import './first-time-guide.css'; /* First-time user guide components */
 /* @import './extraction-mode-selector.css'; - Extraction mode selector - not yet implemented */
 
 /* Any global overrides or additional styles can be added below if needed */

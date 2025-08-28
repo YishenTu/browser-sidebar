@@ -357,7 +357,6 @@ export async function maskPatternMatches(
         keyId: maskingResult.keyId,
       });
     } catch (error) {
-      console.warn(`Failed to mask pattern ${match.type}:`, error);
     }
   }
 

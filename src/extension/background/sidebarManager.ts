@@ -7,6 +7,7 @@
  */
 
 import { Message, createMessage, ToggleSidebarPayload, ErrorPayload } from '@/types/messages';
+import { isRestrictedUrl as isRestrictedUrlShared } from '@/shared/utils/restrictedUrls';
 
 /**
  * Sidebar state information for a tab
@@ -83,9 +84,6 @@ export class SidebarManager {
 
     this.sidebarStates.set(tabId, state);
 
-    if (this.verbose) {
-      console.log(`SidebarManager: Tab ${tabId} sidebar ${isOpen ? 'opened' : 'closed'}`);
-    }
 
     return state;
   }
@@ -148,9 +146,6 @@ export class SidebarManager {
   cleanupTab(tabId: number): boolean {
     const removed = this.sidebarStates.delete(tabId);
 
-    if (removed && this.verbose) {
-      console.log(`SidebarManager: Cleaned up state for tab ${tabId}`);
-    }
 
     return removed;
   }
@@ -162,9 +157,6 @@ export class SidebarManager {
     const count = this.sidebarStates.size;
     this.sidebarStates.clear();
 
-    if (this.verbose) {
-      console.log(`SidebarManager: Cleaned up state for ${count} tabs`);
-    }
   }
 
   /**
@@ -181,7 +173,6 @@ export class SidebarManager {
     const tabId = sender.tab?.id;
 
     if (!tabId) {
-      console.error('SidebarManager: No tab ID in toggle message sender');
       return createMessage<ErrorPayload>({
         type: 'ERROR',
         payload: {
@@ -194,8 +185,8 @@ export class SidebarManager {
     }
 
     try {
-      // Check if this is a restricted page
-      if (this.isRestrictedUrl(sender.tab?.url)) {
+      // Check if this is a restricted page (use shared util for consistency)
+      if (isRestrictedUrlShared(sender.tab?.url)) {
         return createMessage<ErrorPayload>({
           type: 'ERROR',
           payload: {
@@ -229,7 +220,6 @@ export class SidebarManager {
         target: message.source,
       });
     } catch (error) {
-      console.error('SidebarManager: Error handling toggle:', error);
       return createMessage<ErrorPayload>({
         type: 'ERROR',
         payload: {
@@ -257,7 +247,6 @@ export class SidebarManager {
     const tabId = sender.tab?.id;
 
     if (!tabId) {
-      console.error('SidebarManager: No tab ID in close message sender');
       return createMessage<ErrorPayload>({
         type: 'ERROR',
         payload: {
@@ -282,7 +271,6 @@ export class SidebarManager {
         target: message.source,
       });
     } catch (error) {
-      console.error('SidebarManager: Error handling close:', error);
       return createMessage<ErrorPayload>({
         type: 'ERROR',
         payload: {
@@ -316,9 +304,6 @@ export class SidebarManager {
         })
       );
 
-      if (this.verbose) {
-        console.log(`SidebarManager: Sent TOGGLE_SIDEBAR (show=${show}) to tab ${tabId}`);
-      }
     } catch (error) {
       // If content script is not loaded, try to inject it
       if (error instanceof Error && error.message.includes('Could not establish connection')) {
@@ -336,9 +321,6 @@ export class SidebarManager {
    * @param show - Whether to show sidebar after injection
    */
   private async injectContentScript(tabId: number, show: boolean): Promise<void> {
-    if (this.verbose) {
-      console.log(`SidebarManager: Injecting content script for tab ${tabId}`);
-    }
 
     try {
       // The content script should already be injected via manifest.json
@@ -381,30 +363,11 @@ export class SidebarManager {
         })
       );
     } catch (injectionError) {
-      console.error('SidebarManager: Failed to inject content script:', injectionError);
       throw new Error(`Content script injection failed: ${injectionError}`);
     }
   }
 
-  /**
-   * Check if a URL is restricted for content script injection
-   *
-   * @param url - URL to check
-   * @returns True if URL is restricted
-   */
-  private isRestrictedUrl(url?: string): boolean {
-    if (!url) return true;
-
-    return (
-      url.startsWith('chrome://') ||
-      url.startsWith('chrome-extension://') ||
-      url.startsWith('edge://') ||
-      url.startsWith('about:') ||
-      url.startsWith('file://') ||
-      url.startsWith('moz-extension://') ||
-      url === 'about:blank'
-    );
-  }
+  // Removed local restricted URL checker in favor of shared utility
 
   /**
    * Set up tab event listeners for state cleanup
@@ -417,7 +380,7 @@ export class SidebarManager {
 
     // Optional: Clean up state when tab URL changes significantly
     chrome.tabs.onUpdated.addListener((tabId, changeInfo) => {
-      if (changeInfo.url && this.isRestrictedUrl(changeInfo.url)) {
+      if (changeInfo.url && isRestrictedUrlShared(changeInfo.url)) {
         this.cleanupTab(tabId);
       }
     });
