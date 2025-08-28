@@ -11,7 +11,9 @@ export interface TabMentionDropdownProps {
   /** Position object with x and y coordinates for absolute positioning */
   position: {
     x: number;
-    y: number;
+    y?: number;
+    /** Optional bottom offset (preferred) to keep dropdown above the input */
+    bottom?: number;
     // Optional explicit width to match input
     width?: number;
   };
@@ -57,13 +59,13 @@ export const TabMentionDropdown: React.FC<TabMentionDropdownProps> = ({
   const optionRefs = useRef<(HTMLLIElement | null)[]>([]);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
-  const menuId = useId();
+  // const menuId = useId();
 
   // Determine if virtualization is needed
   const shouldVirtualize = tabs.length > maxVisibleTabs;
 
   // Virtual scrolling calculations
-  const itemHeight = 36; // Reduced height per tab option to match ContentPreview
+  const itemHeight = 24; // Extra compact rows
   const containerHeight = Math.min(tabs.length * itemHeight, maxHeight as number);
   const scrollTop = scrollContainerRef.current?.scrollTop || 0;
   const visibleStart = Math.floor(scrollTop / itemHeight);
@@ -357,7 +359,9 @@ export const TabMentionDropdown: React.FC<TabMentionDropdownProps> = ({
         // Position the wrapper div
         position: 'fixed',
         left: `${position.x}px`,
-        top: `${position.y}px`,
+        ...(position.bottom !== undefined
+          ? { bottom: `${position.bottom}px` }
+          : { top: `${position.y}px` }),
         // Ensure it sits on top of everything in the overlay
         zIndex: 2147483647,
         // If width provided, match the input width
@@ -376,24 +380,32 @@ export const TabMentionDropdown: React.FC<TabMentionDropdownProps> = ({
         className="tab-mention-dropdown__menu"
         style={{
           // Override default positioning since parent is already positioned
-          position: 'static',
+          position: 'relative',
           top: 'auto',
           left: 'auto',
           right: 'auto',
           ...(shouldVirtualize ? {
-            height: tabs.length * itemHeight,
+            // Visible height should be clamped to maxHeight; total scroll height is provided by absolute items
+            height: Math.min(tabs.length * itemHeight, typeof maxHeight === 'number' ? maxHeight : Number(maxHeight)),
           } : {}),
           maxHeight: typeof maxHeight === 'number' ? `${maxHeight}px` : maxHeight,
           // Make menu width follow wrapper (input) width if provided
           width: position.width ? '100%' : undefined,
           minWidth: position.width ? undefined : '320px',
-          maxWidth: '500px',
+          maxWidth: position.width ? 'none' : '500px',
           margin: 0,
         }}
+        onMouseLeave={() => setHighlightedIndex(-1)}
         onScroll={shouldVirtualize ? handleScroll : undefined}
       >
-        {visibleTabs.map(({ tab, originalIndex }) =>
-          renderTabOption(tab, originalIndex, originalIndex === highlightedIndex)
+        {tabs.length === 0 ? (
+          <li role="presentation" className="tab-mention-dropdown__empty">
+            No tabs found. Keep typing to search.
+          </li>
+        ) : (
+          visibleTabs.map(({ tab, originalIndex }) =>
+            renderTabOption(tab, originalIndex, originalIndex === highlightedIndex)
+          )
         )}
       </ul>
     </div>

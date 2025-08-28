@@ -81,6 +81,8 @@ export class GeminiProvider extends GeminiClient {
       geminiConfig.endpoint
     );
 
+    // Request logging removed for production
+
     return withErrorHandling(async () => {
       const response = await fetch(url, {
         method: 'POST',
@@ -114,6 +116,8 @@ export class GeminiProvider extends GeminiClient {
       geminiConfig.apiKey,
       geminiConfig.endpoint
     );
+
+    // Request logging removed for production
 
     let lastFinishReason: FinishReason = null;
 

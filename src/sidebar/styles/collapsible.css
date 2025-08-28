@@ -17,10 +17,13 @@
   font-size: 14px;
   color: var(--text-primary);
   transition: background-color 0.2s;
+  appearance: none;
+  -webkit-appearance: none;
 }
 
 .collapsible-header:hover {
-  background-color: var(--hover-bg, rgba(0, 0, 0, 0.05));
+  /* Remove default hover highlight globally; component-specific files can override */
+  background-color: transparent;
 }
 
 .collapsible-header:focus {

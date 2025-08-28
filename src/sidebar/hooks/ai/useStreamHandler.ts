@@ -6,6 +6,7 @@
 
 import { useRef, useCallback } from 'react';
 import { useChatStore } from '@store/chat';
+import { getSystemPrompt } from '@/config/systemPrompt';
 import type { AIProvider } from '../../../types/providers';
 import type { ChatMessage } from '@store/chat';
 import type { UseStreamHandlerReturn } from './types';
@@ -86,10 +87,14 @@ export function useStreamHandler(): UseStreamHandlerReturn {
         // Get last response ID for conversation continuity (OpenAI Response API)
         const previousResponseId = chatStore.getLastResponseId();
 
+        // Get the system prompt
+        const systemPrompt = getSystemPrompt();
+
         // Start streaming with response ID if available
         const stream = provider.streamChat(messages, {
           signal: abortControllerRef.current.signal,
           previousResponseId: previousResponseId || undefined,
+          systemPrompt,
         });
 
         let lastSuccessfulContent = '';

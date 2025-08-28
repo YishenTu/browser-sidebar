@@ -48,7 +48,13 @@ export function buildRequest(
     const userMessages = messages.filter(m => m.role === 'user');
     const lastUserMessage = userMessages[userMessages.length - 1];
     if (lastUserMessage) {
-      request.input = [{ role: 'user', content: lastUserMessage.content }];
+      request.input = [{
+        role: 'user',
+        content: [{
+          type: 'input_text',
+          text: lastUserMessage.content
+        }]
+      }];
     }
   } else {
     // No previous response ID - either:
@@ -63,13 +69,22 @@ export function buildRequest(
       // Mid-conversation - send full history for context
       request.input = messages.map(m => ({
         role: m.role as 'user' | 'assistant',
-        content: m.content,
+        content: [{
+          type: 'input_text',
+          text: m.content
+        }],
       }));
     } else {
       // First message in conversation - only include the user message
       const firstUserMessage = messages.find(m => m.role === 'user');
       if (firstUserMessage) {
-        request.input = [{ role: 'user', content: firstUserMessage.content }];
+        request.input = [{
+          role: 'user',
+          content: [{
+            type: 'input_text',
+            text: firstUserMessage.content
+          }]
+        }];
       }
     }
   }
@@ -87,6 +102,19 @@ export function buildRequest(
       summary: 'auto',
     };
   }
+
+  // Content analysis for future use - commented out for now
+  // if (request.input && request.input.length > 0) {
+  //   const lastInput = request.input[request.input.length - 1];
+  //   let inputContent = '';
+  //   if (typeof lastInput?.content === 'string') {
+  //     inputContent = lastInput.content;
+  //   } else if (Array.isArray(lastInput?.content) && lastInput.content[0]?.text) {
+  //     inputContent = lastInput.content[0].text;
+  //   }
+  //   const hasMultiTab = inputContent.includes('<current_tab>') && inputContent.includes('<additional_tabs>');
+  //   const hasSelectedText = inputContent.includes('<!-- SEL_START');
+  // }
 
   return request;
 }

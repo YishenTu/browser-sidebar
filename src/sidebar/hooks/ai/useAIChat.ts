@@ -46,7 +46,7 @@ export function useAIChat(options: UseAIChatOptions = {}): UseAIChatReturn {
     const initialize = async () => {
       try {
         await initializeProviders();
-      } catch (error) {
+      } catch (_error) {
         chatStore.setError('Failed to initialize AI providers');
       }
     };
@@ -70,7 +70,7 @@ export function useAIChat(options: UseAIChatOptions = {}): UseAIChatReturn {
       try {
         // Re-initialize providers when settings change
         await initializeProviders();
-      } catch (error) {
+      } catch (_error) {
       }
     };
 

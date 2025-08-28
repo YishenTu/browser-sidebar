@@ -6,11 +6,22 @@
  */
 
 /**
+ * Input content item for OpenAI Responses API
+ */
+export interface OpenAIInputContent {
+  type: 'input_text';
+  text: string;
+}
+
+/**
  * OpenAI Responses API request format
  */
 export interface OpenAIResponseRequest {
   model: string;
-  input?: Array<{ role: 'user' | 'assistant'; content: string }>;
+  input?: Array<{ 
+    role: 'user' | 'assistant'; 
+    content: string | OpenAIInputContent[]
+  }>;
   instructions?: string;
   previous_response_id?: string;
   tools?: Array<{ type: string }>;

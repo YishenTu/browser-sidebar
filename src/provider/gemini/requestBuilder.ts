@@ -41,10 +41,19 @@ export function buildRequest(
     tools: [{ google_search: {} }],
   };
 
+  // Add system instruction if provided
+  if (chatConfig?.systemPrompt) {
+    request.systemInstruction = {
+      parts: [{ text: chatConfig.systemPrompt }]
+    };
+  }
+
   // Add safety settings if configured
   if (geminiConfig.safetySettings) {
     request.safetySettings = geminiConfig.safetySettings as GeminiSafetySetting[];
   }
+
+  // Content analysis removed - was only for debugging
 
   return request;
 }

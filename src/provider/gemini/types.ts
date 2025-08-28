@@ -60,6 +60,13 @@ export interface GeminiSafetySetting {
 }
 
 /**
+ * System instruction format (without role field)
+ */
+export interface GeminiSystemInstruction {
+  parts: GeminiPart[];
+}
+
+/**
  * Complete API request structure
  */
 export interface GeminiRequest {
@@ -67,6 +74,7 @@ export interface GeminiRequest {
   generationConfig: GeminiGenerationConfig;
   safetySettings?: GeminiSafetySetting[];
   tools?: GeminiTool[];
+  systemInstruction?: GeminiSystemInstruction;
 }
 
 // ============================================================================
@@ -175,6 +183,7 @@ export interface GeminiChatConfig {
   thinkingBudget?: ThinkingBudget;
   showThoughts?: boolean;
   signal?: AbortSignal;
+  systemPrompt?: string;
 }
 
 /**

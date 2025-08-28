@@ -34,7 +34,7 @@ function initializeServiceWorker(): void {
   );
 
   // Start keep-alive system to prevent service worker suspension
-  const keepAliveStarted = startKeepAlive({
+  startKeepAlive({
     interval: 20000, // 20 seconds
     verbose: false, // Set to true for debugging
   });
@@ -45,7 +45,7 @@ function initializeServiceWorker(): void {
 /**
  * Handle extension installation and updates
  */
-chrome.runtime.onInstalled.addListener(async details => {
+chrome.runtime.onInstalled.addListener(async _details => {
 
   try {
     // Set default extension settings

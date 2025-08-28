@@ -172,7 +172,7 @@ export class DefaultHandlers {
    */
   static async handlePing(
     message: Message<void>,
-    sender: chrome.runtime.MessageSender
+    _sender: chrome.runtime.MessageSender
   ): Promise<Message<void>> {
 
     return createMessage<void>({
@@ -186,9 +186,10 @@ export class DefaultHandlers {
    * Handler for error messages - logs the error
    */
   static async handleError(
-    message: Message<ErrorPayload>,
-    sender: chrome.runtime.MessageSender
+    _message: Message<ErrorPayload>,
+    _sender: chrome.runtime.MessageSender
   ): Promise<void> {
+    // Error logging handled elsewhere
   }
 
   /**
@@ -250,7 +251,7 @@ export class DefaultHandlers {
    */
   static async handleGetAllTabs(
     message: Message<void>,
-    sender: chrome.runtime.MessageSender
+    _sender: chrome.runtime.MessageSender
   ): Promise<Message<GetAllTabsResponsePayload>> {
 
     try {
@@ -282,7 +283,7 @@ export class DefaultHandlers {
    */
   static async handleExtractTabContent(
     message: Message<ExtractTabPayload>,
-    sender: chrome.runtime.MessageSender
+    _sender: chrome.runtime.MessageSender
   ): Promise<Message<ExtractTabContentResponsePayload>> {
 
     if (!message.payload || typeof message.payload.tabId !== 'number') {
@@ -348,7 +349,7 @@ export class DefaultHandlers {
    */
   static async handleCleanupTabCache(
     message: Message<CleanupTabCachePayload>,
-    sender: chrome.runtime.MessageSender
+    _sender: chrome.runtime.MessageSender
   ): Promise<Message<void>> {
 
     if (!message.payload) {

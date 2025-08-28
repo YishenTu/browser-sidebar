@@ -8,6 +8,6 @@
 [x] 6. reasoning summary
 [x] 7. web search
 [x] 8. openai use response id to maintain chat history
-[ ] 9. system prompt
+[x] 9. system prompt
 [ ] 10. slash command
-[ ] 11. multi tab extraction with `@`command
+[x] 11. multi tab extraction

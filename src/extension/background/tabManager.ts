@@ -168,14 +168,14 @@ export class TabManager {
           throw new Error(msg);
         }
         
-        if (response.type === 'CONTENT_EXTRACTED' && response.payload?.content) {
-          const content = response.payload.content as ExtractedContent;
+        if ((response as any).type === 'CONTENT_EXTRACTED' && (response as any).payload?.content) {
+          const content = (response as any).payload.content as ExtractedContent;
           
           // Cache the successful extraction
           await this.cache.set(tabId, content);
           
           return content;
-        } else if (response.type === 'ERROR') {
+        } else if ((response as any).type === 'ERROR') {
           return null;
         } else {
           return null;
@@ -237,12 +237,7 @@ export class TabManager {
    * @param tabId - Optional tab ID to clear. If not provided, clears all cached content
    */
   public async clearCache(tabId?: number): Promise<void> {
-    try {
-      await this.cache.clear(tabId);
-      
-    } catch (error) {
-      throw error;
-    }
+    await this.cache.clear(tabId);
   }
 
   /**

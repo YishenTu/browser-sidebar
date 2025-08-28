@@ -311,7 +311,7 @@ export async function migrate(migrations: MigrationScript[]): Promise<StorageSch
       currentData = existingData;
     }
 
-    const currentVersion = currentData.version || 0;
+    const currentVersion = (currentData as any).version || 0;
 
     // Apply migrations if needed
     let migratedData = currentData;

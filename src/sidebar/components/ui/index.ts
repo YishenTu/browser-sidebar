@@ -16,10 +16,6 @@ export type { CollapsibleProps } from './Collapsible';
 export { Alert } from './Alert';
 export type { AlertProps, AlertType, AlertAction } from './Alert';
 
-// Badge exports
-export { Badge } from './Badge';
-export type { BadgeProps, BadgeVariant, BadgeSize } from './Badge';
-
 // Dropdown exports
 export { Dropdown } from './Dropdown';
 export type { DropdownProps, DropdownOption, DropdownGroup } from './Dropdown';
@@ -39,3 +35,11 @@ export type {
 // Tooltip exports
 export { Tooltip } from './Tooltip';
 export type { TooltipProps } from './Tooltip';
+
+// Modal exports
+export { Modal } from './Modal';
+export type { ModalProps } from './Modal';
+
+// FullscreenModal exports
+export { FullscreenModal } from './FullscreenModal';
+export type { FullscreenModalProps } from './FullscreenModal';

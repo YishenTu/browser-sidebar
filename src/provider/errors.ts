@@ -134,23 +134,23 @@ export class ErrorClassifier {
    */
   static classify(error: unknown, provider?: ProviderType): ErrorType {
     // Handle cancellation
-    if (error.name === 'AbortError' || error.code === 'CANCELLED') {
+    if ((error as any).name === 'AbortError' || (error as any).code === 'CANCELLED') {
       return ErrorType.CANCELLED;
     }
 
     // Handle network errors
     if (
-      error.code === 'ECONNREFUSED' ||
-      error.code === 'ETIMEDOUT' ||
-      error.code === 'ENOTFOUND' ||
-      error.message?.includes('network') ||
-      error.message?.includes('fetch')
+      (error as any).code === 'ECONNREFUSED' ||
+      (error as any).code === 'ETIMEDOUT' ||
+      (error as any).code === 'ENOTFOUND' ||
+      (error as any).message?.includes('network') ||
+      (error as any).message?.includes('fetch')
     ) {
       return ErrorType.NETWORK;
     }
 
     // Handle HTTP status codes
-    const status = error.status || error.statusCode || error.response?.status;
+    const status = (error as any).status || (error as any).statusCode || (error as any).response?.status;
     if (status) {
       if (status === 401 || status === 403) {
         return ErrorType.AUTHENTICATION;
@@ -168,25 +168,25 @@ export class ErrorClassifier {
 
     // Provider-specific error codes
     if (provider === 'openai') {
-      if (error.code === 'invalid_api_key') {
+      if ((error as any).code === 'invalid_api_key') {
         return ErrorType.AUTHENTICATION;
       }
-      if (error.code === 'rate_limit_exceeded') {
+      if ((error as any).code === 'rate_limit_exceeded') {
         return ErrorType.RATE_LIMIT;
       }
-      if (error.code === 'context_length_exceeded') {
+      if ((error as any).code === 'context_length_exceeded') {
         return ErrorType.CONTEXT_EXCEEDED;
       }
     }
 
     if (provider === 'gemini') {
-      if (err.code === 'UNAUTHENTICATED') {
+      if ((error as any).code === 'UNAUTHENTICATED') {
         return ErrorType.AUTHENTICATION;
       }
-      if (err.code === 'RESOURCE_EXHAUSTED') {
+      if ((error as any).code === 'RESOURCE_EXHAUSTED') {
         return ErrorType.RATE_LIMIT;
       }
-      if (err.code === 'INVALID_ARGUMENT' && err.message?.includes('context')) {
+      if ((error as any).code === 'INVALID_ARGUMENT' && (error as any).message?.includes('context')) {
         return ErrorType.CONTEXT_EXCEEDED;
       }
     }

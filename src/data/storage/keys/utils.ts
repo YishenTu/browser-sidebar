@@ -8,7 +8,7 @@ import { hashData } from '@/data/security/crypto';
 import * as chromeStorage from '@/data/storage/chrome';
 import { STORAGE_KEYS, DB_STORES } from './constants';
 import { getDatabase } from './database';
-import type { ServiceState, ServiceMetrics } from './types';
+import type { ServiceState, ServiceMetrics, APIKeyMetadata } from './types';
 
 /**
  * Require service to be initialized
@@ -80,7 +80,7 @@ export async function updateLastUsed(id: string): Promise<void> {
       await dbInstance.update(DB_STORES.METADATA, {
         id,
         lastUsed: Date.now(),
-      } as APIKeyMetadata);
+      } as Partial<APIKeyMetadata>);
     }
   } catch {
     // Ignore errors in last used updates
@@ -138,7 +138,7 @@ export async function auditLog(
 /**
  * Perform data migrations from older versions
  */
-export async function performMigrations(encryptionService: EncryptionService): Promise<void> {
+export async function performMigrations(encryptionService: any): Promise<void> {
   try {
     const migrationStatus = await chromeStorage.get(STORAGE_KEYS.MIGRATION_STATUS);
 
@@ -172,17 +172,18 @@ export async function performMigrations(encryptionService: EncryptionService): P
             };
 
             // Remove the raw key
-            delete migratedKey.key;
+            delete (migratedKey as any).key;
 
             // Update storage
             await chromeStorage.set(key, migratedKey);
             // Maintain hash → id mapping if id present on legacy entry
-            if (migratedKey.keyHash && legacyKey.id) {
+            if (migratedKey.keyHash && (legacyKey as any).id) {
               await chromeStorage.set(`${STORAGE_KEYS.API_KEY_HASH_PREFIX}${migratedKey.keyHash}`, {
-                id: legacyKey.id,
+                id: (legacyKey as any).id,
               });
             }
           } catch (error) {
+            // Ignore migration errors for individual keys
           }
         }
       }

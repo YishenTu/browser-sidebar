@@ -72,7 +72,7 @@ export abstract class BaseProvider implements AIProvider {
    * Called by concrete providers after successful validation
    */
   protected setConfig(config: ProviderConfig): void {
-    const validation = this.validateConfig(config.config);
+    const validation = this.validateConfig(config.config as Record<string, unknown>);
     if (!validation.isValid) {
       throw new Error(`Configuration validation failed: ${validation.errors.join(', ')}`);
     }
@@ -222,11 +222,11 @@ export abstract class BaseProvider implements AIProvider {
     return (
       typeof message === 'object' &&
       message !== null &&
-      typeof message.id === 'string' &&
-      typeof message.role === 'string' &&
-      ['user', 'assistant', 'system'].includes(message.role) &&
-      typeof message.content === 'string' &&
-      message.timestamp instanceof Date
+      typeof (message as any).id === 'string' &&
+      typeof (message as any).role === 'string' &&
+      ['user', 'assistant', 'system'].includes((message as any).role) &&
+      typeof (message as any).content === 'string' &&
+      (message as any).timestamp instanceof Date
     );
   }
 

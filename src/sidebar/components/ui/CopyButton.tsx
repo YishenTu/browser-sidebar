@@ -36,6 +36,7 @@ export const CopyButton: React.FC<CopyButtonProps> = ({
       onCopy?.();
       setTimeout(() => setCopied(false), 2000);
     } catch (err) {
+      // Copy failed silently
     }
   };
 

@@ -1,23 +1,19 @@
 /**
- * Content Aggregation Formatter
+ * Content Aggregation Formatter V2
  * 
- * Formats multiple tab contents with XML structure and enforces size limits.
- * Used to prepare multi-tab content for AI message processing.
+ * Formats multiple tab contents with a cleaner, more readable structure.
+ * Uses markdown-like format instead of XML for better clarity.
  * 
  * @example
  * ```typescript
- * const result = formatMultiTabContent(
+ * const result = formatMultiTabContentV2(
  *   "Analyze these pages for common themes",
  *   currentTab,
  *   [tab1, tab2, tab3]
  * );
  * 
- * if (result.truncated) {
- *   // Content was truncated, result.truncatedTabs.length tabs removed
- * }
- * 
- * // Send result.formatted to AI
- * sendToAI(result.formatted);
+ * // result.formatted contains clean, structured content
+ * // result.metadata contains useful context info
  * ```
  */
 
@@ -27,379 +23,419 @@ import { TabContent } from '@types/tabs';
 // Types and Interfaces
 // ============================================================================
 
-export interface MultiTabFormatResult {
-  /** Formatted XML content ready for AI processing */
+export interface MultiTabFormatResultV2 {
+  /** Formatted content ready for AI processing */
   formatted: string;
-  /** Whether content was truncated due to size limits */
-  truncated: boolean;
-  /** Array of tab IDs that were removed due to truncation */
-  truncatedTabs: number[];
+  /** Metadata about the formatting */
+  metadata: {
+    totalTabs: number;
+    currentTabId: number | null;
+    truncated: boolean;
+    truncatedCount: number;
+    truncatedTabIds: number[];
+    totalChars: number;
+    format: 'markdown' | 'structured';
+  };
 }
 
-export interface FormatOptions {
-  /** Maximum combined size in bytes (default: 1MB) */
-  maxSize?: number;
+export interface FormatOptionsV2 {
+  /** Maximum combined size in characters (default: 100k) */
+  maxChars?: number;
   /** Order in which tabs were selected (for deterministic truncation) */
   selectionOrder?: number[];
+  /** Format style to use */
+  format?: 'markdown' | 'structured';
+  /** Whether to include full content or summaries */
+  includeFullContent?: boolean;
 }
 
 // ============================================================================
 // Constants
 // ============================================================================
 
-/** Default maximum combined size (1MB) */
-const DEFAULT_MAX_SIZE = 1024 * 1024; // 1MB
+/** Default maximum character count (100k chars ~= 400KB) */
+const DEFAULT_MAX_CHARS = 100_000;
 
-/** XML characters that need escaping */
-const XML_ESCAPE_MAP: Record<string, string> = {
-  '&': '&amp;',
-  '<': '&lt;',
-  '>': '&gt;',
-  '"': '&quot;',
-  "'": '&apos;'
-};
+/** Maximum content preview length per tab when truncating */
+const MAX_PREVIEW_LENGTH = 5000;
 
 // ============================================================================
-// Core Formatting Functions
+// Helper Functions
 // ============================================================================
 
 /**
- * Escapes XML special characters in a string
- * 
- * @param text - Text to escape
- * @returns Escaped text safe for XML content
+ * Just return the text as-is for clean markdown output
+ * We're using XML tags only as separators, not for parsing
  */
-function escapeXML(text: string): string {
-  if (!text || typeof text !== 'string') {
-    return '';
-  }
-  
-  return text.replace(/[&<>"']/g, (char) => XML_ESCAPE_MAP[char] || char);
+function cleanText(text: string): string {
+  return text || '';
 }
 
 /**
- * Calculates the byte size of a string in UTF-8 encoding
- * 
- * @param str - String to measure
- * @returns Size in bytes
- */
-function getByteSize(str: string): number {
-  return new TextEncoder().encode(str).length;
-}
-
-/**
- * Safely extracts content from TabContent, handling null/undefined gracefully
- * 
- * @param tabContent - TabContent object to extract from
- * @returns Content string or empty string if unavailable
+ * Safely extracts content from TabContent
  */
 function extractContent(tabContent: TabContent | null | undefined): string {
   if (!tabContent?.extractedContent) {
     return '';
   }
-
   const content = tabContent.extractedContent.content;
   return typeof content === 'string' ? content : '';
 }
 
 /**
- * Safely extracts title from TabContent, handling null/undefined gracefully
- * 
- * @param tabContent - TabContent object to extract from
- * @returns Title string or fallback title
+ * Safely extracts title from TabContent
  */
 function extractTitle(tabContent: TabContent | null | undefined): string {
   if (!tabContent) {
     return 'Unknown Tab';
   }
-
-  // Try extractedContent title first, then tabInfo title
   const extractedTitle = tabContent.extractedContent?.title;
   const tabInfoTitle = tabContent.tabInfo?.title;
-  
   return extractedTitle || tabInfoTitle || 'Unknown Tab';
 }
 
 /**
- * Safely extracts URL from TabContent, handling null/undefined gracefully
- * 
- * @param tabContent - TabContent object to extract from
- * @returns URL string or fallback URL
+ * Safely extracts URL from TabContent
  */
 function extractURL(tabContent: TabContent | null | undefined): string {
   if (!tabContent) {
     return '';
   }
-
-  // Try extractedContent URL first, then tabInfo URL
   const extractedURL = tabContent.extractedContent?.url;
   const tabInfoURL = tabContent.tabInfo?.url;
-  
   return extractedURL || tabInfoURL || '';
 }
 
 /**
- * Formats a single tab as XML content
- * 
- * @param tabContent - Tab content to format
- * @returns XML string for the tab
+ * Extracts domain from URL
  */
-function formatTabXML(tabContent: TabContent): string {
-  const title = extractTitle(tabContent);
-  const url = extractURL(tabContent);
-  const content = extractContent(tabContent);
-
-  return [
-    '    <tab>',
-    `      <title>${escapeXML(title)}</title>`,
-    `      <url>${escapeXML(url)}</url>`,
-    `      <content>${escapeXML(content)}</content>`,
-    '    </tab>'
-  ].join('\n');
+function extractDomain(url: string): string {
+  try {
+    const urlObj = new URL(url);
+    return urlObj.hostname.replace('www.', '');
+  } catch {
+    return '';
+  }
 }
 
 /**
- * Formats the current tab as XML content
- * 
- * @param currentTab - Current tab content to format
- * @returns XML string for the current tab
+ * Truncates content intelligently at sentence/paragraph boundaries
  */
-function formatCurrentTabXML(currentTab: TabContent): string {
-  const title = extractTitle(currentTab);
-  const url = extractURL(currentTab);
-  const content = extractContent(currentTab);
+function truncateContent(content: string, maxLength: number): string {
+  if (content.length <= maxLength) {
+    return content;
+  }
 
-  return [
-    '  <current_tab>',
-    `    <title>${escapeXML(title)}</title>`,
-    `    <url>${escapeXML(url)}</url>`,
-    `    <content>${escapeXML(content)}</content>`,
-    '  </current_tab>'
-  ].join('\n');
+  // Try to truncate at a paragraph boundary
+  const truncated = content.substring(0, maxLength);
+  const lastParagraph = truncated.lastIndexOf('\n\n');
+  if (lastParagraph > maxLength * 0.8) {
+    return truncated.substring(0, lastParagraph) + '\n\n[Content truncated...]';
+  }
+
+  // Try to truncate at a sentence boundary
+  const lastSentence = truncated.lastIndexOf('. ');
+  if (lastSentence > maxLength * 0.8) {
+    return truncated.substring(0, lastSentence + 1) + '\n\n[Content truncated...]';
+  }
+
+  // Fall back to word boundary
+  const lastSpace = truncated.lastIndexOf(' ');
+  if (lastSpace > maxLength * 0.8) {
+    return truncated.substring(0, lastSpace) + '...\n\n[Content truncated...]';
+  }
+
+  return truncated + '...\n\n[Content truncated...]';
+}
+
+/**
+ * Formats a single tab in markdown style
+ */
+function formatTabMarkdown(
+  tabContent: TabContent,
+  index: number,
+  isCurrentTab: boolean = false
+): string {
+  const title = extractTitle(tabContent);
+  const url = extractURL(tabContent);
+  const domain = extractDomain(url);
+  const content = extractContent(tabContent);
+  
+  const lines: string[] = [];
+  
+  // Header with tab number and status
+  if (isCurrentTab) {
+    lines.push(`## Tab ${index} (Active Tab)`);
+  } else {
+    lines.push(`## Tab ${index}`);
+  }
+  
+  // Metadata
+  lines.push(`**Title:** ${title}`);
+  lines.push(`**URL:** ${url}`);
+  if (domain) {
+    lines.push(`**Domain:** ${domain}`);
+  }
+  lines.push('');
+  
+  // Content with clear separator
+  lines.push('---');
+  lines.push('');
+  lines.push(content || '[No content extracted]');
+  lines.push('');
+  
+  return lines.join('\n');
+}
+
+/**
+ * Formats a single tab in structured format
+ */
+function formatTabStructured(
+  tabContent: TabContent,
+  index: number,
+  isCurrentTab: boolean = false
+): { summary: string; content: string } {
+  const title = extractTitle(tabContent);
+  const url = extractURL(tabContent);
+  const domain = extractDomain(url);
+  const content = extractContent(tabContent);
+  
+  const summary = `[Tab ${index}${isCurrentTab ? ' (Active)' : ''}] ${title} - ${domain || url}`;
+  
+  return { summary, content };
 }
 
 /**
  * Determines truncation priority for tabs
- * Uses selection order if provided, otherwise falls back to lastAccessed time
- * 
- * @param tabs - Array of tabs to sort
- * @param selectionOrder - Optional order in which tabs were selected
- * @returns Sorted array with tabs to truncate first at the beginning
  */
-function sortTabsByTruncationPriority(tabs: TabContent[], selectionOrder?: number[]): TabContent[] {
+function sortTabsByPriority(
+  tabs: TabContent[],
+  currentTabId: number | null,
+  selectionOrder?: number[]
+): TabContent[] {
   return [...tabs].sort((a, b) => {
     const aId = a.tabInfo?.id || 0;
     const bId = b.tabInfo?.id || 0;
     
-    // If selection order is provided, use it for deterministic truncation
+    // Current tab always has highest priority
+    if (aId === currentTabId) return -1;
+    if (bId === currentTabId) return 1;
+    
+    // Use selection order if provided
     if (selectionOrder && selectionOrder.length > 0) {
       const aIndex = selectionOrder.indexOf(aId);
       const bIndex = selectionOrder.indexOf(bId);
       
-      // Tabs not in selection order go first (oldest)
-      if (aIndex === -1 && bIndex === -1) {
-        // Both not in order, use lastAccessed
-        const aLastAccessed = a.tabInfo?.lastAccessed || 0;
-        const bLastAccessed = b.tabInfo?.lastAccessed || 0;
-        return aLastAccessed - bLastAccessed;
+      // More recently selected tabs have higher priority
+      if (aIndex !== -1 && bIndex !== -1) {
+        return bIndex - aIndex; // Reverse order (higher index = more recent)
       }
-      
-      if (aIndex === -1) return -1; // a goes first (to be truncated)
-      if (bIndex === -1) return 1;  // b goes first (to be truncated)
-      
-      // Both in selection order - earlier selections get truncated first
-      // (oldest selections have lower indices)
-      return aIndex - bIndex;
+      if (aIndex !== -1) return -1;
+      if (bIndex !== -1) return 1;
     }
     
-    // Fallback: sort by lastAccessed (oldest first)
+    // Fall back to last accessed time (more recent = higher priority)
     const aLastAccessed = a.tabInfo?.lastAccessed || 0;
     const bLastAccessed = b.tabInfo?.lastAccessed || 0;
-    
-    if (aLastAccessed !== bLastAccessed) {
-      return aLastAccessed - bLastAccessed;
-    }
-    
-    // Final tie-breaker: by tab ID for consistency
-    return aId - bId;
+    return bLastAccessed - aLastAccessed;
   });
 }
 
 // ============================================================================
-// Main Formatting Function
+// Main Formatting Functions
 // ============================================================================
 
 /**
- * Creates XML structure for multiple tab contents with size limits
- * 
- * Formats user message, current tab, and additional tabs into a structured XML format
- * for AI processing. Enforces maximum combined size by truncating oldest or least-recently-selected
- * tabs when the size limit is exceeded.
+ * Creates a clean, structured format for multiple tab contents
  * 
  * @param userMessage - The user's query message
- * @param currentTab - Current active tab content (always included)
- * @param additionalTabs - Additional tabs to include (may be truncated)
- * @param options - Formatting options including max size
- * @returns Object containing formatted XML, truncation status, and truncated tab IDs
- * 
- * @example
- * ```typescript
- * const result = formatMultiTabContent(
- *   "Compare these articles",
- *   currentTab,
- *   [tab1, tab2, tab3],
- *   { maxSize: 512 * 1024 } // 512KB limit
- * );
- * 
- * // result.formatted contains XML content
- * // result.truncated is true if content was truncated
- * // result.truncatedTabs contains [2, 3] if tabs 2 and 3 were removed
- * ```
+ * @param currentTab - Current active tab content
+ * @param additionalTabs - Additional tabs to include
+ * @param options - Formatting options
+ * @returns Formatted content and metadata
+ */
+export function formatMultiTabContentV2(
+  userMessage: string,
+  currentTab: TabContent | null | undefined,
+  additionalTabs: TabContent[] = [],
+  options: FormatOptionsV2 = {}
+): MultiTabFormatResultV2 {
+  const {
+    maxChars = DEFAULT_MAX_CHARS,
+    selectionOrder,
+    format = 'markdown',
+    includeFullContent = true
+  } = options;
+
+  const allTabs: TabContent[] = [];
+  const currentTabId = currentTab?.tabInfo?.id || null;
+  
+  // Combine all tabs
+  if (currentTab) {
+    allTabs.push(currentTab);
+  }
+  allTabs.push(...additionalTabs);
+
+  // Sort by priority
+  const sortedTabs = sortTabsByPriority(allTabs, currentTabId, selectionOrder);
+  
+  const sections: string[] = [];
+  const truncatedTabIds: number[] = [];
+  let totalChars = 0;
+  let includedTabs = 0;
+
+  // If no tabs, just return the user message
+  if (sortedTabs.length === 0) {
+    return {
+      formatted: userMessage,
+      metadata: {
+        totalTabs: 0,
+        currentTabId: null,
+        truncated: false,
+        truncatedCount: 0,
+        truncatedTabIds: [],
+        totalChars: userMessage.length,
+        format
+      }
+    };
+  }
+
+  // ====================================================================
+  // PART 1: BROWSER CONTEXT INSTRUCTION
+  // ====================================================================
+  const tabWord = sortedTabs.length === 1 ? 'web page' : 'web pages';
+  const domains = [...new Set(sortedTabs.map(tab => extractDomain(extractURL(tab))).filter(Boolean))];
+  
+  sections.push('<browser_context>');
+  sections.push(`The user is viewing ${sortedTabs.length} ${tabWord} in the browser.`);
+  if (domains.length > 0) {
+    sections.push(`Source${domains.length > 1 ? 's' : ''}: ${domains.join(', ')}`);
+  }
+  sections.push('Below is the extracted content from these tabs, followed by the user question.');
+  sections.push('Please analyze this content to answer the user query.');
+  sections.push('</browser_context>');
+  sections.push('');
+  
+  // ====================================================================
+  // PART 2: TAB CONTENT (Browser Tabs)
+  // ====================================================================
+  sections.push('<tab_content>');
+  
+  // Process each tab with proper XML structure
+  for (let i = 0; i < sortedTabs.length; i++) {
+    const tab = sortedTabs[i];
+    const title = extractTitle(tab);
+    const url = extractURL(tab);
+    const domain = extractDomain(url);
+    const content = extractContent(tab);
+    
+    // Build tab content with XML metadata and markdown content
+    const tabContent = `<tab>
+  <metadata>
+    <title>${title}</title>
+    <url>${url}</url>${domain ? `
+    <domain>${domain}</domain>` : ''}
+  </metadata>
+  <content>
+${content || '[No content extracted]'}
+  </content>
+</tab>`;
+    
+    // Check size limit
+    if (totalChars + tabContent.length > maxChars - 1000) { // Leave buffer for user query
+      // Try truncating the content
+      const remainingSpace = maxChars - totalChars - 2000; // Leave more buffer
+      
+      if (remainingSpace > 1000) {
+        // Include truncated version
+        const truncatedContent = truncateContent(content, Math.min(MAX_PREVIEW_LENGTH, remainingSpace));
+        const truncatedTabContent = `<tab truncated="true">
+  <metadata>
+    <title>${title}</title>
+    <url>${url}</url>${domain ? `
+    <domain>${domain}</domain>` : ''}
+  </metadata>
+  <content>
+${truncatedContent}
+  </content>
+</tab>`;
+        
+        sections.push(truncatedTabContent);
+        totalChars += truncatedTabContent.length;
+        includedTabs++;
+      }
+      
+      // Mark remaining tabs as truncated
+      for (let j = i + (remainingSpace > 1000 ? 1 : 0); j < sortedTabs.length; j++) {
+        const truncTab = sortedTabs[j];
+        if (truncTab.tabInfo?.id !== undefined) {
+          truncatedTabIds.push(truncTab.tabInfo.id);
+        }
+      }
+      break;
+    }
+    
+    sections.push(tabContent);
+    totalChars += tabContent.length;
+    includedTabs++;
+  }
+  
+  // Add truncation notice if needed
+  if (truncatedTabIds.length > 0) {
+    sections.push(`\n[Note: ${truncatedTabIds.length} tab(s) omitted due to size limits]`);
+  }
+  
+  sections.push('\n</tab_content>');
+  sections.push('');
+  
+  // ====================================================================
+  // PART 3: USER QUERY
+  // ====================================================================
+  sections.push(`<user_query>\n${userMessage}\n</user_query>`);
+
+  const formatted = sections.join('\n');
+
+  return {
+    formatted,
+    metadata: {
+      totalTabs: sortedTabs.length,
+      currentTabId,
+      truncated: truncatedTabIds.length > 0,
+      truncatedCount: truncatedTabIds.length,
+      truncatedTabIds,
+      totalChars: formatted.length,
+      format
+    }
+  };
+}
+
+/**
+ * Legacy function for backward compatibility
+ * Converts the new format back to XML style if needed
  */
 export function formatMultiTabContent(
   userMessage: string,
   currentTab: TabContent | null | undefined,
   additionalTabs: TabContent[] = [],
-  options: FormatOptions = {}
-): MultiTabFormatResult {
-  const { maxSize = DEFAULT_MAX_SIZE, selectionOrder } = options;
-
-  // Handle null/undefined inputs gracefully
-  const safeUserMessage = userMessage || '';
-  const safeAdditionalTabs = additionalTabs || [];
-
-  // Start building the XML structure
-  const baseXML = [
-    '<multi_tab_content>',
-    `  <user_query>${escapeXML(safeUserMessage)}</user_query>`
-  ];
-
-  // Add current tab (always included, even if null/undefined)
-  if (currentTab) {
-    baseXML.push(formatCurrentTabXML(currentTab));
-  } else {
-    // Include empty current tab structure for consistency
-    baseXML.push(
-      '  <current_tab>',
-      '    <title></title>',
-      '    <url></url>',
-      '    <content></content>',
-      '  </current_tab>'
-    );
-  }
-
-  // Calculate base size (user query + current tab)
-  const baseContent = baseXML.join('\n');
-  let currentSize = getByteSize(baseContent);
-
-  // Add additional tabs section header
-  const additionalTabsHeader = '  <additional_tabs>';
-  const additionalTabsFooter = '  </additional_tabs>';
-  const closingTag = '</multi_tab_content>';
-
-  // Account for additional tabs structure and closing tag
-  const structureOverhead = getByteSize(additionalTabsHeader + '\n' + additionalTabsFooter + '\n' + closingTag);
-  currentSize += structureOverhead;
-
-  // Process additional tabs with truncation
-  const truncatedTabs: number[] = [];
-  const includedTabs: string[] = [];
-
-  // Sort tabs by truncation priority using selection order if provided
-  const sortedTabs = sortTabsByTruncationPriority(safeAdditionalTabs, selectionOrder);
-
-  // Try to include as many additional tabs as possible
-  for (const tab of sortedTabs) {
-    const tabXML = formatTabXML(tab);
-    const tabSize = getByteSize(tabXML + '\n'); // Include newline
-
-    if (currentSize + tabSize <= maxSize) {
-      includedTabs.push(tabXML);
-      currentSize += tabSize;
-    } else {
-      // Tab would exceed limit, add to truncated list
-      if (tab.tabInfo?.id !== undefined) {
-        truncatedTabs.push(tab.tabInfo.id);
-      }
+  options: { maxSize?: number; selectionOrder?: number[] } = {}
+): { formatted: string; truncated: boolean; truncatedTabs: number[] } {
+  // Use V2 with character limit converted from byte size
+  const maxChars = options.maxSize ? Math.floor(options.maxSize / 4) : DEFAULT_MAX_CHARS;
+  
+  const resultV2 = formatMultiTabContentV2(
+    userMessage,
+    currentTab,
+    additionalTabs,
+    {
+      maxChars,
+      selectionOrder: options.selectionOrder,
+      format: 'markdown' // Use cleaner format by default
     }
-  }
-
-  // Build final XML
-  const finalXML = [
-    ...baseXML,
-    additionalTabsHeader,
-    ...includedTabs,
-    additionalTabsFooter,
-    closingTag
-  ].join('\n');
+  );
 
   return {
-    formatted: finalXML,
-    truncated: truncatedTabs.length > 0,
-    truncatedTabs
+    formatted: resultV2.formatted,
+    truncated: resultV2.metadata.truncated,
+    truncatedTabs: resultV2.metadata.truncatedTabIds
   };
-}
-
-// ============================================================================
-// Utility Functions
-// ============================================================================
-
-/**
- * Calculates the size of formatted content without actually formatting it
- * Useful for size estimation before formatting
- * 
- * @param userMessage - User message
- * @param currentTab - Current tab
- * @param additionalTabs - Additional tabs
- * @returns Estimated size in bytes
- */
-export function estimateFormattedSize(
-  userMessage: string,
-  currentTab: TabContent | null | undefined,
-  additionalTabs: TabContent[] = []
-): number {
-  // This is a simplified estimation - actual XML escaping might change size slightly
-  const userQuerySize = getByteSize(escapeXML(userMessage || ''));
-  
-  let currentTabSize = 0;
-  if (currentTab) {
-    const title = extractTitle(currentTab);
-    const url = extractURL(currentTab);
-    const content = extractContent(currentTab);
-    currentTabSize = getByteSize(escapeXML(title) + escapeXML(url) + escapeXML(content));
-  }
-
-  let additionalTabsSize = 0;
-  for (const tab of additionalTabs || []) {
-    const title = extractTitle(tab);
-    const url = extractURL(tab);
-    const content = extractContent(tab);
-    additionalTabsSize += getByteSize(escapeXML(title) + escapeXML(url) + escapeXML(content));
-  }
-
-  // Add XML structure overhead (rough estimation)
-  const xmlOverhead = 500; // Rough estimate for XML tags and structure
-  
-  return userQuerySize + currentTabSize + additionalTabsSize + xmlOverhead;
-}
-
-/**
- * Validates that a TabContent object has the minimum required structure
- * 
- * @param tabContent - TabContent to validate
- * @returns True if the tab content is valid
- */
-export function isValidTabContent(tabContent: unknown): tabContent is TabContent {
-  if (!tabContent || typeof tabContent !== 'object') {
-    return false;
-  }
-
-  const tab = tabContent as Record<string, unknown>;
-  
-  // Check for required structure
-  return (
-    tab.tabInfo !== null &&
-    typeof tab.tabInfo === 'object' &&
-    (tab.extractedContent === null || typeof tab.extractedContent === 'object')
-  );
 }

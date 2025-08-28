@@ -2,8 +2,8 @@
 
 .tab-mention-dropdown {
   /* Position is controlled inline (fixed) to align with viewport coords */
-  min-width: 320px;
-  max-width: 500px;
+  min-width: 0;
+  max-width: none;
   font-family: var(--font-family-base);
   font-size: var(--font-size-base);
   color: var(--text-primary);
@@ -12,22 +12,20 @@
 }
 
 .tab-mention-dropdown__menu {
+  box-sizing: border-box; /* include border in width to align with input */
   /* Exact chat panel background (matches .ai-sidebar-container) */
   background: rgba(26, 26, 26, 0.8) !important;
   /* Match input area border exactly */
   border: 1px solid rgba(75, 85, 99, 0.3);
   /* Match input radius (12px) */
   border-radius: 12px;
-  box-shadow: 
-    0 0 0 1px rgba(255, 255, 255, 0.1),
-    0 -4px 12px rgba(0, 0, 0, 0.15);
+  box-shadow: none;
   overflow-y: auto;
   overflow-x: hidden;
   animation: tabDropdownSlideUp 0.15s ease-out;
   margin: 0;
   padding: 4px;
   list-style: none;
-  min-height: 100%;
 }
 
 /* Animation for dropdown appearing above input (slide up) */
@@ -71,18 +69,17 @@
 .tab-mention-dropdown__option {
   display: flex;
   align-items: center;
-  padding: 8px 12px;
+  padding: 2px 10px;
   margin: 2px;
-  border-radius: var(--radius-sm);
+  border-radius: 10px; /* visibly rounded hover */
   cursor: pointer;
   transition: background-color var(--transition-fast);
   list-style: none;
   /* Style like collapsed ContentPreview header */
-  min-height: 36px;
+  min-height: 24px;
 }
 
-.tab-mention-dropdown__option:hover,
-.tab-mention-dropdown__option--highlighted {
+.tab-mention-dropdown__option:hover {
   /* More visible hover state */
   background-color: rgba(255, 255, 255, 0.08);
   transition: background-color var(--transition-fast);
@@ -102,7 +99,7 @@
   gap: var(--spacing-sm);
   padding: 0;
   width: 100%;
-  min-height: 32px;
+  min-height: 20px;
 }
 
 .tab-mention-dropdown__favicon {
@@ -259,8 +256,7 @@
 
 /* High contrast mode support */
 @media (prefers-contrast: high) {
-  .tab-mention-dropdown__option:hover,
-  .tab-mention-dropdown__option--highlighted {
+  .tab-mention-dropdown__option:hover {
     background-color: rgba(75, 85, 99, 0.4);
     border: 1px solid var(--border-focus);
   }
@@ -281,8 +277,7 @@
     animation: none !important;
   }
   
-  .tab-mention-dropdown__option:hover,
-  .tab-mention-dropdown__option--highlighted {
+  .tab-mention-dropdown__option:hover {
     transform: none !important;
     transition: background-color var(--transition-fast) !important;
   }
@@ -303,9 +298,7 @@
   background: rgba(26, 26, 26, 0.8) !important;
   /* Keep border same as input area */
   border-color: rgba(75, 85, 99, 0.3);
-  box-shadow: 
-    0 0 0 1px rgba(255, 255, 255, 0.1),
-    0 -4px 12px rgba(0, 0, 0, 0.3);
+  box-shadow: none;
 }
 
 /* Light theme specific adjustments */
@@ -314,9 +307,7 @@
   background: rgba(26, 26, 26, 0.8) !important; /* keep consistent with panel */
   /* Keep border same as input area */
   border-color: rgba(75, 85, 99, 0.3);
-  box-shadow: 
-    0 0 0 1px rgba(0, 0, 0, 0.05),
-    0 -4px 12px rgba(0, 0, 0, 0.08);
+  box-shadow: none;
 }
 
 /* Extra specificity to defeat any generic dropdown menu styles */
@@ -324,9 +315,9 @@
   background: rgba(26, 26, 26, 0.8) !important;
   border: 1px solid rgba(75, 85, 99, 0.3) !important;
   border-radius: 12px !important;
+  box-shadow: none !important;
 }
 
-.ai-sidebar-container[data-theme='light'] .tab-mention-dropdown__option:hover,
-.ai-sidebar-container[data-theme='light'] .tab-mention-dropdown__option--highlighted {
+.ai-sidebar-container[data-theme='light'] .tab-mention-dropdown__option:hover {
   background-color: rgba(0, 0, 0, 0.05);
 }

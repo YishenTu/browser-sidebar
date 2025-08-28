@@ -187,6 +187,8 @@ export class OpenAIProvider extends BaseProvider {
       systemPrompt: config?.systemPrompt,
     });
 
+    // Request logging removed for production
+
     return withErrorHandling(async () => {
       // Use Responses API with AbortSignal passed via RequestOptions
       const response = await (openaiInstance as { responses: { create: (req: unknown, opts: unknown) => Promise<unknown> } }).responses.create(request, {
@@ -225,6 +227,9 @@ export class OpenAIProvider extends BaseProvider {
           previousResponseId: config?.previousResponseId,
           systemPrompt: config?.systemPrompt,
         });
+
+        // Log the actual OpenAI API request for streaming
+        // Request logging removed for production
 
         // Use responses.create with stream: true (there is no separate stream method)
         const asyncIterable = await (openaiInstance as { responses: { create: (req: unknown, opts: unknown) => Promise<unknown> } }).responses.create(request, {

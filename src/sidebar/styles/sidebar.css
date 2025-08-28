@@ -23,7 +23,6 @@
 
 /* Import new UI component styles */
 @import './alert.css'; /* Alert/Banner component */
-@import './badge.css'; /* Badge and character counter */
 @import './collapsible.css'; /* Collapsible sections */
 @import './dropdown.css'; /* Generic dropdown component */
 @import './search-sources.css'; /* Search sources display */
@@ -33,8 +32,7 @@
 @import './tab-loading-indicator.css'; /* Tab loading indicators for multi-tab feature */
 @import './tab-chip.css'; /* Tab chip component for showing loaded tabs */
 @import './tab-error-boundary.css'; /* Tab error boundary for tab extraction errors */
-@import './tooltip.css'; /* Tooltip and HelpTooltip components */
-@import './first-time-guide.css'; /* First-time user guide components */
-/* @import './extraction-mode-selector.css'; - Extraction mode selector - not yet implemented */
+@import './tooltip.css'; /* Tooltip components */
+@import './tab-mention-dropdown.css'; /* @ mention dropdown styles */
 
 /* Any global overrides or additional styles can be added below if needed */

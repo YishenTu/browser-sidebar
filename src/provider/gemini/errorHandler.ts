@@ -160,7 +160,7 @@ export function formatError(error: unknown): ProviderError {
 
     // Add status code to details if available
     if (err.status) {
-      details.statusCode = err.status;
+      details['statusCode'] = err.status;
     }
 
     // Add additional error details
@@ -170,15 +170,15 @@ export function formatError(error: unknown): ProviderError {
 
     // Add error-specific details
     if (err.field) {
-      details.field = err.field;
+      details['field'] = err.field;
     }
     if (err.value) {
-      details.value = err.value;
+      details['value'] = err.value;
     }
 
     // Add original error code if present
     if (err.error?.code) {
-      details.originalCode = err.error.code;
+      details['originalCode'] = err.error.code;
     }
   }
 
@@ -267,11 +267,11 @@ function getErrorCode(errorType: ErrorType): string {
  */
 export function isProviderError(error: unknown): error is ProviderError {
   return (
-    error &&
+    !!error &&
     typeof error === 'object' &&
     'type' in error &&
     'provider' in error &&
-    error.provider === 'gemini'
+    (error as any).provider === 'gemini'
   );
 }
 

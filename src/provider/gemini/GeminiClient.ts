@@ -99,19 +99,19 @@ export class GeminiClient extends BaseProvider {
     }
 
     // API Key validation
-    if (!config.apiKey || typeof config.apiKey !== 'string' || config.apiKey.trim() === '') {
+    if (!config['apiKey'] || typeof config['apiKey'] !== 'string' || config['apiKey'].trim() === '') {
       errors.push('Invalid API key');
     }
 
     // Model validation
-    if (!config.model || typeof config.model !== 'string' || config.model.trim() === '') {
+    if (!config['model'] || typeof config['model'] !== 'string' || config['model'].trim() === '') {
       errors.push('Invalid model');
-    } else if (!modelExists(config.model)) {
-      errors.push(`Unknown model: ${config.model}`);
+    } else if (!modelExists(config['model'])) {
+      errors.push(`Unknown model: ${config['model']}`);
     }
 
     // Thinking budget validation (optional, defaults to '0')
-    if (config.thinkingBudget !== undefined) {
+    if (config['thinkingBudget'] !== undefined) {
       if (
         typeof config.thinkingBudget !== 'string' ||
         !['0', '-1'].includes(config.thinkingBudget)
@@ -191,26 +191,22 @@ export class GeminiClient extends BaseProvider {
 
   /**
    * Send chat messages and get response
-   * TODO: Full implementation in Task 4.2.2b
    */
   async chat(messages: ProviderChatMessage[], _config?: Record<string, unknown>): Promise<ProviderResponse> {
     this.ensureConfigured();
     this.validateMessages(messages);
 
-    // Placeholder - will be implemented in Task 4.2.2b
-    throw new Error('Chat method not yet implemented - will be completed in Task 4.2.2b');
+    throw new Error('Chat method not yet implemented');
   }
 
   /**
    * Stream chat messages
-   * TODO: Full implementation in Task 4.2.2b
    */
   async *streamChat(messages: ProviderChatMessage[], _config?: Record<string, unknown>): AsyncIterable<StreamChunk> {
     this.ensureConfigured();
     this.validateMessages(messages);
 
-    // Placeholder - will be implemented in Task 4.2.2b
-    throw new Error('Stream chat method not yet implemented - will be completed in Task 4.2.2b');
+    throw new Error('Stream chat method not yet implemented');
 
     // Unreachable yield to satisfy generator function requirement
     yield {} as StreamChunk;

@@ -9,6 +9,7 @@ import { useChatStore } from '@store/chat';
 import { useSettingsStore } from '@store/settings';
 import { getModelById } from '@/config/models';
 import { formatMultiTabContent } from '../../utils/contentFormatter';
+import { getSystemPrompt } from '@/config/systemPrompt';
 import type { AIProvider } from '../../../types/providers';
 import type { SendMessageOptions, UseMessageHandlerReturn } from './types';
 import { useStreamHandler } from './useStreamHandler';
@@ -44,9 +45,13 @@ export function useMessageHandler({
       // Get last response ID for conversation continuity (OpenAI Response API)
       const previousResponseId = chatStore.getLastResponseId();
 
+      // Get the system prompt
+      const systemPrompt = getSystemPrompt();
+
       // Get response from provider with response ID if available
       const response = await provider.chat(messages, {
         previousResponseId: previousResponseId || undefined,
+        systemPrompt,
       });
 
       // Store new response ID if present (for OpenAI Response API)
@@ -54,8 +59,7 @@ export function useMessageHandler({
         chatStore.setLastResponseId(response.metadata['responseId'] as string);
       }
 
-      // Get the selected model from settings
-      const selectedModel = settingsStore.settings.selectedModel;
+      // Get model info for metadata
       const modelInfo = getModelById(selectedModel);
 
       // Add assistant message to store with model metadata
@@ -106,7 +110,7 @@ export function useMessageHandler({
 
         // Prepare message content with multi-tab context if available
         let finalContent = trimmedContent;
-        let finalDisplayContent = displayContent || trimmedContent;
+        const finalDisplayContent = displayContent || trimmedContent;
         let hasTabContext = false;
         let formatResult: ReturnType<typeof formatMultiTabContent> | undefined;
         
@@ -125,7 +129,7 @@ export function useMessageHandler({
             .map(tabId => loadedTabs[tabId])
             .filter(Boolean);
           
-          // Format the multi-tab content
+          // Format the multi-tab content with the new cleaner structure
           formatResult = formatMultiTabContent(
             trimmedContent,
             currentTabContent,
@@ -133,26 +137,14 @@ export function useMessageHandler({
             {
               // Get selection order from store for deterministic truncation
               selectionOrder: chatStore.tabSelectionOrder,
+              maxChars: 100_000, // 100k character limit
+              format: 'markdown' // Use markdown format within XML structure
             }
           );
           
           // Use formatted content for AI but keep original for display
           finalContent = formatResult.formatted;
           hasTabContext = true;
-          
-          // Log the exact content being sent to the API for examination
-          console.log('=== Multi-Tab Content Being Sent to API ===');
-          console.log('User Input:', trimmedContent);
-          console.log('Number of tabs included:', loadedTabIds.length);
-          console.log('Tab IDs:', loadedTabIds);
-          console.log('Content Length:', finalContent.length, 'characters');
-          console.log('Full Content to API:\n', finalContent);
-          console.log('==========================================');
-          
-          // Log truncation warning if content was truncated
-          if (formatResult.truncated && formatResult.truncatedTabs.length > 0) {
-            console.warn('Content was truncated. Truncated tabs:', formatResult.truncatedTabs);
-          }
         }
 
         // Add user message to chat store (unless we're regenerating)
@@ -168,11 +160,11 @@ export function useMessageHandler({
               hasTabContext,
               originalUserContent: hasTabContext ? trimmedContent : undefined,
               // Include truncation info in metadata for UI to display
-              ...(formatResult?.truncated && {
+              ...(formatResult?.metadata?.truncated && {
                 truncation: {
                   truncated: true,
-                  truncatedTabCount: formatResult.truncatedTabs.length,
-                  truncatedTabIds: formatResult.truncatedTabs,
+                  truncatedTabCount: formatResult?.metadata?.truncatedCount,
+                  truncatedTabIds: formatResult?.metadata?.truncatedTabIds,
                 }
               }),
             },

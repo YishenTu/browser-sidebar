@@ -154,9 +154,7 @@ export class SidebarManager {
    * Clean up state for all tabs
    */
   cleanupAll(): void {
-    const count = this.sidebarStates.size;
     this.sidebarStates.clear();
-
   }
 
   /**

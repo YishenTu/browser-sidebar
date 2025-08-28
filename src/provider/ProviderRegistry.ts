@@ -320,6 +320,7 @@ export class ProviderRegistry {
         try {
           listener(eventData);
         } catch (error) {
+          // Ignore errors from individual listeners
         }
       });
     }

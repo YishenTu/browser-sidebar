@@ -106,7 +106,7 @@ export class KeepAlive {
       this.pingCount++;
 
       // Use a lightweight Chrome API call to maintain activity
-      const platformInfo = await chrome.runtime.getPlatformInfo();
+      await chrome.runtime.getPlatformInfo();
 
 
       // Additional lightweight operations to ensure activity
@@ -143,7 +143,7 @@ export class KeepAlive {
     try {
       // Use a simple calculation as absolute fallback
       const timestamp = Date.now();
-      const calculation = Math.sqrt(timestamp) + Math.random();
+      Math.sqrt(timestamp) + Math.random();
 
     } catch (error) {
       // Even fallback ping failed

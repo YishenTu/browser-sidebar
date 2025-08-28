@@ -18,11 +18,10 @@ import { ErrorBanner } from '@components/ErrorBanner';
 import { useChatStore, type ChatMessage } from '@store/chat';
 import { useAIChat } from '@hooks/useAIChat';
 import { useMultiTabExtraction } from '@hooks/useMultiTabExtraction';
+import { TabContentItem } from '@components/TabContentItem';
 import { ContentPreview } from '@components/ContentPreview';
-import { MultiTabContentPreview } from '@components/MultiTabContentPreview';
-import { TabErrorBoundary } from '@components/TabErrorBoundary';
 // Import for Task 2.2: Content Injection with Tab ID tracking
-import { getCurrentTabIdSafe } from '@tabext/utils/tabUtils';
+// import { getCurrentTabIdSafe } from '@tabext/utils/tabUtils';
 // Import for Task 4.4: Session State Management - Cleanup message
 import { createMessage } from '@/types/messages';
 
@@ -149,7 +148,7 @@ const ChatPanelInner: React.FC<ChatPanelProps> = ({ className, onClose }) => {
       .then(() => {
         setSettingsInitialized(true);
       })
-      .catch((error: unknown) => {
+      .catch((_error: unknown) => {
         // Still initialize even if settings fail to load
         // This allows the app to work with default settings
         setSettingsInitialized(true);
@@ -194,13 +193,10 @@ const ChatPanelInner: React.FC<ChatPanelProps> = ({ className, onClose }) => {
     currentTabId,
     loadedTabs,
     availableTabs,
-    hasAutoLoaded,
     extractCurrentTab,
     extractTabById,
     removeLoadedTab,
-    refreshAvailableTabs,
     loading: multiTabLoading,
-    loadingTabIds,
     error: multiTabError,
   } = useMultiTabExtraction();
 
@@ -240,9 +236,9 @@ const ChatPanelInner: React.FC<ChatPanelProps> = ({ className, onClose }) => {
           isFirstMessage = messages.length === 0;
         }
 
-        let messageContent = userInput;
-        let displayContent = userInput;
-        let messageMetadata: Record<string, unknown> = wasEditing ? editedMessageMetadata : {};
+        const messageContent = userInput;
+        const displayContent = userInput;
+        const messageMetadata: Record<string, unknown> = wasEditing ? editedMessageMetadata : {};
 
         // Handle content extraction errors or missing content for first message
         if (isFirstMessage) {
@@ -261,65 +257,9 @@ const ChatPanelInner: React.FC<ChatPanelProps> = ({ className, onClose }) => {
           }
         }
 
-        // Inject content on first message with tab tracking
-        if (isFirstMessage && currentTabContent) {
-          try {
-            // Get tab ID for metadata
-            const tabId = await getCurrentTabIdSafe();
-
-            // Format content with webpage metadata and user question
-            const injectedContent = `I'm looking at a webpage with the following content:
-
-Title: ${currentTabContent.title}
-URL: ${currentTabContent.url}
-Domain: ${currentTabContent.domain}
-
-Content:
-${currentTabContent.content}
-
----
-My question: ${userInput}`;
-
-            // Set content for API and displayContent for UI
-            messageContent = injectedContent;
-            displayContent = userInput; // UI shows only user input
-
-            // Add/update metadata to track injection including tabId
-            // For edited messages, preserve existing metadata and update injection-specific fields
-            messageMetadata = {
-              ...messageMetadata, // Preserve existing metadata
-              hasTabContext: true,
-              originalUserContent: userInput,
-              tabId: tabId,
-              tabTitle: currentTabContent.title,
-              tabUrl: currentTabContent.url,
-            };
-          } catch (tabError) {
-            // If tab ID retrieval fails, continue without it but still inject content
-
-            const injectedContent = `I'm looking at a webpage with the following content:
-
-Title: ${currentTabContent.title}
-URL: ${currentTabContent.url}
-Domain: ${currentTabContent.domain}
-
-Content:
-${currentTabContent.content}
-
----
-My question: ${userInput}`;
-
-            messageContent = injectedContent;
-            displayContent = userInput;
-            messageMetadata = {
-              ...messageMetadata, // Preserve existing metadata
-              hasTabContext: true,
-              originalUserContent: userInput,
-              tabTitle: currentTabContent.title,
-              tabUrl: currentTabContent.url,
-            };
-          }
-        }
+        // Multi-tab extraction system will handle content injection
+        // Just pass the user input directly - formatting happens in useMessageHandler
+        // The displayContent remains the user input for UI display
 
         // Issue 2 Fix: Handle editing vs new message properly
         if (wasEditing && editingMessage) {
@@ -588,11 +528,11 @@ My question: ${userInput}`;
           });
           
           // Send cleanup message (fire and forget - no need to wait for response on unmount)
-          chrome.runtime.sendMessage(cleanupMessage).catch((error) => {
+          chrome.runtime.sendMessage(cleanupMessage).catch((_error) => {
             // Failed to send cleanup message on unmount
           });
         }
-      } catch (error) {
+      } catch (_error) {
         // Error during session state cleanup
       }
     };
@@ -685,17 +625,11 @@ My question: ${userInput}`;
         <ErrorBanner />
 
 
-        {/* Content Extraction Preview - Multi-tab or Single-tab */}
-        {currentTabContent || Object.keys(loadedTabs).length > 0 ? (
-          // Multi-tab mode: show MultiTabContentPreview with error boundary
-          <TabErrorBoundary
-            boundaryId="multi-tab-content-preview"
-            maxRetries={2}
-            onError={(error, errorInfo) => {
-              // Error caught by boundary
-            }}
-          >
-            <MultiTabContentPreview
+        {/* Content Extraction Preview - Only render if there's actual content or loading/error state */}
+        {(currentTabContent || Object.keys(loadedTabs).length > 0 || multiTabLoading || multiTabError) && (
+          currentTabContent || Object.keys(loadedTabs).length > 0 ? (
+            // Multi-tab mode: show ContentPreview
+            <ContentPreview
               currentTabContent={currentTabContent ? {
                 tabInfo: {
                   id: currentTabId || 0,
@@ -716,17 +650,17 @@ My question: ${userInput}`;
               onClearTabContent={handleClearTabContent}
               className="ai-sidebar-content-preview"
             />
-          </TabErrorBoundary>
-        ) : (
-          // Fallback to single-tab mode: show original ContentPreview
-          <ContentPreview
-            content={currentTabContent}
-            loading={multiTabLoading}
-            error={multiTabError}
-            onReextract={() => extractCurrentTab()}
-            onClearContent={() => currentTabId && removeLoadedTab(currentTabId)}
-            className="ai-sidebar-content-preview"
-          />
+          ) : (
+            // Fallback to single-tab mode: show TabContentItem only if there's loading/error state
+            <TabContentItem
+              content={currentTabContent}
+              loading={multiTabLoading}
+              error={multiTabError}
+              onReextract={() => extractCurrentTab()}
+              onClearContent={() => currentTabId && removeLoadedTab(currentTabId)}
+              className="ai-sidebar-content-preview"
+            />
+          )
         )}
 
         {showSettings ? (

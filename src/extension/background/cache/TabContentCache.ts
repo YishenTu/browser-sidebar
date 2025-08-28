@@ -83,17 +83,13 @@ export class TabContentCache {
    * @param content - The extracted content to cache
    */
   async set(tabId: number, content: ExtractedContent): Promise<void> {
-    try {
-      const key = this.getStorageKey(tabId);
-      const entry: CacheEntry = {
-        content,
-        timestamp: Date.now(),
-      };
+    const key = this.getStorageKey(tabId);
+    const entry: CacheEntry = {
+      content,
+      timestamp: Date.now(),
+    };
 
-      await chrome.storage.session.set({ [key]: entry });
-    } catch (error) {
-      throw error;
-    }
+    await chrome.storage.session.set({ [key]: entry });
   }
 
   /**
@@ -102,11 +98,10 @@ export class TabContentCache {
    * @param tabId - Optional tab ID to clear. If not provided, clears all cached content
    */
   async clear(tabId?: number): Promise<void> {
-    try {
-      if (tabId !== undefined) {
-        // Clear specific tab
-        const key = this.getStorageKey(tabId);
-        await chrome.storage.session.remove(key);
+    if (tabId !== undefined) {
+      // Clear specific tab
+      const key = this.getStorageKey(tabId);
+      await chrome.storage.session.remove(key);
       } else {
         // Clear all tab content
         const allItems = await chrome.storage.session.get();
@@ -118,9 +113,6 @@ export class TabContentCache {
           await chrome.storage.session.remove(keysToRemove);
         }
       }
-    } catch (error) {
-      throw error;
-    }
   }
 
   /**
@@ -168,6 +160,7 @@ export class TabContentCache {
         await chrome.storage.session.remove(keysToRemove);
       }
     } catch (error) {
+      // Ignore errors when clearing expired entries
     }
   }
 

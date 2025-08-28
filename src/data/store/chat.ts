@@ -484,7 +484,8 @@ export const useChatStore = create<ChatState>((set, get) => ({
 
   removeLoadedTab: (tabId: number) => {
     set(state => {
-      const { [tabId]: removed, ...remainingTabs } = state.loadedTabs;
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const { [tabId]: _removed, ...remainingTabs } = state.loadedTabs;
       const newOrder = state.tabSelectionOrder.filter(id => id !== tabId);
       
       return {

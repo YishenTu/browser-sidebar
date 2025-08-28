@@ -91,6 +91,7 @@ export class GeminiStreamProcessor {
             const obj = JSON.parse(objectStr);
             results.push(obj);
           } catch (e) {
+            // Ignore JSON parsing errors for incomplete objects
           }
         } else {
           // Incomplete object, wait for more data
@@ -170,6 +171,7 @@ export class GeminiStreamProcessor {
           const obj = JSON.parse(jsonStr);
           results.push(obj);
         } catch (e) {
+          // Invalid JSON in SSE data, skip this line
         }
       } else {
         // Try parsing as NDJSON

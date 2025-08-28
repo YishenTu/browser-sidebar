@@ -87,7 +87,6 @@ The codebase follows a modular architecture with clear separation of concerns. E
 
 **Metrics (`metrics/`):**
 - Extraction performance tracking
-- Content quality metrics
 - User interaction analytics
 - Error rate monitoring
 
@@ -210,7 +209,6 @@ The codebase follows a modular architecture with clear separation of concerns. E
   - Extracted content cache
   - Tab selection state
   - Extraction history
-  - Quality metrics
 
 **Storage Layer (`storage/`):**
 - `chrome.ts` – Chrome Storage API abstraction
@@ -269,7 +267,6 @@ The codebase follows a modular architecture with clear separation of concerns. E
   - Role definitions
 - `extraction.ts` – Content extraction types
   - Extracted content formats
-  - Quality metrics
   - Filter configurations
 - `apiKeys.ts` – Key management types
   - Key metadata

@@ -38,15 +38,15 @@ export async function listAPIKeys(
           provider: options.provider,
           limit: options.limit,
           offset: options.offset,
-        });
+        }) as APIKeyMetadata[];
       } else if (options.status) {
         results = await dbInstance.query(DB_STORES.METADATA, {
           status: options.status,
           limit: options.limit,
           offset: options.offset,
-        });
+        }) as APIKeyMetadata[];
       } else {
-        results = await dbInstance.getAll(DB_STORES.METADATA);
+        results = await dbInstance.getAll(DB_STORES.METADATA) as APIKeyMetadata[];
       }
     }
 
@@ -101,7 +101,7 @@ export async function listAPIKeys(
     }));
 
     return {
-      keys,
+      keys: keys as EncryptedAPIKey[],
       total: results.length,
       hasMore,
       nextCursor: hasMore ? `${offset + limit}` : undefined,
@@ -127,13 +127,13 @@ export async function getKeysByProvider(
     const results = dbInstance ? await dbInstance.query(DB_STORES.METADATA, { provider }) : [];
 
     // Convert to EncryptedAPIKey format (metadata only)
-    return results.map(metadata => ({
+    return results.map((metadata: any) => ({
       id: metadata.id,
-      metadata,
+      metadata: metadata as APIKeyMetadata,
       encryptedData: {
         data: new Uint8Array(),
         iv: new Uint8Array(),
-        algorithm: 'AES-GCM',
+        algorithm: 'AES-GCM' as const,
         version: 1,
       },
       keyHash: '',

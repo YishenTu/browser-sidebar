@@ -226,17 +226,19 @@
 
 /* Content Extraction Preview */
 .ai-sidebar-content-preview {
+  background: rgba(26, 26, 26, 0.8) !important; /* Match chat panel */
   margin: 8px 12px;
 }
 
 .content-preview {
-  background: rgba(26, 26, 26, 0.8); /* Same as chat panel - 20% transparent */
+  /* No background needed - parent handles it */
   border-radius: 8px;
 }
 
-/* Content preview wrapper for close button positioning */
+/* Content preview wrapper */
 .content-preview-wrapper {
   position: relative;
+  /* No background needed - parent handles it */
 }
 
 /* Close button in header - use flex positioning instead of absolute */
@@ -269,11 +271,34 @@
 
 .content-preview-collapsible {
   width: 100%;
-  border: 1px solid rgba(75, 85, 99, 0.3); /* Default border - thinner */
+  /* No background needed - parent handles it */
+  border: 1px solid rgba(75, 85, 99, 0.3);
   border-radius: 8px;
-  transition:
-    border-color 0.3s ease,
-    box-shadow 0.3s ease;
+  transition: border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+/* Header */
+.content-preview-collapsible .collapsible-header {
+  /* Inherit background from parent */
+  background: transparent;
+  box-shadow: none !important;
+  outline: none !important;
+}
+
+.content-preview-collapsible .collapsible-header:hover,
+.content-preview-collapsible .collapsible-header:focus,
+.content-preview-collapsible .collapsible-header:focus-visible,
+.content-preview-collapsible .collapsible-header:active {
+  /* Keep transparent on interaction */
+  background: transparent;
+  box-shadow: none !important;
+  outline: none !important;
+}
+
+/* Content region */
+.content-preview-collapsible .collapsible-content {
+  /* Inherit background from parent */
+  background: transparent;
 }
 
 .collapsible-header {

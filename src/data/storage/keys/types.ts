@@ -5,7 +5,9 @@
  */
 
 import type { EncryptedData } from '@/data/security/crypto';
-import type { EncryptedAPIKey } from '@/types/apiKeys';
+import type { EncryptedAPIKey, APIKeyMetadata } from '@/types/apiKeys';
+
+export type { APIKeyMetadata };
 
 /** Encryption Service interface */
 export interface EncryptionService {

@@ -357,6 +357,7 @@ export async function maskPatternMatches(
         keyId: maskingResult.keyId,
       });
     } catch (error) {
+      // Ignore masking errors for individual fields
     }
   }
 

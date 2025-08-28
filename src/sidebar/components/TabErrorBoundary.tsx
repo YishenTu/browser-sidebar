@@ -9,7 +9,7 @@
 
 import React, { Component, ErrorInfo, ReactNode } from 'react';
 import { Alert } from '@ui/Alert';
-import { RegenerateIcon } from '@ui/Icons';
+// import { RegenerateIcon } from '@ui/Icons';
 import '../styles/tab-error-boundary.css';
 
 export interface TabErrorBoundaryState {
@@ -76,7 +76,7 @@ export class TabErrorBoundary extends Component<TabErrorBoundaryProps, TabErrorB
   }
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo) {
-    const { onError, logErrors = true, boundaryId } = this.props;
+    const { onError, logErrors = true } = this.props;
     
     // Update state with error info
     this.setState({

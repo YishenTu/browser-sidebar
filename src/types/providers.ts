@@ -322,11 +322,11 @@ export function isProviderError(value: unknown): value is ProviderError {
   return (
     typeof value === 'object' &&
     value !== null &&
-    typeof value.type === 'string' &&
-    ['authentication', 'rate_limit', 'network', 'validation', 'unknown'].includes(value.type) &&
-    typeof value.message === 'string' &&
-    typeof value.code === 'string' &&
-    isProviderType(value.provider)
+    typeof (value as any).type === 'string' &&
+    ['authentication', 'rate_limit', 'network', 'validation', 'unknown'].includes((value as any).type) &&
+    typeof (value as any).message === 'string' &&
+    typeof (value as any).code === 'string' &&
+    isProviderType((value as any).provider)
   );
 }
 
@@ -337,12 +337,12 @@ export function isStreamChunk(value: unknown): value is StreamChunk {
   return (
     typeof value === 'object' &&
     value !== null &&
-    typeof value.id === 'string' &&
-    typeof value.object === 'string' &&
-    typeof value.created === 'number' &&
-    typeof value.model === 'string' &&
-    Array.isArray(value.choices) &&
-    value.choices.every(
+    typeof (value as any).id === 'string' &&
+    typeof (value as any).object === 'string' &&
+    typeof (value as any).created === 'number' &&
+    typeof (value as any).model === 'string' &&
+    Array.isArray((value as any).choices) &&
+    (value as any).choices.every(
       (choice: unknown) =>
         typeof choice === 'object' &&
         choice !== null &&
@@ -360,17 +360,17 @@ export function isProviderResponse(value: unknown): value is ProviderResponse {
   return (
     typeof value === 'object' &&
     value !== null &&
-    typeof value.id === 'string' &&
-    typeof value.content === 'string' &&
-    typeof value.model === 'string' &&
-    typeof value.usage === 'object' &&
-    value.usage !== null &&
-    typeof value.usage.promptTokens === 'number' &&
-    typeof value.usage.completionTokens === 'number' &&
-    typeof value.usage.totalTokens === 'number' &&
-    typeof value.metadata === 'object' &&
-    value.metadata !== null &&
-    isProviderType(value.metadata.provider)
+    typeof (value as any).id === 'string' &&
+    typeof (value as any).content === 'string' &&
+    typeof (value as any).model === 'string' &&
+    typeof (value as any).usage === 'object' &&
+    (value as any).usage !== null &&
+    typeof (value as any).usage.promptTokens === 'number' &&
+    typeof (value as any).usage.completionTokens === 'number' &&
+    typeof (value as any).usage.totalTokens === 'number' &&
+    typeof (value as any).metadata === 'object' &&
+    (value as any).metadata !== null &&
+    isProviderType((value as any).metadata.provider)
   );
 }
 
@@ -381,12 +381,12 @@ export function isStreamingResponse(value: unknown): value is StreamingResponse 
   return (
     typeof value === 'object' &&
     value !== null &&
-    typeof value.id === 'string' &&
-    typeof value.model === 'string' &&
-    Array.isArray(value.choices) &&
-    typeof value.metadata === 'object' &&
-    value.metadata !== null &&
-    isProviderType(value.metadata.provider)
+    typeof (value as any).id === 'string' &&
+    typeof (value as any).model === 'string' &&
+    Array.isArray((value as any).choices) &&
+    typeof (value as any).metadata === 'object' &&
+    (value as any).metadata !== null &&
+    isProviderType((value as any).metadata.provider)
   );
 }
 
@@ -429,42 +429,42 @@ export function validateOpenAIConfig(config: unknown): ProviderValidationResult 
   const errors: string[] = [];
   const cfg = config as Record<string, unknown>;
 
-  if (!cfg.apiKey || typeof cfg.apiKey !== 'string' || cfg.apiKey.trim() === '') {
+  if (!cfg['apiKey'] || typeof cfg['apiKey'] !== 'string' || (cfg['apiKey'] as string).trim() === '') {
     errors.push('Invalid API key');
   }
 
-  if (!isValidTemperature(cfg.temperature)) {
+  if (!isValidTemperature(cfg['temperature'])) {
     errors.push('Invalid temperature');
   }
 
-  if (!isValidReasoningEffort(cfg.reasoningEffort)) {
+  if (!isValidReasoningEffort(cfg['reasoningEffort'])) {
     errors.push('Invalid reasoning effort');
   }
 
-  if (!cfg.model || typeof cfg.model !== 'string') {
+  if (!cfg['model'] || typeof cfg['model'] !== 'string') {
     errors.push('Invalid model');
   }
 
-  if (typeof cfg.maxTokens !== 'number' || (cfg.maxTokens as number) <= 0) {
+  if (typeof cfg['maxTokens'] !== 'number' || cfg['maxTokens'] <= 0) {
     errors.push('Invalid max tokens');
   }
 
-  if (typeof cfg.topP !== 'number' || (cfg.topP as number) < 0 || (cfg.topP as number) > 1) {
+  if (typeof cfg['topP'] !== 'number' || cfg['topP'] < 0 || cfg['topP'] > 1) {
     errors.push('Invalid top P');
   }
 
   if (
-    typeof cfg.frequencyPenalty !== 'number' ||
-    (cfg.frequencyPenalty as number) < -2 ||
-    (cfg.frequencyPenalty as number) > 2
+    typeof cfg['frequencyPenalty'] !== 'number' ||
+    cfg['frequencyPenalty'] < -2 ||
+    cfg['frequencyPenalty'] > 2
   ) {
     errors.push('Invalid frequency penalty');
   }
 
   if (
-    typeof cfg.presencePenalty !== 'number' ||
-    (cfg.presencePenalty as number) < -2 ||
-    (cfg.presencePenalty as number) > 2
+    typeof cfg['presencePenalty'] !== 'number' ||
+    cfg['presencePenalty'] < -2 ||
+    cfg['presencePenalty'] > 2
   ) {
     errors.push('Invalid presence penalty');
   }
@@ -482,35 +482,35 @@ export function validateGeminiConfig(config: unknown): ProviderValidationResult 
   const errors: string[] = [];
   const cfg = config as Record<string, unknown>;
 
-  if (!cfg.apiKey || typeof cfg.apiKey !== 'string' || cfg.apiKey.trim() === '') {
+  if (!cfg['apiKey'] || typeof cfg['apiKey'] !== 'string' || (cfg['apiKey'] as string).trim() === '') {
     errors.push('Invalid API key');
   }
 
-  if (!isValidTemperature(config.temperature)) {
+  if (!isValidTemperature((config as any).temperature)) {
     errors.push('Invalid temperature');
   }
 
-  if (!isValidThinkingBudget(config.thinkingBudget)) {
+  if (!isValidThinkingBudget((config as any).thinkingBudget)) {
     errors.push('Invalid thinking budget');
   }
 
-  if (typeof config.showThoughts !== 'boolean') {
+  if (typeof (config as any).showThoughts !== 'boolean') {
     errors.push('Invalid show thoughts setting');
   }
 
-  if (!cfg.model || typeof cfg.model !== 'string') {
+  if (!cfg['model'] || typeof cfg['model'] !== 'string') {
     errors.push('Invalid model');
   }
 
-  if (typeof cfg.maxTokens !== 'number' || (cfg.maxTokens as number) <= 0) {
+  if (typeof cfg['maxTokens'] !== 'number' || cfg['maxTokens'] <= 0) {
     errors.push('Invalid max tokens');
   }
 
-  if (typeof cfg.topP !== 'number' || (cfg.topP as number) <= 0 || (cfg.topP as number) > 1) {
+  if (typeof cfg['topP'] !== 'number' || cfg['topP'] <= 0 || cfg['topP'] > 1) {
     errors.push('Invalid top P');
   }
 
-  if (typeof cfg.topK !== 'number' || (cfg.topK as number) <= 0) {
+  if (typeof cfg['topK'] !== 'number' || cfg['topK'] <= 0) {
     errors.push('Invalid top K');
   }
 

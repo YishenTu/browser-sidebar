@@ -80,18 +80,6 @@ export interface ExtractedContent {
     /** Meta tags extracted from the page (internal use) */
     metaTags?: Array<Record<string, string>>;
   };
-
-  // Backward compatibility fields (deprecated, will be removed in v2)
-  /** @deprecated Use content instead */
-  markdown?: string;
-  /** @deprecated Use metadata.hasCodeBlocks instead */
-  hasCode?: boolean;
-  /** @deprecated Use hasTables from metadata instead */
-  hasTables?: boolean;
-  /** @deprecated Use metadata.truncated instead */
-  isTruncated?: boolean;
-  /** @deprecated Use extractedAt instead */
-  extractionTime?: number;
 }
 
 /**
@@ -109,10 +97,6 @@ export interface ExtractionOptions {
 
   /** Maximum time to wait for extraction before timing out (default: 2000ms) */
   timeout?: number;
-
-  // Backward compatibility (deprecated)
-  /** @deprecated Use maxLength instead */
-  maxOutputChars?: number;
 }
 
 // ============================================================================
@@ -164,11 +148,11 @@ export function isExtractionOptions(obj: unknown): obj is ExtractionOptions {
   return (
     typeof obj === 'object' &&
     obj !== null &&
-    (o.timeout === undefined || (typeof o.timeout === 'number' && o.timeout > 0)) &&
-    (o.includeLinks === undefined || typeof o.includeLinks === 'boolean') &&
-    (o.maxLength === undefined || (typeof o.maxLength === 'number' && o.maxLength > 0)) &&
-    (o.maxOutputChars === undefined ||
-      (typeof o.maxOutputChars === 'number' && o.maxOutputChars > 0))
+    (o['timeout'] === undefined || (typeof o['timeout'] === 'number' && o['timeout'] > 0)) &&
+    (o['includeLinks'] === undefined || typeof o['includeLinks'] === 'boolean') &&
+    (o['maxLength'] === undefined || (typeof o['maxLength'] === 'number' && o['maxLength'] > 0)) &&
+    (o['maxOutputChars'] === undefined ||
+      (typeof o['maxOutputChars'] === 'number' && o['maxOutputChars'] > 0))
   );
 }
 

@@ -122,7 +122,7 @@ function handleChromeError(operation: string, source?: string): ExtensionError |
   );
 }
 
-function logError(error: ExtensionError | Error, context?: string): void {
+function logError(_error: ExtensionError | Error, _context?: string): void {
   // Error logging functionality removed
 }
 
