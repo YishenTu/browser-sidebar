@@ -32,7 +32,7 @@
   align-items: center;
   gap: 6px;
   padding: 6px 12px;
-  background: rgba(26, 26, 26, 0.8); /* Same as chat panel */
+  background: var(--sidebar-background); /* Same as chat panel */
   border: 1px solid rgba(75, 85, 99, 0.3);
   border-radius: 6px;
   font-size: 12px;
@@ -83,8 +83,11 @@
   border: 1px solid var(--border-primary);
   border-radius: var(--radius-lg);
   overflow: hidden;
-  background: rgba(26, 26, 26, 0.8); /* Match chat panel transparency */
-  transition: border-color var(--transition-fast), box-shadow var(--transition-fast), transform var(--transition-fast);
+  background: var(--sidebar-background); /* Match chat panel transparency */
+  transition:
+    border-color var(--transition-fast),
+    box-shadow var(--transition-fast),
+    transform var(--transition-fast);
   animation: tabSlideIn var(--transition-medium) ease-out;
 }
 
@@ -230,7 +233,7 @@
 /* Tab Content */
 .multi-tab-content {
   padding: 0 16px 16px 16px;
-  background: rgba(26, 26, 26, 0.8); /* Match chat panel transparency */
+  background: var(--sidebar-background); /* Match chat panel transparency */
 }
 
 .multi-tab-content-preview-item {
@@ -243,15 +246,15 @@
   .multi-tab-header {
     padding: 10px 12px;
   }
-  
+
   .multi-tab-content {
     padding: 0 12px 12px 12px;
   }
-  
+
   .multi-tab-title {
     font-size: 12px;
   }
-  
+
   .multi-tab-domain {
     font-size: 10px;
   }
@@ -284,7 +287,7 @@
   animation-delay: 0.4s;
 }
 
-.multi-tab-additional .multi-tab-item:nth-child(n+5) {
+.multi-tab-additional .multi-tab-item:nth-child(n + 5) {
   animation-delay: 0.5s;
 }
 
@@ -302,12 +305,7 @@
   left: 0;
   right: 0;
   height: 2px;
-  background: linear-gradient(
-    90deg,
-    transparent 0%,
-    var(--primary-400) 50%,
-    transparent 100%
-  );
+  background: linear-gradient(90deg, transparent 0%, var(--primary-400) 50%, transparent 100%);
   background-size: 200% 100%;
   animation: shimmer 1.5s ease-in-out infinite;
   z-index: 1;
@@ -326,7 +324,7 @@
   border: 1px solid var(--border-primary);
   border-radius: var(--radius-lg);
   overflow: hidden;
-  background: rgba(26, 26, 26, 0.8); /* Match chat panel transparency */
+  background: var(--sidebar-background); /* Match chat panel transparency */
   animation: tabFadeIn var(--transition-medium) ease-out;
   margin-bottom: var(--spacing-sm);
 }
@@ -416,7 +414,7 @@
 /* Skeleton content area (for expanded tabs) */
 .multi-tab-skeleton-content {
   padding: 0 var(--spacing-lg) var(--spacing-lg) var(--spacing-lg);
-  background: rgba(26, 26, 26, 0.8); /* Match chat panel transparency */
+  background: var(--sidebar-background); /* Match chat panel transparency */
   display: flex;
   flex-direction: column;
   gap: var(--spacing-xs);
@@ -470,7 +468,7 @@
     animation: none !important;
     transition: opacity var(--transition-fast) !important;
   }
-  
+
   .multi-tab-item:hover {
     transform: none !important;
   }
@@ -481,11 +479,11 @@
   .multi-tab-item {
     border-width: 2px;
   }
-  
+
   .multi-tab-item:hover {
     border-color: var(--text-primary);
   }
-  
+
   .multi-tab-item:focus-within {
     border-color: var(--border-focus);
     border-width: 3px;
@@ -506,7 +504,7 @@
   .multi-tab-item {
     animation-duration: calc(var(--transition-medium) * 0.8);
   }
-  
+
   .multi-tab-content {
     animation-duration: calc(var(--transition-medium) * 0.8);
   }

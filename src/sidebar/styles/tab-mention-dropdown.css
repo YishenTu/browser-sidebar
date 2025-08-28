@@ -14,7 +14,7 @@
 .tab-mention-dropdown__menu {
   box-sizing: border-box; /* include border in width to align with input */
   /* Exact chat panel background (matches .ai-sidebar-container) */
-  background: rgba(26, 26, 26, 0.8) !important;
+  background: var(--sidebar-background) !important;
   /* Match input area border exactly */
   border: 1px solid rgba(75, 85, 99, 0.3);
   /* Match input radius (12px) */
@@ -64,7 +64,6 @@
 .tab-mention-dropdown__menu::-webkit-scrollbar-thumb:hover {
   background: var(--text-muted);
 }
-
 
 .tab-mention-dropdown__option {
   display: flex;
@@ -260,7 +259,7 @@
     background-color: rgba(75, 85, 99, 0.4);
     border: 1px solid var(--border-focus);
   }
-  
+
   .tab-mention-dropdown__active-indicator {
     border: 1px solid var(--primary-500);
   }
@@ -272,11 +271,11 @@
     animation: none !important;
     filter: none !important;
   }
-  
+
   .tab-mention-dropdown__loading::before {
     animation: none !important;
   }
-  
+
   .tab-mention-dropdown__option:hover {
     transform: none !important;
     transition: background-color var(--transition-fast) !important;
@@ -295,7 +294,7 @@
 /* Dark theme specific adjustments */
 .ai-sidebar-container[data-theme='dark'] .tab-mention-dropdown__menu {
   /* Match chat panel dark theme background */
-  background: rgba(26, 26, 26, 0.8) !important;
+  background: var(--sidebar-background) !important;
   /* Keep border same as input area */
   border-color: rgba(75, 85, 99, 0.3);
   box-shadow: none;
@@ -304,7 +303,7 @@
 /* Light theme specific adjustments */
 .ai-sidebar-container[data-theme='light'] .tab-mention-dropdown__menu {
   /* Match chat panel light theme background */
-  background: rgba(26, 26, 26, 0.8) !important; /* keep consistent with panel */
+  background: var(--sidebar-background) !important; /* keep consistent with panel */
   /* Keep border same as input area */
   border-color: rgba(75, 85, 99, 0.3);
   box-shadow: none;
@@ -312,7 +311,7 @@
 
 /* Extra specificity to defeat any generic dropdown menu styles */
 .ai-sidebar-container .tab-mention-dropdown .tab-mention-dropdown__menu {
-  background: rgba(26, 26, 26, 0.8) !important;
+  background: var(--sidebar-background) !important;
   border: 1px solid rgba(75, 85, 99, 0.3) !important;
   border-radius: 12px !important;
   box-shadow: none !important;

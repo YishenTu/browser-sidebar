@@ -17,16 +17,12 @@
   pointer-events: none;
 }
 
-.ai-sidebar-overlay {
+.ai-sidebar-container {
   position: fixed;
   z-index: 2147483647; /* on top */
   box-sizing: border-box;
   pointer-events: auto !important; /* Important to override container's none */
-  background: transparent;
   isolation: isolate; /* Create new stacking context */
-}
-
-.ai-sidebar-container {
   width: 100%;
   height: 100%;
   box-shadow:
@@ -34,12 +30,11 @@
     0 10px 10px -5px rgba(0, 0, 0, 0.4);
   border-radius: 12px;
   overflow: hidden;
-  background: rgba(26, 26, 26, 0.8); /* 20% transparent (80% opacity) */
+  background: var(--sidebar-background); /* Use CSS variable */
   color: #e5e7eb;
   display: flex;
   flex-direction: column;
   border: 1px solid rgba(75, 85, 99, 0.3);
-  position: relative; /* Ensure proper stacking context */
 }
 
 .ai-sidebar-header {
@@ -47,7 +42,7 @@
   align-items: center;
   justify-content: space-between;
   padding: 8px 16px; /* Reduced padding */
-  background: rgba(26, 26, 26, 0.8); /* 20% transparent (80% opacity) */
+  background: transparent; /* Inherit from container */
   border-bottom: none; /* Remove separator */
   user-select: none;
   cursor: grab;
@@ -186,7 +181,7 @@
   flex: 1;
   overflow-y: auto; /* Allow vertical scrolling */
   overflow-x: hidden; /* Prevent horizontal scroll */
-  background: rgba(26, 26, 26, 0.8); /* 20% transparent (80% opacity) */
+  background: transparent; /* Inherit from container */
   display: flex;
   flex-direction: column;
   min-height: 0; /* Important for flex children to scroll properly */
@@ -194,7 +189,7 @@
 
 .ai-sidebar-footer {
   padding: 8px;
-  background: rgba(26, 26, 26, 0.8); /* 20% transparent (80% opacity) */
+  background: transparent; /* Inherit from container */
   border-top: none; /* Remove separator */
   width: 100%;
   box-sizing: border-box;
@@ -221,12 +216,12 @@
   padding: 20px;
   overflow-y: auto;
   height: calc(100% - 60px - 70px);
-  background: rgba(26, 26, 26, 0.8); /* Same as main chat panel - 20% transparent (80% opacity) */
+  background: transparent; /* Inherit from container */
 }
 
 /* Content Extraction Preview */
 .ai-sidebar-content-preview {
-  background: rgba(26, 26, 26, 0.8) !important; /* Match chat panel */
+  background: transparent; /* Inherit from container */
   margin: 8px 12px;
 }
 
@@ -274,7 +269,9 @@
   /* No background needed - parent handles it */
   border: 1px solid rgba(75, 85, 99, 0.3);
   border-radius: 8px;
-  transition: border-color 0.3s ease, box-shadow 0.3s ease;
+  transition:
+    border-color 0.3s ease,
+    box-shadow 0.3s ease;
 }
 
 /* Header */

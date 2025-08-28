@@ -11,7 +11,6 @@ import { useDragPosition } from '@hooks/useDragPosition';
 import { useResize } from '@hooks/useResize';
 import { unmountSidebar } from './index';
 import { useSettingsStore } from '@store/settings';
-import { ErrorProvider } from '@contexts/ErrorContext';
 import { useError } from '@contexts/useError';
 import { getErrorSource } from '@contexts/errorUtils';
 import { ErrorBanner } from '@components/ErrorBanner';
@@ -54,9 +53,26 @@ export interface ChatPanelProps {
 }
 
 /**
- * Inner ChatPanel Component that uses the error context
+ * Unified ChatPanel Component
+ *
+ * A complete chat interface that combines overlay positioning, resize/drag functionality,
+ * and chat components into a single unified component. Features:
+ *
+ * - Fixed overlay positioning with high z-index
+ * - Resizable width (300-800px) with left edge drag handle
+ * - Draggable positioning by header
+ * - 85% viewport height, vertically centered
+ * - Shadow DOM isolation
+ * - Keyboard accessibility (Escape to close)
+ * - Chat functionality with message history and AI responses
+ * - Centralized error management
+ *
+ * @example
+ * ```tsx
+ * <ChatPanel onClose={() => unmountSidebar()} />
+ * ```
  */
-const ChatPanelInner: React.FC<ChatPanelProps> = ({ className, onClose }) => {
+export const ChatPanel: React.FC<ChatPanelProps> = ({ className, onClose }) => {
   const { addError } = useError();
 
   // Helper function to show errors/warnings/info using the error context
@@ -185,7 +201,6 @@ const ChatPanelInner: React.FC<ChatPanelProps> = ({ className, onClose }) => {
   useEffect(() => {
     clearConversation();
   }, [clearConversation]);
-
 
   // Multi-tab extraction integration (handles both current tab and additional tabs)
   const {
@@ -430,23 +445,35 @@ const ChatPanelInner: React.FC<ChatPanelProps> = ({ className, onClose }) => {
   );
 
   // Multi-tab callback handlers
-  const handleRemoveTab = useCallback((tabId: number) => {
-    removeLoadedTab(tabId);
-  }, [removeLoadedTab]);
+  const handleRemoveTab = useCallback(
+    (tabId: number) => {
+      removeLoadedTab(tabId);
+    },
+    [removeLoadedTab]
+  );
 
-  const handleReextractTab = useCallback((tabId: number) => {
-    // Re-extract tab content
-    extractTabById(tabId);
-  }, [extractTabById]);
+  const handleReextractTab = useCallback(
+    (tabId: number) => {
+      // Re-extract tab content
+      extractTabById(tabId);
+    },
+    [extractTabById]
+  );
 
   // Add a new tab via @ mention selection
-  const handleAddTab = useCallback((tabId: number) => {
-    extractTabById(tabId);
-  }, [extractTabById]);
+  const handleAddTab = useCallback(
+    (tabId: number) => {
+      extractTabById(tabId);
+    },
+    [extractTabById]
+  );
 
-  const handleClearTabContent = useCallback((tabId: number) => {
-    removeLoadedTab(tabId);
-  }, [removeLoadedTab]);
+  const handleClearTabContent = useCallback(
+    (tabId: number) => {
+      removeLoadedTab(tabId);
+    },
+    [removeLoadedTab]
+  );
 
   // Update bounds when window resizes
   useEffect(() => {
@@ -484,11 +511,11 @@ const ChatPanelInner: React.FC<ChatPanelProps> = ({ className, onClose }) => {
       if (e.key === 'Escape') {
         // Don't close if the dropdown handled the event or if dropdown is visible
         if (e.defaultPrevented) return;
-        
+
         // Check if dropdown is open by looking for the element
         const dropdown = document.querySelector('.tab-mention-dropdown');
         if (dropdown) return;
-        
+
         handleClose();
       }
     };
@@ -499,7 +526,7 @@ const ChatPanelInner: React.FC<ChatPanelProps> = ({ className, onClose }) => {
 
   // Auto-focus sidebar when opened for accessibility
   useEffect(() => {
-    const sidebar = document.querySelector('.ai-sidebar-overlay') as HTMLElement;
+    const sidebar = document.querySelector('.ai-sidebar-container') as HTMLElement;
     if (sidebar) {
       sidebar.setAttribute('tabindex', '-1');
       sidebar.focus();
@@ -513,11 +540,11 @@ const ChatPanelInner: React.FC<ChatPanelProps> = ({ className, onClose }) => {
       try {
         // Get loaded tab IDs from the Zustand store for cache cleanup
         const loadedTabIds = useChatStore.getState().getLoadedTabIds();
-        
+
         // Clear multi-tab state from Zustand store
         const { clearConversation } = useChatStore.getState();
         clearConversation(); // This already clears multi-tab state per the store implementation
-        
+
         // Send cleanup message to background to clear cache for loaded tab IDs
         if (loadedTabIds.length > 0) {
           const cleanupMessage = createMessage({
@@ -526,9 +553,9 @@ const ChatPanelInner: React.FC<ChatPanelProps> = ({ className, onClose }) => {
             source: 'sidebar',
             target: 'background',
           });
-          
+
           // Send cleanup message (fire and forget - no need to wait for response on unmount)
-          chrome.runtime.sendMessage(cleanupMessage).catch((_error) => {
+          chrome.runtime.sendMessage(cleanupMessage).catch(_error => {
             // Failed to send cleanup message on unmount
           });
         }
@@ -571,7 +598,7 @@ const ChatPanelInner: React.FC<ChatPanelProps> = ({ className, onClose }) => {
   if (!settingsInitialized) {
     return (
       <div
-        className={`ai-sidebar-overlay ai-sidebar-container--loading ${className || ''}`}
+        className={`ai-sidebar-container ai-sidebar-container--loading ${className || ''}`}
         role="dialog"
         aria-label="AI Browser Sidebar Loading"
         aria-modal="false"
@@ -583,17 +610,15 @@ const ChatPanelInner: React.FC<ChatPanelProps> = ({ className, onClose }) => {
         }}
         data-testid="chat-panel-loading"
       >
-        <div>
-          <div className="ai-sidebar-loading-icon">⌛</div>
-          <div>Loading settings...</div>
-        </div>
+        <div className="ai-sidebar-loading-icon">⌛</div>
+        <div>Loading settings...</div>
       </div>
     );
   }
 
   return (
     <div
-      className={`ai-sidebar-overlay ${className || ''}`}
+      className={`ai-sidebar-container ${className || ''}`}
       role="dialog"
       aria-label="AI Browser Sidebar"
       aria-modal="false"
@@ -605,124 +630,105 @@ const ChatPanelInner: React.FC<ChatPanelProps> = ({ className, onClose }) => {
       }}
       data-testid="chat-panel"
     >
-      <div className="ai-sidebar-container" data-testid="sidebar-container">
-        <Header
-          selectedModel={selectedModel}
-          onModelChange={handleModelChange}
-          isLoading={isLoading}
-          hasMessages={hasMessages()}
-          onClearConversation={handleClearConversation}
-          onToggleSettings={() => setShowSettings(!showSettings)}
-          onClose={handleClose}
-          onMouseDown={handleHeaderMouseDown}
-          isDragging={isDragging}
-          extractedContent={currentTabContent}
-          contentLoading={multiTabLoading}
-          contentError={multiTabError}
-        />
+      <Header
+        selectedModel={selectedModel}
+        onModelChange={handleModelChange}
+        isLoading={isLoading}
+        hasMessages={hasMessages()}
+        onClearConversation={handleClearConversation}
+        onToggleSettings={() => setShowSettings(!showSettings)}
+        onClose={handleClose}
+        onMouseDown={handleHeaderMouseDown}
+        isDragging={isDragging}
+        extractedContent={currentTabContent}
+        contentLoading={multiTabLoading}
+        contentError={multiTabError}
+      />
 
-        {/* Centralized Error Banner */}
-        <ErrorBanner />
+      {/* Centralized Error Banner */}
+      <ErrorBanner />
 
-
-        {/* Content Extraction Preview - Only render if there's actual content or loading/error state */}
-        {(currentTabContent || Object.keys(loadedTabs).length > 0 || multiTabLoading || multiTabError) && (
-          currentTabContent || Object.keys(loadedTabs).length > 0 ? (
-            // Multi-tab mode: show ContentPreview
-            <ContentPreview
-              currentTabContent={currentTabContent ? {
-                tabInfo: {
-                  id: currentTabId || 0,
-                  title: currentTabContent.title || 'Current Tab',
-                  url: currentTabContent.url || '',
-                  domain: currentTabContent.metadata?.domain || new URL(currentTabContent.url || 'https://example.com').hostname,
-                  favIconUrl: currentTabContent.metadata?.favIconUrl as string,
-                },
-                extractedContent: currentTabContent,
-                extractionStatus: multiTabLoading ? 'extracting' : 'completed',
-                isStale: false,
-              } : null}
-              additionalTabsContent={Object.entries(loadedTabs)
-                .filter(([tabId]) => Number(tabId) !== currentTabId) // Filter out current tab from additional tabs
-                .map(([, tabContent]) => tabContent)}
-              onRemoveTab={handleRemoveTab}
-              onReextractTab={handleReextractTab}
-              onClearTabContent={handleClearTabContent}
-              className="ai-sidebar-content-preview"
-            />
-          ) : (
-            // Fallback to single-tab mode: show TabContentItem only if there's loading/error state
-            <TabContentItem
-              content={currentTabContent}
-              loading={multiTabLoading}
-              error={multiTabError}
-              onReextract={() => extractCurrentTab()}
-              onClearContent={() => currentTabId && removeLoadedTab(currentTabId)}
-              className="ai-sidebar-content-preview"
-            />
-          )
-        )}
-
-        {showSettings ? (
-          <div className="ai-sidebar-settings-panel">
-            <Settings />
-          </div>
-        ) : (
-          <Body
-            messages={messages}
-            isLoading={isLoading}
-            emptyMessage=""
-            height="calc(100% - 60px - 70px)"
-            onEditMessage={handleEditMessage}
-            onRegenerateMessage={handleRegenerateMessage}
+      {/* Content Extraction Preview - Only render if there's actual content or loading/error state */}
+      {(currentTabContent ||
+        Object.keys(loadedTabs).length > 0 ||
+        multiTabLoading ||
+        multiTabError) &&
+        (currentTabContent || Object.keys(loadedTabs).length > 0 ? (
+          // Multi-tab mode: show ContentPreview
+          <ContentPreview
+            currentTabContent={
+              currentTabContent
+                ? {
+                    tabInfo: {
+                      id: currentTabId || 0,
+                      title: currentTabContent.title || 'Current Tab',
+                      url: currentTabContent.url || '',
+                      domain:
+                        currentTabContent.domain ||
+                        new URL(currentTabContent.url || 'https://example.com').hostname,
+                      favIconUrl: '', // ExtractedContent doesn't have favIconUrl
+                      windowId: 0, // Required field - using default
+                      active: true, // Current tab is active
+                      index: 0, // Required field - using default
+                      pinned: false, // Required field - using default
+                      lastAccessed: currentTabContent.extractedAt || Date.now(),
+                    },
+                    extractedContent: currentTabContent,
+                    extractionStatus: multiTabLoading ? 'extracting' : 'completed',
+                    isStale: false,
+                  }
+                : null
+            }
+            additionalTabsContent={Object.entries(loadedTabs)
+              .filter(([tabId]) => Number(tabId) !== currentTabId) // Filter out current tab from additional tabs
+              .map(([, tabContent]) => tabContent)}
+            onRemoveTab={handleRemoveTab}
+            onReextractTab={handleReextractTab}
+            onClearTabContent={handleClearTabContent}
+            className="ai-sidebar-content-preview"
           />
-        )}
+        ) : (
+          // Fallback to single-tab mode: show TabContentItem only if there's loading/error state
+          <TabContentItem
+            content={currentTabContent}
+            loading={multiTabLoading}
+            error={multiTabError}
+            onReextract={() => extractCurrentTab()}
+            onClearContent={() => currentTabId && removeLoadedTab(currentTabId)}
+            className="ai-sidebar-content-preview"
+          />
+        ))}
 
-        <Footer
-          onSend={handleSendMessage}
-          onCancel={cancelMessage}
-          loading={isLoading}
-          placeholder={editingMessage ? 'Edit your message...' : 'Ask about this webpage...'}
-          editingMessage={editingMessage?.content}
-          onClearEdit={handleClearEdit}
-          availableTabs={availableTabs}
-          loadedTabs={loadedTabs}
-          onTabRemove={handleRemoveTab}
-          onMentionSelectTab={handleAddTab}
+      {showSettings ? (
+        <div className="ai-sidebar-settings-panel">
+          <Settings />
+        </div>
+      ) : (
+        <Body
+          messages={messages}
+          isLoading={isLoading}
+          emptyMessage=""
+          height="calc(100% - 60px - 70px)"
+          onEditMessage={handleEditMessage}
+          onRegenerateMessage={handleRegenerateMessage}
         />
-      </div>
+      )}
 
-      {/* Resize handles placed AFTER the container so they are not covered */}
+      <Footer
+        onSend={handleSendMessage}
+        onCancel={cancelMessage}
+        loading={isLoading}
+        placeholder={editingMessage ? 'Edit your message...' : 'Ask about this webpage...'}
+        editingMessage={editingMessage?.content}
+        onClearEdit={handleClearEdit}
+        availableTabs={availableTabs}
+        loadedTabs={loadedTabs}
+        onTabRemove={handleRemoveTab}
+        onMentionSelectTab={handleAddTab}
+      />
+      {/* Resize handles placed inside the container */}
       <ResizeHandles onMouseDown={handleResizeMouseDown} />
     </div>
-  );
-};
-
-/**
- * Unified ChatPanel Component
- *
- * A complete chat interface that combines overlay positioning, resize/drag functionality,
- * and chat components into a single unified component. Features:
- *
- * - Fixed overlay positioning with high z-index
- * - Resizable width (300-800px) with left edge drag handle
- * - Draggable positioning by header
- * - 85% viewport height, vertically centered
- * - Shadow DOM isolation
- * - Keyboard accessibility (Escape to close)
- * - Chat functionality with message history and AI responses
- * - Centralized error management
- *
- * @example
- * ```tsx
- * <ChatPanel onClose={() => unmountSidebar()} />
- * ```
- */
-export const ChatPanel: React.FC<ChatPanelProps> = props => {
-  return (
-    <ErrorProvider>
-      <ChatPanelInner {...props} />
-    </ErrorProvider>
   );
 };
 

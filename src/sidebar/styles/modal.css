@@ -21,7 +21,7 @@
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  background: rgba(26, 26, 26, 0.95); /* Slightly higher opacity for modal - 95% opaque */
+  background: var(--sidebar-background); /* Use same background as sidebar */
   border: 1px solid var(--border-secondary, rgba(75, 85, 99, 0.3));
   border-radius: var(--radius-lg, 12px);
   box-shadow: var(

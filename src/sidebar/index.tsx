@@ -1,6 +1,7 @@
 import ReactDOM from 'react-dom/client';
 import { flushSync } from 'react-dom';
 import { ChatPanel } from './ChatPanel';
+import { ErrorProvider } from '@contexts/ErrorContext';
 import unifiedStyles from './styles/sidebar.css?inline';
 // Theme is applied inside Sidebar.tsx via settings store effect
 
@@ -44,7 +45,11 @@ export function mountSidebar() {
   // Create React root and render synchronously for deterministic tests
   root = ReactDOM.createRoot(container);
   flushSync(() => {
-    root!.render(<ChatPanel onClose={() => {}} />);
+    root!.render(
+      <ErrorProvider>
+        <ChatPanel onClose={() => {}} />
+      </ErrorProvider>
+    );
   });
 }
 

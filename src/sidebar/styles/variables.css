@@ -54,6 +54,9 @@
   --background-overlay: rgba(0, 0, 0, 0.3);
   --background-muted: var(--gray-800);
 
+  /* Main sidebar background - darker grey, more opaque */
+  --sidebar-background: rgba(28, 28, 30, 0.95); /* Dark grey, 95% opacity */
+
   --text-primary: var(--gray-50);
   --text-secondary: var(--gray-300);
   --text-muted: var(--gray-400);
@@ -155,14 +158,14 @@
   --tooltip-bg: var(--background-elevated);
   --tooltip-text: var(--text-primary);
   --tooltip-border: var(--border-primary);
-  
+
   /* Button States */
   --bg-hover: var(--hover-overlay);
-  
+
   /* Code Styling */
   --code-bg: var(--background-muted);
   --code-text: var(--text-secondary);
-  
+
   /* Aliases for consistency */
   --border-radius-xs: var(--radius-sm);
   --border-radius-sm: var(--radius-md);
