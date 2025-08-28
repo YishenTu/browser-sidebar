@@ -1,0 +1,78 @@
+/* ============================================================================
+ * Fullscreen Modal Styles
+ * Modal overlay component for full-page content display
+ * ============================================================================ */
+
+.fullscreen-modal-backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.7);
+  z-index: 2147483646;
+}
+
+.fullscreen-modal-container {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: calc(100% - 40px);
+  height: calc(100% - 40px);
+  background-color: rgba(26, 26, 26, 0.8);
+  border-radius: 12px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.8);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  z-index: 2147483647;
+}
+
+/* Dynamic max dimensions will still be applied inline */
+
+.fullscreen-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  flex-shrink: 0;
+}
+
+.fullscreen-modal-title {
+  font-size: 20px;
+  font-weight: 600;
+  color: #ffffff;
+  margin: 0;
+}
+
+.fullscreen-modal-subtitle {
+  font-size: 14px;
+  color: #9ca3af;
+  word-break: break-all;
+}
+
+.fullscreen-modal-close-button {
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: #ffffff;
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.fullscreen-modal-close-button:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+.fullscreen-modal-body {
+  flex: 1;
+  overflow: auto;
+  padding: 20px;
+}

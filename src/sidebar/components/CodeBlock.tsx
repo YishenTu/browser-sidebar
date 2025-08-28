@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import '../styles/code-block.css';
 
 interface CodeBlockProps {
   code: string;
@@ -169,66 +170,20 @@ export const CodeBlock: React.FC<CodeBlockProps> = ({ code, language, className 
     return applySyntaxHighlight(code.trim(), language);
   }, [code, language]);
 
-  // Use inline styles to ensure they're applied
-  const containerStyle: React.CSSProperties = {
-    position: 'relative',
-    backgroundColor: '#1E1E1E', // VS Code dark background
-    border: '1px solid #3E3E42', // Subtle border
-    borderRadius: '6px',
-    margin: '16px 0',
-    overflow: 'hidden',
-  };
-
-  const buttonStyle: React.CSSProperties = {
-    position: 'absolute',
-    top: '8px',
-    right: '8px',
-    padding: '4px 10px',
-    fontSize: '12px',
-    backgroundColor: 'transparent', // No background color
-    color: '#808080', // Dimmed gray color
-    border: 'none', // No border
-    borderRadius: '4px',
-    cursor: 'pointer',
-    zIndex: 10,
-    transition: 'all 0.2s',
-    fontFamily: 'monospace',
-  };
-
-  const preStyle: React.CSSProperties = {
-    padding: '20px 16px', // Added top/bottom padding
-    paddingRight: '80px', // Space for button
-    overflowX: 'auto',
-    margin: 0,
-    backgroundColor: 'transparent',
-  };
-
-  const codeStyle: React.CSSProperties = {
-    color: '#D4D4D4', // Default text color (VS Code)
-    fontFamily: 'Consolas, "Courier New", monospace',
-    fontSize: '12px',
-    lineHeight: '1.6',
-    display: 'block',
-  };
+  // Syntax highlighting tokens still use inline styles for dynamic theming
 
   return (
-    <div style={containerStyle} className={className}>
+    <div className={`code-block-container ${className || ''}`}>
       <button
         onClick={handleCopy}
-        style={buttonStyle}
-        onMouseEnter={e => {
-          e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.2)';
-        }}
-        onMouseLeave={e => {
-          e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.1)';
-        }}
+        className="code-block-copy-button"
         aria-label={copied ? 'Code copied' : 'Copy code'}
       >
         {copied ? '✓ Copied' : language || 'copy'}
       </button>
 
-      <pre style={preStyle}>
-        <code style={codeStyle}>{highlightedCode}</code>
+      <pre className="code-block-pre">
+        <code className="code-block-code">{highlightedCode}</code>
       </pre>
     </div>
   );

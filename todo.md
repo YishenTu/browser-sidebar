@@ -11,3 +11,5 @@
 [x] 9. system prompt
 [ ] 10. slash command
 [x] 11. multi tab extraction
+[ ] 12. handle selection
+[ ] 13. fallback extraction approach

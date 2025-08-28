@@ -25,18 +25,6 @@
   }
 }
 
-/* Edit indicator slide down (slightly different timing) */
-@keyframes editSlideDown {
-  from {
-    transform: translateY(-5px);
-    opacity: 0;
-  }
-  to {
-    transform: translateY(0);
-    opacity: 1;
-  }
-}
-
 /* Pulse animation - used by badges and thinking indicators */
 @keyframes pulse {
   0%,
@@ -128,17 +116,6 @@
   }
 }
 
-@keyframes tabSlideOut {
-  from {
-    opacity: 1;
-    transform: translateX(0);
-  }
-  to {
-    opacity: 0;
-    transform: translateX(20px);
-  }
-}
-
 /* Tab fade in animation for smoother loading */
 @keyframes tabFadeIn {
   from {
@@ -175,7 +152,8 @@
 
 /* Loading dots animation */
 @keyframes loadingDots {
-  0%, 20% {
+  0%,
+  20% {
     opacity: 0;
   }
   50% {
@@ -183,18 +161,6 @@
   }
   100% {
     opacity: 0;
-  }
-}
-
-/* Smooth height transition animation */
-@keyframes expandHeight {
-  from {
-    height: 0;
-    opacity: 0;
-  }
-  to {
-    height: auto;
-    opacity: 1;
   }
 }
 
@@ -225,35 +191,35 @@
 /* Respect users' motion preferences globally */
 @media (prefers-reduced-motion: reduce) {
   /* Disable all new tab-related animations */
-  [class*="tab-"]:not([class*="content"]) {
+  [class*='tab-']:not([class*='content']) {
     animation: none !important;
   }
-  
+
   /* Keep essential opacity transitions but remove transforms */
-  [class*="tab-"] {
+  [class*='tab-'] {
     transition: opacity var(--transition-fast) !important;
   }
-  
+
   /* Override specific animations that shouldn't run */
-  *[class*="slide"],
-  *[class*="fade"],
-  *[class*="shimmer"],
-  *[class*="pulse"],
-  *[class*="loading"],
-  *[class*="stagger"] {
+  *[class*='slide'],
+  *[class*='fade'],
+  *[class*='shimmer'],
+  *[class*='pulse'],
+  *[class*='loading'],
+  *[class*='stagger'] {
     animation: none !important;
   }
 }
 
 /* Performance optimization: use GPU acceleration for transforms */
-[class*="tab-"] {
+[class*='tab-'] {
   backface-visibility: hidden;
   perspective: 1000px;
 }
 
 /* Optimize for touch devices */
 @media (pointer: coarse) {
-  [class*="tab-"] {
+  [class*='tab-'] {
     animation-duration: calc(var(--transition-fast) * 0.8);
   }
 }

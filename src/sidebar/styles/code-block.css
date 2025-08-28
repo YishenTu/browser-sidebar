@@ -1,0 +1,56 @@
+/* ============================================================================
+ * Code Block Styles
+ * Syntax-highlighted code block component with copy functionality
+ * ============================================================================ */
+
+.code-block-container {
+  position: relative;
+  background-color: #1e1e1e; /* VS Code dark background */
+  border: 1px solid #3e3e42; /* Subtle border */
+  border-radius: 6px;
+  margin: 16px 0;
+  overflow: hidden;
+}
+
+.code-block-copy-button {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  padding: 4px 10px;
+  font-size: 12px;
+  background-color: transparent;
+  color: #808080; /* Dimmed gray color */
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  z-index: 10;
+  transition: all 0.2s;
+  font-family: monospace;
+}
+
+.code-block-copy-button:hover {
+  background-color: rgba(255, 255, 255, 0.2);
+}
+
+.code-block-copy-button:active {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+.code-block-pre {
+  padding: 20px 16px;
+  padding-right: 80px; /* Space for button */
+  overflow-x: auto;
+  margin: 0;
+  background-color: transparent;
+}
+
+.code-block-code {
+  color: #d4d4d4; /* Default text color (VS Code) */
+  font-family: Consolas, 'Courier New', monospace;
+  font-size: 12px;
+  line-height: 1.6;
+  display: block;
+}
+
+/* Syntax highlighting tokens - these need to remain inline for dynamic theming */
+/* Token styles are applied via inline styles due to dynamic language detection */

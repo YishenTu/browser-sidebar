@@ -14,7 +14,7 @@ import { Alert } from '@ui/Alert';
 import { Collapsible } from '@ui/Collapsible';
 import { RegenerateIcon, ExpandIcon, CancelIcon } from '@ui/Icons';
 import { FullscreenModal } from '@ui/FullscreenModal';
-import { getFaviconUrlSync } from '@/sidebar/utils/favicon';
+import '../styles/tab-content-item.css';
 
 export interface TabContentItemProps {
   /** Extracted content data */
@@ -114,15 +114,14 @@ export const TabContentItem: React.FC<TabContentItemProps> = ({
             <div className="content-preview-header-main">
               <div className="content-preview-title-wrapper">
                 <img
-                  src={getFaviconUrlSync(content.url || '', undefined, { size: 16 }).url}
+                  src={`https://www.google.com/s2/favicons?domain=${encodeURIComponent(new URL(content.url || 'https://example.com').hostname)}&sz=16`}
                   alt=""
                   className="content-preview-favicon"
                   width="16"
                   height="16"
                   onError={e => {
-                    // Use fallback from favicon utility
-                    const fallback = getFaviconUrlSync('', undefined, { size: 16 });
-                    (e.target as HTMLImageElement).src = fallback.url;
+                    // Hide on error instead of using data URL fallback
+                    (e.target as HTMLImageElement).style.display = 'none';
                   }}
                 />
                 <span className="content-preview-title">{content.title}</span>
@@ -211,36 +210,18 @@ export const TabContentItem: React.FC<TabContentItemProps> = ({
                   <p>Extracting webpage content...</p>
                 </div>
               ) : content ? (
-                <div className="content-preview-content" style={{ position: 'relative' }}>
-                  {/* Content excerpt */}
+                <div className="content-preview-content">
+                  {/* Content excerpt with proper truncation */}
                   {excerpt && (
                     <div className="content-preview-excerpt">
                       <p>{excerpt}</p>
                     </div>
                   )}
+
                   {/* Overlay badges and actions on bottom right corner */}
-                  <div
-                    className="content-preview-overlay-actions"
-                    style={{
-                      position: 'absolute',
-                      bottom: '8px',
-                      right: '8px',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '6px',
-                      background: 'transparent',
-                      padding: '0',
-                    }}
-                  >
-                    {truncated && (
-                      <span
-                        className="content-preview-truncated"
-                        style={{ fontSize: '10px', opacity: 0.7 }}
-                      >
-                        Truncated
-                      </span>
-                    )}
-                    {hasCodeBlocks && <span style={{ fontSize: '10px', opacity: 0.7 }}>Code</span>}
+                  <div className="content-preview-overlay-actions">
+                    {truncated && <span className="content-preview-badge">Truncated</span>}
+                    {hasCodeBlocks && <span className="content-preview-badge">Code</span>}
                     <button
                       onClick={e => {
                         e.stopPropagation();
@@ -249,53 +230,21 @@ export const TabContentItem: React.FC<TabContentItemProps> = ({
                       className="content-preview-refresh-inline"
                       title="Re-extract content"
                       aria-label="Re-extract content"
-                      style={{
-                        padding: '4px',
-                        opacity: 0.6,
-                        transition: 'opacity 0.2s',
-                      }}
-                      onMouseEnter={e => (e.currentTarget.style.opacity = '1')}
-                      onMouseLeave={e => (e.currentTarget.style.opacity = '0.6')}
                     >
                       <RegenerateIcon size={14} />
                     </button>
                     <button
-                      onClick={() => setShowFullContent(true)}
+                      onClick={e => {
+                        e.stopPropagation();
+                        setShowFullContent(true);
+                      }}
                       className="content-preview-expand-inline"
                       title="View full content"
                       aria-label="View full content"
-                      style={{
-                        padding: '4px',
-                        opacity: 0.6,
-                        transition: 'opacity 0.2s',
-                      }}
-                      onMouseEnter={e => (e.currentTarget.style.opacity = '1')}
-                      onMouseLeave={e => (e.currentTarget.style.opacity = '0.6')}
                     >
                       <ExpandIcon size={14} />
                     </button>
                   </div>
-
-                  {/* Truncation warning */}
-                  {truncated && (
-                    <div className="content-preview-truncation-warning">
-                      <svg
-                        width="16"
-                        height="16"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                      >
-                        <path d="M12 9v4" />
-                        <circle cx="12" cy="17" r="1" />
-                        <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
-                      </svg>
-                      <span>Content was truncated due to size limits.</span>
-                    </div>
-                  )}
-
-                  {/* Removed author and date metadata */}
                 </div>
               ) : null}
             </Collapsible>
@@ -314,85 +263,18 @@ export const TabContentItem: React.FC<TabContentItemProps> = ({
         className="content-full-modal"
       >
         {content && (
-          <div
-            style={{
-              display: 'flex',
-              flexDirection: 'column',
-              height: '100%',
-              color: '#ffffff',
-            }}
-          >
+          <div className="full-content-container">
             {/* Content metadata */}
-            <div
-              style={{
-                marginBottom: '16px',
-              }}
-            >
-              <div
-                style={{
-                  display: 'flex',
-                  gap: '10px',
-                  flexWrap: 'wrap',
-                }}
-              >
-                {truncated && (
-                  <span
-                    style={{
-                      background: '#dc2626',
-                      color: '#ffffff',
-                      padding: '4px 8px',
-                      borderRadius: '4px',
-                      fontSize: '12px',
-                      fontWeight: 500,
-                    }}
-                  >
-                    Truncated
-                  </span>
-                )}
-                {hasCodeBlocks && (
-                  <span
-                    style={{
-                      background: '#2563eb',
-                      color: '#ffffff',
-                      padding: '4px 8px',
-                      borderRadius: '4px',
-                      fontSize: '12px',
-                      fontWeight: 500,
-                    }}
-                  >
-                    Contains code
-                  </span>
-                )}
+            <div className="full-content-header">
+              <div className="full-content-badges">
+                {truncated && <span className="full-content-badge-error">Truncated</span>}
+                {hasCodeBlocks && <span className="full-content-badge-info">Contains code</span>}
               </div>
             </div>
 
             {/* Full content with better formatting */}
-            <div
-              style={{
-                flex: 1,
-                overflow: 'auto',
-                background: 'rgba(26, 26, 26, 0.8)' /* Match chat panel background */,
-                borderRadius: '8px',
-                padding: '20px',
-              }}
-            >
-              <pre
-                style={{
-                  margin: 0,
-                  padding: 0,
-                  fontFamily: 'Consolas, Monaco, "Courier New", monospace',
-                  fontSize: '14px',
-                  lineHeight: '1.6',
-                  whiteSpace: 'pre-wrap',
-                  wordWrap: 'break-word',
-                  color: '#e5e7eb',
-                  // Prevent host page CSS from forcing a white card look
-                  background: 'transparent',
-                  border: 'none',
-                  boxShadow: 'none',
-                  borderRadius: 0,
-                }}
-              >
+            <div className="full-content-scroll-area">
+              <pre className="full-content-pre">
                 {content.content || content.markdown || content.textContent || ''}
               </pre>
             </div>

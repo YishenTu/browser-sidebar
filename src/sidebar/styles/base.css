@@ -230,11 +230,7 @@
   border-radius: 8px;
 }
 
-/* Content preview wrapper */
-.content-preview-wrapper {
-  position: relative;
-  /* No background needed - parent handles it */
-}
+/* Content preview wrapper - now handled in tab-content-item.css */
 
 /* Close button in header - use flex positioning instead of absolute */
 .content-preview-header-close {
@@ -444,7 +440,7 @@
 
 .content-preview-refresh:hover {
   color: #e5e7eb;
-  background: rgba(55, 65, 81, 0.5);
+  background: transparent;
 }
 
 .content-preview-loading {
@@ -454,7 +450,7 @@
 }
 
 .content-preview-content {
-  padding: 12px 16px 8px 16px; /* Reduced bottom padding from 16px to 8px */
+  padding: 12px 16px 12px 16px;
 }
 
 .content-preview-stats {
@@ -486,7 +482,8 @@
 
 .content-preview-refresh-inline,
 .content-preview-expand-inline {
-  background: transparent;
+  background: transparent !important;
+  background-color: transparent !important;
   border: none;
   color: #9ca3af;
   cursor: pointer;
@@ -502,12 +499,16 @@
   color: #60a5fa;
   transform: rotate(180deg);
   opacity: 1;
+  background: none !important;
+  background-color: transparent !important;
 }
 
 .content-preview-expand-inline:hover {
   color: #60a5fa;
   transform: scale(1.2);
   opacity: 1;
+  background: none !important;
+  background-color: transparent !important;
 }
 
 .content-preview-method {

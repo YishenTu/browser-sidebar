@@ -34,5 +34,6 @@
 @import './tab-error-boundary.css'; /* Tab error boundary for tab extraction errors */
 @import './tooltip.css'; /* Tooltip components */
 @import './tab-mention-dropdown.css'; /* @ mention dropdown styles */
+@import './tab-content-item.css'; /* Tab content item overlay buttons */
 
 /* Any global overrides or additional styles can be added below if needed */
