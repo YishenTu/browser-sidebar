@@ -280,17 +280,9 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
         // Handle content extraction errors or missing content for first message
         if (isFirstMessage) {
           if (multiTabError) {
-            // Show warning about extraction failure, but allow message to proceed
-            showError(
-              `Failed to extract webpage content: ${multiTabError.message}. Your message will be sent without webpage context.`,
-              'warning'
-            );
+            // Silently proceed without webpage context if extraction failed
           } else if (!currentTabContent && !multiTabLoading) {
-            // Show warning about missing content, but allow message to proceed
-            showError(
-              'No webpage content available. Your message will be sent without webpage context.',
-              'warning'
-            );
+            // Silently proceed without webpage context if no content available
           }
         }
 
