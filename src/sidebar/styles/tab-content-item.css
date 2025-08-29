@@ -13,7 +13,6 @@
 /* Inner wrapper container */
 .content-preview-wrapper {
   border-radius: 8px;
-  background: rgba(30, 30, 30, 0.6);
   border: 1px solid rgba(75, 85, 99, 0.3); /* Move border here from collapsible */
   overflow: hidden; /* Keep overflow hidden for clean corners */
   margin: 0;
@@ -39,30 +38,27 @@
 
 .content-preview-content {
   position: relative;
-  /* Fixed height container */
+  /* Flexible height container */
   min-height: 100px;
-  max-height: 120px;
   padding: 0; /* Remove padding, let excerpt handle it */
   overflow: hidden;
   border-radius: 4px;
   margin: 0; /* Removed margin that was adding space */
-  background: rgba(25, 25, 25, 0.4);
   display: flex;
   flex-direction: column;
 }
 
 .content-preview-excerpt {
-  /* Text container that fills entire content area */
-  flex: 1;
+  /* Text container */
   overflow-y: auto; /* Allow vertical scrolling if text overflows */
   overflow-x: hidden; /* Prevent horizontal scroll */
   position: relative;
   border: none;
   border-radius: 0;
-  padding: 12px; /* Uniform padding, overlay buttons are absolute positioned */
-  background: transparent;
+  padding: 12px; /* Uniform padding */
+  padding-bottom: 8px; /* Less padding at bottom since actions row follows */
   margin: 0;
-  height: 100%;
+  max-height: 100px; /* Limit text area height */
   box-sizing: border-box;
   /* Custom scrollbar for better appearance */
   scrollbar-width: thin;
@@ -97,15 +93,29 @@
   /* No truncation - text naturally flows and wraps */
 }
 
-.content-preview-overlay-actions {
-  position: absolute;
-  bottom: 6px;
-  right: 6px;
+/* New actions row that appears below text */
+.content-preview-actions-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 4px 12px;
+  border-top: 1px solid rgba(75, 85, 99, 0.2);
+  min-height: 24px;
+}
+
+/* Debug info on the left */
+.content-preview-debug-info {
+  font-size: 10px;
+  color: rgba(255, 255, 255, 0.5);
+  flex-shrink: 0;
+}
+
+/* Action buttons on the right */
+.content-preview-action-buttons {
   display: flex;
   align-items: center;
-  gap: 4px;
-  padding: 4px;
-  z-index: 10;
+  gap: 6px;
+  margin-left: auto; /* Push to right */
 }
 
 .content-preview-badge {

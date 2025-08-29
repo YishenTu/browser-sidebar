@@ -221,55 +221,61 @@ export const TabContentItem: React.FC<TabContentItemProps> = ({
                       <p>{excerpt}</p>
                     </div>
                   )}
-                  {/* Debug: Show extraction method */}
-                  {content.extractionMethod && (
-                    <div style={{ fontSize: '10px', color: '#888', marginTop: '4px' }}>
-                      Method: {content.extractionMethod} | Length: {content.content?.length || 0}
-                    </div>
-                  )}
 
-                  {/* Overlay badges and actions on bottom right corner */}
-                  <div className="content-preview-overlay-actions">
-                    {truncated && <span className="content-preview-badge">Truncated</span>}
-                    {content?.extractionMethod === 'raw' && (
-                      <span className="content-preview-badge content-preview-badge--raw">Raw</span>
+                  {/* Actions row - debug info and buttons on new row */}
+                  <div className="content-preview-actions-row">
+                    {/* Debug: Show extraction method */}
+                    {content.extractionMethod && (
+                      <div className="content-preview-debug-info">
+                        Method: {content.extractionMethod} | Length: {content.content?.length || 0}
+                      </div>
                     )}
-                    <button
-                      onClick={e => {
-                        e.stopPropagation();
-                        // Re-extract with default method (defuddle)
-                        onReextract({ mode: ExtractionMode.DEFUDDLE });
-                      }}
-                      className="content-preview-refresh-inline"
-                      title="Re-extract content (default method)"
-                      aria-label="Re-extract content"
-                    >
-                      <RegenerateIcon size={14} />
-                    </button>
-                    {/* Raw Mode button - for table-heavy pages */}
-                    <button
-                      onClick={e => {
-                        e.stopPropagation();
-                        // Just re-extract the current tab with raw mode
-                        onReextract({ mode: ExtractionMode.RAW });
-                      }}
-                      className="content-preview-raw-inline"
-                      title="Extract with Raw Mode (preserves HTML/tables)"
-                      aria-label="Extract in Raw Mode"
-                    >
-                      <TableIcon size={14} />
-                    </button>
-                    <button
-                      onClick={e => {
-                        e.stopPropagation();
-                        setShowFullContent(true);
-                      }}
-                      className="content-preview-expand-inline"
-                      title="View full content"
-                      aria-label="View full content"
-                    >
-                      <ExpandIcon size={14} />
-                    </button>
+
+                    {/* Action buttons */}
+                    <div className="content-preview-action-buttons">
+                      {truncated && <span className="content-preview-badge">Truncated</span>}
+                      {content?.extractionMethod === 'raw' && (
+                        <span className="content-preview-badge content-preview-badge--raw">
+                          Raw
+                        </span>
+                      )}
+                      <button
+                        onClick={e => {
+                          e.stopPropagation();
+                          // Re-extract with default method (defuddle)
+                          onReextract({ mode: ExtractionMode.DEFUDDLE });
+                        }}
+                        className="content-preview-refresh-inline"
+                        title="Re-extract content (default method)"
+                        aria-label="Re-extract content"
+                      >
+                        <RegenerateIcon size={14} />
+                      </button>
+                      {/* Raw Mode button - for table-heavy pages */}
+                      <button
+                        onClick={e => {
+                          e.stopPropagation();
+                          // Just re-extract the current tab with raw mode
+                          onReextract({ mode: ExtractionMode.RAW });
+                        }}
+                        className="content-preview-raw-inline"
+                        title="Extract with Raw Mode (preserves HTML/tables)"
+                        aria-label="Extract in Raw Mode"
+                      >
+                        <TableIcon size={14} />
+                      </button>
+                      <button
+                        onClick={e => {
+                          e.stopPropagation();
+                          setShowFullContent(true);
+                        }}
+                        className="content-preview-expand-inline"
+                        title="View full content"
+                        aria-label="View full content"
+                      >
+                        <ExpandIcon size={14} />
+                      </button>
+                    </div>
                   </div>
                 </div>
               ) : null}
