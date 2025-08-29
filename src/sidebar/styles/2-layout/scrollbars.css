@@ -1,0 +1,105 @@
+/* ============================================================================
+ * Scrollbar Styles
+ * Consistent scrollbar styling across all components
+ * ============================================================================ */
+
+/* Base scrollbar styles */
+.ai-sidebar-container *::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.ai-sidebar-container *::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.ai-sidebar-container *::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 3px;
+  transition: background var(--transition-fast);
+}
+
+.ai-sidebar-container *::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+/* Firefox scrollbar styling */
+.ai-sidebar-container * {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
+}
+
+/* Specific component scrollbar overrides */
+
+/* Chat input tab chips */
+.chat-input__tab-chips::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+
+/* Code display areas */
+.katex-display::-webkit-scrollbar,
+.code-block-pre::-webkit-scrollbar {
+  height: 6px;
+}
+
+.katex-display::-webkit-scrollbar-track,
+.code-block-pre::-webkit-scrollbar-track {
+  background: var(--bg-secondary);
+  border-radius: 3px;
+}
+
+.katex-display::-webkit-scrollbar-thumb,
+.code-block-pre::-webkit-scrollbar-thumb {
+  background: var(--border-color);
+  border-radius: 3px;
+}
+
+.katex-display::-webkit-scrollbar-thumb:hover,
+.code-block-pre::-webkit-scrollbar-thumb:hover {
+  background: var(--text-secondary);
+}
+
+/* Dropdown menu scrollbars */
+.dropdown__menu::-webkit-scrollbar,
+.tab-mention-dropdown__menu::-webkit-scrollbar {
+  width: 6px;
+}
+
+.dropdown__menu::-webkit-scrollbar-thumb,
+.tab-mention-dropdown__menu::-webkit-scrollbar-thumb {
+  background: var(--border-secondary);
+  border-radius: 3px;
+}
+
+.dropdown__menu::-webkit-scrollbar-thumb:hover,
+.tab-mention-dropdown__menu::-webkit-scrollbar-thumb:hover {
+  background: var(--text-muted);
+}
+
+/* Content preview scrollbar */
+.content-preview-excerpt::-webkit-scrollbar {
+  width: 6px;
+}
+
+.content-preview-excerpt::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 3px;
+}
+
+.content-preview-excerpt::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+/* Light theme scrollbar adjustments */
+.ai-sidebar-container[data-theme='light'] *::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.2);
+}
+
+.ai-sidebar-container[data-theme='light'] *::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.3);
+}
+
+.ai-sidebar-container[data-theme='light'] * {
+  scrollbar-color: rgba(0, 0, 0, 0.2) transparent;
+}

@@ -3,14 +3,7 @@
  * Chat message display styles for user, assistant, and system messages
  * ============================================================================ */
 
-/* Apply base typography to the entire sidebar */
-.ai-sidebar-container,
-.ai-sidebar-container * {
-  font-family: var(--font-family-base) !important;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  text-rendering: optimizeLegibility;
-}
+/* Typography rules moved to 1-base/typography.css */
 
 /* Truncation warning for messages with truncated tab content */
 .message-truncation-warning {

@@ -42,7 +42,7 @@
 }
 
 .multi-tab-clear-all-button:hover {
-  background: rgba(55, 65, 81, 0.5); /* Fixed: was using undefined var */
+  background: var(--hover-overlay);
   border-color: rgba(75, 85, 99, 0.5);
   color: #e5e7eb;
 }
@@ -114,12 +114,12 @@
 }
 
 .multi-tab-toggle:hover {
-  background: rgba(55, 65, 81, 0.3); /* Fixed: was using undefined var */
+  background: var(--hover-overlay);
 }
 
 .multi-tab-toggle:focus {
   outline: none;
-  background: rgba(55, 65, 81, 0.3); /* Fixed: was using undefined var */
+  background: var(--hover-overlay);
 }
 
 .multi-tab-toggle.expanded {
@@ -222,7 +222,7 @@
 }
 
 .multi-tab-remove-button:hover {
-  background: rgba(239, 68, 68, 0.2); /* Fixed: was using undefined var */
+  background: rgba(239, 68, 68, 0.2); /* Red hover for remove button */
   color: #ef4444;
 }
 

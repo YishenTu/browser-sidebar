@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import '../styles/code-block.css';
+import '../styles/3-components/code-block.css';
 
 interface CodeBlockProps {
   code: string;

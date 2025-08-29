@@ -119,7 +119,9 @@
 
 /* Error shake animation on mount */
 .tab-loading-indicator__content--error {
-  animation: slideDown var(--transition-fast) ease-out, shake 0.5s ease-in-out 0.2s;
+  animation:
+    slideDown var(--transition-fast) ease-out,
+    shake 0.5s ease-in-out 0.2s;
 }
 
 /* Responsive adjustments */
@@ -127,12 +129,12 @@
   .tab-loading-indicator--medium {
     font-size: var(--font-size-xs);
   }
-  
+
   .tab-loading-indicator__retry-button {
     padding: var(--spacing-xs);
     min-width: auto;
   }
-  
+
   .tab-loading-indicator__retry-text {
     display: none;
   }
@@ -156,7 +158,7 @@
     animation: none !important;
     transition: none !important;
   }
-  
+
   .tab-loading-indicator__spinner {
     animation: none;
   }
@@ -167,7 +169,7 @@
   .tab-loading-indicator__error-icon {
     color: var(--error-700);
   }
-  
+
   .tab-loading-indicator__retry-button {
     border-width: 2px;
   }

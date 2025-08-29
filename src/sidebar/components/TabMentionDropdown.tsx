@@ -1,7 +1,7 @@
-import React, { useState, useRef, useEffect, useId, useMemo, useCallback } from 'react';
+import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { TabInfo } from '@/types/tabs';
 import { getFaviconUrlSync } from '@/sidebar/utils/favicon';
-import '../styles/tab-mention-dropdown.css';
+import '../styles/4-features/tab-mention-dropdown.css';
 
 export interface TabMentionDropdownProps {
   /** Array of tab information objects */
@@ -86,7 +86,7 @@ export const TabMentionDropdown: React.FC<TabMentionDropdownProps> = ({
     if (!shouldVirtualize) {
       return tabs.map((tab, index) => ({ tab, originalIndex: index }));
     }
-    
+
     return tabs
       .slice(virtualizedRange.start, virtualizedRange.end)
       .map((tab, index) => ({ tab, originalIndex: virtualizedRange.start + index }));
@@ -107,7 +107,7 @@ export const TabMentionDropdown: React.FC<TabMentionDropdownProps> = ({
     const handleClickOutside = (event: Event) => {
       const mouseEvent = event as MouseEvent;
       const target = mouseEvent.target as Node;
-      
+
       // Check if click is outside the dropdown menu
       if (menuRef.current && !menuRef.current.contains(target)) {
         onClose();
@@ -128,7 +128,7 @@ export const TabMentionDropdown: React.FC<TabMentionDropdownProps> = ({
 
     const handleKeyDown = (event: Event) => {
       const keyboardEvent = event as KeyboardEvent;
-      
+
       switch (keyboardEvent.key) {
         case 'ArrowDown':
           keyboardEvent.preventDefault();
@@ -270,14 +270,14 @@ export const TabMentionDropdown: React.FC<TabMentionDropdownProps> = ({
 
   const handleScroll = useCallback(() => {
     if (!shouldVirtualize) return;
-    
+
     const scrollTop = scrollContainerRef.current?.scrollTop || 0;
     const newVisibleStart = Math.floor(scrollTop / itemHeight);
     const newVisibleEnd = Math.min(
       newVisibleStart + Math.ceil(containerHeight / itemHeight) + 1,
       tabs.length
     );
-    
+
     setVirtualizedRange({ start: newVisibleStart, end: newVisibleEnd });
   }, [shouldVirtualize, containerHeight, tabs.length]);
 
@@ -290,27 +290,31 @@ export const TabMentionDropdown: React.FC<TabMentionDropdownProps> = ({
       return (
         <li
           key={tab.id}
-          ref={shouldVirtualize ? undefined : (el) => (optionRefs.current[originalIndex] = el)}
+          ref={shouldVirtualize ? undefined : el => (optionRefs.current[originalIndex] = el)}
           id={`tab-option-${tab.id}`}
           role="option"
           aria-selected={isHighlighted}
           className={`tab-mention-dropdown__option ${
             isHighlighted ? 'tab-mention-dropdown__option--highlighted' : ''
           } ${tab.active ? 'tab-mention-dropdown__option--active' : ''}`}
-          onClick={(e) => {
+          onClick={e => {
             e.preventDefault();
             e.stopPropagation();
             setHighlightedIndex(originalIndex);
             handleSelect(tab.id);
           }}
           onMouseEnter={() => setHighlightedIndex(originalIndex)}
-          style={shouldVirtualize ? {
-            position: 'absolute',
-            top: originalIndex * itemHeight,
-            left: 0,
-            right: 0,
-            height: itemHeight,
-          } : undefined}
+          style={
+            shouldVirtualize
+              ? {
+                  position: 'absolute',
+                  top: originalIndex * itemHeight,
+                  left: 0,
+                  right: 0,
+                  height: itemHeight,
+                }
+              : undefined
+          }
         >
           {/* Style similar to collapsed ContentPreview header */}
           <div className="tab-mention-dropdown__option-content">
@@ -322,7 +326,7 @@ export const TabMentionDropdown: React.FC<TabMentionDropdownProps> = ({
                   className="tab-mention-dropdown__favicon-img"
                   width="16"
                   height="16"
-                  onError={(e) => {
+                  onError={e => {
                     // Use fallback from favicon utility
                     const fallback = getFaviconUrlSync('', undefined, { size: 16 });
                     (e.target as HTMLImageElement).src = fallback.url;
@@ -353,7 +357,7 @@ export const TabMentionDropdown: React.FC<TabMentionDropdownProps> = ({
   }
 
   return (
-    <div 
+    <div
       className={`tab-mention-dropdown ${className}`}
       style={{
         // Position the wrapper div
@@ -369,14 +373,18 @@ export const TabMentionDropdown: React.FC<TabMentionDropdownProps> = ({
       }}
     >
       <ul
-        ref={(el) => {
+        ref={el => {
           menuRef.current = el;
           scrollContainerRef.current = el;
         }}
         id="tab-mention-listbox"
         role="listbox"
         aria-label="Select tab to mention"
-        aria-activedescendant={highlightedIndex >= 0 && tabs[highlightedIndex] ? `tab-option-${tabs[highlightedIndex].id}` : undefined}
+        aria-activedescendant={
+          highlightedIndex >= 0 && tabs[highlightedIndex]
+            ? `tab-option-${tabs[highlightedIndex].id}`
+            : undefined
+        }
         className="tab-mention-dropdown__menu"
         style={{
           // Override default positioning since parent is already positioned
@@ -384,10 +392,15 @@ export const TabMentionDropdown: React.FC<TabMentionDropdownProps> = ({
           top: 'auto',
           left: 'auto',
           right: 'auto',
-          ...(shouldVirtualize ? {
-            // Visible height should be clamped to maxHeight; total scroll height is provided by absolute items
-            height: Math.min(tabs.length * itemHeight, typeof maxHeight === 'number' ? maxHeight : Number(maxHeight)),
-          } : {}),
+          ...(shouldVirtualize
+            ? {
+                // Visible height should be clamped to maxHeight; total scroll height is provided by absolute items
+                height: Math.min(
+                  tabs.length * itemHeight,
+                  typeof maxHeight === 'number' ? maxHeight : Number(maxHeight)
+                ),
+              }
+            : {}),
           maxHeight: typeof maxHeight === 'number' ? `${maxHeight}px` : maxHeight,
           // Make menu width follow wrapper (input) width if provided
           width: position.width ? '100%' : undefined,

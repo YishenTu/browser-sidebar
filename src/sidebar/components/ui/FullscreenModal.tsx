@@ -7,7 +7,7 @@
 import React, { useEffect, useCallback, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { CloseIcon, EditIcon, SaveIcon, RegenerateIcon } from './Icons';
-import '../../styles/fullscreen-modal.css';
+import '../../styles/3-components/fullscreen-modal.css';
 
 export interface FullscreenModalProps {
   /** Whether the modal is open */

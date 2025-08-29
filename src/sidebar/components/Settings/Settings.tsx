@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect } from 'react';
 import { useSettingsStore } from '@store/settings';
-import '../../styles/settings.css';
+import '../../styles/3-components/settings.css';
 
 export function Settings() {
   const [openaiKey, setOpenaiKey] = useState('');

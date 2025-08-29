@@ -149,18 +149,7 @@ textarea:focus {
   pointer-events: none;
 }
 
-/* Screen reader only text */
-.sr-only {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  padding: 0;
-  margin: -1px;
-  overflow: hidden;
-  clip: rect(0, 0, 0, 0);
-  white-space: nowrap;
-  border: 0;
-}
+/* Screen reader styles moved to 1-base/typography.css */
 
 /* Spinner for loading state */
 .chat-input .spinner {

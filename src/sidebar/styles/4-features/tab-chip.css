@@ -179,7 +179,7 @@
   .tab-chip--loading .tab-chip__favicon {
     animation: none !important;
   }
-  
+
   .tab-chip__remove:active {
     transform: none !important;
   }
@@ -190,7 +190,7 @@
   .tab-chip {
     border-width: 2px;
   }
-  
+
   .tab-chip:hover .tab-chip__remove:hover {
     background-color: var(--error-600);
     color: white;

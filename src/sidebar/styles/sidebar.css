@@ -1,39 +1,19 @@
 /* ============================================================================
- * Main Sidebar Stylesheet
- * Imports all modular CSS components for the sidebar
+ * Legacy Entry Point - Redirects to new index.css
+ * Maintained for backward compatibility
  * ============================================================================ */
 
-/* Import CSS variables for theming */
-@import './variables.css';
-@import './animations.css'; /* Shared animation keyframes */
+@import './index.css';
 
-/* Typography merged into variables.css and component styles */
-
-/* Import modular component styles */
-@import './base.css'; /* Core sidebar layout and structure */
-@import './resize-handles.css'; /* Resize handle functionality */
-@import './chat-input.css'; /* Chat input component */
-@import './message-bubbles.css'; /* Message display styles */
-/* @import './icon-button.css'; - Removed: Only animation needed, moved to animations.css */
-@import './model-selector.css'; /* Model selection dropdown */
-@import './markdown-content.css'; /* Markdown rendering styles */
-@import './settings.css'; /* Settings component styles */
-@import './katex-math.css'; /* Mathematical equation rendering */
-@import './thinking-wrapper.css'; /* Thinking/reasoning display wrapper */
-
-/* Import new UI component styles */
-@import './alert.css'; /* Alert/Banner component */
-@import './collapsible.css'; /* Collapsible sections */
-@import './dropdown.css'; /* Generic dropdown component */
-@import './search-sources.css'; /* Search sources display */
-@import './copy-button.css'; /* Copy button component */
-/* @import './modal.css'; - Removed: Using FullscreenModal instead */
-@import './multi-tab-content.css'; /* Multi-tab content preview component */
-@import './tab-loading-indicator.css'; /* Tab loading indicators for multi-tab feature */
-@import './tab-chip.css'; /* Tab chip component for showing loaded tabs */
-@import './tab-error-boundary.css'; /* Tab error boundary for tab extraction errors */
-@import './tooltip.css'; /* Tooltip components */
-@import './tab-mention-dropdown.css'; /* @ mention dropdown styles */
-@import './tab-content-item.css'; /* Tab content item overlay buttons */
-
-/* Any global overrides or additional styles can be added below if needed */
+/* 
+ * NOTE: This file is maintained for backward compatibility.
+ * The main stylesheet has been reorganized into index.css with a new 
+ * directory structure for better organization and maintainability.
+ * 
+ * New structure:
+ * - 0-foundation/ : Variables and animations
+ * - 1-base/       : Core styles and typography
+ * - 2-layout/     : Layout components
+ * - 3-components/ : Reusable UI components
+ * - 4-features/   : Feature-specific styles
+ */

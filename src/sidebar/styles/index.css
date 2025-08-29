@@ -1,0 +1,58 @@
+/* ============================================================================
+ * Main Sidebar Stylesheet Index
+ * Imports all modular CSS components in proper cascade order
+ * ============================================================================ */
+
+/* ========== 0. Foundation Layer ========== */
+/* CSS Variables and animations - must load first */
+@import './0-foundation/variables.css';
+@import './0-foundation/animations.css';
+
+/* ========== 1. Base Layer ========== */
+/* Core layout, resets, and typography */
+@import './1-base/base.css';
+@import './1-base/typography.css';
+
+/* ========== 2. Layout Layer ========== */
+/* Structural components and utilities */
+@import './2-layout/resize-handles.css';
+@import './2-layout/scrollbars.css';
+
+/* ========== 3. Components Layer ========== */
+/* Reusable UI components (alphabetical order) */
+@import './3-components/alert.css';
+@import './3-components/chat-input.css';
+@import './3-components/code-block.css';
+@import './3-components/collapsible.css';
+@import './3-components/copy-button.css';
+@import './3-components/dropdown.css';
+@import './3-components/fullscreen-modal.css';
+@import './3-components/katex-math.css';
+@import './3-components/markdown-content.css';
+@import './3-components/message-bubbles.css';
+@import './3-components/model-selector.css';
+@import './3-components/settings.css';
+@import './3-components/thinking-wrapper.css';
+@import './3-components/tooltip.css';
+
+/* ========== 4. Features Layer ========== */
+/* Feature-specific and complex component styles */
+@import './4-features/multi-tab-content.css';
+@import './4-features/search-sources.css';
+@import './4-features/tab-chip.css';
+@import './4-features/tab-content-item.css';
+@import './4-features/tab-error-boundary.css';
+@import './4-features/tab-loading-indicator.css';
+@import './4-features/tab-mention-dropdown.css';
+
+/* ============================================================================
+ * Layer Organization:
+ * 
+ * 0. Foundation: Variables and keyframes that everything else depends on
+ * 1. Base: Core styles, resets, and typography
+ * 2. Layout: Structural components like sidebars and grids
+ * 3. Components: Reusable UI components
+ * 4. Features: Feature-specific styles and complex components
+ * 
+ * This organization ensures proper cascade order and prevents conflicts
+ * ============================================================================ */

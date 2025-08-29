@@ -15,7 +15,7 @@ import { Alert } from '@ui/Alert';
 import { Collapsible } from '@ui/Collapsible';
 import { RegenerateIcon, ExpandIcon, CancelIcon, TableIcon } from '@ui/Icons';
 import { FullscreenModal } from '@ui/FullscreenModal';
-import '../styles/tab-content-item.css';
+import '../styles/4-features/tab-content-item.css';
 
 export interface TabContentItemProps {
   /** Extracted content data */
