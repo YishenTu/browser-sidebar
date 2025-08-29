@@ -1,6 +1,7 @@
 /* ============================================================================
  * Tab Content Item Styles
  * Content preview and full content display for extracted tab data
+ * Refactored to use CSS variables and higher specificity instead of !important
  * ============================================================================ */
 
 /* ==== CONTAINER HIERARCHY ==== */
@@ -37,15 +38,15 @@
 
 /* ==== HEADER SECTION ==== */
 
-/* Override generic collapsible header for content-preview */
-.content-preview-collapsible .collapsible-header {
+/* Override generic collapsible header for content-preview with higher specificity */
+.ai-sidebar-container .content-preview-collapsible .collapsible-header {
   background: transparent;
   transition: background-color 0.2s ease;
   margin: 0;
   padding: 8px 12px;
-  box-shadow: none !important;
-  outline: none !important;
-  width: auto !important; /* Override width: 100% from base collapsible */
+  box-shadow: none;
+  outline: none;
+  width: auto; /* Override width: 100% from base collapsible */
   min-width: 0; /* Allow shrinking */
 }
 
@@ -55,19 +56,19 @@
   width: 100%;
 }
 
-.content-preview-collapsible .collapsible-header:hover,
-.content-preview-collapsible .collapsible-header:focus,
-.content-preview-collapsible .collapsible-header:focus-visible,
-.content-preview-collapsible .collapsible-header:active {
+.ai-sidebar-container .content-preview-collapsible .collapsible-header:hover,
+.ai-sidebar-container .content-preview-collapsible .collapsible-header:focus,
+.ai-sidebar-container .content-preview-collapsible .collapsible-header:focus-visible,
+.ai-sidebar-container .content-preview-collapsible .collapsible-header:active {
   background: transparent;
-  box-shadow: none !important;
-  outline: none !important;
+  box-shadow: none;
+  outline: none;
 }
 
-/* Collapsible content area */
-.content-preview-collapsible .collapsible-content {
+/* Collapsible content area with higher specificity */
+.ai-sidebar-container .content-preview-collapsible .collapsible-content {
   background: transparent;
-  transition: height 0.2s ease-out !important;
+  transition: height 0.2s ease-out;
   margin: 0;
   padding: 0;
 }
@@ -168,11 +169,11 @@
   pointer-events: none;
 }
 
-/* Show close button on wrapper hover or when expanded */
-.content-preview-wrapper:hover .content-preview-header-close,
-.content-preview-collapsible.expanded .content-preview-header-close {
-  opacity: 1 !important;
-  visibility: visible !important;
+/* Show close button on wrapper hover or when expanded with higher specificity */
+.ai-sidebar-container .content-preview-wrapper:hover .content-preview-header-close,
+.ai-sidebar-container .content-preview-collapsible.expanded .content-preview-header-close {
+  opacity: 1;
+  visibility: visible;
   pointer-events: auto;
 }
 
@@ -278,11 +279,11 @@
   font-weight: 500;
 }
 
-.content-preview-refresh-inline,
-.content-preview-expand-inline {
+.ai-sidebar-container .content-preview-refresh-inline,
+.ai-sidebar-container .content-preview-expand-inline {
   padding: 4px;
   transition: all 0.2s;
-  background: transparent !important;
+  background: transparent;
   border: none;
   cursor: pointer;
   display: inline-flex;
@@ -303,16 +304,16 @@
   transform: scale(0.95);
 }
 
-/* Full content modal styles */
+/* Full content modal styles with higher specificity */
 /* Override any conflicting modal styles */
-.content-full-modal .fullscreen-modal-body {
-  background: transparent !important;
+.ai-sidebar-container .content-full-modal .fullscreen-modal-body {
+  background: transparent;
 }
 
-.content-full-modal pre,
-.content-full-modal .full-content-pre {
-  background: transparent !important;
-  background-color: transparent !important;
+.ai-sidebar-container .content-full-modal pre,
+.ai-sidebar-container .content-full-modal .full-content-pre {
+  background: transparent;
+  background-color: transparent;
 }
 
 .full-content-badges {
@@ -340,7 +341,7 @@
   font-weight: 500;
 }
 
-.full-content-pre {
+.ai-sidebar-container .full-content-pre {
   margin: 0;
   padding: 16px;
   font-family: var(--font-family-mono, Consolas, Monaco, 'Courier New', monospace);
@@ -349,18 +350,18 @@
   color: var(--text-primary, #d4d4d4);
   white-space: pre-wrap;
   word-break: break-word;
-  background: transparent !important; /* Force transparent background */
-  background-color: transparent !important; /* Double ensure no background */
+  background: transparent; /* Force transparent background */
+  background-color: transparent; /* Double ensure no background */
   border: none;
   overflow: auto;
   flex: 1; /* Take remaining space in modal body */
 }
 
 /* Raw mode styles */
-.content-preview-raw-inline {
+.ai-sidebar-container .content-preview-raw-inline {
   padding: 4px;
   transition: all 0.2s;
-  background: transparent !important;
+  background: transparent;
   border: none;
   cursor: pointer;
   display: inline-flex;

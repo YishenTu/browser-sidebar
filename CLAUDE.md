@@ -367,6 +367,19 @@ npm run format          # Format all files
 - Debounced re-extraction for dynamic content (300-500ms)
 - Progressive content loading for large pages
 
+## CSS Development Guidelines
+
+**IMPORTANT**: When creating or modifying CSS files, ALWAYS consult `/src/sidebar/styles/README.md` for:
+
+- CSS architecture and layer system
+- Component naming conventions
+- Variable namespaces
+- Guidelines to avoid `!important`
+- File organization structure
+- Refactoring best practices
+
+The project uses a layered CSS architecture with minimal `!important` usage. All new CSS should follow these established patterns.
+
 # important-instruction-reminders
 
 Do what has been asked; nothing more, nothing less.
