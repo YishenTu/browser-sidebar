@@ -9,6 +9,200 @@ import { isVisible } from '@tabext/utils/domUtils';
 import type { ExtractedContent } from '@/types/extraction';
 
 /**
+ * Strips unnecessary HTML elements and flattens structure for token optimization
+ * Phase 1: HTML stripping & structure flattening (40-50% token reduction)
+ *
+ * @param html - Raw HTML string to process
+ * @param targetDoc - Document to use for processing (allows testing)
+ * @returns Optimized HTML string with reduced tokens
+ */
+function stripAndFlattenHTML(html: string): string {
+  try {
+    // Create a temporary document for processing
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(html, 'text/html');
+
+    // 1. Remove all copy buttons and their wrappers (safe removal)
+    const copyElements = doc.querySelectorAll(
+      '.app-copy, .copy-button-item, .base_copy, .copy-hover-item'
+    );
+    copyElements.forEach(el => {
+      try {
+        el.parentNode?.removeChild(el);
+      } catch (e) {
+        // Skip if element can't be removed
+      }
+    });
+
+    // 2. Remove icon elements and SVGs (safe removal)
+    const iconElements = doc.querySelectorAll('i.aicon, i.qccdicon, svg, [class*="icon-icon_"]');
+    iconElements.forEach(el => {
+      try {
+        el.parentNode?.removeChild(el);
+      } catch (e) {
+        // Skip if element can't be removed
+      }
+    });
+
+    // 3. Remove empty or disabled elements (safe removal)
+    const disabledElements = doc.querySelectorAll('.item.disable, .count:empty, span:empty');
+    disabledElements.forEach(el => {
+      try {
+        const text = el.textContent?.trim();
+        if (!text || text === '0') {
+          el.parentNode?.removeChild(el);
+        }
+      } catch (e) {
+        // Skip if element can't be removed
+      }
+    });
+
+    // 4. Flatten deeply nested structures (skip - can cause DOMException)
+    // This step is prone to errors, so we'll skip it for now
+
+    // 5. Remove wrapper divs (safer approach)
+    const wrapperDivs = doc.querySelectorAll(
+      'div.wrapper, div.container, div.inner, div.part, div.item-wrap'
+    );
+    wrapperDivs.forEach(div => {
+      try {
+        // Only remove if it has no ID and is purely decorative
+        if (!div.id && div.children.length > 0) {
+          const parent = div.parentElement;
+          if (parent && parent !== doc.body) {
+            // Move children up safely
+            const children = Array.from(div.children);
+            children.forEach(child => {
+              try {
+                parent.insertBefore(child, div);
+              } catch (e) {
+                // Skip if can't move child
+              }
+            });
+            // Remove the now-empty wrapper
+            parent.removeChild(div);
+          }
+        }
+      } catch (e) {
+        // Skip if operation fails
+      }
+    });
+
+    // 6. Clean table attributes (safe operation)
+    const tables = doc.querySelectorAll('table');
+    tables.forEach(table => {
+      try {
+        table.removeAttribute('class');
+        table.removeAttribute('style');
+        const tableElements = table.querySelectorAll('td, th, tr, tbody, thead');
+        tableElements.forEach(el => {
+          el.removeAttribute('class');
+          el.removeAttribute('style');
+          if (el.getAttribute('colspan') === '1') el.removeAttribute('colspan');
+          if (el.getAttribute('rowspan') === '1') el.removeAttribute('rowspan');
+        });
+      } catch (e) {
+        // Skip if can't modify table
+      }
+    });
+
+    // 7. Strip non-semantic class attributes (safe operation)
+    const allElements = doc.querySelectorAll('*');
+    allElements.forEach(el => {
+      try {
+        const className = el.className;
+        if (typeof className === 'string' && className) {
+          // Keep only semantically meaningful classes
+          if (
+            !className.includes('copy-value') &&
+            !className.includes('title') &&
+            !className.includes('content') &&
+            !className.includes('name')
+          ) {
+            el.removeAttribute('class');
+          }
+        }
+      } catch (e) {
+        // Skip if can't access className
+      }
+    });
+
+    // 8. Remove navigation elements (safe removal)
+    const navElements = doc.querySelectorAll(
+      '.nav-colunm, .nav-item, .breadcrumb, .tab-item, .action-btn'
+    );
+    navElements.forEach(el => {
+      try {
+        el.parentNode?.removeChild(el);
+      } catch (e) {
+        // Skip if element can't be removed
+      }
+    });
+
+    // 9. Remove non-essential URLs (Phase 1.5 enhancement)
+    // Remove href attributes except for mailto: links (keep those for contact info)
+    const linksWithHref = doc.querySelectorAll('a[href]');
+    linksWithHref.forEach(link => {
+      try {
+        const href = link.getAttribute('href');
+        if (href && !href.startsWith('mailto:')) {
+          // Remove the href but keep the link text
+          link.removeAttribute('href');
+          // Also remove target, rel, and other link-specific attributes
+          link.removeAttribute('target');
+          link.removeAttribute('rel');
+        }
+      } catch (e) {
+        // Skip if can't modify link
+      }
+    });
+
+    // 10. Further flatten structure - remove single-child divs and spans
+    const singleChildContainers = doc.querySelectorAll('div, span');
+    singleChildContainers.forEach(container => {
+      try {
+        // Only process if it has exactly one child element and no text content
+        if (
+          container.children.length === 1 &&
+          !container.id &&
+          !container.className.includes('copy-value') &&
+          !container.textContent?.replace(container.children[0]?.textContent || '', '').trim()
+        ) {
+          const child = container.children[0];
+          if (child && container.parentNode) {
+            // Replace container with its child
+            container.parentNode.replaceChild(child, container);
+          }
+        }
+      } catch (e) {
+        // Skip if operation fails
+      }
+    });
+
+    // 11. Normalize whitespace (simplified approach)
+    // Just normalize the HTML string instead of manipulating text nodes
+    let result = doc.body.innerHTML;
+    result = result.replace(/\s+/g, ' '); // Normalize all whitespace
+    result = result.replace(/>\s+</g, '><'); // Remove whitespace between tags
+
+    // 12. Remove zero-count items (using regex as fallback)
+    result = result.replace(
+      /<[^>]*class="[^"]*item[^"]*"[^>]*>.*?<span[^>]*class="[^"]*count[^"]*"[^>]*>\s*0\s*<\/span>.*?<\/[^>]+>/gi,
+      ''
+    );
+
+    // 13. Remove empty anchor tags that lost their hrefs
+    result = result.replace(/<a[^>]*>(\s*)<\/a>/gi, '');
+
+    return result;
+  } catch (error) {
+    console.error('[stripAndFlattenHTML] Error during optimization:', error);
+    // Return original HTML if optimization fails completely
+    return html;
+  }
+}
+
+/**
  * Configuration options for raw mode extraction
  */
 interface RawModeOptions {
@@ -22,6 +216,9 @@ interface RawModeOptions {
   inject_pseudo?: boolean;
   /** Handle Shadow DOM (default: false, future feature) */
   shadow_aware?: boolean;
+
+  /** Enable aggressive HTML stripping for token optimization (Phase 1) */
+  optimize_tokens?: boolean;
 
   // Stripping toggles - all default to false (don't strip) for testing
   /** Strip invisible elements (default: false for testing) */
@@ -76,20 +273,33 @@ export async function extractWithRaw(options?: RawModeOptions): Promise<Extracte
     cleanDoc.body.appendChild(clonedRoot);
   }
 
-  // 4. URL normalization will be handled by orchestrator via normalizeUrls()
+  // 4. Apply token optimization if enabled (Phase 1)
+  let finalHTML = cleanDoc.body.innerHTML;
+  if (options?.optimize_tokens) {
+    try {
+      finalHTML = stripAndFlattenHTML(finalHTML);
+      // Update cleanDoc with optimized HTML for metadata calculation
+      cleanDoc.body.innerHTML = finalHTML;
+    } catch (error) {
+      console.warn('[RAW] Token optimization failed, using original HTML:', error);
+      // Continue with original HTML if optimization fails
+    }
+  }
+
+  // 5. URL normalization will be handled by orchestrator via normalizeUrls()
   // Don't duplicate that work here
 
-  // 5. Calculate metadata
+  // 6. Calculate metadata
   const tables = cleanDoc.querySelectorAll('table');
   const textContent = cleanDoc.body.textContent || '';
   const hasCodeBlocks = cleanDoc.querySelectorAll('pre, code').length > 0;
 
-  // 6. Return full ExtractedContent shape
+  // 7. Return full ExtractedContent shape
   const result = {
     title: document.title || 'Untitled',
     url: window.location.href,
     domain: window.location.hostname,
-    content: cleanDoc.body.innerHTML, // Raw HTML
+    content: finalHTML, // Optimized HTML if token optimization is enabled
     textContent,
     excerpt: textContent.substring(0, 200) + (textContent.length > 200 ? '...' : ''),
     extractedAt: Date.now(),

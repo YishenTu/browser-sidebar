@@ -238,6 +238,7 @@ async function performExtraction(
         strip_class: false, // Keep classes for code language detection
         keep_id: true,
         inject_pseudo: false,
+        optimize_tokens: true, // Enable Phase 1 HTML stripping for token optimization
 
         // All stripping toggles default to false (don't strip) for testing
         strip_invisible: false,
