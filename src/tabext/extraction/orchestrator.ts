@@ -6,7 +6,7 @@
  * falls back to heuristic extraction if needed.
  */
 
-import type { ExtractedContent, ExtractionOptions } from '../../types/extraction';
+import type { ExtractedContent, ExtractionOptions, ExtractionMethod } from '../../types/extraction';
 import { validateExtractionOptions, ExtractionMode } from '../../types/extraction';
 import { normalizeUrls, cleanHtml } from '../utils/domUtils';
 import { clampText } from '../utils/textUtils';
@@ -105,7 +105,7 @@ export async function extractContent(
   opts?: ExtractionOptions,
   mode: ExtractionMode = ExtractionMode.DEFUDDLE
 ): Promise<ExtractedContent> {
-  const startTime = performance.now();
+  // Extract content called with specified mode
   let timeoutId: NodeJS.Timeout | null = null;
 
   try {
@@ -113,7 +113,6 @@ export async function extractContent(
     if (typeof document === 'undefined') {
       throw new Error('Document is not available - extraction cannot proceed');
     }
-
 
     // Validate and normalize options with defaults
     const options = validateExtractionOptions(opts);
@@ -136,37 +135,22 @@ export async function extractContent(
       timeoutId = null;
     }
 
-    // Calculate final extraction time and reference to avoid unused warning
-    const extractionTime = performance.now() - startTime;
-    if (DEBUG) {
-    }
-
-    return {
-      ...result,
-      extractionTime,
-    };
+    return result;
   } catch (error) {
     // Clean up timeout if still pending
     if (timeoutId) {
       clearTimeout(timeoutId);
     }
 
-    // Calculate elapsed time for error logging
-    const elapsed = performance.now() - startTime;
-
     // Classify and handle specific error types
     const errorInfo = classifyError(error);
 
-    switch (errorInfo.type) {
-    }
+    // Error type can be used for specific error handling in the future
+    void errorInfo.type;
 
     // Always return valid fallback content
     const timeoutUsed = opts?.timeout ?? 2000;
-    return createFallbackContent(
-      elapsed,
-      opts?.maxLength || opts?.maxOutputChars || 200000,
-      timeoutUsed
-    );
+    return createFallbackContent(opts?.maxLength || 200000, timeoutUsed);
   }
 }
 
@@ -214,7 +198,7 @@ async function performExtraction(
   let htmlContent = '';
   let textContent = '';
   let author: string | undefined;
-  let extractionMethod: 'defuddle' | 'selection' = 'defuddle';
+  let extractionMethod: ExtractionMethod = 'defuddle';
   let metadata: ReturnType<typeof getPageMetadata>;
 
   // Check for user selection first
@@ -244,7 +228,51 @@ async function performExtraction(
     }
   }
 
-  // Step 1: Use Defuddle for all extraction (unless we already have selection-only content)
+  // Step 1: Try RAW mode first if requested (before defuddle)
+  if (mode === ExtractionMode.RAW && !htmlContent) {
+    // Starting RAW extraction
+    try {
+      const rawExtractor = await import('./extractors/raw');
+      const rawResult = await rawExtractor.extractWithRaw({
+        root_hints: ['.company-detail', '.content', 'main'],
+        strip_class: false, // Keep classes for code language detection
+        keep_id: true,
+        inject_pseudo: false,
+
+        // All stripping toggles default to false (don't strip) for testing
+        strip_invisible: false,
+        strip_scripts: true,
+        strip_styles: true,
+        strip_links: true,
+        strip_noscript: true,
+        strip_iframes: true,
+        strip_objects: true,
+        strip_embeds: true,
+        strip_applets: true,
+        strip_svg: true,
+        strip_canvas: true,
+        strip_event_handlers: true,
+        strip_javascript_urls: true,
+        strip_unsafe_attrs: true,
+        find_main_content: true, // Don't try to find main content, use whole body
+      });
+
+      if (rawResult.content && rawResult.content.trim()) {
+        // RAW extraction successful
+        htmlContent = rawResult.content;
+        textContent = rawResult.textContent || '';
+        author = rawResult.author;
+        extractionMethod = 'raw';
+      } else {
+        // No content extracted from raw mode
+      }
+    } catch (error) {
+      console.error('[RAW MODE] Extraction failed:', error);
+      // Raw extraction failed, fall through to defuddle
+    }
+  }
+
+  // Step 2: Use Defuddle for all extraction (unless we already have selection-only content)
   if (!htmlContent) {
     try {
       const defuddleExtractor = await getDefuddleExtractor();
@@ -255,24 +283,26 @@ async function performExtraction(
         textContent = defuddleResult.textContent || '';
         author = defuddleResult.author || undefined;
         extractionMethod = 'defuddle';
-
       } else {
+        // No raw content extracted
       }
     } catch (error) {
       // Defuddle extraction failed, will use fallback
     }
   }
 
-  // Step 2: Clean and normalize URLs in HTML content
+  // Step 3: Clean and normalize URLs in HTML content
   if (htmlContent && htmlContent.trim()) {
     try {
       // First clean the HTML following Obsidian's proven order
-      htmlContent = cleanHtml(htmlContent, false);
+      // CRITICAL: For raw mode, preserve classes for code detection
+      const preserveClasses = extractionMethod === 'raw';
+      htmlContent = cleanHtml(htmlContent, preserveClasses);
 
-      // Then normalize URLs - preserve links only if includeLinks is true
-      // This ensures images are always normalized but links are only normalized when needed
-      htmlContent = normalizeUrls(htmlContent, window.location.href, includeLinks);
-
+      // Then normalize URLs. In RAW mode, also normalize link hrefs to absolute
+      // so table and reference links remain valid outside the page context.
+      const normalizeLinkHrefs = extractionMethod === 'raw' ? true : includeLinks;
+      htmlContent = normalizeUrls(htmlContent, window.location.href, normalizeLinkHrefs);
     } catch (error) {
       // HTML cleaning/normalization failed, using original content
     }
@@ -290,33 +320,43 @@ async function performExtraction(
         includeLinks
       );
       selectionMarkdown = await htmlToMarkdown(normalizedSelection, { includeLinks });
-
     } catch (error) {
       // Failed to process selection
     }
   }
 
-  // Step 3: Convert HTML to Markdown with graceful degradation
+  // Step 3: Convert HTML to Markdown with graceful degradation (skip for RAW mode)
   let markdown = '';
   if (htmlContent && htmlContent.trim()) {
-    try {
-      markdown = await htmlToMarkdown(htmlContent, { includeLinks });
+    // For RAW mode, use HTML directly without markdown conversion
+    if (extractionMethod === 'raw') {
+      // Skipping markdown conversion for raw mode, using raw HTML
+      markdown = htmlContent; // Use raw HTML directly
 
-      // If we have a selection, prepend it with a marker
+      // If we have a selection with raw mode, still prepend it
       if (selectionMarkdown) {
-        markdown = `## Selected Content\n\n${selectionMarkdown}\n\n---\n\n## Full Page Content\n\n${markdown}`;
+        markdown = `<!-- Selected Content -->\n${selectionMarkdown}\n\n<hr>\n\n<!-- Full Page Content -->\n${markdown}`;
       }
-
-    } catch (error) {
-      // HTML to Markdown conversion failed, falling back to text extraction
-
-      // Graceful fallback to basic text extraction
+    } else {
+      // For other modes, convert to markdown
       try {
-        const parser = new DOMParser();
-        const doc = parser.parseFromString(htmlContent, 'text/html');
-        markdown = doc.body?.textContent || doc.body?.innerText || '';
-      } catch (parseError) {
-        markdown = '';
+        markdown = await htmlToMarkdown(htmlContent, { includeLinks });
+
+        // If we have a selection, prepend it with a marker
+        if (selectionMarkdown) {
+          markdown = `## Selected Content\n\n${selectionMarkdown}\n\n---\n\n## Full Page Content\n\n${markdown}`;
+        }
+      } catch (error) {
+        // HTML to Markdown conversion failed, falling back to text extraction
+
+        // Graceful fallback to basic text extraction
+        try {
+          const parser = new DOMParser();
+          const doc = parser.parseFromString(htmlContent, 'text/html');
+          markdown = doc.body?.textContent || doc.body?.innerText || '';
+        } catch (parseError) {
+          markdown = '';
+        }
       }
     }
   }
@@ -351,19 +391,22 @@ async function performExtraction(
     // Feature detection failed, defaulting to false
   }
 
-  // Step 6: Apply character limits with error handling
+  // Step 6: Apply character limits with error handling (skip for RAW mode)
   let clampedMarkdown = markdown;
   let isTruncated = false;
 
-  try {
-    const clampResult = clampText(markdown, maxLength);
-    clampedMarkdown = clampResult.text;
-    isTruncated = clampResult.isTruncated;
-  } catch (error) {
-    // If clamping fails, manually truncate as a last resort
-    if (markdown.length > maxLength) {
-      clampedMarkdown = markdown.substring(0, maxLength) + '...';
-      isTruncated = true;
+  // Skip clamping for RAW mode to preserve full HTML content
+  if (extractionMethod !== 'raw') {
+    try {
+      const clampResult = clampText(markdown, maxLength);
+      clampedMarkdown = clampResult.text;
+      isTruncated = clampResult.isTruncated;
+    } catch (error) {
+      // If clamping fails, manually truncate as a last resort
+      if (markdown.length > maxLength) {
+        clampedMarkdown = markdown.substring(0, maxLength) + '...';
+        isTruncated = true;
+      }
     }
   }
 
@@ -395,11 +438,13 @@ async function performExtraction(
         return 'unknown';
       }
     })(),
-    content: clampedMarkdown, // Main content in markdown format
+    content: clampedMarkdown, // Main content (markdown or raw HTML)
     textContent:
-      textContent.length > maxLength
-        ? textContent.substring(0, maxLength - 3) + '...'
-        : textContent, // Plain text version (also clamped)
+      extractionMethod === 'raw'
+        ? textContent // Don't clamp raw mode text content
+        : textContent.length > maxLength
+          ? textContent.substring(0, maxLength - 3) + '...'
+          : textContent, // Plain text version (clamped for non-raw modes)
     excerpt,
     author: author || metadata?.author, // Prefer Readability byline, then page metadata
     publishedDate: metadata?.publishedDate,
@@ -411,15 +456,14 @@ async function performExtraction(
       truncated: isTruncated,
       timeoutMs,
     },
-    // Backward compatibility fields (deprecated)
-    markdown: clampedMarkdown,
-    hasCode,
-    hasTables,
-    isTruncated,
   };
+
+  // Returning extracted content
 
   const totalTime = performance.now() - stepStartTime;
   if (DEBUG) {
+    // Log total time in debug mode
+    void totalTime;
   } else {
     void totalTime; // Reference to avoid unused warning in production
   }
@@ -440,14 +484,7 @@ async function performExtraction(
 /**
  * Creates minimal fallback content when extraction fails
  */
-function createFallbackContent(
-  extractionTime: number,
-  maxLength: number,
-  timeoutMs: number = 2000
-): ExtractedContent {
-  if (DEBUG) {
-  }
-
+function createFallbackContent(maxLength: number, timeoutMs: number = 2000): ExtractedContent {
   // Safe metadata extraction
   let metadata: ReturnType<typeof getPageMetadata>;
   try {
@@ -535,11 +572,5 @@ function createFallbackContent(
       truncated: isTruncated,
       timeoutMs,
     },
-    // Backward compatibility fields (deprecated)
-    markdown: clampedText,
-    hasCode: false,
-    hasTables: false,
-    isTruncated,
-    extractionTime,
   };
 }

@@ -6,7 +6,7 @@
  */
 
 import { TabInfo } from './tabs';
-import { ExtractedContent } from './extraction';
+import { ExtractedContent, ExtractionMode } from './extraction';
 
 /**
  * Available message types for inter-component communication
@@ -136,6 +136,8 @@ export interface ExtractTabPayload {
     /** Extraction timeout in milliseconds */
     timeout?: number;
   };
+  /** Extraction mode to use */
+  mode?: ExtractionMode;
 }
 
 /**

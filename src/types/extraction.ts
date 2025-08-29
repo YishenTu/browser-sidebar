@@ -13,7 +13,7 @@
 /**
  * Method used to extract content from a web page
  */
-export type ExtractionMethod = 'defuddle' | 'selection';
+export type ExtractionMethod = 'defuddle' | 'selection' | 'raw';
 
 /**
  * Extraction mode for content capture
@@ -21,6 +21,7 @@ export type ExtractionMethod = 'defuddle' | 'selection';
 export enum ExtractionMode {
   DEFUDDLE = 'defuddle', // Defuddle extraction (default)
   SELECTION = 'selection', // Selection-only extraction
+  RAW = 'raw', // Raw mode extraction (preserves tables)
 }
 
 // ============================================================================
@@ -132,7 +133,7 @@ export function isExtractedContent(obj: any): obj is ExtractedContent {
     (obj.author === undefined || typeof obj.author === 'string') &&
     (obj.publishedDate === undefined || typeof obj.publishedDate === 'string') &&
     typeof obj.extractedAt === 'number' &&
-    ['defuddle', 'selection'].includes(obj.extractionMethod) &&
+    ['defuddle', 'selection', 'raw'].includes(obj.extractionMethod) &&
     (obj.metadata === undefined ||
       (typeof obj.metadata === 'object' &&
         typeof obj.metadata.hasCodeBlocks === 'boolean' &&
@@ -150,9 +151,7 @@ export function isExtractionOptions(obj: unknown): obj is ExtractionOptions {
     obj !== null &&
     (o['timeout'] === undefined || (typeof o['timeout'] === 'number' && o['timeout'] > 0)) &&
     (o['includeLinks'] === undefined || typeof o['includeLinks'] === 'boolean') &&
-    (o['maxLength'] === undefined || (typeof o['maxLength'] === 'number' && o['maxLength'] > 0)) &&
-    (o['maxOutputChars'] === undefined ||
-      (typeof o['maxOutputChars'] === 'number' && o['maxOutputChars'] > 0))
+    (o['maxLength'] === undefined || (typeof o['maxLength'] === 'number' && o['maxLength'] > 0))
   );
 }
 
@@ -162,9 +161,7 @@ export function isExtractionOptions(obj: unknown): obj is ExtractionOptions {
 export function validateExtractionOptions(
   options: ExtractionOptions = {}
 ): Required<Pick<ExtractionOptions, 'includeLinks' | 'maxLength' | 'timeout'>> {
-  // Handle backward compatibility
-  const maxLength =
-    options.maxLength ?? options.maxOutputChars ?? DEFAULT_EXTRACTION_OPTIONS.maxLength;
+  const maxLength = options.maxLength ?? DEFAULT_EXTRACTION_OPTIONS.maxLength;
 
   const normalized = {
     includeLinks: options.includeLinks ?? DEFAULT_EXTRACTION_OPTIONS.includeLinks,

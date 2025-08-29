@@ -9,6 +9,7 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import type { TabContent, TabInfo } from '@/types/tabs';
 import type { ExtractedContent } from '@/types/extraction';
+import { ExtractionMode } from '@/types/extraction';
 import type {
   GetAllTabsResponsePayload,
   ExtractTabContentResponsePayload,
@@ -35,9 +36,9 @@ export interface UseMultiTabExtractionReturn {
 
   // Actions
   /** Extract current tab content - called ONCE on mount */
-  extractCurrentTab: () => Promise<void>;
+  extractCurrentTab: (options?: { mode?: ExtractionMode }) => Promise<void>;
   /** Extract content from specific tab by ID - called via @ mentions */
-  extractTabById: (tabId: number) => Promise<void>;
+  extractTabById: (tabId: number, options?: { mode?: ExtractionMode }) => Promise<void>;
   /** Remove a loaded tab from the collection */
   removeLoadedTab: (tabId: number) => void;
   /** Clear all loaded tabs */
@@ -161,82 +162,96 @@ export function useMultiTabExtraction(): UseMultiTabExtractionReturn {
   /**
    * Extract content from current tab - called once on mount
    */
-  const extractCurrentTab = useCallback(async (): Promise<void> => {
-    const currentHasAutoLoaded = getHasAutoLoaded();
-    if (currentHasAutoLoaded || autoLoadAttempted.current) {
-      return; // Prevent multiple auto-loads
-    }
-
-    autoLoadAttempted.current = true;
-    setLoading(true);
-    setError(null);
-
-    try {
-      // Get current tab ID
-      const tabId = await getCurrentTabId();
-
-      if (!tabId) {
-        throw new Error('Unable to determine current tab ID');
+  const extractCurrentTab = useCallback(
+    async (options?: { mode?: ExtractionMode }): Promise<void> => {
+      const currentHasAutoLoaded = getHasAutoLoaded();
+      if (currentHasAutoLoaded || autoLoadAttempted.current) {
+        return; // Prevent multiple auto-loads
       }
 
-      setCurrentTabId(tabId);
+      autoLoadAttempted.current = true;
+      setLoading(true);
+      setError(null);
 
-      // Extract content from current tab
-      const message = createMessage({
-        type: 'EXTRACT_TAB_CONTENT',
-        payload: { tabId } as ExtractTabPayload,
-        source: 'sidebar',
-        target: 'background',
-      });
+      try {
+        // Get current tab ID
+        const tabId = await getCurrentTabId();
 
-      const response = await chrome.runtime.sendMessage(message);
+        if (!tabId) {
+          throw new Error('Unable to determine current tab ID');
+        }
 
-      if (response?.payload?.content) {
-        const { content } = response.payload as ExtractTabContentResponsePayload;
+        setCurrentTabId(tabId);
 
-        // Create TabContent and add to store instead of local state
-        const tabContent: TabContent = {
-          tabInfo: {
-            id: tabId,
-            title: content.title || 'Current Tab',
-            url: content.url || '',
-            domain: content.domain || new URL(content.url || 'https://example.com').hostname,
-            favIconUrl: '', // ExtractedContent doesn't have favIconUrl
-            windowId: 0, // Required field - using default
-            active: tabId === currentTabId, // Check if this is the active tab
-            index: 0, // Required field - using default
-            pinned: false, // Required field - using default
-            lastAccessed: content.extractedAt || Date.now(),
-          },
-          extractedContent: content,
-          extractionStatus: 'completed',
-          isStale: false,
-        };
+        // Extract content from current tab - always use default mode for auto-load
+        const message = createMessage({
+          type: 'EXTRACT_TAB_CONTENT',
+          payload: {
+            tabId,
+            mode: options?.mode || ExtractionMode.DEFUDDLE, // Always use defuddle for auto-load
+            options: { forceRefresh: true }, // Force fresh extraction on mount
+          } as ExtractTabPayload,
+          source: 'sidebar',
+          target: 'background',
+        });
 
-        addLoadedTab(tabId, tabContent);
-        setHasAutoLoaded(true);
+        const response = await chrome.runtime.sendMessage(message);
 
-        // Clear any previous errors
-        setError(null);
-      } else {
-        throw new Error('No content received from current tab');
+        if (response?.payload?.content) {
+          const { content } = response.payload as ExtractTabContentResponsePayload;
+
+          // Create TabContent and add to store instead of local state
+          const tabContent: TabContent = {
+            tabInfo: {
+              id: tabId,
+              title: content.title || 'Current Tab',
+              url: content.url || '',
+              domain: content.domain || new URL(content.url || 'https://example.com').hostname,
+              favIconUrl: '', // ExtractedContent doesn't have favIconUrl
+              windowId: 0, // Required field - using default
+              active: tabId === currentTabId, // Check if this is the active tab
+              index: 0, // Required field - using default
+              pinned: false, // Required field - using default
+              lastAccessed: content.extractedAt || Date.now(),
+            },
+            extractedContent: content,
+            extractionStatus: 'completed',
+            isStale: false,
+          };
+
+          addLoadedTab(tabId, tabContent);
+          setHasAutoLoaded(true);
+
+          // Clear any previous errors
+          setError(null);
+        } else {
+          throw new Error('No content received from current tab');
+        }
+      } catch (err) {
+        setError(err instanceof Error ? err : new Error('Current tab extraction failed'));
+        // Reset auto-load attempt on error so it can be retried
+        autoLoadAttempted.current = false;
+      } finally {
+        setLoading(false);
       }
-    } catch (err) {
-      setError(err instanceof Error ? err : new Error('Current tab extraction failed'));
-      // Reset auto-load attempt on error so it can be retried
-      autoLoadAttempted.current = false;
-    } finally {
-      setLoading(false);
-    }
-  }, [getHasAutoLoaded, getCurrentTabId, setCurrentTabId, addLoadedTab, setHasAutoLoaded]);
+    },
+    [getHasAutoLoaded, getCurrentTabId, setCurrentTabId, addLoadedTab, setHasAutoLoaded]
+  );
 
   /**
    * Extract content from specific tab by ID - called via @ mentions
    */
   const extractTabById = useCallback(
-    async (tabId: number): Promise<void> => {
-      // Prevent loading current tab (already auto-loaded)
-      if (currentTabId && tabId === currentTabId) {
+    async (tabId: number, options?: { mode?: ExtractionMode }): Promise<void> => {
+      // Extract tab by ID with optional mode
+      // Allow re-extraction with different mode (e.g., raw mode)
+      const isReextractWithMode = options?.mode !== undefined;
+
+      // For re-extraction with mode, just extract without checks
+      if (isReextractWithMode) {
+        // Continue to extraction
+      } else if (currentTabId && tabId === currentTabId) {
+        // Prevent loading current tab unless re-extracting
         return;
       }
 
@@ -245,20 +260,20 @@ export function useMultiTabExtraction(): UseMultiTabExtractionReturn {
         return;
       }
 
-      // Determine tabInfo and whether this is a retry
+      // Determine tabInfo
       const existing = loadedTabs[tabId];
-      const isRetry = !!existing && existing.extractionStatus !== 'completed';
-      if (existing && existing.extractionStatus === 'completed') {
+
+      // Skip if already completed UNLESS it's a re-extraction with mode
+      if (existing && existing.extractionStatus === 'completed' && !isReextractWithMode) {
         return;
       }
 
-      // Resolve TabInfo (from existing entry on retry, or from availableTabs)
-      const tabInfo: TabInfo | undefined = isRetry
-        ? existing!.tabInfo
-        : availableTabs.find(tab => tab.id === tabId);
+      // Resolve TabInfo (from existing entry, availableTabs, or for re-extraction)
+      const tabInfo: TabInfo | undefined =
+        existing?.tabInfo || availableTabs.find(tab => tab.id === tabId); // Use existing tab info if available (for re-extraction or retry) // Otherwise find in available tabs
 
       if (!tabInfo) {
-        throw new Error(`Tab ${tabId} not found in available tabs`);
+        throw new Error(`Tab ${tabId} not found in available tabs or loaded tabs`);
       }
 
       // Add to loading set and clear global error
@@ -276,15 +291,27 @@ export function useMultiTabExtraction(): UseMultiTabExtractionReturn {
 
         addLoadedTab(tabId, initialTabContent);
 
-        // Extract content
+        // Extract content - always go through background for raw mode
+        // The sidebar doesn't have direct access to chrome.tabs API
+
+        // Normal extraction through background
         const message = createMessage({
           type: 'EXTRACT_TAB_CONTENT',
-          payload: { tabId } as ExtractTabPayload,
+          payload: {
+            tabId,
+            mode: options?.mode,
+            options: { forceRefresh: true }, // Always force refresh for manual extractions
+          } as ExtractTabPayload,
           source: 'sidebar',
           target: 'background',
         });
 
         const response = await chrome.runtime.sendMessage(message);
+
+        // Check if we got an error response
+        if (response?.type === 'ERROR') {
+          throw new Error(response.payload?.message || 'Failed to extract content');
+        }
 
         // Handle success path
         if (response?.payload?.content) {

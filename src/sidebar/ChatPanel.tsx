@@ -18,6 +18,7 @@ import { useChatStore, type ChatMessage } from '@store/chat';
 import { useAIChat } from '@hooks/useAIChat';
 import { useMultiTabExtraction } from '@hooks/useMultiTabExtraction';
 import { TabContentItem } from '@components/TabContentItem';
+import { ExtractionMode } from '@/types/extraction';
 import { ContentPreview } from '@components/ContentPreview';
 // Import for Task 2.2: Content Injection with Tab ID tracking
 // import { getCurrentTabIdSafe } from '@tabext/utils/tabUtils';
@@ -453,9 +454,9 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ className, onClose }) => {
   );
 
   const handleReextractTab = useCallback(
-    (tabId: number) => {
+    (tabId: number, options?: { mode?: ExtractionMode }) => {
       // Re-extract tab content
-      extractTabById(tabId);
+      extractTabById(tabId, options);
     },
     [extractTabById]
   );
@@ -693,7 +694,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ className, onClose }) => {
             content={currentTabContent}
             loading={multiTabLoading}
             error={multiTabError}
-            onReextract={() => extractCurrentTab()}
+            onReextract={options => extractCurrentTab(options)}
             onClearContent={() => currentTabId && removeLoadedTab(currentTabId)}
             className="ai-sidebar-content-preview"
           />

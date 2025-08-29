@@ -8,11 +8,12 @@
 
 import React, { useState } from 'react';
 import type { ExtractedContent } from '@/types/extraction';
+import { ExtractionMode } from '@/types/extraction';
 import { Spinner } from '@ui/Spinner';
 import { Alert } from '@ui/Alert';
 // Badge imported but not used - removed
 import { Collapsible } from '@ui/Collapsible';
-import { RegenerateIcon, ExpandIcon, CancelIcon } from '@ui/Icons';
+import { RegenerateIcon, ExpandIcon, CancelIcon, TableIcon } from '@ui/Icons';
 import { FullscreenModal } from '@ui/FullscreenModal';
 import '../styles/tab-content-item.css';
 
@@ -23,8 +24,8 @@ export interface TabContentItemProps {
   loading: boolean;
   /** Error state if extraction fails */
   error: Error | null;
-  /** Function to trigger re-extraction */
-  onReextract: () => void;
+  /** Function to trigger re-extraction with optional mode */
+  onReextract: (options?: { mode?: ExtractionMode }) => void;
   /** Function to clear extracted content */
   onClearContent?: () => void;
   /** Custom CSS class */
@@ -183,7 +184,7 @@ export const TabContentItem: React.FC<TabContentItemProps> = ({
             dismissible={false}
             action={{
               label: 'Retry',
-              handler: onReextract,
+              handler: () => onReextract(),
             }}
             className="content-preview-error"
           />
@@ -217,21 +218,44 @@ export const TabContentItem: React.FC<TabContentItemProps> = ({
                       <p>{excerpt}</p>
                     </div>
                   )}
+                  {/* Debug: Show extraction method */}
+                  {content.extractionMethod && (
+                    <div style={{ fontSize: '10px', color: '#888', marginTop: '4px' }}>
+                      Method: {content.extractionMethod} | Length: {content.content?.length || 0}
+                    </div>
+                  )}
 
                   {/* Overlay badges and actions on bottom right corner */}
                   <div className="content-preview-overlay-actions">
                     {truncated && <span className="content-preview-badge">Truncated</span>}
                     {hasCodeBlocks && <span className="content-preview-badge">Code</span>}
+                    {content?.extractionMethod === 'raw' && (
+                      <span className="content-preview-badge content-preview-badge--raw">Raw</span>
+                    )}
                     <button
                       onClick={e => {
                         e.stopPropagation();
-                        onReextract();
+                        // Re-extract with default method (defuddle)
+                        onReextract({ mode: ExtractionMode.DEFUDDLE });
                       }}
                       className="content-preview-refresh-inline"
-                      title="Re-extract content"
+                      title="Re-extract content (default method)"
                       aria-label="Re-extract content"
                     >
                       <RegenerateIcon size={14} />
+                    </button>
+                    {/* Raw Mode button - for table-heavy pages */}
+                    <button
+                      onClick={e => {
+                        e.stopPropagation();
+                        // Just re-extract the current tab with raw mode
+                        onReextract({ mode: ExtractionMode.RAW });
+                      }}
+                      className="content-preview-raw-inline"
+                      title="Extract with Raw Mode (preserves HTML/tables)"
+                      aria-label="Extract in Raw Mode"
+                    >
+                      <TableIcon size={14} />
                     </button>
                     <button
                       onClick={e => {

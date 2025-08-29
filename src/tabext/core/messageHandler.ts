@@ -30,8 +30,9 @@ async function handleContentExtraction(message: Message): Promise<Message> {
       }
     }
 
-    // Perform extraction with validated options
-    const extractedContent = await extractContent(extractionOptions);
+    // Perform extraction with validated options and mode
+    const mode = (message.payload as any)?.mode;
+    const extractedContent = await extractContent(extractionOptions, mode);
 
     // Map ExtractedContent to ContentExtractedPayload format for compatibility
     const responsePayload = {
@@ -81,7 +82,6 @@ async function handleContentExtraction(message: Message): Promise<Message> {
       }
     }
 
-
     return createMessage({
       type: 'ERROR',
       payload: {
@@ -112,7 +112,7 @@ async function handleTabContentExtraction(message: Message): Promise<Message> {
 
     // Extract the ExtractTabPayload from the message
     const tabPayload = message.payload as ExtractTabPayload;
-    
+
     if (!tabPayload || typeof tabPayload.tabId !== 'number') {
       return createMessage({
         type: 'ERROR',
@@ -135,8 +135,8 @@ async function handleTabContentExtraction(message: Message): Promise<Message> {
       }
     }
 
-    // Perform extraction with validated options
-    const extractedContent = await extractContent(extractionOptions);
+    // Perform extraction with validated options and mode
+    const extractedContent = await extractContent(extractionOptions, tabPayload.mode);
 
     // Return the extracted content in the expected format
     return createMessage({
@@ -168,7 +168,6 @@ async function handleTabContentExtraction(message: Message): Promise<Message> {
         errorCode = 'TAB_EXTRACTION_PARSING_ERROR';
       }
     }
-
 
     return createMessage({
       type: 'ERROR',

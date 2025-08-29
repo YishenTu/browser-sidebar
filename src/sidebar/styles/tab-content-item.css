@@ -194,3 +194,32 @@
   overflow: auto;
   flex: 1; /* Take remaining space in modal body */
 }
+
+/* Raw mode styles */
+.content-preview-raw-inline {
+  padding: 4px;
+  transition: all 0.2s;
+  background: transparent !important;
+  border: none;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: rgba(255, 255, 255, 0.6);
+  outline: none;
+}
+
+.content-preview-raw-inline:hover {
+  color: var(--color-primary, #3b82f6);
+  transform: scale(1.1);
+}
+
+.content-preview-raw-inline:active {
+  transform: scale(0.95);
+}
+
+/* Raw mode badge */
+.content-preview-badge--raw {
+  background: rgba(59, 130, 246, 0.1);
+  color: #3b82f6;
+}

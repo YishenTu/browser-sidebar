@@ -8,6 +8,7 @@
 
 import type { TabInfo } from '../../types/tabs';
 import type { ExtractedContent, ExtractionOptions } from '../../types/extraction';
+import { ExtractionMode } from '../../types/extraction';
 import type { ExtractTabPayload } from '../../types/messages';
 import { createTabInfoFromChromeTab } from '../../types/tabs';
 import { TabContentCache } from './cache/TabContentCache';
@@ -67,7 +68,7 @@ export class TabManager {
     try {
       // Query all tabs from all windows
       const chromeTabs = await chrome.tabs.query({});
-      
+
       // Filter out restricted URLs and convert to TabInfo
       const accessibleTabs = chromeTabs
         .filter(tab => tab.url && !this.isRestrictedUrl(tab.url))
@@ -75,7 +76,9 @@ export class TabManager {
 
       return accessibleTabs;
     } catch (error) {
-      throw new Error(`Failed to query browser tabs: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      throw new Error(
+        `Failed to query browser tabs: ${error instanceof Error ? error.message : 'Unknown error'}`
+      );
     }
   }
 
@@ -92,13 +95,28 @@ export class TabManager {
    */
   public async extractTabContent(
     tabId: number,
-    options?: ExtractionOptions
+    options?: ExtractionOptions,
+    mode?: ExtractionMode
   ): Promise<ExtractedContent | null> {
     try {
+      // Check if force refresh is requested
+      const forceRefresh = (options as any)?.forceRefresh === true;
+
       // First, check if we have cached content
+      // BUT: Skip cache if requesting a different mode or force refresh
       const cachedContent = await this.cache.get(tabId);
-      if (cachedContent) {
-        return cachedContent;
+      if (cachedContent && !forceRefresh) {
+        // Check for mode mismatch:
+        // If mode is specified and different from cached, re-extract
+        const requestedMode = mode || 'defuddle'; // Default to defuddle if not specified
+        if (cachedContent.extractionMethod !== requestedMode) {
+          // Clear the cache for this tab to force re-extraction
+          await this.cache.clear(tabId);
+        } else {
+          return cachedContent;
+        }
+      } else if (forceRefresh && cachedContent) {
+        await this.cache.clear(tabId);
       }
 
       // Verify the tab exists and is accessible
@@ -117,7 +135,9 @@ export class TabManager {
       // Ensure content script is available in the tab before extraction
       const contentScriptReady = await this.ensureContentScript(tabId);
       if (!contentScriptReady) {
-        throw new Error(`Failed to extract content from tab ${tabId}: tab may be closed, restricted, or content script unavailable`);
+        throw new Error(
+          `Failed to extract content from tab ${tabId}: tab may be closed, restricted, or content script unavailable`
+        );
       }
 
       // Queue the extraction to limit concurrent operations
@@ -125,11 +145,14 @@ export class TabManager {
         // Send extraction message to the content script
         const extractionPayload: ExtractTabPayload = {
           tabId,
-          options: options ? {
-            maxLength: options.maxLength,
-            timeout: options.timeout,
-            includeImages: false, // Not supported in current extraction options
-          } : undefined,
+          options: options
+            ? {
+                maxLength: options.maxLength,
+                timeout: options.timeout,
+                includeImages: false, // Not supported in current extraction options
+              }
+            : undefined,
+          mode,
         };
 
         const message = createMessage({
@@ -141,12 +164,12 @@ export class TabManager {
 
         // Send message to the specific tab with timeout enforcement
         const timeoutMs = options?.timeout || 5000; // Default 5 seconds
-        
+
         const response = await Promise.race([
           // Wrap chrome.tabs.sendMessage in a Promise to await the async callback
-          new Promise<unknown>((resolve) => {
+          new Promise<unknown>(resolve => {
             try {
-              chrome.tabs.sendMessage(tabId, message, (resp) => {
+              chrome.tabs.sendMessage(tabId, message, resp => {
                 const lastErr = chrome.runtime.lastError;
                 if (lastErr) {
                   resolve(null);
@@ -158,22 +181,22 @@ export class TabManager {
               resolve(null);
             }
           }),
-          new Promise<null>((resolve) => setTimeout(() => resolve(null), timeoutMs))
+          new Promise<null>(resolve => setTimeout(() => resolve(null), timeoutMs)),
         ]);
-        
+
         // Parse typed response with payload structure
         if (!response) {
           const msg = `Extraction timed out after ${timeoutMs}ms`;
           // Propagate a timeout error so higher layers can surface precise messaging
           throw new Error(msg);
         }
-        
+
         if ((response as any).type === 'CONTENT_EXTRACTED' && (response as any).payload?.content) {
           const content = (response as any).payload.content as ExtractedContent;
-          
+
           // Cache the successful extraction
           await this.cache.set(tabId, content);
-          
+
           return content;
         } else if ((response as any).type === 'ERROR') {
           return null;
@@ -181,12 +204,11 @@ export class TabManager {
           return null;
         }
       });
-      
-      return extractedContent;
 
+      return extractedContent;
     } catch (error) {
       // Handle specific error cases
-      
+
       return null;
     }
   }
@@ -211,7 +233,7 @@ export class TabManager {
   public async getTab(tabId: number): Promise<TabInfo | null> {
     try {
       const chromeTab = await chrome.tabs.get(tabId);
-      
+
       if (!chromeTab || !chromeTab.url) {
         return null;
       }
@@ -289,13 +311,12 @@ export class TabManager {
    * @returns Promise resolving to array of TabInfo objects (excludes not found tabs)
    */
   public async getTabs(tabIds: number[]): Promise<TabInfo[]> {
-    const results = await Promise.allSettled(
-      tabIds.map(tabId => this.getTab(tabId))
-    );
+    const results = await Promise.allSettled(tabIds.map(tabId => this.getTab(tabId)));
 
     return results
-      .filter((result): result is PromiseFulfilledResult<TabInfo> => 
-        result.status === 'fulfilled' && result.value !== null
+      .filter(
+        (result): result is PromiseFulfilledResult<TabInfo> =>
+          result.status === 'fulfilled' && result.value !== null
       )
       .map(result => result.value);
   }
@@ -355,7 +376,7 @@ export class TabManager {
       const manifest = chrome.runtime.getManifest();
       const contentScriptFiles = manifest.content_scripts?.[0]?.js || [];
       const contentScriptCss = manifest.content_scripts?.[0]?.css || [];
-      
+
       if (contentScriptFiles.length === 0) {
         return false;
       }

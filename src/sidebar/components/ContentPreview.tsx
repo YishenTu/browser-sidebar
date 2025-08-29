@@ -10,6 +10,7 @@ import React from 'react';
 import { TabContentItem } from './TabContentItem';
 import { Alert } from '@ui/Alert';
 import type { TabContent } from '@/types/tabs';
+import type { ExtractionMode } from '@/types/extraction';
 
 export interface ContentPreviewProps {
   /** Current tab content (shown first) */
@@ -18,8 +19,8 @@ export interface ContentPreviewProps {
   additionalTabsContent: TabContent[];
   /** Callback to remove a specific tab by ID */
   onRemoveTab: (tabId: number) => void;
-  /** Callback to re-extract content for a specific tab */
-  onReextractTab: (tabId: number) => void;
+  /** Callback to re-extract content for a specific tab with optional mode */
+  onReextractTab: (tabId: number, options?: { mode?: ExtractionMode }) => void;
   /** Callback to clear content for a specific tab */
   onClearTabContent: (tabId: number) => void;
   /** Custom CSS class */
@@ -47,7 +48,6 @@ export const ContentPreview: React.FC<ContentPreviewProps> = ({
   const totalTabs = (currentTabContent ? 1 : 0) + additionalTabsContent.length;
   const hasExcessiveTabs = totalTabs > 10;
 
-
   // If no content at all, don't render anything
   if (!currentTabContent && additionalTabsContent.length === 0) {
     return null;
@@ -66,7 +66,6 @@ export const ContentPreview: React.FC<ContentPreviewProps> = ({
         />
       )}
 
-
       {/* Current tab content */}
       {currentTabContent && (
         <TabContentItem
@@ -77,7 +76,9 @@ export const ContentPreview: React.FC<ContentPreviewProps> = ({
               ? new Error(currentTabContent.extractionError)
               : null
           }
-          onReextract={() => onReextractTab(currentTabContent.tabInfo.id)}
+          onReextract={options => {
+            onReextractTab(currentTabContent.tabInfo.id, options);
+          }}
           onClearContent={() => onClearTabContent(currentTabContent.tabInfo.id)}
           tabId={currentTabContent.tabInfo.id}
           className="multi-tab-content-preview-item"
@@ -85,7 +86,7 @@ export const ContentPreview: React.FC<ContentPreviewProps> = ({
       )}
 
       {/* Additional tabs - styled the same as current tab */}
-      {additionalTabsContent.map((tabContent) => (
+      {additionalTabsContent.map(tabContent => (
         <TabContentItem
           key={tabContent.tabInfo.id}
           content={tabContent.extractedContent}
@@ -95,7 +96,7 @@ export const ContentPreview: React.FC<ContentPreviewProps> = ({
               ? new Error(tabContent.extractionError)
               : null
           }
-          onReextract={() => onReextractTab(tabContent.tabInfo.id)}
+          onReextract={options => onReextractTab(tabContent.tabInfo.id, options)}
           onClearContent={() => onClearTabContent(tabContent.tabInfo.id)}
           tabId={tabContent.tabInfo.id}
           className="multi-tab-content-preview-item"

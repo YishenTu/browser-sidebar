@@ -116,7 +116,6 @@ export class MessageHandlerRegistry {
         return false;
       }
 
-
       // Execute handler
       const result = await handlerRegistration.handler(message, sender);
 
@@ -174,7 +173,6 @@ export class DefaultHandlers {
     message: Message<void>,
     _sender: chrome.runtime.MessageSender
   ): Promise<Message<void>> {
-
     return createMessage<void>({
       type: 'PONG',
       source: 'background',
@@ -230,7 +228,6 @@ export class DefaultHandlers {
     message: Message<void>,
     sender: chrome.runtime.MessageSender
   ): Promise<Message<GetTabIdPayload>> {
-
     // Ensure sender has a tab ID
     if (!sender.tab?.id) {
       throw new Error('Unable to determine tab ID from sender');
@@ -253,17 +250,15 @@ export class DefaultHandlers {
     message: Message<void>,
     _sender: chrome.runtime.MessageSender
   ): Promise<Message<GetAllTabsResponsePayload>> {
-
     try {
       // Get TabManager instance
       const tabManager = TabManager.getInstance();
-      
+
       // Get all accessible tabs
       const tabs = await tabManager.getAllTabs();
-      
+
       // Sort by lastAccessed (most recent first)
       const sortedTabs = tabs.sort((a, b) => b.lastAccessed - a.lastAccessed);
-
 
       return createMessage<GetAllTabsResponsePayload>({
         type: 'GET_ALL_TABS',
@@ -274,7 +269,9 @@ export class DefaultHandlers {
         target: message.source,
       });
     } catch (error) {
-      throw new Error(`Failed to get all tabs: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      throw new Error(
+        `Failed to get all tabs: ${error instanceof Error ? error.message : 'Unknown error'}`
+      );
     }
   }
 
@@ -285,13 +282,12 @@ export class DefaultHandlers {
     message: Message<ExtractTabPayload>,
     _sender: chrome.runtime.MessageSender
   ): Promise<Message<ExtractTabContentResponsePayload>> {
-
     if (!message.payload || typeof message.payload.tabId !== 'number') {
       throw new Error('Invalid EXTRACT_TAB_CONTENT payload: tabId is required');
     }
 
-    const { tabId, options } = message.payload;
-    
+    const { tabId, options, mode } = message.payload;
+
     try {
       // Get TabManager instance
       const tabManager = TabManager.getInstance();
@@ -302,15 +298,15 @@ export class DefaultHandlers {
         timeout: options?.timeout || 5000, // 5-second timeout as per requirements
       };
 
-
       // Use TabManager's extractTabContent method which handles cache checking and updating
-      const content = await tabManager.extractTabContent(tabId, extractionOptions);
+      const content = await tabManager.extractTabContent(tabId, extractionOptions, mode);
 
       if (!content) {
         // TabManager returns null for various failure cases (tab closed, restricted URL, etc.)
-        throw new Error(`Failed to extract content from tab ${tabId}: tab may be closed, restricted, or content script unavailable`);
+        throw new Error(
+          `Failed to extract content from tab ${tabId}: tab may be closed, restricted, or content script unavailable`
+        );
       }
-
 
       return createMessage<ExtractTabContentResponsePayload>({
         type: 'EXTRACT_TAB_CONTENT',
@@ -322,15 +318,20 @@ export class DefaultHandlers {
         target: message.source,
       });
     } catch (error) {
-
       // Provide descriptive error messages based on common failure scenarios
       let errorMessage = `Failed to extract content from tab ${tabId}`;
 
       if (error instanceof Error) {
         const msg = error.message || '';
-        if (msg.includes('Could not establish connection') || msg.includes('Receiving end does not exist')) {
+        if (
+          msg.includes('Could not establish connection') ||
+          msg.includes('Receiving end does not exist')
+        ) {
           errorMessage = `Tab ${tabId} does not have a content script available or is not accessible`;
-        } else if (msg.includes('restricted URL') || msg.includes('Cannot extract from restricted URL')) {
+        } else if (
+          msg.includes('restricted URL') ||
+          msg.includes('Cannot extract from restricted URL')
+        ) {
           // Only classify as restricted when we have a clear restricted URL signal
           errorMessage = `Tab ${tabId} contains a restricted URL that cannot be accessed`;
         } else if (msg.includes('timeout') || msg.includes('timed out')) {
@@ -351,7 +352,6 @@ export class DefaultHandlers {
     message: Message<CleanupTabCachePayload>,
     _sender: chrome.runtime.MessageSender
   ): Promise<Message<void>> {
-
     if (!message.payload) {
       throw new Error('Invalid CLEANUP_TAB_CACHE payload: payload is required');
     }
@@ -373,14 +373,15 @@ export class DefaultHandlers {
         }
       }
 
-
       return createMessage<void>({
         type: 'CLEANUP_TAB_CACHE',
         source: 'background',
         target: message.source,
       });
     } catch (error) {
-      throw new Error(`Failed to cleanup tab cache: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      throw new Error(
+        `Failed to cleanup tab cache: ${error instanceof Error ? error.message : 'Unknown error'}`
+      );
     }
   }
 }
@@ -407,9 +408,21 @@ export function createDefaultMessageHandler(): MessageHandlerRegistry {
     'Sidebar state ack'
   );
   registry.registerHandler('GET_TAB_ID', DefaultHandlers.handleGetTabId, 'Return sender tab ID');
-  registry.registerHandler('GET_ALL_TABS', DefaultHandlers.handleGetAllTabs, 'Return all accessible tabs');
-  registry.registerHandler('EXTRACT_TAB_CONTENT', DefaultHandlers.handleExtractTabContent, 'Extract content from specific tab with cache and timeout handling');
-  registry.registerHandler('CLEANUP_TAB_CACHE', DefaultHandlers.handleCleanupTabCache, 'Clear cached content for specified tabs');
+  registry.registerHandler(
+    'GET_ALL_TABS',
+    DefaultHandlers.handleGetAllTabs,
+    'Return all accessible tabs'
+  );
+  registry.registerHandler(
+    'EXTRACT_TAB_CONTENT',
+    DefaultHandlers.handleExtractTabContent,
+    'Extract content from specific tab with cache and timeout handling'
+  );
+  registry.registerHandler(
+    'CLEANUP_TAB_CACHE',
+    DefaultHandlers.handleCleanupTabCache,
+    'Clear cached content for specified tabs'
+  );
 
   return registry;
 }
