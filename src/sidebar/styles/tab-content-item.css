@@ -3,38 +3,148 @@
  * Content preview and full content display for extracted tab data
  * ============================================================================ */
 
-/* Main outer container */
+/* ==== CONTAINER HIERARCHY ==== */
+
+/* Level 1: Main outer container */
 .content-preview {
   border-radius: 10px;
-  margin-bottom: 0; /* No gap between items */
-  margin-top: 0;
+  margin: 0; /* No gap between items - controlled by parent */
 }
 
-/* Inner wrapper container */
+/* Level 2: Inner wrapper container */
 .content-preview-wrapper {
   border-radius: 8px;
-  border: 1px solid rgba(75, 85, 99, 0.3); /* Move border here from collapsible */
-  overflow: hidden; /* Keep overflow hidden for clean corners */
+  border: 1px solid rgba(75, 85, 99, 0.3);
+  overflow: hidden;
   margin: 0;
   padding: 0;
 }
 
-/* Collapsible container - styles moved to base.css to avoid conflicts */
-/* .content-preview-collapsible styles are defined in base.css */
+/* Level 3: Collapsible container */
+.content-preview-collapsible {
+  width: 100%;
+  background: transparent;
+  border-radius: 8px;
+  transition:
+    border-color 0.3s ease,
+    box-shadow 0.3s ease;
+}
 
-/* Header section */
+/* ==== HEADER SECTION ==== */
+
+/* Override generic collapsible header for content-preview */
 .content-preview-collapsible .collapsible-header {
+  background: transparent;
   transition: background-color 0.2s ease;
   margin: 0;
-  padding: 8px 12px; /* Add some padding to header */
+  padding: 8px 12px;
+  box-shadow: none !important;
+  outline: none !important;
 }
 
-/* Optimize collapsible animations */
+.content-preview-collapsible .collapsible-header:hover,
+.content-preview-collapsible .collapsible-header:focus,
+.content-preview-collapsible .collapsible-header:focus-visible,
+.content-preview-collapsible .collapsible-header:active {
+  background: transparent;
+  box-shadow: none !important;
+  outline: none !important;
+}
+
+/* Collapsible content area */
 .content-preview-collapsible .collapsible-content {
-  transition: height 0.2s ease-out !important; /* Faster animation */
+  background: transparent;
+  transition: height 0.2s ease-out !important;
   margin: 0;
   padding: 0;
 }
+
+/* Header structure */
+.content-preview-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  gap: 8px;
+}
+
+.content-preview-header--error {
+  color: #f87171;
+}
+
+.content-preview-header-content {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  flex: 1;
+  overflow: hidden;
+  padding-right: 8px;
+}
+
+.content-preview-header-main {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  flex: 1;
+  overflow: hidden;
+}
+
+.content-preview-title-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  overflow: hidden;
+  width: 100%;
+}
+
+.content-preview-title {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+}
+
+.content-preview-favicon {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  object-fit: contain;
+}
+
+/* Close button in header */
+.content-preview-header-close {
+  border: none;
+  background: transparent;
+  width: 16px;
+  height: 16px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0;
+  color: var(--text-secondary);
+  border-radius: var(--radius-sm);
+  transition: var(--transition-fast);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  margin-left: auto;
+}
+
+.content-preview-header-close:hover {
+  background: var(--hover-overlay);
+  color: var(--text-primary);
+}
+
+.content-preview-header-close:active {
+  background: var(--active-overlay);
+}
+
+/* ==== CONTENT SECTION ==== */
 
 .content-preview-content {
   position: relative;
