@@ -238,8 +238,10 @@ async function performExtraction(
         strip_class: false, // Keep classes for code language detection
         keep_id: true,
         inject_pseudo: false,
-        optimize_tokens: true, // Enable Phase 1 HTML stripping for token optimization
-        convert_to_markdown: true, // Enable Phase 2 Markdown conversion for LLM
+
+        // DEBUG TOGGLES - Internal testing phase
+        optimize_tokens: true, // Phase 1: Strip & flatten HTML (40-50% token reduction)
+        convert_to_markdown: false, // Phase 2: Convert to Markdown (20-30% additional reduction)
 
         // All stripping toggles default to false (don't strip) for testing
         strip_invisible: false,

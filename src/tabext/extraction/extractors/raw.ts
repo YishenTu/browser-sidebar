@@ -41,7 +41,7 @@ function processNode(node: Node, listLevel: number = 0): string {
     case 'h4':
     case 'h5':
     case 'h6': {
-      const level = parseInt(tagName[1]);
+      const level = parseInt(tagName[1] || '1');
       const prefix = '#'.repeat(level);
       const text = processChildren(' ').trim();
       if (text) result = `\n${prefix} ${text}\n`;
@@ -158,13 +158,15 @@ function processNode(node: Node, listLevel: number = 0): string {
       break;
     }
 
-    // Links (keep mailto for contact info)
+    // Links (URLs are stripped in Phase 1, so just preserve text)
     case 'a': {
       const href = element.getAttribute('href');
       const text = processChildren().trim();
-      if (href && href.startsWith('mailto:') && text) {
+      if (href && text) {
+        // If href still exists (Phase 1 not applied), convert to markdown link
         result = `[${text}](${href})`;
       } else if (text) {
+        // No href (stripped by Phase 1), just keep the text
         result = text;
       }
       break;
@@ -256,15 +258,54 @@ function stripAndFlattenHTML(html: string): string {
     const parser = new DOMParser();
     const doc = parser.parseFromString(html, 'text/html');
 
-    // 1. Remove all copy buttons and their wrappers (safe removal)
+    // 1. Remove copy buttons/icons but try to preserve nearby content
     const copyElements = doc.querySelectorAll(
-      '.app-copy, .copy-button-item, .base_copy, .copy-hover-item'
+      '.app-copy, .copy-button-item, .base_copy, .copy-hover-item, .copy-btn, .copy-icon, button[class*="copy"], i[class*="copy"], svg[class*="copy"]'
     );
     copyElements.forEach(el => {
       try {
-        el.parentNode?.removeChild(el);
+        // For button/icon elements, just remove them
+        const tagName = el.tagName.toLowerCase();
+        if (tagName === 'button' || tagName === 'i' || tagName === 'svg' || tagName === 'img') {
+          el.parentNode?.removeChild(el);
+        } else {
+          // For other elements, check if they have meaningful content beyond copy UI
+          const text = el.textContent?.trim() || '';
+          const copyTerms = ['copy', '复制', 'copied', '已复制', 'click to copy', '点击复制'];
+
+          // Check if this is ONLY a copy UI element (no other meaningful text)
+          const isCopyOnly = copyTerms.some(
+            term =>
+              text.toLowerCase() === term.toLowerCase() ||
+              text.toLowerCase() === `${term.toLowerCase()} to clipboard`
+          );
+
+          if (isCopyOnly) {
+            // This element only contains copy UI text, safe to remove
+            el.parentNode?.removeChild(el);
+          } else if (text.length > 0) {
+            // Has other content, try to preserve it
+            // Remove child elements that are copy buttons but keep text
+            const copyChildren = el.querySelectorAll('button, i, svg, .copy-icon, .copy-btn');
+            copyChildren.forEach(child => {
+              child.parentNode?.removeChild(child);
+            });
+
+            // Also try to remove inline copy text while preserving other content
+            if (el.childNodes.length > 0) {
+              el.childNodes.forEach(node => {
+                if (node.nodeType === Node.TEXT_NODE) {
+                  const nodeText = node.textContent?.trim().toLowerCase() || '';
+                  if (copyTerms.some(term => nodeText === term.toLowerCase())) {
+                    node.textContent = '';
+                  }
+                }
+              });
+            }
+          }
+        }
       } catch (e) {
-        // Skip if element can't be removed
+        // Skip if element can't be modified
       }
     });
 
@@ -410,18 +451,19 @@ function stripAndFlattenHTML(html: string): string {
       }
     });
 
-    // 9. Remove non-essential URLs (Phase 1.5 enhancement)
-    // Remove href attributes except for mailto: links (keep those for contact info)
+    // 9. Remove URLs from links while preserving link text
     const linksWithHref = doc.querySelectorAll('a[href]');
     linksWithHref.forEach(link => {
       try {
         const href = link.getAttribute('href');
-        if (href && !href.startsWith('mailto:')) {
-          // Remove the href but keep the link text
+        if (href) {
+          // Remove the href attribute to strip the URL
           link.removeAttribute('href');
           // Also remove target, rel, and other link-specific attributes
           link.removeAttribute('target');
           link.removeAttribute('rel');
+          link.removeAttribute('title');
+          // The link text is preserved, just the URL is removed
         }
       } catch (e) {
         // Skip if can't modify link
@@ -461,9 +503,6 @@ function stripAndFlattenHTML(html: string): string {
       /<[^>]*class="[^"]*item[^"]*"[^>]*>.*?<span[^>]*class="[^"]*count[^"]*"[^>]*>\s*0\s*<\/span>.*?<\/[^>]+>/gi,
       ''
     );
-
-    // 13. Remove empty anchor tags that lost their hrefs
-    result = result.replace(/<a[^>]*>(\s*)<\/a>/gi, '');
 
     return result;
   } catch (error) {
