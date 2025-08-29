@@ -8,7 +8,7 @@ import unifiedStyles from './styles/sidebar.css?inline';
 let root: ReactDOM.Root | null = null;
 let shadowRoot: ShadowRoot | null = null;
 
-export function mountSidebar() {
+export function mountSidebar(initialData?: { selectedText?: string }) {
   // Remove any existing sidebar
   unmountSidebar();
 
@@ -47,7 +47,7 @@ export function mountSidebar() {
   flushSync(() => {
     root!.render(
       <ErrorProvider>
-        <ChatPanel onClose={() => {}} />
+        <ChatPanel onClose={() => {}} initialSelectedText={initialData?.selectedText} />
       </ErrorProvider>
     );
   });

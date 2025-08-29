@@ -399,11 +399,17 @@ export function useMultiTabExtraction(): UseMultiTabExtractionReturn {
     refreshAvailableTabs();
   }, [refreshAvailableTabs]);
 
-  // Auto-extract current tab on mount
+  // Auto-extract current tab on mount with proper timing for selection preservation
   useEffect(() => {
     const currentHasAutoLoaded = getHasAutoLoaded();
     if (!currentHasAutoLoaded && !autoLoadAttempted.current) {
-      extractCurrentTab();
+      // Use requestAnimationFrame + setTimeout to ensure selection has been fully restored
+      // This timing matches the selection restoration in sidebarController.ts
+      requestAnimationFrame(() => {
+        setTimeout(() => {
+          extractCurrentTab();
+        }, 20); // 20ms delay after frame to ensure all restoration attempts have completed
+      });
     }
   }, []); // Empty deps array - only run on mount
 

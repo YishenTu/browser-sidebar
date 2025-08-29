@@ -126,7 +126,7 @@ export const FullscreenModal: React.FC<FullscreenModalProps> = ({
         {/* Modal Header */}
         {(title || showCloseButton || editable) && (
           <div className="fullscreen-modal-header">
-            <div style={{ flex: 1 }}>
+            <div className="fullscreen-modal-header-content">
               {title && (
                 <h2 id="fullscreen-modal-title" className="fullscreen-modal-title">
                   {title}
@@ -139,17 +139,11 @@ export const FullscreenModal: React.FC<FullscreenModalProps> = ({
             {/* Show edited badge */}
             {editable && edited && (
               <span
-                style={{
-                  position: 'absolute',
-                  top: '20px',
-                  right: editable ? '96px' : '56px', // Adjust position based on whether edit button is shown
-                  padding: '4px 8px',
-                  backgroundColor: 'var(--color-accent)',
-                  color: 'white',
-                  borderRadius: '4px',
-                  fontSize: '12px',
-                  fontWeight: '500',
-                }}
+                className={`fullscreen-modal-edited-badge ${
+                  editable
+                    ? 'fullscreen-modal-edited-badge--with-edit'
+                    : 'fullscreen-modal-edited-badge--without-edit'
+                }`}
               >
                 Edited
               </span>
@@ -167,29 +161,7 @@ export const FullscreenModal: React.FC<FullscreenModalProps> = ({
                     aria-label="Edit content"
                     title="Edit content"
                     type="button"
-                    style={{
-                      position: 'absolute',
-                      top: '12px',
-                      right: '48px', // Position next to close button (32px close button + 4px gap + 12px margin)
-                      width: '32px',
-                      height: '32px',
-                      padding: '0',
-                      backgroundColor: 'transparent',
-                      border: 'none',
-                      borderRadius: '0',
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      color: '#ffffff',
-                      transition: 'background-color 0.2s',
-                    }}
-                    onMouseEnter={e => {
-                      e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.1)';
-                    }}
-                    onMouseLeave={e => {
-                      e.currentTarget.style.backgroundColor = 'transparent';
-                    }}
+                    className="fullscreen-modal-edit-button"
                   >
                     <EditIcon size={20} />
                   </button>
@@ -205,29 +177,7 @@ export const FullscreenModal: React.FC<FullscreenModalProps> = ({
                       aria-label="Save changes"
                       title="Save changes"
                       type="button"
-                      style={{
-                        position: 'absolute',
-                        top: '12px',
-                        right: '84px', // Position for save button
-                        width: '32px',
-                        height: '32px',
-                        padding: '0',
-                        backgroundColor: 'var(--color-success)',
-                        border: 'none',
-                        borderRadius: '0',
-                        cursor: 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        color: 'white',
-                        transition: 'opacity 0.2s',
-                      }}
-                      onMouseEnter={e => {
-                        e.currentTarget.style.opacity = '0.9';
-                      }}
-                      onMouseLeave={e => {
-                        e.currentTarget.style.opacity = '1';
-                      }}
+                      className="fullscreen-modal-save-button"
                     >
                       <SaveIcon size={20} />
                     </button>
@@ -243,29 +193,7 @@ export const FullscreenModal: React.FC<FullscreenModalProps> = ({
                       aria-label="Re-extract content"
                       title="Re-extract content"
                       type="button"
-                      style={{
-                        position: 'absolute',
-                        top: '12px',
-                        right: '48px', // Position for regenerate button
-                        width: '32px',
-                        height: '32px',
-                        padding: '0',
-                        backgroundColor: 'transparent',
-                        border: 'none',
-                        borderRadius: '0',
-                        cursor: 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        color: '#ffffff',
-                        transition: 'background-color 0.2s',
-                      }}
-                      onMouseEnter={e => {
-                        e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.1)';
-                      }}
-                      onMouseLeave={e => {
-                        e.currentTarget.style.backgroundColor = 'transparent';
-                      }}
+                      className="fullscreen-modal-regenerate-button"
                     >
                       <RegenerateIcon size={20} />
                     </button>
@@ -294,7 +222,7 @@ export const FullscreenModal: React.FC<FullscreenModalProps> = ({
             <>
               {/* Truncated badge */}
               {truncated && (
-                <div style={{ marginBottom: '12px' }}>
+                <div className="fullscreen-modal-content-spacing">
                   <span
                     style={{
                       padding: '4px 8px',

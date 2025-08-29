@@ -141,3 +141,102 @@
 .fullscreen-modal-container:has(.fullscreen-modal-edit-textarea) {
   overflow: hidden !important;
 }
+
+/* Header flex content */
+.fullscreen-modal-header-content {
+  flex: 1;
+}
+
+/* Edited badge */
+.fullscreen-modal-edited-badge {
+  position: absolute;
+  top: 20px;
+  padding: 4px 8px;
+  background-color: var(--color-accent);
+  color: white;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.fullscreen-modal-edited-badge--with-edit {
+  right: 96px;
+}
+
+.fullscreen-modal-edited-badge--without-edit {
+  right: 56px;
+}
+
+/* Edit button */
+.fullscreen-modal-edit-button {
+  position: absolute;
+  top: 12px;
+  right: 48px;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  background-color: transparent;
+  border: none;
+  border-radius: 0;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #ffffff;
+  transition: background-color 0.2s;
+}
+
+.fullscreen-modal-edit-button:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+/* Save button */
+.fullscreen-modal-save-button {
+  position: absolute;
+  top: 12px;
+  right: 84px;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  background-color: var(--color-success);
+  border: none;
+  border-radius: 0;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  transition: opacity 0.2s;
+}
+
+.fullscreen-modal-save-button:hover {
+  opacity: 0.9;
+}
+
+/* Regenerate button */
+.fullscreen-modal-regenerate-button {
+  position: absolute;
+  top: 12px;
+  right: 48px;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  background-color: transparent;
+  border: none;
+  border-radius: 0;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #ffffff;
+  transition: background-color 0.2s;
+}
+
+.fullscreen-modal-regenerate-button:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+/* Content spacing */
+.fullscreen-modal-content-spacing {
+  margin-bottom: 12px;
+}

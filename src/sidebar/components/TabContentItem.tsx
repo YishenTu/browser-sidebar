@@ -239,18 +239,6 @@ export const TabContentItem: React.FC<TabContentItemProps> = ({
                           Raw
                         </span>
                       )}
-                      <button
-                        onClick={e => {
-                          e.stopPropagation();
-                          // Re-extract with default method (defuddle)
-                          onReextract({ mode: ExtractionMode.DEFUDDLE });
-                        }}
-                        className="content-preview-refresh-inline"
-                        title="Re-extract content (default method)"
-                        aria-label="Re-extract content"
-                      >
-                        <RegenerateIcon size={14} />
-                      </button>
                       {/* Raw Mode button - for table-heavy pages */}
                       <button
                         onClick={e => {
@@ -263,6 +251,18 @@ export const TabContentItem: React.FC<TabContentItemProps> = ({
                         aria-label="Extract in Raw Mode"
                       >
                         <TableIcon size={14} />
+                      </button>
+                      <button
+                        onClick={e => {
+                          e.stopPropagation();
+                          // Re-extract with default method (defuddle)
+                          onReextract({ mode: ExtractionMode.DEFUDDLE });
+                        }}
+                        className="content-preview-refresh-inline"
+                        title="Re-extract content (default method)"
+                        aria-label="Re-extract content"
+                      >
+                        <RegenerateIcon size={14} />
                       </button>
                       <button
                         onClick={e => {

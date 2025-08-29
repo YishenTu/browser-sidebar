@@ -51,6 +51,8 @@ export interface ChatPanelProps {
   className?: string;
   /** Callback when sidebar is closed */
   onClose: () => void;
+  /** Initial selected text from the page */
+  initialSelectedText?: string;
 }
 
 /**
@@ -73,7 +75,11 @@ export interface ChatPanelProps {
  * <ChatPanel onClose={() => unmountSidebar()} />
  * ```
  */
-export const ChatPanel: React.FC<ChatPanelProps> = ({ className, onClose }) => {
+export const ChatPanel: React.FC<ChatPanelProps> = ({
+  className,
+  onClose,
+  initialSelectedText,
+}) => {
   const { addError } = useError();
 
   // Helper function to show errors/warnings/info using the error context
@@ -89,6 +95,18 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ className, onClose }) => {
     width: DEFAULT_WIDTH,
     height: getSidebarHeight(),
   });
+
+  // Store selected text for potential use (but don't show notification)
+  useEffect(() => {
+    if (initialSelectedText) {
+      // Store the selected text for context without showing a notification
+      // This could be used to:
+      // 1. Pre-fill the input field
+      // 2. Add as context to the first message
+      // 3. Store in a ref for later use
+      // For now, we just preserve it without any UI notification
+    }
+  }, [initialSelectedText]);
 
   // Use drag hook for header dragging with DYNAMIC bounds based on current size
   const {
@@ -545,12 +563,13 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ className, onClose }) => {
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, [handleClose]);
 
-  // Auto-focus sidebar when opened for accessibility
+  // Set tabindex for keyboard navigation but don't auto-focus to preserve selection
   useEffect(() => {
     const sidebar = document.querySelector('.ai-sidebar-container') as HTMLElement;
     if (sidebar) {
       sidebar.setAttribute('tabindex', '-1');
-      sidebar.focus();
+      // Don't auto-focus to preserve text selection on the page
+      // sidebar.focus(); // Removed to preserve selection
     }
   }, []);
 
