@@ -44,10 +44,7 @@
   cursor: ns-resize;
 }
 
-.ai-sidebar-resize-handle:hover {
-  background: var(--primary-500);
-  opacity: 0.3;
-}
+/* Hover effect removed for cleaner resize experience */
 
 /* Corner handles */
 .ai-sidebar-resize-handle--nw {

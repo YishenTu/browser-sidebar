@@ -56,7 +56,7 @@ export class TabErrorBoundary extends Component<TabErrorBoundaryProps, TabErrorB
 
   constructor(props: TabErrorBoundaryProps) {
     super(props);
-    
+
     this.state = {
       hasError: false,
       error: null,
@@ -75,9 +75,9 @@ export class TabErrorBoundary extends Component<TabErrorBoundaryProps, TabErrorB
     };
   }
 
-  componentDidCatch(error: Error, errorInfo: ErrorInfo) {
+  override componentDidCatch(error: Error, errorInfo: ErrorInfo) {
     const { onError, logErrors = true } = this.props;
-    
+
     // Update state with error info
     this.setState({
       errorInfo,
@@ -99,7 +99,7 @@ export class TabErrorBoundary extends Component<TabErrorBoundaryProps, TabErrorB
     }
   }
 
-  componentWillUnmount() {
+  override componentWillUnmount() {
     if (this.retryTimeoutId) {
       clearTimeout(this.retryTimeoutId);
     }
@@ -111,7 +111,7 @@ export class TabErrorBoundary extends Component<TabErrorBoundaryProps, TabErrorB
   private isTabExtractionError(error: Error): boolean {
     const message = error.message.toLowerCase();
     const stack = error.stack?.toLowerCase() || '';
-    
+
     // Look for common tab extraction error patterns
     const tabExtractionKeywords = [
       'tab',
@@ -124,9 +124,9 @@ export class TabErrorBoundary extends Component<TabErrorBoundaryProps, TabErrorB
       'favicon',
       'readability',
     ];
-    
-    return tabExtractionKeywords.some(keyword => 
-      message.includes(keyword) || stack.includes(keyword)
+
+    return tabExtractionKeywords.some(
+      keyword => message.includes(keyword) || stack.includes(keyword)
     );
   }
 
@@ -140,10 +140,13 @@ export class TabErrorBoundary extends Component<TabErrorBoundaryProps, TabErrorB
 
     // Exponential backoff: 1s, 2s, 4s...
     const delay = Math.pow(2, this.state.retryCount) * 1000;
-    
-    this.retryTimeoutId = setTimeout(() => {
-      this.handleRetry();
-    }, Math.min(delay, 5000)); // Cap at 5 seconds
+
+    this.retryTimeoutId = setTimeout(
+      () => {
+        this.handleRetry();
+      },
+      Math.min(delay, 5000)
+    ); // Cap at 5 seconds
   };
 
   /**
@@ -182,27 +185,27 @@ export class TabErrorBoundary extends Component<TabErrorBoundaryProps, TabErrorB
    */
   private getErrorMessage(error: Error): string {
     const message = error.message.toLowerCase();
-    
+
     if (message.includes('network') || message.includes('fetch')) {
       return 'Unable to connect to tabs. Please check your network connection.';
     }
-    
+
     if (message.includes('timeout') || message.includes('timed out')) {
       return 'Tab operation timed out. The page might be loading or unresponsive.';
     }
-    
+
     if (message.includes('permission') || message.includes('denied')) {
       return 'Missing permissions to access tab content. Please refresh the page and try again.';
     }
-    
+
     if (message.includes('content script')) {
       return 'Unable to communicate with the page. Try refreshing the page.';
     }
-    
+
     if (this.isTabExtractionError(error)) {
       return 'Unable to extract content from tabs. This might be a temporary issue.';
     }
-    
+
     // Generic error message
     return 'An unexpected error occurred while processing tabs.';
   }
@@ -212,20 +215,20 @@ export class TabErrorBoundary extends Component<TabErrorBoundaryProps, TabErrorB
    */
   private getErrorType(): 'error' | 'warning' {
     const { error } = this.state;
-    
+
     if (!error) return 'error';
-    
+
     const message = error.message.toLowerCase();
-    
+
     // Warnings for non-critical errors
     if (message.includes('timeout') || message.includes('network')) {
       return 'warning';
     }
-    
+
     return 'error';
   }
 
-  render() {
+  override render() {
     const { hasError, error, retryCount } = this.state;
     const { children, fallback, maxRetries = 2, className = '' } = this.props;
 
@@ -243,7 +246,7 @@ export class TabErrorBoundary extends Component<TabErrorBoundaryProps, TabErrorB
       const errorMessage = this.getErrorMessage(error);
       const errorType = this.getErrorType();
       const canRetry = retryCount < maxRetries;
-      
+
       return (
         <div className={`tab-error-boundary ${className}`}>
           <Alert
@@ -251,20 +254,26 @@ export class TabErrorBoundary extends Component<TabErrorBoundaryProps, TabErrorB
             message={errorMessage}
             dismissible={true}
             onDismiss={this.handleReset}
-            action={canRetry ? {
-              label: 'Retry',
-              handler: this.handleRetry,
-            } : undefined}
+            action={
+              canRetry
+                ? {
+                    label: 'Retry',
+                    handler: this.handleRetry,
+                  }
+                : undefined
+            }
             className="tab-error-boundary__alert"
             showIcon={true}
           >
             {retryCount > 0 && (
               <div className="tab-error-boundary__retry-info">
-                {canRetry ? `Attempt ${retryCount + 1} of ${maxRetries + 1}` : 'Max retries reached'}
+                {canRetry
+                  ? `Attempt ${retryCount + 1} of ${maxRetries + 1}`
+                  : 'Max retries reached'}
               </div>
             )}
-            
-            {process.env.NODE_ENV === 'development' && (
+
+            {process.env['NODE_ENV'] === 'development' && (
               <details className="tab-error-boundary__debug">
                 <summary>Error Details (Development)</summary>
                 <pre className="tab-error-boundary__error-details">
@@ -290,14 +299,17 @@ export function withTabErrorBoundary<P extends object>(
   Component: React.ComponentType<P>,
   boundaryProps?: Partial<TabErrorBoundaryProps>
 ) {
-  const WrappedComponent = React.forwardRef<any, P>((props, ref) => (
-    <TabErrorBoundary {...boundaryProps}>
-      <Component {...props} ref={ref} />
-    </TabErrorBoundary>
-  ));
-  
+  const WrappedComponent = React.forwardRef<any, P>((props, ref) => {
+    const componentProps = { ...props } as P;
+    return (
+      <TabErrorBoundary {...boundaryProps}>
+        <Component {...componentProps} ref={ref} />
+      </TabErrorBoundary>
+    );
+  });
+
   WrappedComponent.displayName = `withTabErrorBoundary(${Component.displayName || Component.name})`;
-  
+
   return WrappedComponent;
 }
 

@@ -5,20 +5,20 @@
 .multi-tab-content-preview {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 2px; /* Minimal gap between TabContentItem components */
   /* No background needed - parent handles it */
 }
 
 /* Warning Alert */
 .multi-tab-warning {
-  margin-bottom: 8px;
+  margin-bottom: 4px;
 }
 
 /* Controls Section */
 .multi-tab-controls {
   display: flex;
   justify-content: flex-end;
-  margin-bottom: 8px;
+  margin-bottom: 4px;
 }
 
 .multi-tab-controls-group {
@@ -55,27 +55,27 @@
 .multi-tab-section-header {
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 8px 0 4px 0;
+  gap: 4px;
+  padding: 2px 0;
   font-size: 12px;
   font-weight: 600;
   color: var(--color-text-secondary);
   text-transform: uppercase;
   letter-spacing: 0.025em;
   border-bottom: 1px solid var(--color-border);
-  margin-bottom: 8px;
+  margin-bottom: 2px;
 }
 
 /* Current Tab Section */
 .multi-tab-current {
-  margin-bottom: 8px;
+  margin-bottom: 2px;
 }
 
 /* Additional Tabs Section */
 .multi-tab-additional {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 2px;
 }
 
 /* Individual Tab Item */

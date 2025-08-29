@@ -2,7 +2,7 @@
 
 .tab-error-boundary {
   width: 100%;
-  margin: 8px 0;
+  margin: 0;
 }
 
 .tab-error-boundary__alert {
@@ -35,8 +35,8 @@
 }
 
 .tab-error-boundary__error-details {
-  margin: 8px 0 0 0;
-  padding: 8px 12px;
+  margin: 4px 0 0 0;
+  padding: 4px 8px;
   background-color: rgba(0, 0, 0, 0.05);
   border-radius: 4px;
   font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
@@ -61,7 +61,7 @@
 }
 
 .tab-error-boundary__fallback h3 {
-  margin: 0 0 8px 0;
+  margin: 0 0 4px 0;
   font-size: 16px;
   font-weight: 600;
 }
@@ -108,16 +108,16 @@
   .tab-error-boundary__alert {
     font-size: 12px;
   }
-  
+
   .tab-error-boundary__error-details {
     font-size: 9px;
     max-height: 150px;
   }
-  
+
   .tab-error-boundary__fallback-actions {
     flex-direction: column;
   }
-  
+
   .tab-error-boundary__fallback-button {
     width: 100%;
   }
@@ -125,7 +125,7 @@
 
 /* Integration with existing multi-tab styles */
 .multi-tab-content-preview .tab-error-boundary {
-  margin: 4px 0;
+  margin: 0;
 }
 
 .multi-tab-content-preview .tab-error-boundary__alert {
