@@ -62,7 +62,6 @@ export const ChatInput = React.forwardRef<HTMLTextAreaElement, ChatInputProps>(
       placeholder = 'Type your message here... (use @ to mention tabs)',
       availableTabs = [],
       enableMentions = true,
-      loadedTabs = {},
       onTabRemove: _onTabRemove,
       onMentionSelectTab,
       ...textAreaProps
@@ -84,20 +83,18 @@ export const ChatInput = React.forwardRef<HTMLTextAreaElement, ChatInputProps>(
     const textAreaRef = useRef<HTMLTextAreaElement>(null);
 
     // @ Mention functionality state
-    const [dropdownPosition, setDropdownPosition] = useState<{ x: number; y: number; width?: number } | null>(null);
+    const [dropdownPosition, setDropdownPosition] = useState<{
+      x: number;
+      y: number;
+      width?: number;
+    } | null>(null);
     const [filteredTabs, setFilteredTabs] = useState<TabInfo[]>([]);
-  const [highlightedTabId, setHighlightedTabId] = useState<number | null>(null);
-    
+    const [highlightedTabId, setHighlightedTabId] = useState<number | null>(null);
+
     // @ Mention hook
-    const {
-      mention,
-      showDropdown,
-      detectMention,
-      clearMention,
-    } = useTabMention({
+    const { mention, showDropdown, detectMention, clearMention } = useTabMention({
       enabled: enableMentions,
     });
-
 
     // Merge refs
     React.useImperativeHandle(ref, () => textAreaRef.current!, []);
@@ -108,13 +105,14 @@ export const ChatInput = React.forwardRef<HTMLTextAreaElement, ChatInputProps>(
         if (!query.trim()) {
           return availableTabs.slice(0, 10); // Show first 10 tabs if no query
         }
-        
+
         const lowerQuery = query.toLowerCase();
         return availableTabs
-          .filter(tab => 
-            tab.title.toLowerCase().includes(lowerQuery) ||
-            tab.domain.toLowerCase().includes(lowerQuery) ||
-            tab.url.toLowerCase().includes(lowerQuery)
+          .filter(
+            tab =>
+              tab.title.toLowerCase().includes(lowerQuery) ||
+              tab.domain.toLowerCase().includes(lowerQuery) ||
+              tab.url.toLowerCase().includes(lowerQuery)
           )
           .slice(0, 10); // Limit to 10 results
       },
@@ -131,13 +129,13 @@ export const ChatInput = React.forwardRef<HTMLTextAreaElement, ChatInputProps>(
       const cursorPosition = textarea.selectionStart || 0;
       // Call detectMention which returns the immediate result
       const detectedMention = detectMention(currentValue, cursorPosition);
-      
+
       // Use the immediate detection result, not the hook state
       if (detectedMention) {
         // Filter tabs based on query
         const filtered = filterTabsByQuery(detectedMention.query);
         setFilteredTabs(filtered);
-        
+
         // Calculate dropdown position (above input)
         try {
           // Align dropdown with the bordered input container rather than the textarea
@@ -161,7 +159,13 @@ export const ChatInput = React.forwardRef<HTMLTextAreaElement, ChatInputProps>(
         setFilteredTabs([]);
         setDropdownPosition(null);
       }
-    }, [currentValue, detectMention, filterTabsByQuery, enableMentions, calculateCaretDropdownPosition]);
+    }, [
+      currentValue,
+      detectMention,
+      filterTabsByQuery,
+      enableMentions,
+      calculateCaretDropdownPosition,
+    ]);
 
     // Handle value changes
     const handleValueChange = useCallback(
@@ -179,18 +183,18 @@ export const ChatInput = React.forwardRef<HTMLTextAreaElement, ChatInputProps>(
       (event: React.ChangeEvent<HTMLTextAreaElement>) => {
         const newValue = event.target.value;
         handleValueChange(newValue);
-        
+
         // Trigger mention detection immediately with the new value
         const textarea = textAreaRef.current;
         if (textarea && enableMentions) {
           const cursorPosition = textarea.selectionStart || 0;
           const detectedMention = detectMention(newValue, cursorPosition);
-          
+
           if (detectedMention) {
             // Filter tabs and set up dropdown immediately
             const filtered = filterTabsByQuery(detectedMention.query);
             setFilteredTabs(filtered);
-            
+
             // Calculate dropdown position (above input)
             try {
               // Align dropdown with the bordered input container rather than the textarea
@@ -215,7 +219,13 @@ export const ChatInput = React.forwardRef<HTMLTextAreaElement, ChatInputProps>(
           }
         }
       },
-      [handleValueChange, detectMention, filterTabsByQuery, enableMentions, calculateCaretDropdownPosition]
+      [
+        handleValueChange,
+        detectMention,
+        filterTabsByQuery,
+        enableMentions,
+        calculateCaretDropdownPosition,
+      ]
     );
 
     // Send message
@@ -289,7 +299,7 @@ export const ChatInput = React.forwardRef<HTMLTextAreaElement, ChatInputProps>(
       clearMention();
       setFilteredTabs([]);
       setDropdownPosition(null);
-      
+
       // Return focus to textarea
       setTimeout(() => {
         if (textAreaRef.current) {
@@ -307,10 +317,12 @@ export const ChatInput = React.forwardRef<HTMLTextAreaElement, ChatInputProps>(
         // If mention dropdown is showing, let it handle certain keys
         if (showDropdown && dropdownPosition && filteredTabs.length > 0) {
           // Let the dropdown handle navigation keys
-          if (['ArrowDown', 'ArrowUp', 'Enter', 'Escape', 'Tab', 'Home', 'End'].includes(event.key)) {
-            // Don't prevent default - let TabMentionDropdown handle these
-            // Also trigger cursor position check after key handling
-            setTimeout(handleCursorPositionChange, 0);
+          if (
+            ['ArrowDown', 'ArrowUp', 'Enter', 'Escape', 'Tab', 'Home', 'End'].includes(event.key)
+          ) {
+            // Prevent default to stop cursor movement in textarea
+            event.preventDefault();
+            // The TabMentionDropdown will handle these keys via its own listener
             return;
           }
         }
@@ -345,13 +357,23 @@ export const ChatInput = React.forwardRef<HTMLTextAreaElement, ChatInputProps>(
           }
           // Shift+Enter allows default new line behavior
         }
-        
+
         // Trigger mention detection on cursor movement keys (@ is handled by onChange)
         if (['ArrowLeft', 'ArrowRight', 'Home', 'End', 'PageUp', 'PageDown'].includes(event.key)) {
           setTimeout(handleCursorPositionChange, 0);
         }
       },
-      [handleSend, loading, isSending, currentValue, handleValueChange, showDropdown, dropdownPosition, filteredTabs, handleCursorPositionChange]
+      [
+        handleSend,
+        loading,
+        isSending,
+        currentValue,
+        handleValueChange,
+        showDropdown,
+        dropdownPosition,
+        filteredTabs,
+        handleCursorPositionChange,
+      ]
     );
 
     // Stop all keyboard event propagation when the input is focused
@@ -400,7 +422,6 @@ export const ChatInput = React.forwardRef<HTMLTextAreaElement, ChatInputProps>(
 
     return (
       <div className={`chat-input${className ? ` ${className}` : ''}`}>
-
         {/* Main input area with border */}
         <div className="chat-input__main">
           <div className="chat-input__textarea-container">
@@ -416,9 +437,13 @@ export const ChatInput = React.forwardRef<HTMLTextAreaElement, ChatInputProps>(
               placeholder={placeholder}
               disabled={isDisabled}
               aria-label={ariaLabel}
-              aria-autocomplete={enableMentions ? "list" : undefined}
-              aria-controls={enableMentions ? "tab-mention-listbox" : undefined}
-              aria-activedescendant={enableMentions && showDropdown && highlightedTabId ? `tab-option-${highlightedTabId}` : undefined}
+              aria-autocomplete={enableMentions ? 'list' : undefined}
+              aria-controls={enableMentions ? 'tab-mention-listbox' : undefined}
+              aria-activedescendant={
+                enableMentions && showDropdown && highlightedTabId
+                  ? `tab-option-${highlightedTabId}`
+                  : undefined
+              }
               minRows={1}
               maxRows={8}
               tabIndex={0}

@@ -78,8 +78,9 @@
   min-height: 24px;
 }
 
-.tab-mention-dropdown__option:hover {
-  /* More visible hover state */
+.tab-mention-dropdown__option:hover,
+.tab-mention-dropdown__option--highlighted {
+  /* Same hover state for both mouse and keyboard navigation */
   background-color: rgba(255, 255, 255, 0.08);
   transition: background-color var(--transition-fast);
 }
