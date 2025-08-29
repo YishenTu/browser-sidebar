@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react';
-import { TextArea, TextAreaProps, CancelIcon } from '@ui/index';
+import { TextArea, TextAreaProps, CloseIcon } from '@ui/index';
 import { useTabMention } from '@hooks/useTabMention';
 import { TabMentionDropdown } from './TabMentionDropdown';
 import { TabErrorBoundary } from './TabErrorBoundary';
@@ -483,7 +483,7 @@ export const ChatInput = React.forwardRef<HTMLTextAreaElement, ChatInputProps>(
                   className="chat-input__cancel-button"
                   aria-label={cancelButtonLabel}
                 >
-                  <CancelIcon />
+                  <CloseIcon />
                 </button>
               </div>
             </div>

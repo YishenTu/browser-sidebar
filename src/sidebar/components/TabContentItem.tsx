@@ -13,7 +13,7 @@ import { Spinner } from '@ui/Spinner';
 import { Alert } from '@ui/Alert';
 // Badge imported but not used - removed
 import { Collapsible } from '@ui/Collapsible';
-import { RegenerateIcon, ExpandIcon, CancelIcon, TableIcon } from '@ui/Icons';
+import { RegenerateIcon, ExpandIcon, CloseIcon, TableIcon } from '@ui/Icons';
 import { FullscreenModal } from '@ui/FullscreenModal';
 import '../styles/4-features/tab-content-item.css';
 
@@ -81,7 +81,7 @@ export const TabContentItem: React.FC<TabContentItemProps> = ({
               aria-label="Clear content"
               title="Clear content"
             >
-              <CancelIcon size={12} />
+              <CloseIcon size={12} />
             </button>
           )}
         </div>
@@ -104,7 +104,7 @@ export const TabContentItem: React.FC<TabContentItemProps> = ({
               aria-label="Clear content"
               title="Clear content"
             >
-              <CancelIcon size={12} />
+              <CloseIcon size={12} />
             </button>
           )}
         </div>
@@ -142,7 +142,7 @@ export const TabContentItem: React.FC<TabContentItemProps> = ({
               aria-label="Clear content"
               title="Clear content"
             >
-              <CancelIcon size={12} />
+              <CloseIcon size={12} />
             </button>
           )}
         </div>
@@ -164,7 +164,7 @@ export const TabContentItem: React.FC<TabContentItemProps> = ({
             aria-label="Clear content"
             title="Clear content"
           >
-            <CancelIcon size={10} />
+            <CloseIcon size={12} />
           </button>
         )}
       </div>

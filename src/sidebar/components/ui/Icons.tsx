@@ -5,13 +5,17 @@ export const CancelIcon: React.FC<{ size?: number; className?: string }> = ({
   size = 16,
   className = '',
 }) => (
-  <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" className={className}>
-    <path
-      d="M6 18L18 6M6 6l12 12"
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" className={className}>
+    <rect
+      x="5"
+      y="5"
+      width="14"
+      height="14"
+      rx="2"
+      ry="2"
+      fill="none"
       stroke="currentColor"
       strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
     />
   </svg>
 );

@@ -198,14 +198,7 @@
   background: transparent; /* Inherit from container */
 }
 
-/* Content Extraction Preview container */
-.ai-sidebar-content-preview {
-  background: transparent;
-  margin: 8px 10px;
-  padding-right: 2px;
-}
-
-/* Content preview styles moved to tab-content-item.css */
+/* Content preview styles moved to tab-content-item.css and multi-tab-content.css */
 
 /* Close button styles moved to tab-content-item.css */
 

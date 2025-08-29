@@ -737,7 +737,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
             onContentEdit={handleContentEdit}
             onReextract={options => extractCurrentTab(options)}
             onClearContent={() => currentTabId && removeLoadedTab(currentTabId)}
-            className="ai-sidebar-content-preview"
+            className="multi-tab-content-preview-item"
           />
         ))}
 

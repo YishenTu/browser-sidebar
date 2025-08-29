@@ -133,14 +133,30 @@ textarea:focus {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #b85651 !important; /* Muted red */
+  background: transparent !important;
   cursor: pointer;
-  border: none !important;
+  border: 1px solid rgba(255, 255, 255, 0.5) !important; /* White border with opacity */
   border-radius: 50% !important;
   width: 28px !important;
   height: 28px !important;
-  color: white !important;
+  color: rgba(255, 255, 255, 0.7) !important; /* White icon color with opacity */
   transition: all 0.2s;
+}
+
+.chat-input__cancel-button:hover {
+  border-color: rgba(255, 255, 255, 0.8) !important;
+  color: rgba(255, 255, 255, 0.9) !important;
+}
+
+/* Style the square icon inside */
+.chat-input__cancel-button svg {
+  width: 14px !important;
+  height: 14px !important;
+}
+
+.chat-input__cancel-button svg rect {
+  stroke: currentColor !important;
+  fill: transparent !important;
 }
 
 /* Loading state */

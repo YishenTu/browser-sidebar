@@ -46,11 +46,10 @@
   background: #2f67de !important; /* Blue for user messages */
   color: white !important;
   padding: 10px 12px !important; /* Match previous correct spacing */
+  margin: 8px 16px 0 auto !important; /* Remove bottom margin - footer handles spacing */
   border-radius: 16px !important;
   display: inline-block !important; /* Inline-block for dynamic width */
   max-width: calc(100% - 16px) !important; /* Leave space for right margin */
-  margin-left: auto !important; /* Push to right */
-  margin-right: 16px !important; /* Explicit right margin */
   word-wrap: break-word !important;
   text-align: left !important; /* Left-aligned text */
   hyphens: auto !important; /* Enable automatic hyphenation */
@@ -261,6 +260,7 @@
   max-width: 100%;
   margin-left: auto;
   margin-right: 0;
+  margin-bottom: 12px; /* Add spacing to next element */
 }
 
 .message-hover-container--assistant {
