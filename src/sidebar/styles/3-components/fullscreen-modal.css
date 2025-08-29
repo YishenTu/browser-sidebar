@@ -21,10 +21,8 @@
   transform: translate(-50%, -50%);
   width: calc(100% - 40px);
   height: calc(100% - 40px);
-  background: var(
-    --sidebar-background,
-    rgba(28, 28, 30, 0.95)
-  ); /* Use sidebar background variable */
+  background: var(--sidebar-background, rgba(28, 28, 30, 0.95));
+  /* Use sidebar background variable */
   border-radius: 12px;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.8);
   display: flex;
@@ -39,7 +37,8 @@
   display: flex;
   align-items: center;
   padding: 20px;
-  padding-right: 56px; /* Add space for the absolutely positioned close button (32px width + 12px right + 12px padding) */
+  padding-right: 56px;
+  /* Add space for the absolutely positioned close button (32px width + 12px right + 12px padding) */
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
   flex-shrink: 0;
 }
@@ -49,6 +48,12 @@
   font-weight: 600;
   color: #ffffff;
   margin: 0;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.4;
 }
 
 .fullscreen-modal-subtitle {
@@ -62,17 +67,20 @@
   top: 12px;
   right: 12px;
   background: transparent;
-  border: none; /* Remove border */
+  border: none;
+  /* Remove border */
   color: #ffffff;
   width: 32px;
   height: 32px;
-  border-radius: 0; /* Square shape */
+  border-radius: 0;
+  /* Square shape */
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
   transition: background-color 0.2s;
-  z-index: 10; /* Ensure it's above other content */
+  z-index: 10;
+  /* Ensure it's above other content */
 }
 
 .fullscreen-modal-close-button:hover {
@@ -146,6 +154,8 @@
 /* Header flex content */
 .fullscreen-modal-header-content {
   flex: 1;
+  padding-right: 60px;
+  /* Prevent title from overlapping with action buttons */
 }
 
 /* Edited badge */
