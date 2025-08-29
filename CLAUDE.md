@@ -58,7 +58,7 @@ The extension uses a **custom injected sidebar** instead of Chrome's native APIs
 ```
 Extension Icon Click
     ↓
-Background Service Worker (src/backend/)
+Background Service Worker (src/extension/background/)
     ├─ Tracks sidebar state per tab
     └─ Sends message to content script
         ↓
@@ -74,9 +74,11 @@ Sidebar React App (src/sidebar/)
 ### Message Passing Protocol
 
 - **Icon → Background**: Chrome action API
-- **Background → Content**: `chrome.tabs.sendMessage` with types (typed messages):
+- **Background → Content**: `chrome.tabs.sendMessage` with typed messages:
   - `TOGGLE_SIDEBAR`
   - `CLOSE_SIDEBAR`
+  - `EXTRACT_CONTENT`
+  - `CONTENT_READY`
 - **Content → Sidebar**: Custom DOM events via `window.dispatchEvent`
 - **Sidebar → Background**: `chrome.runtime.sendMessage` for state updates
 
@@ -84,74 +86,89 @@ Sidebar React App (src/sidebar/)
 
 - **Tab-specific state**: Maintained in background script using `Map<tabId, boolean>`
 - **Sidebar position/size**: Local React state, resets on close
-- **Future persistence**: Chrome storage API (Stage 3)
+- **Persistent storage**: Chrome storage API for settings and API keys
 
 ## Project Structure
 
 ```
 src/
-├── extension/      # Chrome extension infrastructure
-│   ├── background/           # Service worker
-│   │   ├── index.ts          # Background script entry
-│   │   ├── keepAlive.ts      # Keep-alive mechanism
-│   │   ├── messageHandler.ts # Message routing
-│   │   └── sidebarManager.ts # Tab state management
-│   └── messaging/            # Message passing utilities
-├── tabext/         # Content script & extraction
-│   ├── index.ts              # Content script entry
-│   ├── core/                 # Core functionality
-│   │   ├── domManipulator.ts # DOM operations
-│   │   └── messageHandler.ts # Message handling
-│   ├── extraction/           # Content extraction
-│   │   ├── ContentExtractor.ts # Main extraction logic
-│   │   ├── markdownConverter.ts # Markdown conversion
-│   │   └── extractors/       # Site-specific extractors
-│   └── utils/                # Utilities
-│       ├── constants.ts      # Constants
-│       └── logger.ts         # Logging utility
-├── sidebar/        # React UI with Shadow DOM
-│   ├── ChatPanel.tsx         # Main chat interface with AI integration
-│   ├── index.tsx             # Mount/unmount functions
-│   ├── components/           # React components
-│   │   ├── ChatInput.tsx         # Enhanced input with character counter
-│   │   ├── ContentPreview.tsx    # Page content display
-│   │   ├── MarkdownRenderer.tsx  # Full markdown + KaTeX math
-│   │   ├── MessageBubble.tsx     # Messages with thinking display
-│   │   ├── MessageList.tsx       # Virtualized for performance
-│   │   ├── ModelSelector.tsx     # AI model selection
-│   │   ├── Settings/             # Settings components
-│   │   ├── ThinkingWrapper.tsx   # Real-time reasoning display
-│   │   ├── layout/              # Layout components
-│   │   └── ui/                   # Core UI components
-│   ├── contexts/           # React contexts
-│   │   └── ErrorContext.tsx      # Unified error handling
-│   ├── hooks/              # Custom hooks
-│   │   └── ai/                   # AI chat hooks
-│   │       ├── useAIChat.ts          # Main chat logic
-│   │       ├── useStreamHandler.ts   # Stream processing
-│   │       └── useProviderManager.ts # Provider switching
-│   └── styles/             # Component-specific CSS
-├── provider/       # AI provider implementations (✅ COMPLETE)
-│   ├── BaseProvider.ts           # Abstract base class
-│   ├── ProviderFactory.ts        # Factory pattern
-│   ├── ProviderRegistry.ts       # Singleton registry
-│   ├── openai/                   # OpenAI GPT-5 series
-│   │   ├── OpenAIProvider.ts     # Response API implementation
-│   │   └── streamProcessor.ts    # Event stream handling
-│   └── gemini/                   # Google Gemini 2.5
-│       ├── GeminiProvider.ts     # Gemini API implementation
-│       └── streamProcessor.ts    # JSON stream parsing
+├── config/         # Configuration and constants
+│   ├── models.ts           # AI model definitions
+│   └── systemPrompt.ts     # System prompts for AI
 ├── data/           # Data management layer
-│   ├── store/                    # Zustand stores
-│   │   ├── chat.ts               # Chat state with streaming
-│   │   └── settings.ts           # Settings + API keys
-│   ├── storage/                  # Chrome storage layer
-│   │   ├── keys/                 # API key management
-│   │   └── chrome.ts             # Storage wrapper
-│   └── security/                 # Encryption utilities
-│       └── crypto.ts             # AES-GCM encryption
-├── config/         # Centralized configuration
-│   └── models.ts                 # AI model definitions
+│   ├── security/           # AES-GCM encryption
+│   ├── storage/            # Chrome storage wrapper
+│   │   └── keys/           # API key management system
+│   └── store/              # Zustand state stores
+├── extension/      # Chrome extension infrastructure
+│   ├── background/         # Service worker
+│   │   ├── index.ts        # Background script entry
+│   │   ├── keepAlive.ts    # Keep-alive mechanism
+│   │   ├── messageHandler.ts # Message routing
+│   │   ├── sidebarManager.ts # Sidebar state
+│   │   ├── tabManager.ts   # Tab lifecycle
+│   │   ├── cache/          # Content caching
+│   │   └── queue/          # Extraction queue
+│   └── messaging/          # Message utilities
+├── provider/       # AI provider implementations
+│   ├── BaseProvider.ts     # Abstract base class
+│   ├── ProviderFactory.ts  # Factory pattern
+│   ├── ProviderRegistry.ts # Singleton registry
+│   ├── apiKeyValidation.ts # Key validation
+│   ├── errors.ts           # Error handling
+│   ├── openai/             # OpenAI GPT-5 series
+│   │   ├── OpenAIProvider.ts
+│   │   ├── OpenAIClient.ts
+│   │   └── streamProcessor.ts
+│   └── gemini/             # Google Gemini 2.5
+│       ├── GeminiProvider.ts
+│       ├── GeminiClient.ts
+│       └── streamProcessor.ts
+├── shared/         # Shared utilities
+│   └── utils/              # Common utilities
+├── sidebar/        # React UI with Shadow DOM
+│   ├── ChatPanel.tsx       # Main chat interface
+│   ├── index.tsx           # Mount/unmount logic
+│   ├── components/         # React components
+│   │   ├── layout/         # Header, Footer, Body, ResizeHandles
+│   │   ├── ui/             # Reusable UI components
+│   │   ├── ChatInput.tsx   # Enhanced input
+│   │   ├── ContentPreview.tsx # Page content display
+│   │   ├── MarkdownRenderer.tsx # Markdown + KaTeX
+│   │   ├── MessageBubble.tsx # Message display
+│   │   ├── MessageList.tsx # Virtualized list
+│   │   ├── ModelSelector.tsx # Model selection
+│   │   ├── Settings/       # Settings UI
+│   │   ├── TabChip.tsx     # Tab selection chips
+│   │   ├── TabContentItem.tsx # Tab content display
+│   │   ├── TabMentionDropdown.tsx # @ mention UI
+│   │   └── ThinkingWrapper.tsx # Reasoning display
+│   ├── contexts/           # React contexts
+│   │   └── ErrorContext.tsx # Error handling
+│   ├── hooks/              # Custom hooks
+│   │   ├── ai/             # AI chat hooks
+│   │   ├── useContentExtraction.ts
+│   │   ├── useMultiTabExtraction.ts
+│   │   └── useTabMention.ts
+│   └── styles/             # Layered CSS architecture
+│       ├── 0-foundation/   # Variables, animations, reset
+│       ├── 1-base/         # Base styles, typography
+│       ├── 2-layout/       # Layout and structure
+│       ├── 3-components/   # Component styles
+│       └── 4-features/     # Feature-specific styles
+├── tabext/         # Content extraction system
+│   ├── index.ts            # Content script entry
+│   ├── extractorLoader.ts  # Dynamic loading
+│   ├── core/               # Core functionality
+│   │   ├── documentPatcher.ts # DOM patches
+│   │   ├── messageHandler.ts # Message handling
+│   │   └── sidebarController.ts # Sidebar control
+│   ├── extraction/         # Extraction pipeline
+│   │   ├── orchestrator.ts # Main coordinator
+│   │   ├── analyzers/      # Content analysis
+│   │   ├── converters/     # Format conversion
+│   │   └── extractors/     # Extraction strategies
+│   └── utils/              # DOM and text utilities
 └── types/          # TypeScript definitions
 ```
 
@@ -163,42 +180,7 @@ src/
 **Stage 4 ✅**: AI Providers - OpenAI and Gemini fully integrated with streaming
 **Stage 5 ✅**: Content Extraction - Advanced tab content capture with markdown conversion, multi-tab aggregation
 
-## Major Refactoring Milestones
-
-### Task 5 - UI Consolidation (Completed)
-
-The project underwent a major refactoring in Task 5 to consolidate the sidebar architecture:
-
-### Component Consolidation
-
-- **Unified ChatPanel**: Merged `Sidebar.tsx` and `ChatPanel.tsx` into a single, comprehensive component
-- **Centralized Components**: All React components moved to `/src/sidebar/components/`
-- **UI Library**: Reusable UI components organized in `/src/sidebar/components/ui/`
-- **Model Selection**: Added `ModelSelector.tsx` component for AI model switching
-
-### Style Unification
-
-- **Single CSS File**: Consolidated multiple CSS files into `/src/sidebar/styles/sidebar.css`
-- **CSS Variables**: Consistent theming using CSS custom properties from `/src/styles/variables.css`
-- **Component Styles**: Individual components include CSS-in-JS with CSS variable integration
-
-### TDD Development Approach
-
-The refactoring followed Test-Driven Development (TDD) methodology:
-
-1. **Red**: Write comprehensive tests first (61 tests across E2E, integration, performance, accessibility)
-2. **Green**: Implement minimal code to pass tests
-3. **Refactor**: Optimize and clean up while maintaining test coverage >90%
-
-### Path Alias System
-
-Implemented comprehensive path aliases for cleaner, more maintainable imports:
-
-- Shorter import paths (`@components/Button` vs `../../../sidebar/components/Button`)
-- Clear module boundaries and organization
-- Better IDE support and refactoring capabilities
-
-### Current AI Models
+## Current AI Models
 
 **OpenAI GPT-5 Series**:
 
@@ -211,15 +193,6 @@ Implemented comprehensive path aliases for cleaner, more maintainable imports:
 - `gemini-2.5-flash-lite` - Cost-effective, thinking disabled
 - `gemini-2.5-flash` - Balanced, dynamic thinking
 - `gemini-2.5-pro` - Advanced with automatic thinking
-
-### Recent Updates (Stage 5)
-
-- **Content Extraction System**: Complete implementation with markdown conversion
-- **Multi-tab Support**: Aggregate content from multiple browser tabs
-- **Smart Extraction**: Using Readability algorithm for clean content
-- **Dynamic Monitoring**: MutationObserver for SPA content updates
-- **Selection Handling**: Context-aware text selection with markers
-- **Performance**: Optimized extraction with caching and lazy loading
 
 ## Key Technical Decisions
 
@@ -244,67 +217,56 @@ Content scripts are statically defined in manifest.json and load automatically o
 - **TypeScript strict mode**: All strict checks enabled
 - **Path aliases**: Complete alias system for clean imports:
   - `@/*` → `src/*` (root)
-  - `@sidebar/*` → `src/sidebar/*` (sidebar components)
-  - `@components/*` → `src/sidebar/components/*` (React components)
-  - `@ui/*` → `src/sidebar/components/ui/*` (UI components)
-  - `@hooks/*` → `src/sidebar/hooks/*` (custom hooks)
-  - `@contexts/*` → `src/sidebar/contexts/*` (React contexts)
-  - `@backend/*` → `src/backend/*` (service worker)
-  - `@tabext/*` → `src/tabext/*` (content script)
-  - `@core/*` → `src/core/*` (messaging)
-  - `@store/*` → `src/store/*` (state management)
-  - `@types/*` → `src/types/*` (TypeScript definitions)
-  - `@utils/*` → `src/utils/*` (utilities)
-  - `@provider/*`, `@storage/*`, `@services/*` (future modules)
+  - `@sidebar/*` → `src/sidebar/*`
+  - `@components/*` → `src/sidebar/components/*`
+  - `@ui/*` → `src/sidebar/components/ui/*`
+  - `@hooks/*` → `src/sidebar/hooks/*`
+  - `@contexts/*` → `src/sidebar/contexts/*`
+  - `@extension/*` → `src/extension/*`
+  - `@tabext/*` → `src/tabext/*`
+  - `@provider/*` → `src/provider/*`
+  - `@data/*` → `src/data/*`
+  - `@store/*` → `src/data/store/*`
+  - `@storage/*` → `src/data/storage/*`
+  - `@security/*` → `src/data/security/*`
+  - `@types/*` → `src/types/*`
+  - `@config/*` → `src/config/*`
+  - `@shared/*` → `src/shared/*`
 - **Manifest V3**: Latest extension standards
 
 ## Testing Strategy
 
 ### Test File Locations
 
-After the Task 5 refactoring, tests are organized by type and complexity:
-
-- **E2E tests**: `tests/e2e/` - Full sidebar lifecycle and user workflows
-- **Integration tests**: `tests/integration/` - Component interaction and state management
-- **Component tests**: `tests/sidebar/components/` - Individual component testing
-- **Performance tests**: `tests/sidebar/performance-*.test.tsx` - Performance benchmarks
-- **Accessibility tests**: `tests/sidebar/accessibility-*.test.tsx` - WCAG compliance
-- **Store tests**: `tests/store/` - Zustand state management testing
+- **E2E tests**: `tests/e2e/` - Full sidebar lifecycle
+- **Integration tests**: `tests/integration/` - Component interaction
+- **Component tests**: `tests/sidebar/components/` - Individual components
+- **Performance tests**: `tests/sidebar/performance-*.test.tsx`
+- **Accessibility tests**: `tests/sidebar/accessibility-*.test.tsx`
+- **Store tests**: `tests/store/` - State management
 
 ### Test Coverage Requirements
 
 - **Minimum Coverage**: >90% line and branch coverage
-- **E2E Coverage**: Complete user workflows from mount to unmount
 - **Performance Benchmarks**:
   - Initial render: <50ms
   - User interactions: <100ms
   - Re-renders: <20ms
   - Memory growth: <1MB over 10 cycles
-- **Accessibility**: WCAG 2.1 AA compliance verification
 
-### Chrome API Mocking
-
-The test setup (`tests/setup/setup.ts`) provides Chrome API mocks. When testing components that use Chrome APIs, these are automatically available.
-
-### Running Specific Tests
+### Running Tests
 
 ```bash
 # Run all tests
-npm test                                    # All tests once
-npm run test:watch                         # Watch mode
-npm run test:ui                            # Vitest UI
-npm run test:coverage                      # Coverage report
+npm test                    # All tests once
+npm run test:watch          # Watch mode
+npm run test:ui             # Vitest UI
+npm run test:coverage       # Coverage report
 
 # Run specific test suites
-npm test -- tests/e2e/ --run               # E2E tests
-npm test -- tests/integration/ --run       # Integration tests
-npm test -- tests/sidebar/performance-*.test.tsx --run # Performance tests
-npm test -- tests/sidebar/accessibility-*.test.tsx --run # Accessibility tests
-
-# Run specific test files
-npm test -- tests/sidebar/ChatPanel.test.tsx --run
-npm test -- tests/sidebar/components/ModelSelector.test.tsx --run
-npm test -- --grep "resize" --run          # By test name pattern
+npm test -- tests/e2e/ --run
+npm test -- tests/integration/ --run
+npm test -- tests/sidebar/components/ --run
 ```
 
 ## Common Pitfalls & Solutions

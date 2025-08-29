@@ -1,6 +1,6 @@
 # AI Browser Sidebar Extension
 
-A privacy‑focused browser extension for AI‑powered chat with web content using your own API keys (BYOK). The sidebar is a Shadow DOM overlay that’s resizable, draggable, and works across Chromium browsers.
+A privacy‑focused browser extension for AI‑powered chat with web content using your own API keys (BYOK). The sidebar is a Shadow DOM overlay that's resizable, draggable, and works across Chromium browsers.
 
 ## Features
 
@@ -19,7 +19,7 @@ A privacy‑focused browser extension for AI‑powered chat with web content usi
 
 - **Frontend**: React 18 + TypeScript (strict mode)
 - **Build**: Vite + CRXJS (Manifest V3)
-- **Styling**: CSS modules + CSS variables + dark mode
+- **Styling**: Layered CSS architecture with CSS variables + dark mode support
 - **State**: Zustand stores for chat/settings/API keys
 - **AI Providers**: OpenAI Response API, Gemini API
 - **Testing**: Vitest + React Testing Library (>90% coverage)
@@ -85,7 +85,7 @@ npm run test:ui
    - Drag the header to move it anywhere
    - Drag the left edge to resize (300-800px width)
    - Click the X button or extension icon to close
-4. **Configure AI providers**: Add your API keys in the extension settings (coming soon)
+4. **Configure AI providers**: Add your API keys in the extension settings
 
 ## Multi-Tab Content Injection
 
@@ -195,32 +195,50 @@ The extension supports aggregating content from multiple browser tabs in your co
 ```
 browser-sidebar/
 ├── src/
-│   ├── extension/     # Chrome extension infrastructure
-│   │   └── background/   # Service worker, message handling
-│   ├── tabext/        # Content script & extraction
-│   │   ├── core/         # DOM manipulation, messaging
-│   │   ├── extraction/   # Content extraction algorithms
-│   │   └── utils/        # Helper utilities
-│   ├── sidebar/       # React UI with Shadow DOM
-│   │   ├── ChatPanel.tsx        # Main chat interface
-│   │   ├── components/          # UI components
-│   │   │   ├── MessageBubble.tsx    # Message display
-│   │   │   ├── ThinkingWrapper.tsx  # Reasoning display
-│   │   │   ├── ModelSelector.tsx    # AI model picker
-│   │   │   └── ContentPreview.tsx   # Page content display
-│   │   └── hooks/ai/            # AI chat hooks
-│   ├── provider/      # AI provider implementations
-│   │   ├── openai/    # OpenAI GPT-5 series
-│   │   └── gemini/    # Google Gemini 2.5
+│   ├── config/        # Configuration and constants
+│   │   ├── models.ts      # AI model definitions
+│   │   └── systemPrompt.ts # System prompts
 │   ├── data/          # Data management layer
-│   │   ├── store/     # Zustand state management
-│   │   ├── storage/   # Chrome storage + encryption
-│   │   └── security/  # AES-GCM encryption
-│   ├── config/        # Model configurations
+│   │   ├── security/      # AES-GCM encryption
+│   │   ├── storage/       # Chrome storage + key management
+│   │   └── store/         # Zustand state management
+│   ├── extension/     # Browser extension infrastructure
+│   │   ├── background/    # Service worker components
+│   │   │   ├── cache/     # Content caching system
+│   │   │   └── queue/     # Extraction queue management
+│   │   └── messaging/     # Message passing system
+│   ├── provider/      # AI provider implementations
+│   │   ├── openai/        # OpenAI GPT-5 series
+│   │   └── gemini/        # Google Gemini 2.5
+│   ├── shared/        # Shared utilities
+│   │   └── utils/         # Common utility functions
+│   ├── sidebar/       # React UI with Shadow DOM
+│   │   ├── ChatPanel.tsx  # Main chat interface
+│   │   ├── components/    # React components library
+│   │   │   ├── layout/    # Header, Footer, Body, ResizeHandles
+│   │   │   ├── ui/        # Reusable UI components
+│   │   │   └── ...        # Chat, AI, and content components
+│   │   ├── contexts/      # React context providers
+│   │   ├── hooks/         # Custom React hooks
+│   │   │   └── ai/        # AI integration hooks
+│   │   └── styles/        # Layered CSS architecture
+│   │       ├── 0-foundation/  # Variables, animations, reset
+│   │       ├── 1-base/        # Base styles, typography
+│   │       ├── 2-layout/      # Layout and structure
+│   │       ├── 3-components/  # Component styles
+│   │       └── 4-features/    # Feature-specific styles
+│   ├── tabext/        # Content extraction system
+│   │   ├── core/          # Core functionality
+│   │   ├── extraction/    # Content extraction pipeline
+│   │   │   ├── analyzers/ # Content analysis
+│   │   │   ├── converters/# Format conversion
+│   │   │   └── extractors/# Extraction strategies
+│   │   └── utils/         # DOM and text utilities
 │   └── types/         # TypeScript definitions
 ├── tests/             # Comprehensive test suites
 ├── dist/              # Build output (load in browser)
 └── docs/              # Documentation
+    └── stages/        # Implementation stage guides
 ```
 
 ## Documentation
@@ -228,6 +246,7 @@ browser-sidebar/
 - [Product Requirements (PRD)](./docs/PRD.md)
 - [Claude Code Instructions](./CLAUDE.md)
 - [Agent Guidelines](./AGENTS.md)
+- Module documentation in each `src/*/README.md`
 - Stage guides in `docs/stages/` for detailed implementation
 
 ## Contributing
@@ -289,4 +308,4 @@ MIT — see `package.json` for the license field (LICENSE file TBD)
 ---
 
 _Version: 0.5.0-dev_
-_Last Updated: 2025-08-27_
+_Last Updated: 2025-08-29_
