@@ -57,6 +57,22 @@ function stripAndFlattenHTML(html: string): string {
       }
     });
 
+    // 3.5. Remove common non-content elements (ads, banners, modals, etc.)
+    const nonContentElements = doc.querySelectorAll(
+      '[class*="banner"], [class*="modal"], [class*="popup"], [class*="overlay"], ' +
+        '[class*="cookie"], [class*="gdpr"], [class*="alert"], [class*="notice"], ' +
+        '[class*="advertise"], [class*="promotion"], [class*="social-share"], ' +
+        '[class*="social-media"], [class*="newsletter"], [class*="subscribe"], ' +
+        '[id*="ad-"], [id*="ads-"], .ad, .ads, .advertisement'
+    );
+    nonContentElements.forEach(el => {
+      try {
+        el.parentNode?.removeChild(el);
+      } catch (e) {
+        // Skip if element can't be removed
+      }
+    });
+
     // 4. Flatten deeply nested structures (skip - can cause DOMException)
     // This step is prone to errors, so we'll skip it for now
 
@@ -127,13 +143,34 @@ function stripAndFlattenHTML(html: string): string {
       }
     });
 
-    // 8. Remove navigation elements (safe removal)
-    const navElements = doc.querySelectorAll(
-      '.nav-colunm, .nav-item, .breadcrumb, .tab-item, .action-btn'
-    );
-    navElements.forEach(el => {
+    // 8. Remove navigation, header, and footer elements (safe removal)
+    // Remove by semantic tags first
+    const structuralElements = doc.querySelectorAll('header, nav, footer, aside');
+    structuralElements.forEach(el => {
       try {
         el.parentNode?.removeChild(el);
+      } catch (e) {
+        // Skip if element can't be removed
+      }
+    });
+
+    // Remove by common class/id patterns
+    const commonPatterns = doc.querySelectorAll(
+      '[class*="header"], [class*="nav"], [class*="footer"], [class*="sidebar"], ' +
+        '[id*="header"], [id*="nav"], [id*="footer"], [id*="sidebar"], ' +
+        '.nav-colunm, .nav-item, .breadcrumb, .tab-item, .action-btn, ' +
+        '.menu, .toolbar, .topbar, .bottombar'
+    );
+    commonPatterns.forEach(el => {
+      try {
+        // Don't remove if it contains main content indicators
+        const text = el.textContent || '';
+        const hasImportantContent =
+          el.querySelector('table') || el.querySelector('.copy-value') || text.length > 1000; // Likely main content if very long
+
+        if (!hasImportantContent) {
+          el.parentNode?.removeChild(el);
+        }
       } catch (e) {
         // Skip if element can't be removed
       }
