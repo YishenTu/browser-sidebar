@@ -9,7 +9,9 @@ The `tabext` module is the content script portion of the browser extension that 
 ```
 src/tabext/
 ├── index.ts                    # Entry point & initialization
+├── extractorLoader.ts          # Dynamic import wrapper for extraction
 ├── core/                       # Core functionality
+│   ├── index.ts               # Core module exports
 │   ├── documentPatcher.ts     # Document API patches
 │   ├── messageHandler.ts      # Message routing & handling
 │   └── sidebarController.ts   # Sidebar lifecycle management
@@ -17,13 +19,18 @@ src/tabext/
 │   ├── index.ts               # Public extraction API
 │   ├── orchestrator.ts        # Main extraction coordinator
 │   ├── extractors/            # Extraction strategies
-│   │   └── defuddle.ts       # Defuddle-based extraction
+│   │   ├── index.ts          # Extractor exports
+│   │   ├── defuddle.ts       # Defuddle-based extraction
+│   │   └── raw.ts            # Raw HTML/table preservation mode
 │   ├── converters/            # Format converters
+│   │   ├── index.ts          # Converter exports
 │   │   └── markdownConverter.ts # HTML to Markdown
 │   └── analyzers/             # Content analysis tools
 │       ├── contentAnalyzer.ts   # Text analysis (word count, etc.)
 │       └── metadataExtractor.ts # Page metadata extraction
+├── types/                      # TypeScript type definitions
 └── utils/                      # Utility functions
+    ├── index.ts               # Utility exports
     ├── domUtils.ts            # DOM manipulation utilities
     ├── textUtils.ts           # Text processing utilities
     └── tabUtils.ts            # Tab-related utilities
@@ -90,6 +97,7 @@ Coordinates the entire extraction pipeline:
 #### Extractors
 
 - **Defuddle** (`extractors/defuddle.ts`): Uses the Defuddle library for intelligent content extraction
+- **Raw** (`extractors/raw.ts`): Preserves HTML structure with table-aware extraction and optional Markdown conversion
 
 #### Converters
 
@@ -148,10 +156,10 @@ The extraction pipeline follows a robust, multi-step approach:
    - Include links (default: true)
    - Max length (default: 200,000 chars)
 
-2. **Primary Extraction (Defuddle)**
-   - Intelligent content detection
-   - Removes ads, navigation, footers
-   - Preserves main article content
+2. **Primary Extraction**
+   - **Defuddle Mode**: Intelligent content detection, removes ads/navigation/footers
+   - **Raw Mode**: Preserves HTML structure, optimized for tables and structured data
+   - Fallback strategy if primary extractor fails
 
 3. **HTML Processing**
    - Cleans malicious/unnecessary elements
@@ -182,7 +190,7 @@ The extraction pipeline follows a robust, multi-step approach:
 ```typescript
 import { extractContent } from '@tabext/extraction';
 
-// Basic extraction
+// Basic extraction (uses Defuddle by default)
 const content = await extractContent();
 
 // With options
@@ -190,6 +198,16 @@ const content = await extractContent({
   timeout: 5000, // 5 second timeout
   includeLinks: false, // Strip links
   maxLength: 100000, // Limit to 100k chars
+});
+
+// Force raw mode for table-heavy content
+const content = await extractContent({}, 'raw');
+
+// Raw mode with Markdown conversion
+import { extractWithRaw } from '@tabext/extraction/extractors/raw';
+const content = await extractWithRaw({
+  convert_to_markdown: true,
+  optimize_tokens: true, // Apply HTML stripping first
 });
 ```
 
@@ -243,6 +261,9 @@ Error codes:
 - **Module Caching**: Dynamic imports are cached after first load
 - **Timeout Enforcement**: Prevents hanging operations
 - **Memory Management**: Large content is truncated appropriately
+- **Token Optimization**: Raw mode includes 2-phase optimization:
+  - Phase 1: HTML stripping (40-50% token reduction)
+  - Phase 2: Markdown conversion (additional 20-30% reduction)
 
 ## Testing
 
@@ -269,7 +290,9 @@ npm test -- src/tabext
 
 ## Future Enhancements
 
-- [ ] Add more extraction strategies (Readability, Mozilla's reader view)
+- [x] Add more extraction strategies (Raw mode for table preservation)
+- [ ] Add Readability.js integration for article extraction
+- [ ] Add Mozilla's reader view algorithm
 - [ ] Implement content caching layer
 - [ ] Add support for more output formats (PDF, DOCX)
 - [ ] Enhance metadata extraction for academic papers
@@ -297,5 +320,25 @@ Chrome DevTools:
 - **defuddle**: Intelligent content extraction
 - **turndown**: HTML to Markdown conversion
 - **turndown-plugin-gfm**: GitHub Flavored Markdown support
-- **dompurify**: HTML sanitization
+- **dompurify**: HTML sanitization (when using Defuddle)
 - **Chrome Extension APIs**: Message passing, runtime communication
+
+## Extraction Modes
+
+### Defuddle Mode (Default)
+
+- Best for: Articles, blog posts, news sites
+- Removes: Ads, navigation, sidebars, footers
+- Preserves: Main article content, semantic structure
+- Output: Clean HTML or Markdown
+
+### Raw Mode
+
+- Best for: Table-heavy content, structured data, business sites
+- Preserves: HTML structure, tables, lists, data attributes
+- Features:
+  - Token optimization (40-70% reduction)
+  - Direct HTML to Markdown conversion
+  - Site-specific configurations
+  - Pseudo-element content injection
+- Output: Optimized HTML or Markdown

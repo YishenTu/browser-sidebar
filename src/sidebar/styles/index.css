@@ -1,49 +1,56 @@
 /* ============================================================================
  * Main Sidebar Stylesheet Index
- * Imports all modular CSS components in proper cascade order
+ * Implements CSS Layers for predictable cascade control
  * ============================================================================ */
 
-/* ========== 0. Foundation Layer ========== */
-/* CSS Variables and animations - must load first */
-@import './0-foundation/variables.css';
-@import './0-foundation/animations.css';
+/* Define layer order - later layers override earlier ones */
+@layer reset, foundation, base, layout, components, features, utilities;
 
-/* ========== 1. Base Layer ========== */
-/* Core layout, resets, and typography */
-@import './1-base/base.css';
-@import './1-base/typography.css';
+/* ========== Reset Layer ========== */
+/* Browser normalization - lowest specificity */
+@import './0-foundation/reset.css' layer(reset);
 
-/* ========== 2. Layout Layer ========== */
+/* ========== Foundation Layer ========== */
+/* CSS Variables and animations - must load early */
+@import './0-foundation/variables.css' layer(foundation);
+@import './0-foundation/animations.css' layer(foundation);
+
+/* ========== Base Layer ========== */
+/* Core layout and typography */
+@import './1-base/base.css' layer(base);
+@import './1-base/typography.css' layer(base);
+
+/* ========== Layout Layer ========== */
 /* Structural components and utilities */
-@import './2-layout/resize-handles.css';
-@import './2-layout/scrollbars.css';
+@import './2-layout/resize-handles.css' layer(layout);
+@import './2-layout/scrollbars.css' layer(layout);
 
-/* ========== 3. Components Layer ========== */
+/* ========== Components Layer ========== */
 /* Reusable UI components (alphabetical order) */
-@import './3-components/alert.css';
-@import './3-components/chat-input.css';
-@import './3-components/code-block.css';
-@import './3-components/collapsible.css';
-@import './3-components/copy-button.css';
-@import './3-components/dropdown.css';
-@import './3-components/fullscreen-modal.css';
-@import './3-components/katex-math.css';
-@import './3-components/markdown-content.css';
-@import './3-components/message-bubbles.css';
-@import './3-components/model-selector.css';
-@import './3-components/settings.css';
-@import './3-components/thinking-wrapper.css';
-@import './3-components/tooltip.css';
+@import './3-components/alert.css' layer(components);
+@import './3-components/chat-input.css' layer(components);
+@import './3-components/code-block.css' layer(components);
+@import './3-components/collapsible.css' layer(components);
+@import './3-components/copy-button.css' layer(components);
+@import './3-components/dropdown.css' layer(components);
+@import './3-components/fullscreen-modal.css' layer(components);
+@import './3-components/katex-math.css' layer(components);
+@import './3-components/markdown-content.css' layer(components);
+@import './3-components/message-bubbles.css' layer(components);
+@import './3-components/model-selector.css' layer(components);
+@import './3-components/settings.css' layer(components);
+@import './3-components/thinking-wrapper.css' layer(components);
+@import './3-components/tooltip.css' layer(components);
 
-/* ========== 4. Features Layer ========== */
+/* ========== Features Layer ========== */
 /* Feature-specific and complex component styles */
-@import './4-features/multi-tab-content.css';
-@import './4-features/search-sources.css';
-@import './4-features/tab-chip.css';
-@import './4-features/tab-content-item.css';
-@import './4-features/tab-error-boundary.css';
-@import './4-features/tab-loading-indicator.css';
-@import './4-features/tab-mention-dropdown.css';
+@import './4-features/multi-tab-content.css' layer(features);
+@import './4-features/search-sources.css' layer(features);
+@import './4-features/tab-chip.css' layer(features);
+@import './4-features/tab-content-item.css' layer(features);
+@import './4-features/tab-error-boundary.css' layer(features);
+@import './4-features/tab-loading-indicator.css' layer(features);
+@import './4-features/tab-mention-dropdown.css' layer(features);
 
 /* ============================================================================
  * Layer Organization:

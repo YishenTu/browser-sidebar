@@ -153,7 +153,86 @@
   --sidebar-height: 85vh;
   --header-height: 3rem; /* 48px */
 
-  /* Component-specific Variables */
+  /* Component-specific Variables with Namespaces */
+
+  /* Message Bubbles */
+  --msg-user-bg: #2f67de;
+  --msg-user-text: white;
+  --msg-user-padding: 10px 12px;
+  --msg-user-margin: 8px 16px 0 auto;
+  --msg-user-radius: 16px;
+  --msg-assistant-bg: transparent;
+  --msg-assistant-text: #e5e7eb;
+  --msg-assistant-padding: 3px 16px 3px 22px;
+  --msg-system-bg: rgba(217, 119, 6, 0.2);
+  --msg-system-text: #fde047;
+  --msg-font-size: var(--font-size-base);
+  --msg-line-height: 1.4;
+
+  /* Chat Input */
+  --input-bg: transparent;
+  --input-text: #e5e7eb;
+  --input-text-focus: #ffffff;
+  --input-placeholder: #6b7280;
+  --input-padding: 0.5rem 0.75rem;
+  --input-border: 1px solid rgba(255, 255, 255, 0.2);
+  --input-border-focus: 1px solid rgba(255, 255, 255, 0.4);
+  --input-font-size: var(--font-size-base);
+  --input-cancel-size: 28px;
+  --input-cancel-border: 1px solid rgba(255, 255, 255, 0.5);
+  --input-cancel-color: rgba(255, 255, 255, 0.7);
+
+  /* Fullscreen Modal */
+  --modal-bg: #1a1a1a;
+  --modal-text: #d4d4d4;
+  --modal-border: 1px solid #333;
+  --modal-padding: 16px;
+  --modal-font-family: Consolas, Monaco, 'Courier New', monospace;
+  --modal-font-size: 13px;
+  --modal-line-height: 1.6;
+
+  /* Markdown Content */
+  --md-text: var(--text-primary);
+  --md-code-bg: var(--background-muted);
+  --md-code-text: var(--text-secondary);
+  --md-code-padding: 0.2em 0.4em;
+  --md-code-radius: var(--radius-sm);
+  --md-link-color: var(--text-link);
+  --md-link-hover: var(--text-link-hover);
+  --md-heading-margin-top: 1.5em;
+  --md-heading-margin-bottom: 0.5em;
+  --md-paragraph-margin: 0.5em 0;
+
+  /* Tab Mention Dropdown */
+  --dropdown-bg: #2d3748;
+  --dropdown-border: 1px solid #4a5568;
+  --dropdown-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  --dropdown-item-hover: rgba(255, 255, 255, 0.1);
+  --dropdown-item-selected: rgba(59, 130, 246, 0.2);
+  --dropdown-text: #e2e8f0;
+  --dropdown-text-secondary: #a0aec0;
+
+  /* Tab Content */
+  --tab-content-bg: rgba(45, 55, 72, 0.5);
+  --tab-content-border: 1px solid rgba(74, 85, 104, 0.5);
+  --tab-content-radius: 8px;
+  --tab-content-padding: 12px;
+  --tab-content-margin: 8px 0;
+
+  /* Model Selector */
+  --model-bg: rgba(31, 41, 55, 0.8);
+  --model-border: 1px solid rgba(75, 85, 99, 0.4);
+  --model-hover: rgba(55, 65, 81, 0.6);
+  --model-text: #e5e7eb;
+  --model-icon-size: 16px;
+
+  /* Thinking Wrapper */
+  --thinking-bg: rgba(59, 130, 246, 0.1);
+  --thinking-border: 1px solid rgba(59, 130, 246, 0.3);
+  --thinking-text: #93c5fd;
+  --thinking-padding: 8px 12px;
+  --thinking-radius: 8px;
+
   /* Tooltip */
   --tooltip-bg: var(--background-elevated);
   --tooltip-text: var(--text-primary);

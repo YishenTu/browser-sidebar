@@ -1,6 +1,7 @@
 /* ============================================================================
  * Fullscreen Modal Styles
  * Modal overlay component for full-page content display
+ * Refactored to use CSS variables and layers instead of !important
  * ============================================================================ */
 
 .fullscreen-modal-backdrop {
@@ -87,59 +88,59 @@
   /* Background inherited from container */
 }
 
-/* Edit mode textarea - ensure no overlays or dark layers */
-.fullscreen-modal-edit-textarea {
+/* Edit mode textarea with higher specificity through parent selectors */
+.ai-sidebar-container .fullscreen-modal-edit-textarea {
   /* Reset all inherited styles */
   all: unset;
 
-  /* Apply desired styles */
-  width: 100% !important;
-  padding: 16px !important;
-  margin: 0 !important;
-  border: none !important;
-  resize: none !important;
-  outline: none !important;
-  background: transparent !important;
-  background-color: transparent !important;
-  color: #d4d4d4 !important;
-  font-family: Consolas, Monaco, 'Courier New', monospace !important;
-  font-size: 13px !important;
-  line-height: 1.6 !important;
-  white-space: pre-wrap !important;
-  word-wrap: break-word !important;
-  word-break: break-word !important;
-  overflow: auto !important;
-  position: relative !important;
-  z-index: 1 !important;
+  /* Apply desired styles using CSS variables */
+  width: 100%;
+  padding: var(--modal-padding);
+  margin: 0;
+  border: none;
+  resize: none;
+  outline: none;
+  background: transparent;
+  background-color: transparent;
+  color: var(--modal-text);
+  font-family: var(--modal-font-family);
+  font-size: var(--modal-font-size);
+  line-height: var(--modal-line-height);
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  word-break: break-word;
+  overflow: auto;
+  position: relative;
+  z-index: 1;
 
   /* Ensure no pseudo-elements create overlays */
-  box-shadow: none !important;
-  text-shadow: none !important;
-  opacity: 1 !important;
-  filter: none !important;
+  box-shadow: none;
+  text-shadow: none;
+  opacity: 1;
+  filter: none;
 
   /* Prevent any background images or gradients */
-  background-image: none !important;
+  background-image: none;
 }
 
 /* Ensure textarea is fully visible in dark mode */
-.fullscreen-modal-edit-textarea:focus {
-  background: transparent !important;
-  background-color: transparent !important;
-  color: #ffffff !important;
-  opacity: 1 !important;
+.ai-sidebar-container .fullscreen-modal-edit-textarea:focus {
+  background: transparent;
+  background-color: transparent;
+  color: #ffffff;
+  opacity: 1;
 }
 
 /* Remove any potential overlays from parent containers during edit */
-.fullscreen-modal-body:has(.fullscreen-modal-edit-textarea) {
-  background: transparent !important;
-  position: relative !important;
-  z-index: 0 !important;
+.ai-sidebar-container .fullscreen-modal-body:has(.fullscreen-modal-edit-textarea) {
+  background: transparent;
+  position: relative;
+  z-index: 0;
 }
 
 /* Ensure no overlays from modal container */
-.fullscreen-modal-container:has(.fullscreen-modal-edit-textarea) {
-  overflow: hidden !important;
+.ai-sidebar-container .fullscreen-modal-container:has(.fullscreen-modal-edit-textarea) {
+  overflow: hidden;
 }
 
 /* Header flex content */

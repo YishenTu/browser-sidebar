@@ -1,13 +1,14 @@
 /* ============================================================================
  * Markdown Content Styles
  * Code blocks and table rendering for markdown content
+ * Refactored to use CSS variables and layers instead of !important
  * ============================================================================ */
 
-/* Ensure markdown paragraphs use base font size */
-.ai-sidebar-body p,
-[role='article'] p {
-  font-size: var(--font-size-base) !important; /* 14px */
-  line-height: var(--line-height-base) !important; /* 1.4 */
+/* Ensure markdown paragraphs use base font size with higher specificity */
+.ai-sidebar-container .ai-sidebar-body p,
+.ai-sidebar-container [role='article'] p {
+  font-size: var(--md-font-size, var(--font-size-base)); /* 14px */
+  line-height: var(--md-line-height, var(--line-height-base)); /* 1.4 */
 }
 
 /* Code blocks will be handled by the new minimal component */
@@ -57,45 +58,45 @@
 /* Markdown list styles - handled by component with inline styles for now */
 
 /* ============================================================================
- * Markdown Table Styles
+ * Markdown Table Styles with higher specificity
  * ============================================================================ */
 
-.ai-sidebar-body table {
-  display: table !important;
-  width: auto !important;
-  min-width: 50% !important;
-  max-width: 100% !important;
-  border-collapse: collapse !important;
-  margin: 1em 0 !important;
-  font-size: var(--font-size-sm) !important; /* Tables stay smaller for readability */
+.ai-sidebar-container .ai-sidebar-body table {
+  display: table;
+  width: auto;
+  min-width: 50%;
+  max-width: 100%;
+  border-collapse: collapse;
+  margin: 1em 0;
+  font-size: var(--font-size-sm); /* Tables stay smaller for readability */
 }
 
-.ai-sidebar-body thead {
-  background-color: rgba(75, 85, 99, 0.2) !important;
+.ai-sidebar-container .ai-sidebar-body thead {
+  background-color: rgba(75, 85, 99, 0.2);
 }
 
-.ai-sidebar-body th {
-  padding: 8px 12px !important;
-  text-align: left !important;
-  border: 1px solid rgba(107, 114, 128, 0.3) !important;
-  font-weight: 600 !important;
-  color: #e5e7eb !important;
-  background-color: rgba(75, 85, 99, 0.3) !important;
+.ai-sidebar-container .ai-sidebar-body th {
+  padding: 8px 12px;
+  text-align: left;
+  border: 1px solid rgba(107, 114, 128, 0.3);
+  font-weight: 600;
+  color: #e5e7eb;
+  background-color: rgba(75, 85, 99, 0.3);
 }
 
-.ai-sidebar-body td {
-  padding: 8px 12px !important;
-  text-align: left !important;
-  border: 1px solid rgba(107, 114, 128, 0.3) !important;
-  color: #d1d5db !important;
+.ai-sidebar-container .ai-sidebar-body td {
+  padding: 8px 12px;
+  text-align: left;
+  border: 1px solid rgba(107, 114, 128, 0.3);
+  color: #d1d5db;
 }
 
-.ai-sidebar-body tbody tr:hover {
-  background-color: rgba(75, 85, 99, 0.1) !important;
+.ai-sidebar-container .ai-sidebar-body tbody tr:hover {
+  background-color: rgba(75, 85, 99, 0.1);
 }
 
 /* Ensure table container allows scrolling */
-.ai-sidebar-body .overflow-x-auto {
-  overflow-x: auto !important;
-  max-width: 100% !important;
+.ai-sidebar-container .ai-sidebar-body .overflow-x-auto {
+  overflow-x: auto;
+  max-width: 100%;
 }

@@ -1,6 +1,7 @@
 /* ============================================================================
  * Message Bubbles
  * Chat message display styles for user, assistant, and system messages
+ * Refactored to use CSS variables and layers instead of !important
  * ============================================================================ */
 
 /* Typography rules moved to 1-base/typography.css */
@@ -42,55 +43,56 @@
   /* Remove extra letter spacing */
 }
 
-.message-bubble--user {
-  background: #2f67de !important; /* Blue for user messages */
-  color: white !important;
-  padding: 10px 12px !important; /* Match previous correct spacing */
-  margin: 8px 16px 0 auto !important; /* Remove bottom margin - footer handles spacing */
-  border-radius: 16px !important;
-  display: inline-block !important; /* Inline-block for dynamic width */
-  max-width: calc(100% - 16px) !important; /* Leave space for right margin */
-  word-wrap: break-word !important;
-  text-align: left !important; /* Left-aligned text */
-  hyphens: auto !important; /* Enable automatic hyphenation */
-  -webkit-hyphens: auto !important; /* Safari support */
-  word-break: break-word !important; /* Break long words if needed */
-  line-height: 1.4 !important; /* Tighter line height */
-  letter-spacing: normal !important; /* Normal letter spacing */
-  position: relative !important; /* For context indicator positioning */
+/* User message bubble with higher specificity through data attributes */
+.ai-sidebar-container .message-bubble--user {
+  background: var(--msg-user-bg); /* #2f67de from variables */
+  color: var(--msg-user-text); /* white from variables */
+  padding: var(--msg-user-padding); /* 10px 12px from variables */
+  margin: var(--msg-user-margin); /* 8px 16px 0 auto from variables */
+  border-radius: var(--msg-user-radius); /* 16px from variables */
+  display: inline-block; /* Inline-block for dynamic width */
+  max-width: calc(100% - 16px); /* Leave space for right margin */
+  word-wrap: break-word;
+  text-align: left; /* Left-aligned text */
+  hyphens: auto; /* Enable automatic hyphenation */
+  -webkit-hyphens: auto; /* Safari support */
+  word-break: break-word; /* Break long words if needed */
+  line-height: var(--msg-line-height); /* 1.4 from variables */
+  letter-spacing: normal; /* Normal letter spacing */
+  position: relative; /* For context indicator positioning */
 }
 
 /* Target all child elements inside user bubble for consistent spacing */
-.message-bubble--user * {
-  margin: 0 !important;
-  padding: 0 !important; /* Remove ALL padding, not just vertical */
-  line-height: inherit !important;
+.ai-sidebar-container .message-bubble--user * {
+  margin: 0;
+  padding: 0; /* Remove ALL padding, not just vertical */
+  line-height: inherit;
   /* Inherit the parent's line-height */
 }
 
 /* Ensure message content div has no padding */
-.message-bubble--user [data-testid='message-content'] {
-  padding: 0 !important;
-  margin: 0 !important;
+.ai-sidebar-container .message-bubble--user [data-testid='message-content'] {
+  padding: 0;
+  margin: 0;
 }
 
 /* Specifically target paragraphs in user bubbles */
-.message-bubble--user p {
-  margin: 0 !important;
-  padding: 0 !important;
-  font-size: var(--font-size-base) !important;
+.ai-sidebar-container .message-bubble--user p {
+  margin: 0;
+  padding: 0;
+  font-size: var(--msg-font-size);
   /* 14px */
-  line-height: inherit !important;
+  line-height: inherit;
   /* Inherit the parent's line-height */
 }
 
 /* Paragraph spacing in assistant messages */
-.message-bubble--assistant p {
+.ai-sidebar-container .message-bubble--assistant p {
   margin-bottom: 0.5em;
   /* Reduced spacing between paragraphs */
-  font-size: var(--font-size-base) !important;
+  font-size: var(--msg-font-size);
   /* 14px */
-  line-height: var(--line-height-base) !important;
+  line-height: var(--msg-line-height);
 }
 
 .message-bubble--assistant p:last-child {
@@ -98,33 +100,33 @@
 }
 
 /* Ensure all text in message bubbles uses base font size */
-.message-bubble p,
-.message-bubble div:not(.thinking-wrapper):not(.search-sources) {
-  font-size: var(--font-size-base) !important;
+.ai-sidebar-container .message-bubble p,
+.ai-sidebar-container .message-bubble div:not(.thinking-wrapper):not(.search-sources) {
+  font-size: var(--msg-font-size);
   /* 14px */
-  line-height: var(--line-height-base) !important;
+  line-height: var(--msg-line-height);
   /* 1.4 */
 }
 
 /* Code blocks should use monospace */
-.message-bubble code,
-.message-bubble pre {
-  font-family: var(--font-family-mono) !important;
-  font-size: var(--font-size-sm) !important;
+.ai-sidebar-container .message-bubble code,
+.ai-sidebar-container .message-bubble pre {
+  font-family: var(--font-family-mono);
+  font-size: var(--font-size-sm);
 }
 
 /* Inline code */
-.message-bubble :not(pre) > code {
-  font-size: 0.9em !important;
+.ai-sidebar-container .message-bubble :not(pre) > code {
+  font-size: 0.9em;
   padding: 0.2em 0.4em;
   background: rgba(110, 118, 129, 0.2);
   border-radius: 3px;
 }
 
 /* Strong emphasis */
-.message-bubble strong,
-.message-bubble b {
-  font-weight: var(--font-weight-semibold) !important;
+.ai-sidebar-container .message-bubble strong,
+.ai-sidebar-container .message-bubble b {
+  font-weight: var(--font-weight-semibold);
 }
 
 /* Fix for text wrapping in responses */
@@ -140,93 +142,95 @@
 }
 
 /* First and last children get no spacing */
-.message-bubble--user > *:first-child {
-  margin-top: 0 !important;
-  padding-top: 0 !important;
+.ai-sidebar-container .message-bubble--user > *:first-child {
+  margin-top: 0;
+  padding-top: 0;
 }
 
-.message-bubble--user > *:last-child {
-  margin-bottom: 0 !important;
-  padding-bottom: 0 !important;
+.ai-sidebar-container .message-bubble--user > *:last-child {
+  margin-bottom: 0;
+  padding-bottom: 0;
 }
 
-.message-bubble--assistant {
-  background: transparent !important;
+/* Assistant message bubble */
+.ai-sidebar-container .message-bubble--assistant {
+  background: var(--msg-assistant-bg);
   /* Transparent background for AI */
-  color: #e5e7eb !important;
-  padding: 3px 16px 3px 22px !important;
+  color: var(--msg-assistant-text);
+  padding: var(--msg-assistant-padding);
   /* Adjusted padding: 16px right, 22px left (16px + 6px original) */
-  border-radius: 16px !important;
-  display: block !important;
+  border-radius: 16px;
+  display: block;
   /* Block for full width */
-  max-width: 100% !important;
+  max-width: 100%;
   /* Full width of hover container */
-  width: 100% !important;
+  width: 100%;
   /* Full width of hover container */
-  word-wrap: break-word !important;
-  margin: 0 !important;
+  word-wrap: break-word;
+  margin: 0;
   /* Margins handled by hover container */
-  text-align: left !important;
+  text-align: left;
   /* Left-aligned text */
-  text-align-last: left !important;
+  text-align-last: left;
   /* Last line stays left-aligned */
-  hyphens: auto !important;
+  hyphens: auto;
   /* Enable automatic hyphenation */
-  -webkit-hyphens: auto !important;
+  -webkit-hyphens: auto;
   /* Safari support */
-  word-break: break-word !important;
+  word-break: break-word;
   /* Break long words if needed */
-  line-height: 1.4 !important;
+  line-height: var(--msg-line-height);
   /* Tighter line height */
-  letter-spacing: normal !important;
+  letter-spacing: normal;
   /* Normal letter spacing */
-  box-sizing: border-box !important;
-  position: relative !important; /* For context indicator positioning */
+  box-sizing: border-box;
+  position: relative; /* For context indicator positioning */
 }
 
-.message-bubble--system {
-  background: rgba(217, 119, 6, 0.2) !important;
+/* System message bubble */
+.ai-sidebar-container .message-bubble--system {
+  background: var(--msg-system-bg);
   /* Yellow for system messages */
-  color: #fde047 !important;
-  padding: 8px 14px !important;
+  color: var(--msg-system-text);
+  padding: 8px 14px;
   /* Reduced padding */
-  border-radius: 16px !important;
-  display: inline-block !important;
-  max-width: 90% !important;
-  text-align: center !important;
-  word-wrap: break-word !important;
-  margin: 0 auto !important;
-  line-height: 1.4 !important;
+  border-radius: 16px;
+  display: inline-block;
+  max-width: 90%;
+  text-align: center;
+  word-wrap: break-word;
+  margin: 0 auto;
+  line-height: var(--msg-line-height);
   /* Tighter line height */
-  letter-spacing: normal !important;
+  letter-spacing: normal;
   /* Normal letter spacing */
 }
 
 /* Message row alignment */
-.message-row {
-  display: flex !important;
-  width: 100% !important;
-  margin-bottom: 8px !important;
+.ai-sidebar-container .message-row {
+  display: flex;
+  width: 100%;
+  margin-bottom: 8px;
   /* Reduced spacing between messages */
 }
 
-.message-row--user {
-  justify-content: flex-end !important;
-  padding: 0 0 0 100px !important;
+.ai-sidebar-container .message-row--user {
+  justify-content: flex-end;
+  padding: 0 0 0 100px;
   /* 100px left padding, right handled by bubble margin */
-  box-sizing: border-box !important;
+  box-sizing: border-box;
   /* Ensure proper box model */
 }
 
-.message-row--assistant {
-  justify-content: flex-start !important;
-  padding: 0 !important;
+.ai-sidebar-container .message-row--assistant {
+  justify-content: flex-start;
+  padding: 0;
   /* Padding handled by bubble margin */
 }
 
-.message-row--system {
-  justify-content: center !important;
-  padding: 0 12px !important;
+.ai-sidebar-container .message-row--system {
+  justify-content: center;
+  padding: 0 12px;
 }
 
 /* Message content container styles */
@@ -422,14 +426,14 @@
   padding-right: 12px;
 }
 
-.message-model-name {
-  font-size: 12px !important;
+.ai-sidebar-container .message-model-name {
+  font-size: 12px;
   color: #6b7280;
   font-weight: 500;
 }
 
-.message-timestamp {
-  font-size: 12px !important;
+.ai-sidebar-container .message-timestamp {
+  font-size: 12px;
   color: #6b7280;
 }
 
@@ -467,12 +471,12 @@
   /* Match assistant bubble right padding */
 }
 
-.search-sources {
+.ai-sidebar-container .search-sources {
   background: transparent;
   border: none;
   padding: 4px 0;
   /* 4px top and bottom padding */
-  font-size: 12px !important;
+  font-size: 12px;
 }
 
 .search-sources[open] summary::before {
@@ -480,14 +484,14 @@
   /* Remove triangle */
 }
 
-.search-sources-summary {
+.ai-sidebar-container .search-sources-summary {
   cursor: pointer;
   padding: 0.125rem 0;
   user-select: none;
   color: #9ca3af;
   /* Grey color */
   font-weight: 400;
-  font-size: 12px !important;
+  font-size: 12px;
   list-style: none;
   /* Remove default marker */
   will-change: auto;
@@ -525,7 +529,7 @@
   animation: expandSources 0.15s ease-out;
 }
 
-.search-source-link {
+.ai-sidebar-container .search-source-link {
   color: #9ca3af;
   /* Grey color for links */
   text-decoration: none;
@@ -534,7 +538,7 @@
   transition:
     color 0.15s,
     text-decoration 0.15s;
-  font-size: 12px !important;
+  font-size: 12px;
 }
 
 .search-source-link:hover {

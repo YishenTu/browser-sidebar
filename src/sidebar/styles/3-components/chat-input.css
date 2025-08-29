@@ -1,15 +1,16 @@
 /* ============================================================================
  * Chat Input Component
  * Message input area with send button and utilities
+ * Refactored to use CSS variables and layers instead of !important
  * ============================================================================ */
 
-.chat-input {
+.ai-sidebar-container .chat-input {
   /* Remove all borders and backgrounds */
-  border: none !important;
+  border: none;
   border-radius: 0;
-  background: transparent !important;
+  background: var(--input-bg);
   padding: 0;
-  box-shadow: none !important;
+  box-shadow: none;
   width: 100%;
   box-sizing: border-box;
   position: relative;
@@ -40,69 +41,60 @@
   position: relative;
 }
 
-/* Override textarea styles - completely transparent */
-.chat-input__textarea-container .textarea,
-.chat-input__textarea-container textarea,
-.chat-input textarea,
-textarea {
-  width: 100% !important;
-  border: none !important;
-  border-radius: 0 !important;
-  background: transparent !important;
-  background-color: transparent !important;
-  padding: 0.5rem 0.75rem !important; /* Equal padding on both sides */
-  color: #e5e7eb !important; /* Light gray text */
-  box-shadow: none !important;
-  outline: none !important;
-  -webkit-appearance: none !important;
-  appearance: none !important;
-  resize: none !important; /* Disable resize handle */
-  box-sizing: border-box !important;
-  font-size: var(--font-size-base) !important; /* 14px - consistent across app */
-  font-family: inherit !important;
+/* Override textarea styles with higher specificity */
+.ai-sidebar-container .chat-input__textarea-container textarea,
+.ai-sidebar-container .chat-input textarea {
+  width: 100%;
+  border: none;
+  border-radius: 0;
+  background: var(--input-bg);
+  background-color: var(--input-bg);
+  padding: var(--input-padding); /* 0.5rem 0.75rem from variables */
+  color: var(--input-text); /* #e5e7eb from variables */
+  box-shadow: none;
+  outline: none;
+  -webkit-appearance: none;
+  appearance: none;
+  resize: none; /* Disable resize handle */
+  box-sizing: border-box;
+  font-size: var(--input-font-size); /* 14px - consistent across app */
+  font-family: inherit;
 }
 
-.chat-input__textarea-container .textarea::placeholder,
-.chat-input__textarea-container textarea::placeholder {
-  color: #6b7280 !important;
-  opacity: 1 !important;
+.ai-sidebar-container .chat-input__textarea-container textarea::placeholder {
+  color: var(--input-placeholder);
+  opacity: 1;
 }
 
 /* Focus styles for textarea - keep transparent */
-.chat-input__textarea-container .textarea:focus,
-.chat-input__textarea-container textarea:focus,
-.chat-input textarea:focus,
-textarea:focus {
-  outline: none !important;
-  outline-width: 0 !important;
-  box-shadow: none !important;
-  background: transparent !important;
-  background-color: transparent !important;
-  border: none !important;
-  color: #ffffff !important; /* White text on focus */
+.ai-sidebar-container .chat-input__textarea-container textarea:focus,
+.ai-sidebar-container .chat-input textarea:focus {
+  outline: none;
+  outline-width: 0;
+  box-shadow: none;
+  background: var(--input-bg);
+  background-color: var(--input-bg);
+  border: none;
+  color: var(--input-text-focus); /* White text on focus from variables */
 }
 
-/* Dark mode textarea styles */
-.dark textarea,
-[data-theme='dark'] textarea,
-.dark .textarea,
-[data-theme='dark'] .textarea {
-  background: transparent !important;
-  background-color: transparent !important;
-  color: #ffffff !important; /* White text in dark mode */
-  border: none !important;
+/* Dark mode textarea styles with higher specificity */
+.ai-sidebar-container[data-theme='dark'] textarea,
+.ai-sidebar-container[data-theme='dark'] .textarea {
+  background: var(--input-bg);
+  background-color: var(--input-bg);
+  color: var(--input-text-focus); /* White text in dark mode */
+  border: none;
 }
 
-.dark textarea:focus,
-[data-theme='dark'] textarea:focus {
-  border: none !important;
-  color: #ffffff !important;
+.ai-sidebar-container[data-theme='dark'] textarea:focus {
+  border: none;
+  color: var(--input-text-focus);
 }
 
-/* Ultimate override for dark mode text color */
-[data-theme='dark'] * textarea,
-.dark * textarea {
-  color: #ffffff !important;
+/* Override for dark mode text color with container specificity */
+.ai-sidebar-container[data-theme='dark'] .chat-input textarea {
+  color: var(--input-text-focus);
 }
 
 .chat-input__actions {
@@ -129,34 +121,34 @@ textarea:focus {
   gap: 0.25rem;
 }
 
-.chat-input__cancel-button {
+.ai-sidebar-container .chat-input__cancel-button {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: transparent !important;
+  background: var(--input-bg);
   cursor: pointer;
-  border: 1px solid rgba(255, 255, 255, 0.5) !important; /* White border with opacity */
-  border-radius: 50% !important;
-  width: 28px !important;
-  height: 28px !important;
-  color: rgba(255, 255, 255, 0.7) !important; /* White icon color with opacity */
+  border: var(--input-cancel-border); /* 1px solid rgba(255, 255, 255, 0.5) from variables */
+  border-radius: 50%;
+  width: var(--input-cancel-size); /* 28px from variables */
+  height: var(--input-cancel-size); /* 28px from variables */
+  color: var(--input-cancel-color); /* rgba(255, 255, 255, 0.7) from variables */
   transition: all 0.2s;
 }
 
-.chat-input__cancel-button:hover {
-  border-color: rgba(255, 255, 255, 0.8) !important;
-  color: rgba(255, 255, 255, 0.9) !important;
+.ai-sidebar-container .chat-input__cancel-button:hover {
+  border-color: rgba(255, 255, 255, 0.8);
+  color: rgba(255, 255, 255, 0.9);
 }
 
 /* Style the square icon inside */
-.chat-input__cancel-button svg {
-  width: 14px !important;
-  height: 14px !important;
+.ai-sidebar-container .chat-input__cancel-button svg {
+  width: 14px;
+  height: 14px;
 }
 
-.chat-input__cancel-button svg rect {
-  stroke: currentColor !important;
-  fill: transparent !important;
+.ai-sidebar-container .chat-input__cancel-button svg rect {
+  stroke: currentColor;
+  fill: transparent;
 }
 
 /* Loading state */
@@ -168,9 +160,9 @@ textarea:focus {
 /* Screen reader styles moved to 1-base/typography.css */
 
 /* Spinner for loading state */
-.chat-input .spinner {
-  width: 16px !important;
-  height: 16px !important;
+.ai-sidebar-container .chat-input .spinner {
+  width: 16px;
+  height: 16px;
 }
 
 /* ============================================================================
