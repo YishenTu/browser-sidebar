@@ -68,8 +68,6 @@ export interface ExtractedContent {
 
   /** Content metadata and statistics */
   metadata?: {
-    /** Whether the content contains code blocks */
-    hasCodeBlocks: boolean;
     /** Whether the content contains data tables */
     hasTables: boolean;
     /** Whether content was truncated due to size limits */

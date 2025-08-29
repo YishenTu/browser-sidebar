@@ -224,6 +224,9 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ className, onClose }) => {
     null
   );
 
+  // Store edited content for each tab
+  const [editedTabContent, setEditedTabContent] = useState<Record<number | string, string>>({});
+
   // Handle sending messages
   const handleSendMessage = useCallback(
     async (userInput: string) => {
@@ -291,6 +294,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ className, onClose }) => {
           await sendMessage(messageContent, {
             streaming: true,
             skipUserMessage: true, // Prevent duplicate user message
+            editedTabContent: editedTabContent,
           });
         } else {
           // Send message with content injection for first message or normal content for subsequent messages
@@ -298,6 +302,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ className, onClose }) => {
             streaming: true,
             displayContent: displayContent,
             metadata: Object.keys(messageMetadata).length > 0 ? messageMetadata : undefined,
+            editedTabContent: editedTabContent,
           });
         }
       } catch (error) {
@@ -322,6 +327,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ className, onClose }) => {
       multiTabError,
       multiTabLoading,
       showError,
+      editedTabContent,
     ]
   );
 
@@ -472,9 +478,23 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ className, onClose }) => {
   const handleClearTabContent = useCallback(
     (tabId: number) => {
       removeLoadedTab(tabId);
+      // Clear edited content for this tab
+      setEditedTabContent(prev => {
+        const updated = { ...prev };
+        delete updated[tabId];
+        return updated;
+      });
     },
     [removeLoadedTab]
   );
+
+  // Handle content edit callback
+  const handleContentEdit = useCallback((tabId: number | string, editedContent: string) => {
+    setEditedTabContent(prev => ({
+      ...prev,
+      [tabId]: editedContent,
+    }));
+  }, []);
 
   // Update bounds when window resizes
   useEffect(() => {
@@ -686,6 +706,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ className, onClose }) => {
             onRemoveTab={handleRemoveTab}
             onReextractTab={handleReextractTab}
             onClearTabContent={handleClearTabContent}
+            onContentEdit={handleContentEdit}
             className="ai-sidebar-content-preview"
           />
         ) : (
@@ -694,6 +715,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ className, onClose }) => {
             content={currentTabContent}
             loading={multiTabLoading}
             error={multiTabError}
+            onContentEdit={handleContentEdit}
             onReextract={options => extractCurrentTab(options)}
             onClearContent={() => currentTabId && removeLoadedTab(currentTabId)}
             className="ai-sidebar-content-preview"

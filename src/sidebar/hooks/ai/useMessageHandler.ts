@@ -92,7 +92,13 @@ export function useMessageHandler({
         return; // Don't send empty messages
       }
 
-      const { streaming = true, skipUserMessage = false, displayContent, metadata } = options;
+      const {
+        streaming = true,
+        skipUserMessage = false,
+        displayContent,
+        metadata,
+        editedTabContent,
+      } = options;
 
       try {
         // Clear any previous errors
@@ -113,35 +119,31 @@ export function useMessageHandler({
         const finalDisplayContent = displayContent || trimmedContent;
         let hasTabContext = false;
         let formatResult: ReturnType<typeof formatMultiTabContent> | undefined;
-        
+
         // Check if we have loaded tabs to include
         const loadedTabs = chatStore.getLoadedTabs();
         const loadedTabIds = Object.keys(loadedTabs).map(id => parseInt(id, 10));
-        
+
         if (loadedTabIds.length > 0) {
           // We have loaded tabs, format the content with multi-tab structure
           const currentTabId = chatStore.getCurrentTabId();
           const currentTabContent = currentTabId ? loadedTabs[currentTabId] : null;
-          
+
           // Get additional tabs (all tabs except current)
           const additionalTabs = loadedTabIds
             .filter(tabId => tabId !== currentTabId)
             .map(tabId => loadedTabs[tabId])
             .filter(Boolean);
-          
+
           // Format the multi-tab content with the new cleaner structure
-          formatResult = formatMultiTabContent(
-            trimmedContent,
-            currentTabContent,
-            additionalTabs,
-            {
-              // Get selection order from store for deterministic truncation
-              selectionOrder: chatStore.tabSelectionOrder,
-              maxChars: 100_000, // 100k character limit
-              format: 'markdown' // Use markdown format within XML structure
-            }
-          );
-          
+          formatResult = formatMultiTabContent(trimmedContent, currentTabContent, additionalTabs, {
+            // Get selection order from store for deterministic truncation
+            selectionOrder: chatStore.tabSelectionOrder,
+            maxChars: 100_000, // 100k character limit
+            format: 'markdown', // Use markdown format within XML structure
+            editedTabContent: editedTabContent,
+          });
+
           // Use formatted content for AI but keep original for display
           finalContent = formatResult.formatted;
           hasTabContext = true;
@@ -165,7 +167,7 @@ export function useMessageHandler({
                   truncated: true,
                   truncatedTabCount: formatResult?.metadata?.truncatedCount,
                   truncatedTabIds: formatResult?.metadata?.truncatedTabIds,
-                }
+                },
               }),
             },
           });
@@ -176,7 +178,7 @@ export function useMessageHandler({
             throw new Error('No user message found for regeneration');
           }
           userMessage = lastUserMessage;
-          
+
           // Update the user message with new content if multi-tab context changed
           if (hasTabContext && userMessage.content !== finalContent) {
             chatStore.updateMessage(userMessage.id, {

@@ -28,6 +28,8 @@ export interface TabContentItemProps {
   onReextract: (options?: { mode?: ExtractionMode }) => void;
   /** Function to clear extracted content */
   onClearContent?: () => void;
+  /** Callback when content is edited */
+  onContentEdit?: (tabId: number | string, editedContent: string) => void;
   /** Custom CSS class */
   className?: string;
   /** Optional tab identifier for multi-tab scenarios */
@@ -47,13 +49,14 @@ export const TabContentItem: React.FC<TabContentItemProps> = ({
   error,
   onReextract,
   onClearContent,
+  onContentEdit,
   className = '',
   tabId,
 }) => {
   const [showFullContent, setShowFullContent] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
-  const hasCodeBlocks = content?.metadata?.hasCodeBlocks ?? content?.hasCode ?? false;
+  const [editedContent, setEditedContent] = useState<string | null>(null);
   const truncated = content?.metadata?.truncated ?? content?.isTruncated ?? false;
 
   // Use full text content, let CSS handle truncation
@@ -228,7 +231,6 @@ export const TabContentItem: React.FC<TabContentItemProps> = ({
                   {/* Overlay badges and actions on bottom right corner */}
                   <div className="content-preview-overlay-actions">
                     {truncated && <span className="content-preview-badge">Truncated</span>}
-                    {hasCodeBlocks && <span className="content-preview-badge">Code</span>}
                     {content?.extractionMethod === 'raw' && (
                       <span className="content-preview-badge content-preview-badge--raw">Raw</span>
                     )}
@@ -285,24 +287,26 @@ export const TabContentItem: React.FC<TabContentItemProps> = ({
         maxWidth="72vw"
         maxHeight="72vh"
         className="content-full-modal"
-      >
-        {content && (
-          <>
-            {/* Content metadata badges */}
-            {(truncated || hasCodeBlocks) && (
-              <div className="full-content-badges">
-                {truncated && <span className="full-content-badge-error">Truncated</span>}
-                {hasCodeBlocks && <span className="full-content-badge-info">Contains code</span>}
-              </div>
-            )}
-
-            {/* Full content display */}
-            <pre className="full-content-pre">
-              {content.content || content.markdown || content.textContent || ''}
-            </pre>
-          </>
-        )}
-      </FullscreenModal>
+        editable={!!content}
+        content={
+          editedContent !== null
+            ? editedContent
+            : content?.content || content?.markdown || content?.textContent || ''
+        }
+        edited={editedContent !== null}
+        onContentSave={newContent => {
+          setEditedContent(newContent);
+          if (tabId && onContentEdit) {
+            onContentEdit(tabId, newContent);
+          }
+        }}
+        truncated={truncated}
+        onRegenerate={() => {
+          // Reset edited content and trigger re-extraction
+          setEditedContent(null);
+          onReextract();
+        }}
+      />
     </>
   );
 };

@@ -86,3 +86,58 @@
   flex-direction: column;
   /* Background inherited from container */
 }
+
+/* Edit mode textarea - ensure no overlays or dark layers */
+.fullscreen-modal-edit-textarea {
+  /* Reset all inherited styles */
+  all: unset;
+
+  /* Apply desired styles */
+  width: 100% !important;
+  padding: 16px !important;
+  margin: 0 !important;
+  border: none !important;
+  resize: none !important;
+  outline: none !important;
+  background: transparent !important;
+  background-color: transparent !important;
+  color: #d4d4d4 !important;
+  font-family: Consolas, Monaco, 'Courier New', monospace !important;
+  font-size: 13px !important;
+  line-height: 1.6 !important;
+  white-space: pre-wrap !important;
+  word-wrap: break-word !important;
+  word-break: break-word !important;
+  overflow: auto !important;
+  position: relative !important;
+  z-index: 1 !important;
+
+  /* Ensure no pseudo-elements create overlays */
+  box-shadow: none !important;
+  text-shadow: none !important;
+  opacity: 1 !important;
+  filter: none !important;
+
+  /* Prevent any background images or gradients */
+  background-image: none !important;
+}
+
+/* Ensure textarea is fully visible in dark mode */
+.fullscreen-modal-edit-textarea:focus {
+  background: transparent !important;
+  background-color: transparent !important;
+  color: #ffffff !important;
+  opacity: 1 !important;
+}
+
+/* Remove any potential overlays from parent containers during edit */
+.fullscreen-modal-body:has(.fullscreen-modal-edit-textarea) {
+  background: transparent !important;
+  position: relative !important;
+  z-index: 0 !important;
+}
+
+/* Ensure no overlays from modal container */
+.fullscreen-modal-container:has(.fullscreen-modal-edit-textarea) {
+  overflow: hidden !important;
+}

@@ -4,9 +4,9 @@
  * A modal component that renders outside the sidebar container using React Portal
  */
 
-import React, { useEffect, useCallback } from 'react';
+import React, { useEffect, useCallback, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { CloseIcon } from './Icons';
+import { CloseIcon, EditIcon, SaveIcon, RegenerateIcon } from './Icons';
 import '../../styles/fullscreen-modal.css';
 
 export interface FullscreenModalProps {
@@ -18,8 +18,8 @@ export interface FullscreenModalProps {
   title?: React.ReactNode;
   /** Optional subtitle shown under title (e.g., URL) */
   subtitle?: React.ReactNode;
-  /** Modal content */
-  children: React.ReactNode;
+  /** Modal content (used when not editable) */
+  children?: React.ReactNode;
   /** Custom class name */
   className?: string;
   /** Maximum width of modal content */
@@ -28,6 +28,18 @@ export interface FullscreenModalProps {
   maxHeight?: string;
   /** Whether to show close button */
   showCloseButton?: boolean;
+  /** Enable edit mode for content */
+  editable?: boolean;
+  /** Content to display/edit (when editable is true) */
+  content?: string;
+  /** Whether content has been edited */
+  edited?: boolean;
+  /** Callback when content is saved */
+  onContentSave?: (content: string) => void;
+  /** Whether content is truncated */
+  truncated?: boolean;
+  /** Callback to re-extract/regenerate content */
+  onRegenerate?: () => void;
 }
 
 /**
@@ -45,7 +57,27 @@ export const FullscreenModal: React.FC<FullscreenModalProps> = ({
   maxWidth = '72vw',
   maxHeight = '72vh',
   showCloseButton = true,
+  editable = false,
+  content = '',
+  edited = false,
+  onContentSave,
+  truncated = false,
+  onRegenerate,
 }) => {
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [editedContent, setEditedContent] = useState(content);
+
+  // Reset edit mode when modal closes
+  useEffect(() => {
+    if (!isOpen) {
+      setIsEditMode(false);
+    }
+  }, [isOpen]);
+
+  // Update edited content when content prop changes
+  useEffect(() => {
+    setEditedContent(content);
+  }, [content]);
   // Handle ESC key press
   const handleEscape = useCallback(
     (e: KeyboardEvent) => {
@@ -92,9 +124,9 @@ export const FullscreenModal: React.FC<FullscreenModalProps> = ({
         }}
       >
         {/* Modal Header */}
-        {(title || showCloseButton) && (
+        {(title || showCloseButton || editable) && (
           <div className="fullscreen-modal-header">
-            <div>
+            <div style={{ flex: 1 }}>
               {title && (
                 <h2 id="fullscreen-modal-title" className="fullscreen-modal-title">
                   {title}
@@ -102,6 +134,147 @@ export const FullscreenModal: React.FC<FullscreenModalProps> = ({
               )}
               {subtitle && <div className="fullscreen-modal-subtitle">{subtitle}</div>}
             </div>
+
+            {/* Header actions - absolutely positioned like the close button */}
+            {/* Show edited badge */}
+            {editable && edited && (
+              <span
+                style={{
+                  position: 'absolute',
+                  top: '20px',
+                  right: editable ? '96px' : '56px', // Adjust position based on whether edit button is shown
+                  padding: '4px 8px',
+                  backgroundColor: 'var(--color-accent)',
+                  color: 'white',
+                  borderRadius: '4px',
+                  fontSize: '12px',
+                  fontWeight: '500',
+                }}
+              >
+                Edited
+              </span>
+            )}
+
+            {/* Edit/Save buttons - positioned next to close button */}
+            {editable && (
+              <>
+                {!isEditMode ? (
+                  <button
+                    onClick={() => {
+                      setIsEditMode(true);
+                      setEditedContent(content);
+                    }}
+                    aria-label="Edit content"
+                    title="Edit content"
+                    type="button"
+                    style={{
+                      position: 'absolute',
+                      top: '12px',
+                      right: '48px', // Position next to close button (32px close button + 4px gap + 12px margin)
+                      width: '32px',
+                      height: '32px',
+                      padding: '0',
+                      backgroundColor: 'transparent',
+                      border: 'none',
+                      borderRadius: '0',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      color: '#ffffff',
+                      transition: 'background-color 0.2s',
+                    }}
+                    onMouseEnter={e => {
+                      e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.1)';
+                    }}
+                    onMouseLeave={e => {
+                      e.currentTarget.style.backgroundColor = 'transparent';
+                    }}
+                  >
+                    <EditIcon size={20} />
+                  </button>
+                ) : (
+                  <>
+                    <button
+                      onClick={() => {
+                        if (onContentSave) {
+                          onContentSave(editedContent);
+                        }
+                        setIsEditMode(false);
+                      }}
+                      aria-label="Save changes"
+                      title="Save changes"
+                      type="button"
+                      style={{
+                        position: 'absolute',
+                        top: '12px',
+                        right: '84px', // Position for save button
+                        width: '32px',
+                        height: '32px',
+                        padding: '0',
+                        backgroundColor: 'var(--color-success)',
+                        border: 'none',
+                        borderRadius: '0',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        color: 'white',
+                        transition: 'opacity 0.2s',
+                      }}
+                      onMouseEnter={e => {
+                        e.currentTarget.style.opacity = '0.9';
+                      }}
+                      onMouseLeave={e => {
+                        e.currentTarget.style.opacity = '1';
+                      }}
+                    >
+                      <SaveIcon size={20} />
+                    </button>
+                    <button
+                      onClick={() => {
+                        setIsEditMode(false);
+                        setEditedContent(content);
+                        // Trigger re-extraction if callback is provided
+                        if (onRegenerate) {
+                          onRegenerate();
+                        }
+                      }}
+                      aria-label="Re-extract content"
+                      title="Re-extract content"
+                      type="button"
+                      style={{
+                        position: 'absolute',
+                        top: '12px',
+                        right: '48px', // Position for regenerate button
+                        width: '32px',
+                        height: '32px',
+                        padding: '0',
+                        backgroundColor: 'transparent',
+                        border: 'none',
+                        borderRadius: '0',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        color: '#ffffff',
+                        transition: 'background-color 0.2s',
+                      }}
+                      onMouseEnter={e => {
+                        e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.1)';
+                      }}
+                      onMouseLeave={e => {
+                        e.currentTarget.style.backgroundColor = 'transparent';
+                      }}
+                    >
+                      <RegenerateIcon size={20} />
+                    </button>
+                  </>
+                )}
+              </>
+            )}
+
+            {/* Close button - already absolutely positioned via CSS */}
             {showCloseButton && (
               <button
                 onClick={onClose}
@@ -116,7 +289,64 @@ export const FullscreenModal: React.FC<FullscreenModalProps> = ({
         )}
 
         {/* Modal Content */}
-        <div className="fullscreen-modal-body">{children}</div>
+        <div className="fullscreen-modal-body">
+          {editable ? (
+            <>
+              {/* Truncated badge */}
+              {truncated && (
+                <div style={{ marginBottom: '12px' }}>
+                  <span
+                    style={{
+                      padding: '4px 8px',
+                      backgroundColor: 'var(--color-error)',
+                      color: 'white',
+                      borderRadius: '4px',
+                      fontSize: '12px',
+                      fontWeight: '500',
+                    }}
+                  >
+                    Truncated
+                  </span>
+                </div>
+              )}
+              {/* Editable content */}
+              {isEditMode ? (
+                <textarea
+                  value={editedContent}
+                  onChange={e => setEditedContent(e.target.value)}
+                  className="fullscreen-modal-edit-textarea"
+                  style={{
+                    width: '100%',
+                    height: truncated ? 'calc(100% - 40px)' : '100%',
+                    padding: '16px',
+                    margin: '0',
+                    border: 'none',
+                    resize: 'none',
+                    outline: 'none',
+                    background: 'transparent !important',
+                    backgroundColor: 'transparent !important',
+                    color: '#d4d4d4',
+                    fontFamily: 'Consolas, Monaco, "Courier New", monospace',
+                    fontSize: '13px',
+                    lineHeight: '1.6',
+                    whiteSpace: 'pre-wrap',
+                    wordWrap: 'break-word',
+                    wordBreak: 'break-word',
+                    overflow: 'auto',
+                    position: 'relative',
+                    zIndex: 1,
+                  }}
+                  placeholder="Edit the extracted content here..."
+                  autoFocus
+                />
+              ) : (
+                <pre className="full-content-pre">{edited ? editedContent : content}</pre>
+              )}
+            </>
+          ) : (
+            children
+          )}
+        </div>
       </div>
     </>,
     modalRoot

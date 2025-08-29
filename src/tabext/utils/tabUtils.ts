@@ -67,6 +67,5 @@ export async function exampleUsage(): Promise<void> {
     // - Track tab-specific state
   } catch (error) {
     // Fallback to safe method
-    const tabId = await getCurrentTabIdSafe();
   }
 }

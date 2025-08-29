@@ -1,409 +1,392 @@
-# Raw Mode Implementation Plan
+# HTML to Markdown Conversion Plan for Token Optimization
 
 ## Overview
 
-Implement a "Raw Mode" extraction option that preserves HTML structure (especially tables) with minimal processing. This provides an alternative when Defuddle struggles with table-heavy or fragmented pages.
+This plan outlines a comprehensive strategy to convert HTML content to Markdown format for optimal LLM token consumption. The goal is to achieve 85-90% total token reduction from original HTML while maintaining universal compatibility across different websites.
 
-## Core Principle
+## Current State
 
-**"Snapshot visible DOM → Clean dangerous elements → Preserve structure → Convert to Markdown"**
+- **Phase 1 Complete**: HTML stripping and flattening
+  - Achieved: ~79% token reduction (213K chars � 45K chars)
+  - Removes: Copy buttons, icons, navigation, non-essential URLs
+  - Preserves: Tables, key content, mailto links, images
 
-## Implementation Details
+## Proposed Solution: Two-Stage Processing Pipeline
 
-### 1. Type System Updates
+### Stage 1: HTML Optimization ( Complete)
 
-#### File: `/src/types/extraction.ts`
+Current implementation in `stripAndFlattenHTML()`:
 
-```typescript
-// Line 16: Update ExtractionMethod type
-export type ExtractionMethod = 'defuddle' | 'selection' | 'raw';
+- Remove UI elements (buttons, icons, navigation)
+- Strip non-essential URLs (keep mailto: links)
+- Flatten nested structures
+- Normalize whitespace
+- **Result**: ~79% token reduction
 
-// Line 21: Update ExtractionMode enum
-export enum ExtractionMode {
-  DEFUDDLE = 'defuddle',
-  SELECTION = 'selection',
-  RAW = 'raw', // New mode
-}
+### Stage 2: HTML�Markdown Conversion (Proposed)
 
-// Line 135: Update type guard to accept 'raw'
-['defuddle', 'selection', 'raw'].includes(obj.extractionMethod);
-```
+Universal pattern recognition and conversion:
 
-#### File: `/src/types/messages.ts`
+- Convert HTML structures to Markdown
+- Preserve semantic meaning
+- Work across any website
+- **Expected**: Additional 40-50% reduction (Total: 85-90%)
 
-```typescript
-// Add mode to ExtractTabPayload for multi-tab support
-export interface ExtractTabPayload {
-  tabId: number;
-  options?: ExtractionOptions;
-  mode?: ExtractionMode; // Add this
-}
-```
+## Detailed Implementation Plan
 
-### 2. Raw Mode Extractor
+### Phase 2.1: Pattern Recognition Engine
 
-#### New File: `/src/tabext/extraction/extractors/raw.ts`
+#### Universal Patterns to Detect
 
-**Core Features:**
+1. **Table Patterns**
 
-1. **Smart root selection**
-   - Priority: Configured hints → Best scoring container → document.body
-   - Scoring: Text length × (1 - link density) × tag/class bonuses × table bonus
+   ```html
+   <table>
+     � Analyze column count and structure
+   </table>
+   ```
 
-2. **Visibility filtering** (Critical insight from review)
-   - Check `getComputedStyle` BEFORE removing styles
-   - Filter out `display: none` and `visibility: hidden` elements
-   - Preserves only actually visible content
+   - 2 columns without header � Key-value pairs
+   - 2 columns with header � Simple table
+   - 3+ columns � Full markdown table
+   - Nested tables � Flatten when possible
 
-3. **Security sanitization**
-   - Remove: `<script>`, `<style>`, `<link>`, `<noscript>`, `<svg>`, `<canvas>`, `<iframe>`
-   - Strip: All `on*` event attributes, `javascript:` URLs, inline `style` attributes
-   - Preserve: Safe attributes for structure/semantics
+2. **Heading Patterns**
 
-4. **Table preservation**
-   - Keep full table structure: `<table>`, `<thead>`, `<tbody>`, `<tr>`, `<th>`, `<td>`
-   - Preserve table attributes: `colspan`, `rowspan`, `scope`, `headers`
-   - No paragraph merging or text density analysis
+   ```html
+   <h1>
+     to
+     <h6>
+       � # to ######
+       <div class="*title*">
+         � ## (inferred heading) <strong> at line start � **Bold heading**</strong>
+       </div>
+     </h6>
+   </h1>
+   ```
 
-5. **URL absolutization**
-   - Convert all relative URLs to absolute
-   - Handle: `href`, `src`, `srcset` attributes
-   - Ensures content works offline/in Obsidian
+3. **List Patterns**
 
-**Configuration Options:**
+   ```html
+   <ul>
+     /
+     <ol>
+       � Bullet/numbered lists Repeated
+       <div class="same">
+         � Inferred list
+         <dl>
+           /
+           <dt>/</dt>
+           <dd>� Definition list</dd>
+         </dl>
+       </div>
+     </ol>
+   </ul>
+   ```
 
-```typescript
-interface RawModeOptions {
-  root_hints?: string[]; // Selector hints for main content
-  strip_class?: boolean; // Remove class attributes (default: true)
-  keep_id?: boolean; // Preserve id attributes (default: true)
-  inject_pseudo?: boolean; // Inject ::before/::after content (default: false)
-  shadow_aware?: boolean; // Handle Shadow DOM (default: false, future)
-}
-```
+4. **Key-Value Patterns**
 
-**Implementation Structure:**
+   ```html
+   <span>Label:</span><span>Value</span>
+   <dt>Term</dt>
+   <dd>Definition</dd>
+   <td>Field</td>
+   <td>Value</td>
+   (in 2-col table)
+   ```
 
-```typescript
-import { isVisible } from '@tabext/utils/domUtils';
-import type { ExtractedContent } from '@/types/extraction';
+5. **Content Blocks**
+   ````html
+   <p>� Paragraph with double newline</p>
+   <blockquote>
+     � > Quote
+     <pre>>
+   </blockquote>
+   ````
 
-export async function extractWithRaw(options?: RawModeOptions): Promise<ExtractedContent> {
-  // 1. Simple root selection (no complex scoring for v1)
-  const root = pickRoot(document, options?.root_hints);
+### Phase 2.2: Conversion Algorithm
 
-  // 2. Create clean document
-  const cleanDoc = document.implementation.createHTMLDocument('raw');
+```javascript
+class HTMLToMarkdownConverter {
+  constructor(options = {}) {
+    this.options = {
+      preserveTables: true,
+      inferHeadings: true,
+      flattenNested: true,
+      ...options,
+    };
+  }
 
-  // 3. Deep clone visible nodes only (reuse existing isVisible)
-  const snapshot = deepCloneVisible(root, cleanDoc, options);
+  convert(html) {
+    const doc = parseHTML(html);
+    const context = this.analyzeStructure(doc);
+    return this.convertElement(doc.body, context);
+  }
 
-  // 4. Don't duplicate URL work - let orchestrator handle via normalizeUrls()
-  // absolutizeUrls(cleanDoc); // REMOVED - orchestrator will do this
+  analyzeStructure(doc) {
+    return {
+      hasMultipleTables: doc.querySelectorAll('table').length > 1,
+      primaryLanguage: this.detectLanguage(doc),
+      documentType: this.inferDocumentType(doc),
+      averageNestingDepth: this.calculateNestingDepth(doc),
+    };
+  }
 
-  // 5. Calculate metadata
-  const tables = cleanDoc.querySelectorAll('table');
-  const textContent = cleanDoc.body.textContent || '';
+  convertElement(element, context, depth = 0) {
+    const pattern = this.detectPattern(element);
+    const converter = this.converters[pattern];
+    return converter ? converter(element, context, depth) : this.defaultConverter(element);
+  }
 
-  // 6. Return full ExtractedContent shape
-  return {
-    title: document.title,
-    url: window.location.href,
-    domain: window.location.hostname,
-    content: cleanDoc.body.innerHTML, // Raw HTML
-    textContent,
-    excerpt: textContent.substring(0, 200) + '...',
-    extractedAt: Date.now(),
-    extractionMethod: 'raw' as const,
-    metadata: {
-      hasCodeBlocks: false, // Will be detected after markdown conversion
-      hasTables: tables.length > 0,
-      truncated: false,
-    },
-    // Backward compatibility
-    markdown: '', // Will be filled by orchestrator
-    hasCode: false,
-    hasTables: tables.length > 0,
-    isTruncated: false,
+  detectPattern(element) {
+    // Pattern detection logic
+    if (element.tagName === 'TABLE') return 'table';
+    if (element.tagName.match(/^H[1-6]$/)) return 'heading';
+    if (this.isListPattern(element)) return 'list';
+    if (this.isKeyValuePattern(element)) return 'keyvalue';
+    if (this.isContentBlock(element)) return 'content';
+    return 'container';
+  }
+
+  converters = {
+    table: this.convertTable,
+    heading: this.convertHeading,
+    list: this.convertList,
+    keyvalue: this.convertKeyValue,
+    content: this.convertContent,
+    container: this.convertContainer,
   };
 }
+```
 
-// Simple root picker - prefer known containers, fallback to body
-function pickRoot(doc: Document, hints?: string[]): Element {
-  // Try hints first
-  if (hints) {
-    for (const selector of hints) {
-      const el = doc.querySelector(selector);
-      if (el && isVisible(el)) return el;
+### Phase 2.3: Specific Conversion Rules
+
+#### Table Conversion Logic
+
+```javascript
+convertTable(table) {
+  const rows = Array.from(table.querySelectorAll('tr'));
+  const firstRow = rows[0];
+  const colCount = firstRow?.querySelectorAll('td, th').length || 0;
+
+  // Analyze table structure
+  if (colCount === 2) {
+    const hasHeader = firstRow.querySelector('th') !== null;
+    const looksLikeKeyValue = !hasHeader && this.isKeyValueContent(rows);
+
+    if (looksLikeKeyValue) {
+      // Convert to key-value pairs
+      return rows.map(row => {
+        const [key, value] = Array.from(row.querySelectorAll('td'));
+        return `${this.extractText(key)}: ${this.extractText(value)}`;
+      }).join('\n');
     }
   }
 
-  // Try common content containers
-  const selectors = ['main', 'article', '#content', '[role="main"]', '.content', '.main'];
-  for (const selector of selectors) {
-    const el = doc.querySelector(selector);
-    if (el && isVisible(el)) return el;
+  // Convert to markdown table
+  return this.toMarkdownTable(rows);
+}
+```
+
+#### Smart Text Extraction
+
+```javascript
+extractText(element) {
+  // Remove all HTML tags but preserve structure hints
+  let text = element.textContent.trim();
+
+  // Handle special cases
+  if (element.querySelector('a[href^="mailto:"]')) {
+    // Preserve email links as plain text
+    const email = element.querySelector('a[href^="mailto:"]').textContent;
+    text = text.replace(/.*?([\w._%+-]+@[\w.-]+\.[A-Z]{2,}).*/i, '$1');
   }
 
-  return doc.body;
-}
-```
-
-### 3. Orchestrator Integration
-
-#### File: `/src/tabext/extraction/orchestrator.ts`
-
-**Critical Changes:**
-
-```typescript
-// Line 217: Fix extractionMethod type
-let extractionMethod: ExtractionMethod = 'defuddle'; // Use the type, not literal
-
-// Around line 246, add RAW mode handling BEFORE defuddle
-if (mode === ExtractionMode.RAW && !htmlContent) {
-  try {
-    const rawExtractor = await import('./extractors/raw');
-    const rawResult = await rawExtractor.extractWithRaw({
-      root_hints: ['.company-detail', '.content', 'main'],
-      strip_class: true,
-      keep_id: true,
-      inject_pseudo: false,
-    });
-
-    if (rawResult.content && rawResult.content.trim()) {
-      htmlContent = rawResult.content;
-      textContent = rawResult.textContent || '';
-      author = rawResult.author;
-      extractionMethod = 'raw';
-    }
-  } catch (error) {
-    // Fall through to defuddle
+  // Handle nested structures
+  if (this.getDepth(element) > 3) {
+    // Deep nesting - extract only leaf text
+    text = this.getLeafText(element);
   }
+
+  return text;
 }
+```
 
-// Line 269-275: For RAW mode, preserve classes for code detection
-if (htmlContent && htmlContent.trim()) {
-  try {
-    // CRITICAL: Use cleanHtml(html, true) for raw mode to preserve classes
-    const preserveClasses = extractionMethod === 'raw';
-    htmlContent = cleanHtml(htmlContent, preserveClasses);
+### Phase 2.4: Edge Cases and Fallbacks
 
-    // Then normalize URLs - this handles absolutization
-    htmlContent = normalizeUrls(htmlContent, window.location.href, includeLinks);
-  } catch (error) {
-    // HTML cleaning/normalization failed
+#### Handle Complex Structures
+
+1. **Nested Tables**: Flatten to single-level or preserve based on complexity
+2. **Mixed Content**: Inline elements within blocks
+3. **Forms**: Extract labels and values
+4. **Media**: Keep alt text, ignore decorative images
+5. **Scripts/Styles**: Already removed in Stage 1
+
+#### Fallback Strategy
+
+```javascript
+defaultConverter(element) {
+  // If pattern is unrecognized
+  const text = this.extractText(element);
+
+  // Apply heuristics
+  if (text.length < 20 && this.looksLikeHeading(element)) {
+    return `## ${text}`;
   }
+
+  if (text.includes(':') && text.length < 100) {
+    return text; // Likely key-value
+  }
+
+  // Default: return as paragraph
+  return text ? `${text}\n` : '';
 }
 ```
 
-### 4. UI Integration
+## Testing Strategy
 
-#### File: `/src/sidebar/components/TabContentItem.tsx`
+### Test Cases by Website Type
 
-**CRITICAL: Fix prop type mismatch**
+1. **E-commerce Sites**
+   - Product pages with specifications
+   - Shopping carts with tables
+   - Review sections with repeated structures
 
-Option A - Update prop type to accept options:
+2. **News/Article Sites**
+   - Article with headings and paragraphs
+   - Comment sections
+   - Sidebar content
+
+3. **Business/Data Sites**
+   - Company information pages
+   - Financial tables
+   - Contact information
+
+4. **Documentation Sites**
+   - Code examples
+   - API references
+   - Nested navigation
+
+5. **Social Media**
+   - Posts with mixed media
+   - Profile pages
+   - Comment threads
+
+### Performance Metrics
+
+- **Token Reduction Rate**: Target 85-90% from original
+- **Content Preservation**: 100% of meaningful text
+- **Structure Preservation**: Maintain logical hierarchy
+- **Processing Speed**: <100ms for average page
+- **Memory Usage**: <10MB for processing
+
+## Implementation Phases
+
+### Phase 1: Core Converter (Week 1)
+
+- [ ] Implement pattern detection engine
+- [ ] Build basic converters for each pattern type
+- [ ] Create text extraction utilities
+- [ ] Add fallback handling
+
+### Phase 2: Optimization (Week 2)
+
+- [ ] Optimize for common patterns
+- [ ] Add context-aware conversion
+- [ ] Implement smart heading inference
+- [ ] Handle edge cases
+
+### Phase 3: Testing & Refinement (Week 3)
+
+- [ ] Test on 50+ different websites
+- [ ] Measure token reduction rates
+- [ ] Fine-tune pattern detection
+- [ ] Add configuration options
+
+### Phase 4: Integration (Week 4)
+
+- [ ] Integrate with existing raw mode
+- [ ] Add toggle option in UI
+- [ ] Performance optimization
+- [ ] Documentation
+
+## Configuration Options
 
 ```typescript
-// Line 27: Update prop type
-onReextract: (options?: { mode?: ExtractionMode }) => void;
-```
+interface ConversionOptions {
+  // Format options
+  outputFormat: 'markdown' | 'simplified-markdown' | 'key-value';
 
-Option B - Add separate callback (less breaking):
+  // Table handling
+  preserveComplexTables: boolean;
+  maxTableColumns: number;
+  convertTwoColTablesToKV: boolean;
 
-```typescript
-// Add new prop
-onReextractRaw?: () => void;
-```
+  // Structure options
+  inferHeadings: boolean;
+  maxHeadingLevel: number;
+  flattenDepth: number;
 
-For Option A, update button (line ~235):
+  // Content options
+  preserveLinks: boolean;
+  preserveImages: boolean;
+  maxContentLength: number;
 
-```jsx
-{
-  /* Raw Mode button - for table-heavy pages */
+  // Performance options
+  timeoutMs: number;
+  maxMemoryMB: number;
 }
-<button
-  onClick={e => {
-    e.stopPropagation();
-    onReextract({ mode: ExtractionMode.RAW });
-  }}
-  className="content-preview-raw-inline"
-  title="Re-extract in Raw Mode (preserves tables)"
-  aria-label="Re-extract in Raw Mode"
->
-  <TableIcon size={14} />
-</button>;
-```
-
-Add visual indicator when content was extracted in raw mode:
-
-```jsx
-{
-  /* After line 224, add raw mode badge */
-}
-{
-  content?.extractionMethod === 'raw' && (
-    <span className="content-preview-badge content-preview-badge--raw">Raw</span>
-  );
-}
-```
-
-**Required updates for Option A:**
-
-- `/src/sidebar/components/ContentPreview.tsx` lines 80, 98: Update calls to `onReextract()`
-- `/src/sidebar/ChatPanel.tsx` line 696: Update call to `reextract()`
-
-#### File: `/src/sidebar/styles/tab-content-item.css`
-
-Add styling for raw mode elements:
-
-```css
-.content-preview-raw-inline {
-  /* Similar to refresh button but with different hover color */
-  color: var(--color-text-tertiary);
-  transition: color 0.2s;
-}
-
-.content-preview-raw-inline:hover {
-  color: var(--color-primary);
-}
-
-.content-preview-badge--raw {
-  background: var(--color-info-bg);
-  color: var(--color-info-text);
-}
-```
-
-### 5. Message Passing Updates (for multi-tab support)
-
-#### File: `/src/extension/background/tabManager.ts`
-
-```typescript
-// Line 126: Include mode in extraction payload
-const extractionPayload: ExtractTabPayload = {
-  tabId: tab.id,
-  options: extractionOptions,
-  mode: mode, // Add this if mode is provided
-};
-```
-
-#### File: `/src/tabext/core/messageHandler.ts`
-
-```typescript
-// Line 105: Pass mode to extractContent
-const result = await extractContent(extractionOptions, payload.mode);
-```
-
-### 6. Hook Updates
-
-#### File: `/src/sidebar/hooks/useContentExtraction.ts`
-
-The hook already supports passing `mode` in options, so it will work as-is for single-tab:
-
-```typescript
-// This already works for current tab!
-onReextract({ mode: ExtractionMode.RAW });
-```
-
-### 7. Markdown Conversion
-
-The existing `markdownConverter.ts` already has:
-
-- GFM plugin with table support
-- Table preservation rules
-- Proper attribute handling
-
-This will correctly convert raw HTML tables to Markdown tables.
-
-## Critical Implementation Notes
-
-### Key Fixes from Review
-
-1. **Type System**: Must update type guard at line 135 to accept 'raw', not just add the enum
-2. **Orchestrator**: Use ExtractionMethod type (not literal) for extractionMethod variable
-3. **Clean HTML**: Use `cleanHtml(html, true)` for raw mode to preserve code language classes
-4. **URL Normalization**: Don't duplicate - reuse existing `normalizeUrls()` from orchestrator
-5. **Return Shape**: Raw extractor must return full ExtractedContent, not just content field
-6. **UI Props**: Must fix prop type mismatch - onReextract needs to accept options parameter
-7. **Message Passing**: ExtractTabPayload needs mode field for multi-tab support
-
-### Testing will be done by user
-
-User will handle all testing after implementation is complete.
-
-## Implementation Order
-
-1. **Update Type System**
-   - [ ] Add 'raw' to ExtractionMethod type at line 16 in `/src/types/extraction.ts`
-   - [ ] Add RAW to ExtractionMode enum at line 21
-   - [ ] Update type guard at line 135 to accept 'raw'
-   - [ ] Add mode to ExtractTabPayload in `/src/types/messages.ts`
-
-2. **Create Raw Extractor**
-   - [ ] Create `/src/tabext/extraction/extractors/raw.ts`
-   - [ ] Import and reuse `isVisible` from `@tabext/utils/domUtils`
-   - [ ] Implement simple root selection (no complex scoring)
-   - [ ] Clone only visible nodes with security sanitization
-   - [ ] Return full ExtractedContent shape (not just content)
-   - [ ] Let orchestrator handle URL normalization (don't duplicate)
-
-3. **Update Orchestrator**
-   - [ ] Fix extractionMethod type at line 217 to use ExtractionMethod type
-   - [ ] Add RAW mode handling around line 246 (before defuddle)
-   - [ ] Use `cleanHtml(html, true)` for raw mode to preserve classes
-   - [ ] Let existing normalizeUrls handle URL absolutization
-
-4. **Update UI Components**
-   - [ ] Choose Option A or B for prop type fix:
-     - Option A: Update onReextract prop type in TabContentItem.tsx
-     - Option B: Add separate onReextractRaw prop
-   - [ ] If Option A, update all call sites (ContentPreview, ChatPanel)
-   - [ ] Add Raw Mode button with TableIcon
-   - [ ] Add raw mode badge indicator
-   - [ ] Add CSS styles in tab-content-item.css
-
-5. **Update Message Passing** (for multi-tab)
-   - [ ] Update tabManager.ts line 126 to include mode in payload
-   - [ ] Update messageHandler.ts line 105 to pass mode to extractContent
-
-6. **Add Icon**
-   - [ ] Create TableIcon in `/src/sidebar/components/ui/Icons.tsx` or reuse existing
-
-7. **Future Enhancements** (if needed)
-   - [ ] Shadow DOM support
-   - [ ] Pseudo-element injection
-   - [ ] Site-specific configurations
-
-## Benefits
-
-1. **No Risk** - Completely isolated from Defuddle
-2. **Table Preservation** - Full structural fidelity
-3. **User Control** - Manual activation when needed
-4. **Simple** - No complex algorithms, just DOM manipulation
-5. **Secure** - Strips all dangerous content
-6. **Future-Proof** - Can add Shadow DOM support later
-
-## Configuration
-
-For known problematic sites, we can add default hints:
-
-```typescript
-const SITE_CONFIGS = {
-  'qichacha.com': {
-    root_hints: ['.company-detail', '.layout-content'],
-    inject_pseudo: true, // They use ::before for some labels
-  },
-  'bloomberg.com': {
-    root_hints: ['.content-main', 'article'],
-  },
-};
 ```
 
 ## Success Criteria
 
-✅ Tables are fully preserved with structure
-✅ No regression in normal Defuddle mode
-✅ Clean, safe HTML output
-✅ Works within existing extraction flow
-✅ User can easily switch between modes
-✅ Performance <500ms on typical pages
+1. **Universal Compatibility**: Works on 95%+ of websites
+2. **Token Efficiency**: 85-90% reduction from original HTML
+3. **Content Fidelity**: No loss of meaningful information
+4. **Performance**: <100ms processing time
+5. **Maintainability**: Clean, documented, testable code
+
+## Risk Mitigation
+
+### Potential Issues & Solutions
+
+1. **Over-aggressive conversion**
+   - Solution: Conservative defaults with opt-in aggressive mode
+2. **Loss of important structure**
+   - Solution: Preserve tables and lists by default
+3. **Language-specific issues**
+   - Solution: Unicode-aware text processing
+4. **Performance degradation**
+   - Solution: Streaming processing for large documents
+5. **Edge case failures**
+   - Solution: Robust fallback to simpler extraction
+
+## Future Enhancements
+
+1. **Machine Learning Pattern Detection**
+   - Train model on common HTML patterns
+   - Improve heading and structure inference
+
+2. **Domain-Specific Templates**
+   - E-commerce product template
+   - News article template
+   - Documentation template
+
+3. **Reversible Conversion**
+   - Store metadata for reconstruction
+   - Useful for editing scenarios
+
+4. **Streaming Processing**
+   - Process large documents in chunks
+   - Reduce memory usage
+
+## Conclusion
+
+This two-stage approach (HTML Stripping � Markdown Conversion) provides:
+
+- **Maximum token reduction** (85-90%)
+- **Universal compatibility** (works on any website)
+- **Preserved semantics** (maintains meaning and structure)
+- **LLM-optimized output** (clean, hierarchical markdown)
+
+The key innovation is **pattern-based conversion** that doesn't rely on specific class names or IDs, making it work across the entire web while achieving exceptional token efficiency.

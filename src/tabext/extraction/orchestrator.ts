@@ -11,7 +11,7 @@ import { validateExtractionOptions, ExtractionMode } from '../../types/extractio
 import { normalizeUrls, cleanHtml } from '../utils/domUtils';
 import { clampText } from '../utils/textUtils';
 import { getPageMetadata } from './analyzers/metadataExtractor';
-import { detectCodeBlocks, detectTables, generateExcerpt } from './analyzers/contentAnalyzer';
+import { detectTables, generateExcerpt } from './analyzers/contentAnalyzer';
 import { htmlToMarkdown } from './converters/markdownConverter';
 
 // Debug flag - disable in production
@@ -239,6 +239,7 @@ async function performExtraction(
         keep_id: true,
         inject_pseudo: false,
         optimize_tokens: true, // Enable Phase 1 HTML stripping for token optimization
+        convert_to_markdown: true, // Enable Phase 2 Markdown conversion for LLM
 
         // All stripping toggles default to false (don't strip) for testing
         strip_invisible: false,
@@ -326,12 +327,20 @@ async function performExtraction(
     }
   }
 
-  // Step 3: Convert HTML to Markdown with graceful degradation (skip for RAW mode)
+  // Step 3: Convert HTML to Markdown with graceful degradation (skip for RAW mode if already converted)
   let markdown = '';
   if (htmlContent && htmlContent.trim()) {
-    // For RAW mode, use HTML directly without markdown conversion
-    if (extractionMethod === 'raw') {
-      // Skipping markdown conversion for raw mode, using raw HTML
+    // For RAW mode with markdown conversion enabled, content is already in markdown format
+    if (extractionMethod === 'raw' && htmlContent.startsWith('#')) {
+      // Content appears to already be in markdown format from raw extractor
+      markdown = htmlContent;
+
+      // If we have a selection with raw mode, still prepend it
+      if (selectionMarkdown) {
+        markdown = `## Selected Content\n\n${selectionMarkdown}\n\n---\n\n## Full Page Content\n\n${markdown}`;
+      }
+    } else if (extractionMethod === 'raw') {
+      // Raw mode but still in HTML format (fallback or error case)
       markdown = htmlContent; // Use raw HTML directly
 
       // If we have a selection with raw mode, still prepend it
@@ -382,11 +391,9 @@ async function performExtraction(
   }
 
   // Step 5: Analyze content features on original markdown (before clamping) with error handling
-  let hasCode = false;
   let hasTables = false;
 
   try {
-    hasCode = detectCodeBlocks(markdown);
     hasTables = detectTables(markdown);
   } catch (error) {
     // Feature detection failed, defaulting to false
@@ -452,7 +459,6 @@ async function performExtraction(
     extractedAt: Date.now(),
     extractionMethod,
     metadata: {
-      hasCodeBlocks: hasCode,
       hasTables,
       truncated: isTruncated,
       timeoutMs,
@@ -568,7 +574,6 @@ function createFallbackContent(maxLength: number, timeoutMs: number = 2000): Ext
     extractedAt: Date.now(),
     extractionMethod: 'defuddle' as const, // Default to defuddle even on failure
     metadata: {
-      hasCodeBlocks: false,
       hasTables: false,
       truncated: isTruncated,
       timeoutMs,

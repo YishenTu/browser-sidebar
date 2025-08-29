@@ -9,6 +9,240 @@ import { isVisible } from '@tabext/utils/domUtils';
 import type { ExtractedContent } from '@/types/extraction';
 
 /**
+ * Helper function to process nodes recursively for markdown conversion
+ */
+function processNode(node: Node, listLevel: number = 0): string {
+  if (node.nodeType === Node.TEXT_NODE) {
+    return (node.textContent || '').replace(/\s+/g, ' ');
+  }
+
+  if (node.nodeType !== Node.ELEMENT_NODE) {
+    return '';
+  }
+
+  const element = node as Element;
+  const tagName = element.tagName.toLowerCase();
+  let result = '';
+
+  // Process children first for most elements
+  const processChildren = (separator: string = ''): string => {
+    return Array.from(element.childNodes)
+      .map(child => processNode(child, listLevel))
+      .filter(text => text.trim())
+      .join(separator);
+  };
+
+  // Handle different HTML elements
+  switch (tagName) {
+    // Headings
+    case 'h1':
+    case 'h2':
+    case 'h3':
+    case 'h4':
+    case 'h5':
+    case 'h6': {
+      const level = parseInt(tagName[1]);
+      const prefix = '#'.repeat(level);
+      const text = processChildren(' ').trim();
+      if (text) result = `\n${prefix} ${text}\n`;
+      break;
+    }
+
+    // Paragraphs and divs
+    case 'p':
+    case 'div': {
+      const content = processChildren(' ').trim();
+      if (content) result = `\n${content}\n`;
+      break;
+    }
+
+    // Lists
+    case 'ul':
+    case 'ol': {
+      const items = Array.from(element.children)
+        .filter(child => child.tagName.toLowerCase() === 'li')
+        .map((li, index) => {
+          const prefix = tagName === 'ol' ? `${index + 1}.` : '-';
+          const indent = '  '.repeat(listLevel);
+          const content = processNode(li, listLevel + 1).trim();
+          return content ? `${indent}${prefix} ${content}` : '';
+        })
+        .filter(item => item);
+
+      if (items.length > 0) {
+        result = '\n' + items.join('\n') + '\n';
+      }
+      break;
+    }
+
+    case 'li': {
+      // Process list item content (handled by parent ul/ol)
+      result = processChildren(' ');
+      break;
+    }
+
+    // Tables - special handling for structured data
+    case 'table': {
+      const rows: string[][] = [];
+      const trs = element.querySelectorAll('tr');
+
+      trs.forEach(tr => {
+        const cells: string[] = [];
+        tr.querySelectorAll('td, th').forEach(cell => {
+          const text = (cell.textContent || '').replace(/\s+/g, ' ').trim();
+          cells.push(text);
+        });
+        if (cells.length > 0) {
+          rows.push(cells);
+        }
+      });
+
+      if (rows.length > 0) {
+        // Simple table format for LLM
+        result = '\n```table\n';
+        rows.forEach(row => {
+          result += row.join(' | ') + '\n';
+        });
+        result += '```\n';
+      }
+      break;
+    }
+
+    // Definition lists (common in Chinese business sites)
+    case 'dl': {
+      const items: string[] = [];
+      let currentTerm = '';
+
+      Array.from(element.children).forEach(child => {
+        if (child.tagName.toLowerCase() === 'dt') {
+          currentTerm = (child.textContent || '').trim();
+        } else if (child.tagName.toLowerCase() === 'dd' && currentTerm) {
+          const definition = (child.textContent || '').trim();
+          if (definition) {
+            items.push(`**${currentTerm}**: ${definition}`);
+          }
+          currentTerm = '';
+        }
+      });
+
+      if (items.length > 0) {
+        result = '\n' + items.join('\n') + '\n';
+      }
+      break;
+    }
+
+    // Inline elements
+    case 'strong':
+    case 'b': {
+      const text = processChildren().trim();
+      if (text) result = `**${text}**`;
+      break;
+    }
+
+    case 'em':
+    case 'i': {
+      const text = processChildren().trim();
+      if (text) result = `*${text}*`;
+      break;
+    }
+
+    case 'code': {
+      const text = processChildren().trim();
+      if (text) result = `\`${text}\``;
+      break;
+    }
+
+    case 'pre': {
+      const text = (element.textContent || '').trim();
+      if (text) result = `\n\`\`\`\n${text}\n\`\`\`\n`;
+      break;
+    }
+
+    // Links (keep mailto for contact info)
+    case 'a': {
+      const href = element.getAttribute('href');
+      const text = processChildren().trim();
+      if (href && href.startsWith('mailto:') && text) {
+        result = `[${text}](${href})`;
+      } else if (text) {
+        result = text;
+      }
+      break;
+    }
+
+    // Line breaks
+    case 'br': {
+      result = '\n';
+      break;
+    }
+
+    // Horizontal rules
+    case 'hr': {
+      result = '\n---\n';
+      break;
+    }
+
+    // Blockquotes
+    case 'blockquote': {
+      const lines = processChildren('\n').trim().split('\n');
+      result = '\n' + lines.map(line => `> ${line}`).join('\n') + '\n';
+      break;
+    }
+
+    // Special handling for elements with copy-value class (key data)
+    default: {
+      // Check for copy-value class (important data)
+      if (element.classList.contains('copy-value')) {
+        const text = (element.textContent || '').trim();
+        if (text) result = `**${text}**`;
+      } else {
+        // Default: just process children
+        result = processChildren(' ');
+      }
+      break;
+    }
+  }
+
+  return result;
+}
+
+/**
+ * Converts HTML to Markdown format for optimal LLM consumption
+ * Phase 2: HTML to Markdown conversion (additional 20-30% token reduction)
+ *
+ * @param html - HTML string to convert
+ * @returns Markdown string optimized for LLM consumption
+ */
+function htmlToMarkdown(html: string): string {
+  try {
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(html, 'text/html');
+
+    // Process the entire document
+    let markdown = processNode(doc.body);
+
+    // Clean up the markdown
+    markdown = markdown
+      .replace(/&nbsp;?/gi, ' ') // Replace &nbsp entities with spaces
+      .replace(/&gt;/gi, '>') // Replace &gt entities
+      .replace(/&lt;/gi, '<') // Replace &lt entities
+      .replace(/&amp;/gi, '&') // Replace &amp entities
+      .replace(/&quot;/gi, '"') // Replace &quot entities
+      .replace(/&#39;/gi, "'") // Replace &#39 entities
+      .replace(/\n{3,}/g, '\n\n') // Remove excessive newlines
+      .replace(/^\s+|\s+$/g, '') // Trim
+      .replace(/\n\s+\n/g, '\n\n') // Clean empty lines with spaces
+      .replace(/\s+$/gm, '') // Remove trailing spaces from lines
+      .replace(/\s{2,}/g, ' '); // Collapse multiple spaces
+
+    return markdown;
+  } catch (error) {
+    console.error('[htmlToMarkdown] Error during conversion:', error);
+    return html; // Fallback to HTML if conversion fails
+  }
+}
+
+/**
  * Strips unnecessary HTML elements and flattens structure for token optimization
  * Phase 1: HTML stripping & structure flattening (40-50% token reduction)
  *
@@ -257,6 +491,9 @@ interface RawModeOptions {
   /** Enable aggressive HTML stripping for token optimization (Phase 1) */
   optimize_tokens?: boolean;
 
+  /** Convert to Markdown format for LLM consumption (Phase 2) */
+  convert_to_markdown?: boolean;
+
   // Stripping toggles - all default to false (don't strip) for testing
   /** Strip invisible elements (default: false for testing) */
   strip_invisible?: boolean;
@@ -310,16 +547,33 @@ export async function extractWithRaw(options?: RawModeOptions): Promise<Extracte
     cleanDoc.body.appendChild(clonedRoot);
   }
 
-  // 4. Apply token optimization if enabled (Phase 1)
-  let finalHTML = cleanDoc.body.innerHTML;
+  // 4. Apply token optimization if enabled
+  let finalContent = cleanDoc.body.innerHTML;
+
+  // Phase 1: HTML stripping
   if (options?.optimize_tokens) {
     try {
-      finalHTML = stripAndFlattenHTML(finalHTML);
+      finalContent = stripAndFlattenHTML(finalContent);
       // Update cleanDoc with optimized HTML for metadata calculation
-      cleanDoc.body.innerHTML = finalHTML;
+      cleanDoc.body.innerHTML = finalContent;
     } catch (error) {
       console.warn('[RAW] Token optimization failed, using original HTML:', error);
       // Continue with original HTML if optimization fails
+    }
+  }
+
+  // Phase 2: Markdown conversion (if enabled)
+  if (options?.convert_to_markdown) {
+    try {
+      // If we haven't stripped HTML yet, do it first for better markdown
+      if (!options?.optimize_tokens) {
+        finalContent = stripAndFlattenHTML(finalContent);
+      }
+      finalContent = htmlToMarkdown(finalContent);
+      // Successfully converted to Markdown format
+    } catch (error) {
+      console.warn('[RAW] Markdown conversion failed, using HTML:', error);
+      // Continue with HTML if markdown conversion fails
     }
   }
 
@@ -329,20 +583,18 @@ export async function extractWithRaw(options?: RawModeOptions): Promise<Extracte
   // 6. Calculate metadata
   const tables = cleanDoc.querySelectorAll('table');
   const textContent = cleanDoc.body.textContent || '';
-  const hasCodeBlocks = cleanDoc.querySelectorAll('pre, code').length > 0;
 
   // 7. Return full ExtractedContent shape
   const result = {
     title: document.title || 'Untitled',
     url: window.location.href,
     domain: window.location.hostname,
-    content: finalHTML, // Optimized HTML if token optimization is enabled
+    content: finalContent, // Optimized HTML or Markdown based on options
     textContent,
     excerpt: textContent.substring(0, 200) + (textContent.length > 200 ? '...' : ''),
     extractedAt: Date.now(),
     extractionMethod: 'raw' as const,
     metadata: {
-      hasCodeBlocks,
       hasTables: tables.length > 0,
       truncated: false,
     },

@@ -49,7 +49,6 @@ async function handleContentExtraction(message: Message): Promise<Message> {
         excerpt: extractedContent.excerpt,
         ...extractedContent.metadata,
         // Include backward compatibility fields
-        hasCodeBlocks: extractedContent.metadata?.hasCodeBlocks || extractedContent.hasCode,
         hasTables: extractedContent.metadata?.hasTables || extractedContent.hasTables,
         truncated: extractedContent.metadata?.truncated || extractedContent.isTruncated,
       },

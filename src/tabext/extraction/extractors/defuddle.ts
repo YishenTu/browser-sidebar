@@ -39,7 +39,6 @@ export async function extractWithDefuddle(): Promise<ExtractedContent> {
     const contentElement = document.createElement('div');
     contentElement.innerHTML = defuddled.content || '';
 
-    const codeBlocks = contentElement.querySelectorAll('pre, code').length;
     const tables = contentElement.querySelectorAll('table').length;
 
     const result = {
@@ -54,7 +53,6 @@ export async function extractWithDefuddle(): Promise<ExtractedContent> {
       extractedAt: Date.now(),
       extractionMethod: 'defuddle' as const,
       metadata: {
-        hasCodeBlocks: codeBlocks > 0,
         hasTables: tables > 0,
         truncated: false,
         timeoutMs: defuddled.parseTime || 0,
@@ -62,16 +60,10 @@ export async function extractWithDefuddle(): Promise<ExtractedContent> {
         schemaOrgData: defuddled.schemaOrgData,
         metaTags: defuddled.metaTags,
       },
-      // Backward compatibility fields
-      markdown: defuddled.content || '',
-      hasCode: codeBlocks > 0,
-      hasTables: tables > 0,
-      isTruncated: false,
     };
 
     return result;
   } catch (error) {
-
     // Return a basic fallback with document content
     const fallbackContent = document.body?.textContent || 'Content extraction failed';
     const fallbackTitle = document.title || 'Untitled';
@@ -88,15 +80,9 @@ export async function extractWithDefuddle(): Promise<ExtractedContent> {
       extractedAt: Date.now(),
       extractionMethod: 'defuddle',
       metadata: {
-        hasCodeBlocks: false,
         hasTables: false,
         truncated: false,
       },
-      // Backward compatibility fields
-      markdown: fallbackContent,
-      hasCode: false,
-      hasTables: false,
-      isTruncated: false,
     };
   }
 }

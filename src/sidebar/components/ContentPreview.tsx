@@ -23,6 +23,8 @@ export interface ContentPreviewProps {
   onReextractTab: (tabId: number, options?: { mode?: ExtractionMode }) => void;
   /** Callback to clear content for a specific tab */
   onClearTabContent: (tabId: number) => void;
+  /** Callback when content is edited */
+  onContentEdit?: (tabId: number | string, editedContent: string) => void;
   /** Custom CSS class */
   className?: string;
 }
@@ -43,6 +45,7 @@ export const ContentPreview: React.FC<ContentPreviewProps> = ({
   onRemoveTab: _onRemoveTab,
   onReextractTab,
   onClearTabContent,
+  onContentEdit,
   className = '',
 }) => {
   const totalTabs = (currentTabContent ? 1 : 0) + additionalTabsContent.length;
@@ -80,6 +83,7 @@ export const ContentPreview: React.FC<ContentPreviewProps> = ({
             onReextractTab(currentTabContent.tabInfo.id, options);
           }}
           onClearContent={() => onClearTabContent(currentTabContent.tabInfo.id)}
+          onContentEdit={onContentEdit}
           tabId={currentTabContent.tabInfo.id}
           className="multi-tab-content-preview-item"
         />
@@ -98,6 +102,7 @@ export const ContentPreview: React.FC<ContentPreviewProps> = ({
           }
           onReextract={options => onReextractTab(tabContent.tabInfo.id, options)}
           onClearContent={() => onClearTabContent(tabContent.tabInfo.id)}
+          onContentEdit={onContentEdit}
           tabId={tabContent.tabInfo.id}
           className="multi-tab-content-preview-item"
         />
