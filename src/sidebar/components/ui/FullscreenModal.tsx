@@ -244,25 +244,7 @@ export const FullscreenModal: React.FC<FullscreenModalProps> = ({
                   onChange={e => setEditedContent(e.target.value)}
                   className="fullscreen-modal-edit-textarea"
                   style={{
-                    width: '100%',
                     height: truncated ? 'calc(100% - 40px)' : '100%',
-                    padding: '16px',
-                    margin: '0',
-                    border: 'none',
-                    resize: 'none',
-                    outline: 'none',
-                    background: 'transparent !important',
-                    backgroundColor: 'transparent !important',
-                    color: '#d4d4d4',
-                    fontFamily: 'Consolas, Monaco, "Courier New", monospace',
-                    fontSize: '13px',
-                    lineHeight: '1.6',
-                    whiteSpace: 'pre-wrap',
-                    wordWrap: 'break-word',
-                    wordBreak: 'break-word',
-                    overflow: 'auto',
-                    position: 'relative',
-                    zIndex: 1,
                   }}
                   placeholder="Edit the extracted content here..."
                   autoFocus

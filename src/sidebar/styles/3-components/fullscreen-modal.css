@@ -21,14 +21,14 @@
   transform: translate(-50%, -50%);
   width: calc(100% - 40px);
   height: calc(100% - 40px);
-  background: var(--sidebar-background, rgba(28, 28, 30, 0.95));
-  /* Use sidebar background variable */
+  background: rgba(28, 28, 30, 0.95); /* Direct color since modal is outside sidebar container */
   border-radius: 12px;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.8);
   display: flex;
   flex-direction: column;
   overflow: hidden;
   z-index: 2147483647;
+  isolation: isolate; /* Create new stacking context to isolate from page */
 }
 
 /* Dynamic max dimensions will still be applied inline */
@@ -41,6 +41,7 @@
   /* Add space for the absolutely positioned close button (32px width + 12px right + 12px padding) */
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
   flex-shrink: 0;
+  background: rgba(28, 28, 30, 0.95); /* Direct color since modal is outside sidebar container */
 }
 
 .fullscreen-modal-title {
@@ -50,6 +51,7 @@
   margin: 0;
   display: -webkit-box;
   -webkit-line-clamp: 2;
+  line-clamp: 2; /* Standard property for compatibility */
   -webkit-box-orient: vertical;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -93,55 +95,59 @@
   padding: 20px;
   display: flex;
   flex-direction: column;
-  /* Background inherited from container */
+  background: rgba(28, 28, 30, 0.95); /* Direct color since modal is outside sidebar container */
+  isolation: isolate; /* Isolate from page styles */
 }
 
-/* Edit mode textarea with higher specificity through parent selectors */
-.ai-sidebar-container .fullscreen-modal-edit-textarea {
-  /* Reset all inherited styles */
-  all: unset;
-
-  /* Apply desired styles using CSS variables */
+/* Edit mode textarea - high specificity to override page styles */
+.fullscreen-modal-edit-textarea {
+  /* Core layout */
   width: 100%;
-  padding: var(--modal-padding);
+  padding: 16px;
   margin: 0;
   border: none;
   resize: none;
   outline: none;
-  background: transparent;
-  background-color: transparent;
-  color: var(--modal-text);
-  font-family: var(--modal-font-family);
-  font-size: var(--modal-font-size);
-  line-height: var(--modal-line-height);
+
+  /* Background and color - needs !important to override page styles */
+  background: rgba(28, 28, 30, 0.95) !important;
+  background-color: rgba(28, 28, 30, 0.95) !important;
+  color: #d4d4d4 !important;
+
+  /* Typography */
+  font-family: Consolas, Monaco, 'Courier New', monospace;
+  font-size: 13px;
+  line-height: 1.6;
   white-space: pre-wrap;
   word-wrap: break-word;
   word-break: break-word;
+
+  /* Layout details */
   overflow: auto;
   position: relative;
   z-index: 1;
+  display: block;
+  box-sizing: border-box;
 
-  /* Ensure no pseudo-elements create overlays */
+  /* Reset any page styles */
   box-shadow: none;
   text-shadow: none;
   opacity: 1;
   filter: none;
-
-  /* Prevent any background images or gradients */
   background-image: none;
 }
 
 /* Ensure textarea is fully visible in dark mode */
-.ai-sidebar-container .fullscreen-modal-edit-textarea:focus {
-  background: transparent;
-  background-color: transparent;
-  color: #ffffff;
+.fullscreen-modal-edit-textarea:focus {
+  background: rgba(28, 28, 30, 0.95) !important;
+  background-color: rgba(28, 28, 30, 0.95) !important;
+  color: #ffffff !important;
   opacity: 1;
 }
 
 /* Remove any potential overlays from parent containers during edit */
-.ai-sidebar-container .fullscreen-modal-body:has(.fullscreen-modal-edit-textarea) {
-  background: transparent;
+.fullscreen-modal-body:has(.fullscreen-modal-edit-textarea) {
+  background: rgba(28, 28, 30, 0.95); /* Direct color since modal is outside sidebar container */
   position: relative;
   z-index: 0;
 }
@@ -156,6 +162,7 @@
   flex: 1;
   padding-right: 60px;
   /* Prevent title from overlapping with action buttons */
+  background: rgba(28, 28, 30, 0.95); /* Direct color since modal is outside sidebar container */
 }
 
 /* Edited badge */
@@ -250,4 +257,62 @@
 /* Content spacing */
 .fullscreen-modal-content-spacing {
   margin-bottom: 12px;
+}
+
+/* ============================================================================
+ * Full Content Modal Styles (from tab-content-item.css)
+ * ============================================================================ */
+
+/* Override any conflicting modal styles */
+.content-full-modal .fullscreen-modal-body {
+  background: rgba(28, 28, 30, 0.95); /* Direct color since modal is outside sidebar container */
+}
+
+.content-full-modal pre,
+.content-full-modal .full-content-pre {
+  background: rgba(28, 28, 30, 0.95); /* Direct color since modal is outside sidebar container */
+  background-color: rgba(28, 28, 30, 0.95);
+}
+
+.full-content-badges {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+
+.full-content-badge-error {
+  background: #dc2626;
+  color: #ffffff;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.full-content-badge-info {
+  background: #2563eb;
+  color: #ffffff;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.full-content-pre {
+  margin: 0;
+  padding: 16px;
+  font-family: Consolas, Monaco, 'Courier New', monospace;
+  font-size: 13px;
+  line-height: 1.6;
+  color: #d4d4d4;
+  white-space: pre-wrap;
+  word-break: break-word;
+  background: rgba(28, 28, 30, 0.95); /* Direct color since modal is outside sidebar container */
+  background-color: rgba(28, 28, 30, 0.95);
+  border: none;
+  overflow: auto;
+  flex: 1; /* Take remaining space in modal body */
+  display: block;
+  isolation: isolate; /* Isolate from page styles */
 }

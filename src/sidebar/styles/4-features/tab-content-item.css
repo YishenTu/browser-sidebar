@@ -304,58 +304,7 @@
   transform: scale(0.95);
 }
 
-/* Full content modal styles with higher specificity */
-/* Override any conflicting modal styles */
-.ai-sidebar-container .content-full-modal .fullscreen-modal-body {
-  background: transparent;
-}
-
-.ai-sidebar-container .content-full-modal pre,
-.ai-sidebar-container .content-full-modal .full-content-pre {
-  background: transparent;
-  background-color: transparent;
-}
-
-.full-content-badges {
-  display: flex;
-  gap: 10px;
-  flex-wrap: wrap;
-  margin-bottom: 16px;
-}
-
-.full-content-badge-error {
-  background: #dc2626;
-  color: #ffffff;
-  padding: 4px 8px;
-  border-radius: 4px;
-  font-size: 12px;
-  font-weight: 500;
-}
-
-.full-content-badge-info {
-  background: #2563eb;
-  color: #ffffff;
-  padding: 4px 8px;
-  border-radius: 4px;
-  font-size: 12px;
-  font-weight: 500;
-}
-
-.ai-sidebar-container .full-content-pre {
-  margin: 0;
-  padding: 16px;
-  font-family: var(--font-family-mono, Consolas, Monaco, 'Courier New', monospace);
-  font-size: 13px;
-  line-height: 1.6;
-  color: var(--text-primary, #d4d4d4);
-  white-space: pre-wrap;
-  word-break: break-word;
-  background: transparent; /* Force transparent background */
-  background-color: transparent; /* Double ensure no background */
-  border: none;
-  overflow: auto;
-  flex: 1; /* Take remaining space in modal body */
-}
+/* Full content modal styles moved to fullscreen-modal.css */
 
 /* Raw mode styles */
 .ai-sidebar-container .content-preview-raw-inline {

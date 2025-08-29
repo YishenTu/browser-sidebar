@@ -1,47 +1,6 @@
-# Data Layer Architecture
+# Data Module
 
-The data layer provides a comprehensive solution for state management, persistence, and security in the AI Browser Sidebar Extension. It implements a layered architecture that separates concerns while maintaining type safety and performance.
-
-## Table of Contents
-
-- [Architecture Overview](#architecture-overview)
-- [Directory Structure](#directory-structure)
-- [Core Modules](#core-modules)
-- [Implementation Details](#implementation-details)
-- [API Reference](#api-reference)
-- [Usage Examples](#usage-examples)
-- [Security Considerations](#security-considerations)
-- [Performance Optimization](#performance-optimization)
-- [Error Handling](#error-handling)
-- [Testing Strategy](#testing-strategy)
-- [Migration Guide](#migration-guide)
-
-## Architecture Overview
-
-```mermaid
-graph TD
-    UI[UI Components] --> Store[Zustand Stores]
-    Store --> Storage[Chrome Storage]
-    Storage --> Security[Encryption Layer]
-    Security --> Chrome[Chrome Storage API]
-
-    Store -.-> Memory[In-Memory State]
-    Storage -.-> Cache[Local Cache]
-
-    style UI fill:#e1f5fe
-    style Store fill:#fff9c4
-    style Storage fill:#f3e5f5
-    style Security fill:#ffebee
-```
-
-### Design Principles
-
-1. **Separation of Concerns**: Each layer has a single responsibility
-2. **Type Safety**: Full TypeScript coverage with strict typing
-3. **Performance First**: Optimistic updates, caching, and batch operations
-4. **Security by Default**: Automatic encryption for sensitive data
-   5.ессия **Reactive Updates**: Immediate UI feedback through Zustand
-5. **Graceful Degradation**: Fallback mechanisms for storage failures
+The data module provides comprehensive state management, persistence, and security for the AI Browser Sidebar Extension. It implements a layered architecture with Zustand stores, Chrome storage, and encryption.
 
 ## Directory Structure
 
@@ -50,318 +9,488 @@ data/
 ├── store/                    # State management layer
 │   ├── chat.ts              # Chat conversations and messages
 │   ├── settings.ts          # User preferences and API keys
-│   └── types.ts             # Shared store type definitions
+│   ├── index.ts             # Store exports
+│   └── README.md            # Store documentation
 ├── storage/                  # Persistence layer
-│   ├── keys/                # API key management
-│   │   ├── manager.ts       # Key storage orchestration
-│   │   ├── validator.ts     # API key validation
-│   │   └── types.ts         # Key-related types
+│   ├── keys/                # API key management system
+│   │   ├── cache.ts         # Key caching
+│   │   ├── constants.ts     # Key constants
+│   │   ├── database.ts      # Key database
+│   │   ├── encryption.ts    # Key encryption
+│   │   ├── health.ts        # Health checks
+│   │   ├── importExport.ts  # Import/export
+│   │   ├── index.ts         # Key exports
+│   │   ├── operations.ts    # CRUD operations
+│   │   ├── query.ts         # Query operations
+│   │   ├── rotation.ts      # Key rotation
+│   │   ├── types.ts         # Key types
+│   │   ├── usage.ts         # Usage tracking
+│   │   └── utils.ts         # Key utilities
 │   ├── chrome.ts            # Chrome Storage API wrapper
-│   ├── migrations.ts        # Data migration utilities
-│   └── types.ts             # Storage type definitions
+│   ├── index.ts             # Storage exports
+│   └── keys.ts              # Key management entry
 ├── security/                 # Security layer
-│   ├── crypto.ts            # AES-GCM encryption implementation
-│   ├── keychain.ts          # Secure key derivation
-│   └── sanitizer.ts         # Input sanitization
-└── index.ts                 # Public API exports
+│   ├── crypto.ts            # AES-GCM encryption
+│   ├── index.ts             # Security exports
+│   └── masking.ts           # Data masking
+├── README.md                # This file
+└── index.ts                 # Module exports
 ```
 
-## Core Modules
+## Architecture Overview
 
-### Store Module (`/store`)
+```
+UI Components
+    ↓
+Zustand Stores (reactive state)
+    ↓
+Storage Layer (persistence)
+    ↓
+Security Layer (encryption)
+    ↓
+Chrome Storage API
+```
+
+## Core Components
+
+### Store Layer (`store/`)
 
 #### Chat Store (`chat.ts`)
 
-Manages all chat-related state including conversations, messages, and streaming responses.
+Manages conversation state and streaming:
 
-**Key Features:**
+**State Management:**
 
-- Message history management with pagination
-- Real-time streaming state updates
-- Conversation branching support
-- Token usage tracking
-- Error recovery mechanisms
+- Conversations array with messages
+- Active conversation tracking
+- Streaming state for real-time updates
+- Token usage monitoring
+- Error handling
 
-**State Shape:**
-Manages conversations, active conversation ID, messages array, streaming state, token usage tracking, and error handling.
+**Key Actions:**
+
+- `addMessage` - Add new message
+- `updateMessage` - Update existing message
+- `startStreaming` - Begin streaming response
+- `appendToStream` - Add streaming chunks
+- `endStreaming` - Complete streaming
 
 #### Settings Store (`settings.ts`)
 
-Manages user preferences, API keys, and application configuration.
+Manages user preferences and configuration:
 
-**Key Features:**
+**State Management:**
 
-- Multi-provider API key management
-- Theme and appearance settings
-- Model preferences per provider
+- API keys by provider
+- Model preferences
+- UI customization
 - Privacy settings
-- Export/import configuration
+- Feature flags
 
-**State Shape:**
-Manages API keys by provider, theme preferences, default model configuration, provider-specific model preferences, privacy settings, and experimental feature flags.
+**Key Actions:**
 
-### Storage Module (`/storage`)
+- `setApiKey` - Save encrypted API key
+- `removeApiKey` - Delete API key
+- `updateTheme` - Change UI theme
+- `setDefaultModel` - Set preferred model
+- `exportSettings` - Export configuration
+
+### Storage Layer (`storage/`)
 
 #### Chrome Storage Wrapper (`chrome.ts`)
 
-Type-safe wrapper around Chrome Storage API with automatic serialization.
+Type-safe wrapper around Chrome Storage API:
 
 **Features:**
 
-- Automatic JSON serialization/deserialization
+- Automatic serialization/deserialization
 - Batch operations for performance
 - Storage quota management
 - Change listeners with debouncing
-- Migration support for schema changes
+- Migration support
 
 **Storage Areas:**
 
-- `local`: Large data (conversations, cache)
-- `sync`: User settings (synced across devices)
-- `session`: Temporary data (current session only)
+- `local` - Large data (10MB limit)
+- `sync` - Synced settings (100KB limit)
+- `session` - Temporary data
 
-#### Key Manager (`keys/manager.ts`)
+#### Key Management System (`keys/`)
 
-Orchestrates API key storage with encryption and validation.
+Comprehensive API key management:
+
+**Components:**
+
+- **Cache** - In-memory key caching
+- **Database** - Persistent key storage
+- **Encryption** - AES-GCM protection
+- **Health** - Validation and monitoring
+- **Rotation** - Key rotation policies
+- **Usage** - Track API usage
 
 **Security Features:**
 
-- Automatic encryption before storage
-- Key rotation support
-- Access audit logging
-- Secure deletion with memory clearing
-- Provider-specific validation
+- Automatic encryption
+- Secure key derivation
+- Memory clearing
+- Audit logging
+- Access control
 
-### Security Module (`/security`)
+### Security Layer (`security/`)
 
 #### Encryption (`crypto.ts`)
 
-Implements AES-GCM encryption with WebCrypto API.
+AES-GCM encryption implementation:
 
-**Implementation Details:**
+**Specifications:**
 
 - 256-bit AES keys
-- Random IV generation per encryption
-- PBKDF2 key derivation from user passphrase
-- Constant-time comparison for authentication
-- Memory clearing after operations
+- Random IV per encryption
+- PBKDF2 key derivation
+- 100,000 iterations
+- SHA-256 hashing
+
+**API:**
+
+```typescript
+encrypt(plaintext: string, passphrase: string): Promise<EncryptedData>
+decrypt(encrypted: EncryptedData, passphrase: string): Promise<string>
+```
+
+#### Data Masking (`masking.ts`)
+
+Sensitive data protection:
+
+**Features:**
+
+- API key masking for display
+- PII detection and redaction
+- Secure clipboard operations
+- Log sanitization
+
+## State Management
+
+### Zustand Integration
+
+**Store Pattern:**
+
+```typescript
+interface ChatStore {
+  // State
+  conversations: Conversation[];
+  activeId: string | null;
+
+  // Actions
+  addMessage: (message: Message) => void;
+  setActiveConversation: (id: string) => void;
+
+  // Computed
+  get activeConversation(): Conversation | null;
+}
+```
+
+**Middleware:**
+
+- Devtools for debugging
+- Persist for storage sync
+- Immer for immutability
+
+### Storage Persistence
+
+**Auto-sync Pattern:**
+
+```typescript
+// Zustand persist middleware
+persist(
+  (set, get) => ({
+    /* store */
+  }),
+  {
+    name: 'chat-storage',
+    storage: createChromeStorage(),
+  }
+);
+```
+
+## API Usage
+
+### Chat Operations
+
+```typescript
+import { useChatStore } from '@data/store';
+
+// Add message
+const addMessage = useChatStore(state => state.addMessage);
+addMessage({
+  role: 'user',
+  content: 'Hello!',
+});
+
+// Stream response
+const startStreaming = useChatStore(state => state.startStreaming);
+startStreaming();
+```
+
+### Settings Management
+
+```typescript
+import { useSettingsStore } from '@data/store';
+
+// Save API key
+const setApiKey = useSettingsStore(state => state.setApiKey);
+await setApiKey('openai', 'sk-...');
+
+// Get current model
+const model = useSettingsStore(state => state.providers.openai?.model);
+```
+
+### Direct Storage Access
+
+```typescript
+import { ChromeStorage } from '@data/storage';
+
+// Save data
+await ChromeStorage.set('key', { data: 'value' });
+
+// Load data
+const data = await ChromeStorage.get('key');
+
+// Listen for changes
+ChromeStorage.onChange('key', (newValue, oldValue) => {
+  console.log('Changed:', newValue);
+});
+```
+
+### Encryption
+
+```typescript
+import { encrypt, decrypt } from '@data/security';
+
+// Encrypt sensitive data
+const encrypted = await encrypt('secret', 'passphrase');
+
+// Decrypt data
+const plaintext = await decrypt(encrypted, 'passphrase');
+```
+
+## Security
+
+### API Key Protection
 
 **Encryption Flow:**
-Data flows from plaintext through key derivation, IV generation, encryption, base64 encoding to storage. Decryption reverses this process with base64 decoding, IV-based decryption, verification, and plaintext recovery.
 
-#### Sanitization (`sanitizer.ts`)
+1. User provides API key
+2. Generate random salt and IV
+3. Derive encryption key via PBKDF2
+4. Encrypt with AES-GCM
+5. Store encrypted data + metadata
+6. Clear plaintext from memory
 
-Input validation and sanitization for security.
+### Best Practices
 
-**Capabilities:**
+**Do:**
 
-- XSS prevention for user inputs
-- SQL injection prevention
-- Path traversal protection
-- Content Security Policy enforcement
-- Rate limiting for API calls
+- Always encrypt sensitive data
+- Use secure key derivation
+- Clear memory after use
+- Implement access logging
+- Validate all inputs
 
-## Implementation Details
+**Don't:**
 
-### State Management Pattern
+- Store plaintext keys
+- Log sensitive data
+- Trust user input
+- Skip validation
+- Ignore errors
 
-Implements Zustand store with devtools, persistence, and Immer middleware for immutable state updates. Includes state properties, action methods, and computed values with automatic storage synchronization.
+## Performance
 
-### Storage Adapter Pattern
+### Optimization Strategies
 
-Chrome Storage adapter for Zustand provides async getItem, setItem, and removeItem methods that interface with chrome.storage.local API for persistent state management.
+#### Caching
 
-### Encryption Implementation
+- In-memory cache for frequent access
+- TTL-based expiration
+- LRU eviction policy
 
-CryptoService class implements secure key derivation using PBKDF2 with 100,000 iterations and SHA-256 hashing. Encryption uses AES-GCM with random salt and IV generation, returning base64-encoded encrypted data, salt, and IV.
+#### Batching
 
-## API Reference
+- Debounced storage writes
+- Batch multiple updates
+- Reduce API calls
 
-### Chat Store API
+#### Memory Management
 
-**Message operations:** addMessage, updateMessage, deleteMessage, clearMessages
+- Pagination for large datasets
+- Virtual scrolling for lists
+- Periodic cleanup routines
 
-**Streaming operations:** startStreaming, appendToStream, endStreaming for real-time message updates
+### Performance Metrics
 
-**Conversation operations:** createConversation, switchConversation, deleteConversation, exportConversation for conversation management
-
-### Settings Store API
-
-**API key operations:** setApiKey, removeApiKey, validateApiKey for secure key management
-
-**Preference operations:** updateTheme, setDefaultModel, updatePrivacySettings for user customization
-
-**Import/Export:** exportSettings, importSettings, resetToDefaults for data portability
-
-### Storage API
-
-**Basic operations:** saveToStorage, loadFromStorage, removeFromStorage with optional storage area selection
-
-**Batch operations:** batchSave, batchLoad for efficient multi-item operations
-
-**Listeners:** onStorageChange for reactive updates to storage modifications
-
-## Usage Examples
-
-_Code examples have been removed for brevity. Please refer to the implementation files for usage patterns._
-
-## Security Considerations
-
-### API Key Security
-
-1. **Never store plaintext**: All API keys are encrypted before storage
-2. **Memory clearing**: Sensitive data is cleared from memory after use
-3. **Access logging**: All key access is logged for audit
-4. **Rotation support**: Keys can be rotated without data loss
-5. **Secure deletion**: Keys are overwritten before deletion
-
-### Data Protection
-
-1. **Encryption at rest**: All sensitive data is encrypted in storage
-2. **Transport security**: HTTPS only for external communications
-3. **Input validation**: All user inputs are sanitized
-4. **XSS prevention**: Content Security Policy enforcement
-5. **CSRF protection**: Token validation for state changes
-
-### Privacy Guidelines
-
-1. **Local first**: Data stays on device unless explicitly shared
-2. **No telemetry**: No automatic data collection
-3. **User control**: Full data export and deletion capabilities
-4. **Transparent storage**: Users can inspect all stored data
-5. **Consent required**: Explicit consent for any data sharing
-
-## Performance Optimization
-
-### Caching Strategy
-
-Implement in-memory cache with TTL (Time To Live) for frequently accessed storage items. Cache entries expire after a configured duration, falling back to storage retrieval and cache refresh.
-
-### Batch Operations
-
-Debounce multiple storage writes into single batch operations to improve performance. Pending writes are collected and executed together after a configurable delay.
-
-### Memory Management
-
-1. **Pagination**: Load messages in chunks
-2. **Virtualization**: Only render visible messages
-3. **Cleanup**: Remove old conversations periodically
-4. **Compression**: Compress large conversation exports
-5. **Lazy loading**: Load data only when needed
+- Storage write: <5ms (debounced)
+- Encryption: <10ms for typical data
+- Cache hit rate: >90%
+- Memory usage: <50MB typical
 
 ## Error Handling
 
-### Storage Errors
+### Error Types
 
-Custom StorageError class with error codes and recoverability flags. Robust save operations include retry logic with exponential backoff, quota exceeded handling through data cleanup, and graceful failure reporting.
+| Type                | Description           | Recovery            |
+| ------------------- | --------------------- | ------------------- |
+| `QUOTA_EXCEEDED`    | Storage limit reached | Clean old data      |
+| `ENCRYPTION_FAILED` | Encryption error      | Retry with new key  |
+| `NETWORK_ERROR`     | Sync failed           | Retry with backoff  |
+| `CORRUPTION`        | Data corrupted        | Restore from backup |
+| `PERMISSION_DENIED` | No storage access     | Request permission  |
 
-### Recovery Mechanisms
+### Recovery Strategies
 
-1. **Automatic retry**: Transient failures retry with backoff
-2. **Fallback storage**: Use session storage if local fails
-3. **Data recovery**: Restore from backups on corruption
-4. **Graceful degradation**: Continue with reduced functionality
-5. **User notification**: Inform user of persistent issues
+1. **Automatic Retry** - Transient failures
+2. **Fallback Storage** - Use session storage
+3. **Data Recovery** - Restore from backup
+4. **Graceful Degradation** - Reduced functionality
+5. **User Notification** - Clear error messages
 
-## Testing Strategy
+## Migration
 
-### Unit Tests
+### Schema Migrations
 
-Test individual store operations like message addition and verify state changes. Test storage persistence by mocking Chrome storage APIs and verifying correct serialization and storage calls.
+**Migration System:**
 
-### Integration Tests
+```typescript
+const migrations = {
+  '1.0.0': migrateToV1,
+  '2.0.0': migrateToV2,
+  '3.0.0': migrateToV3,
+};
+```
 
-Test complete workflows across multiple modules, such as encrypted API key storage and retrieval. Verify that encryption is applied and that stored data differs from plaintext while retrieved data matches original input.
+**Breaking Changes:**
 
-## Migration Guide
+- v2.0: Conversation-based messages
+- v2.1: Encrypted API keys
+- v3.0: Zustand migration
 
-### From v1 to v2
+## Testing
 
-Migration process transforms old message format into conversation-based structure. Retrieves all existing data, restructures into new format with conversations array, clears old storage, and saves transformed data.
+### Test Coverage
 
-### Breaking Changes
+```bash
+# Run data module tests
+npm test -- src/data
 
-- **v2.0**: Changed message format to support conversations
-- **v2.1**: Encrypted API keys (automatic migration)
-- **v2.2**: Added provider-specific settings
-- **v3.0**: Moved to Zustand from Redux (compatibility layer provided)
+# Specific test suites
+npm test -- src/data/store
+npm test -- src/data/storage
+npm test -- src/data/security
+```
 
-## Best Practices
+### Test Types
 
-### Do's
+- Unit tests for stores
+- Integration tests for storage
+- Security tests for encryption
+- Performance benchmarks
 
-- ✅ Always encrypt sensitive data
-- ✅ Use batch operations for multiple updates
-- ✅ Implement proper error handling
-- ✅ Clean up old data periodically
-- ✅ Test storage quota limits
-- ✅ Provide data export functionality
-- ✅ Use TypeScript for type safety
-- ✅ Implement proper logging
+## Debugging
 
-### Don'ts
+### Chrome DevTools
 
-- ❌ Store plaintext passwords or API keys
-- ❌ Block UI on storage operations
-- ❌ Assume storage operations succeed
-- ❌ Store large blobs without compression
-- ❌ Mix storage areas unnecessarily
-- ❌ Ignore storage change events
-- ❌ Trust user input without validation
-- ❌ Leak sensitive data in errors
+```javascript
+// View all storage
+chrome.storage.local.get(null, console.log);
 
-## Troubleshooting
+// Monitor changes
+chrome.storage.onChanged.addListener((changes, area) => {
+  console.log('Storage changed:', changes, area);
+});
 
-### Common Issues
+// Check quota
+chrome.storage.local.getBytesInUse(null, bytes => {
+  console.log('Used:', bytes, 'bytes');
+});
+```
 
-**Issue**: Storage quota exceeded
-**Solution**: Implement cleanup by sorting conversations by last accessed time and keeping only the most recent ones.
+### Zustand DevTools
 
-**Issue**: Slow storage operations
-**Solution**: Use batch operations and in-memory caching with fallback to storage for cache misses.
+Enable Redux DevTools extension to inspect:
 
-**Issue**: Data corruption
-**Solution**: Implement validation and recovery by checking data schema and falling back to backup data when validation fails.
+- State changes
+- Action history
+- Time travel debugging
+- State diff
+
+## Common Issues
+
+### Storage Quota Exceeded
+
+**Solution:**
+
+```typescript
+// Clean old conversations
+const cleanOldData = async () => {
+  const conversations = await getConversations();
+  const sorted = conversations.sort((a, b) => b.lastAccessed - a.lastAccessed);
+  const keep = sorted.slice(0, 50);
+  await saveConversations(keep);
+};
+```
+
+### Slow Operations
+
+**Solution:**
+
+- Use batch operations
+- Implement caching
+- Debounce updates
+- Use web workers for encryption
 
 ## Future Enhancements
 
 ### Planned Features
 
-1. **IndexedDB Support**: For larger data storage needs
-2. **Sync Conflict Resolution**: Better handling of sync conflicts
-3. **Compression**: Automatic compression for large data
-4. **Versioned Backups**: Automatic backup with version history
-5. **Analytics**: Privacy-preserving usage analytics
-6. **Real-time Sync**: WebSocket-based real-time synchronization
-7. **Offline Support**: Full offline capability with sync queue
-8. **Data Portability**: Import/export in standard formats
+1. IndexedDB for large storage
+2. Sync conflict resolution
+3. Automatic compression
+4. Versioned backups
+5. Real-time sync via WebSocket
+6. Offline queue for sync
+7. Data export formats
 
 ### Experimental Features
 
-Enable in settings to test upcoming features:
+Enable via settings:
 
-- IndexedDB storage for large data sets
-- Data compression for stored data
-- Real-time synchronization
-- Advanced encryption methods
+- IndexedDB storage
+- Data compression
+- Real-time sync
+- Advanced encryption
 
 ## Contributing
 
 ### Development Setup
 
-- Install dependencies: `npm install`
-- Run tests: `npm run test:data`
-- Build: `npm run build`
-- Watch mode: `npm run dev`
+```bash
+# Install dependencies
+npm install
+
+# Run tests
+npm test -- src/data
+
+# Build module
+npm run build
+```
 
 ### Code Standards
 
-- TypeScript strict mode enabled
-- 100% type coverage required
-- Unit tests for all public APIs
-- Integration tests for critical paths
-- Documentation for public interfaces
+- TypeScript strict mode
+- 100% type coverage
+- Unit tests required
+- Documentation for APIs
+- Security review for changes
 
 ## License
 
-This module is part of the AI Browser Sidebar Extension and follows the project's MIT license.
+MIT License - Part of the AI Browser Sidebar Extension project
