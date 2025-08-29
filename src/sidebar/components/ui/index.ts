@@ -26,20 +26,16 @@ export type { CopyButtonProps } from './CopyButton';
 
 // TabLoadingIndicator exports
 export { TabLoadingIndicator } from '../TabLoadingIndicator';
-export type { 
-  TabLoadingIndicatorProps, 
-  TabLoadingIndicatorStatus, 
-  TabLoadingIndicatorSize 
+export type {
+  TabLoadingIndicatorProps,
+  TabLoadingIndicatorStatus,
+  TabLoadingIndicatorSize,
 } from '../TabLoadingIndicator';
 
 // Tooltip exports
 export { Tooltip } from './Tooltip';
 export type { TooltipProps } from './Tooltip';
 
-// Modal exports
-export { Modal } from './Modal';
-export type { ModalProps } from './Modal';
-
-// FullscreenModal exports
+// FullscreenModal exports (Modal removed - using FullscreenModal only)
 export { FullscreenModal } from './FullscreenModal';
 export type { FullscreenModalProps } from './FullscreenModal';

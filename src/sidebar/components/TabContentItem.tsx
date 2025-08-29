@@ -263,22 +263,20 @@ export const TabContentItem: React.FC<TabContentItemProps> = ({
         className="content-full-modal"
       >
         {content && (
-          <div className="full-content-container">
-            {/* Content metadata */}
-            <div className="full-content-header">
+          <>
+            {/* Content metadata badges */}
+            {(truncated || hasCodeBlocks) && (
               <div className="full-content-badges">
                 {truncated && <span className="full-content-badge-error">Truncated</span>}
                 {hasCodeBlocks && <span className="full-content-badge-info">Contains code</span>}
               </div>
-            </div>
+            )}
 
-            {/* Full content with better formatting */}
-            <div className="full-content-scroll-area">
-              <pre className="full-content-pre">
-                {content.content || content.markdown || content.textContent || ''}
-              </pre>
-            </div>
-          </div>
+            {/* Full content display */}
+            <pre className="full-content-pre">
+              {content.content || content.markdown || content.textContent || ''}
+            </pre>
+          </>
         )}
       </FullscreenModal>
     </>

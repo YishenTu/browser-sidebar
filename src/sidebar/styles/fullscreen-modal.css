@@ -20,7 +20,10 @@
   transform: translate(-50%, -50%);
   width: calc(100% - 40px);
   height: calc(100% - 40px);
-  background-color: rgba(26, 26, 26, 0.8);
+  background: var(
+    --sidebar-background,
+    rgba(28, 28, 30, 0.95)
+  ); /* Use sidebar background variable */
   border-radius: 12px;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.8);
   display: flex;
@@ -79,4 +82,7 @@
   flex: 1;
   overflow: auto;
   padding: 20px;
+  display: flex;
+  flex-direction: column;
+  /* Background inherited from container */
 }

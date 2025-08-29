@@ -27,7 +27,7 @@
 @import './dropdown.css'; /* Generic dropdown component */
 @import './search-sources.css'; /* Search sources display */
 @import './copy-button.css'; /* Copy button component */
-@import './modal.css'; /* Modal component for full content display */
+/* @import './modal.css'; - Removed: Using FullscreenModal instead */
 @import './multi-tab-content.css'; /* Multi-tab content preview component */
 @import './tab-loading-indicator.css'; /* Tab loading indicators for multi-tab feature */
 @import './tab-chip.css'; /* Tab chip component for showing loaded tabs */
