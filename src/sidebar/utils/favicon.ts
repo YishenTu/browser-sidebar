@@ -1,6 +1,6 @@
 /**
  * @file Favicon Utilities
- * 
+ *
  * Utilities for fetching and caching tab favicons with Google service fallback.
  * Provides robust favicon handling with memory caching and error recovery.
  */
@@ -24,17 +24,21 @@ export interface FaviconResult {
 }
 
 // In-memory cache for favicon URLs
-const faviconCache = new Map<string, {
-  result: FaviconResult;
-  timestamp: number;
-  expires: number;
-}>();
+const faviconCache = new Map<
+  string,
+  {
+    result: FaviconResult;
+    timestamp: number;
+    expires: number;
+  }
+>();
 
 // Cache TTL (Time To Live) in milliseconds - 30 minutes
 const CACHE_TTL = 30 * 60 * 1000;
 
 // Generic fallback icon (document icon)
-const GENERIC_FAVICON_DATA_URL = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTYiIGhlaWdodD0iMTYiIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHBhdGggZD0iTTE0IDJIMTIuNUw2IDhWMjBBMiAyIDAgMCAwIDggMjJIMTZBMiAyIDAgMCAwIDE4IDIwVjRBMiAyIDAgMCAwIDE2IDJIMTRBMTI1NCIgc3Ryb2tlPSJjdXJyZW50Q29sb3IiIHN0cm9rZS13aWR0aD0iMiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIi8+CjxwYXRoIGQ9Im0xNCA4LTYgMCAyIDJoNFYxMiIgc3Ryb2tlPSJjdXJyZW50Q29sb3IiIHN0cm9rZS13aWR0aD0iMiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIi8+Cjwvc3ZnPgo=';
+const GENERIC_FAVICON_DATA_URL =
+  'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTYiIGhlaWdodD0iMTYiIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHBhdGggZD0iTTE0IDJIMTIuNUw2IDhWMjBBMiAyIDAgMCAwIDggMjJIMTZBMiAyIDAgMCAwIDE4IDIwVjRBMiAyIDAgMCAwIDE2IDJIMTRBMTI1NCIgc3Ryb2tlPSJjdXJyZW50Q29sb3IiIHN0cm9rZS13aWR0aD0iMiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIi8+CjxwYXRoIGQ9Im0xNCA4LTYgMCAyIDJoNFYxMiIgc3Ryb2tlPSJjdXJyZW50Q29sb3IiIHN0cm9rZS13aWR0aD0iMiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIi8+Cjwvc3ZnPgo=';
 
 /**
  * Extract domain from URL
@@ -45,8 +49,8 @@ function extractDomain(url: string): string {
     return urlObj.hostname;
   } catch {
     // Fallback for invalid URLs
-    const match = url.match(/^https?:\/\/([^\/]+)/);
-    return match ? match[1] : url;
+    const match = url.match(/^https?:\/\/([^/]+)/);
+    return match?.[1] ?? url;
   }
 }
 
@@ -110,13 +114,13 @@ function cacheFavicon(cacheKey: string, result: FaviconResult): void {
 
 /**
  * Get favicon URL for a tab with fallback options
- * 
+ *
  * Priority order:
  * 1. Tab's existing favIconUrl (if useGoogleService is false)
  * 2. Google favicon service for the domain
  * 3. Tab's existing favIconUrl (as fallback if Google fails)
  * 4. Generic document icon
- * 
+ *
  * @param tabUrl - The tab's URL
  * @param tabFavIconUrl - The tab's existing favicon URL (optional)
  * @param options - Configuration options
@@ -127,11 +131,7 @@ export async function getFaviconUrl(
   tabFavIconUrl?: string,
   options: FaviconOptions = {}
 ): Promise<FaviconResult> {
-  const {
-    size = 16,
-    timeout = 3000,
-    useGoogleService = true,
-  } = options;
+  const { size = 16, timeout = 3000, useGoogleService = true } = options;
 
   // Create cache key based on domain and options
   const domain = extractDomain(tabUrl);
@@ -163,7 +163,7 @@ export async function getFaviconUrl(
     // Try Google favicon service
     const googleUrl = getGoogleFaviconUrl(domain, size);
     const isGoogleAccessible = await isUrlAccessible(googleUrl, timeout);
-    
+
     if (isGoogleAccessible) {
       result = {
         url: googleUrl,
@@ -194,7 +194,6 @@ export async function getFaviconUrl(
       isFallback: true,
       source: 'generic',
     };
-
   } catch (error) {
     // On any error, use generic fallback
     result = {
@@ -212,7 +211,7 @@ export async function getFaviconUrl(
 /**
  * Synchronously get favicon URL with fallback (for immediate use)
  * This uses the cache if available, otherwise returns either the tab favicon or Google service URL
- * 
+ *
  * @param tabUrl - The tab's URL
  * @param tabFavIconUrl - The tab's existing favicon URL (optional)
  * @param options - Configuration options
@@ -223,10 +222,7 @@ export function getFaviconUrlSync(
   tabFavIconUrl?: string,
   options: FaviconOptions = {}
 ): FaviconResult {
-  const {
-    size = 16,
-    useGoogleService = true,
-  } = options;
+  const { size = 16, useGoogleService = true } = options;
 
   const domain = extractDomain(tabUrl);
   const cacheKey = `${domain}:${size}:${useGoogleService}`;
@@ -278,7 +274,7 @@ export function getFaviconCacheStats(): {
   entries: Array<{ key: string; timestamp: number; expires: number; source: string }>;
 } {
   const entries: Array<{ key: string; timestamp: number; expires: number; source: string }> = [];
-  
+
   faviconCache.forEach((value, key) => {
     entries.push({
       key,
@@ -297,7 +293,7 @@ export function getFaviconCacheStats(): {
 /**
  * Preload favicon for a tab (useful for performance)
  * This triggers an async fetch and caches the result
- * 
+ *
  * @param tabUrl - The tab's URL
  * @param tabFavIconUrl - The tab's existing favicon URL (optional)
  * @param options - Configuration options
@@ -328,7 +324,7 @@ export function useFavicon(
   // For now, return sync result
   // In a real React environment, this would use useState/useEffect
   const result = getFaviconUrlSync(tabUrl, tabFavIconUrl, options);
-  
+
   return {
     faviconUrl: result.url,
     isLoading: false,
