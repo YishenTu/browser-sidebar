@@ -125,6 +125,19 @@ How do I initialize this product with my API key?
 `;
 
 /**
+ * Example with no tabs loaded
+ */
+const exampleNoTabs = `
+<system_instruction>
+You are a helpful assistant.
+</system_instruction>
+
+<user_query>
+What is the weather like today?
+</user_query>
+`;
+
+/**
  * Example with single tab and no selection
  */
 const exampleSingleTab = `
@@ -265,4 +278,4 @@ How do these initialization methods relate to each other?
  *    - Just mentions selections are marked within the content
  */
 
-export { exampleOutput, exampleSingleTab, exampleMultipleSelections };
+export { exampleOutput, exampleNoTabs, exampleSingleTab, exampleMultipleSelections };

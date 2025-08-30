@@ -29,18 +29,12 @@ export interface MultiTabFormatResult {
   /** Metadata about the formatting */
   metadata: {
     totalTabs: number;
-    currentTabId: number | null;
-    truncated: boolean;
-    truncatedCount: number;
-    truncatedTabIds: number[];
     totalChars: number;
     format: 'markdown' | 'structured';
   };
 }
 
 export interface FormatOptions {
-  /** Edited content for tabs (tab ID -> edited content) */
-  editedTabContent?: Record<number | string, string>;
   /** Whether there's a text selection in any tab */
   hasSelection?: boolean;
 }
@@ -56,18 +50,7 @@ export interface FormatOptions {
 /**
  * Safely extracts content from TabContent
  */
-function extractContent(
-  tabContent: TabContent | null | undefined,
-  editedContent?: Record<number | string, string>
-): string {
-  // Check if we have edited content for this tab
-  if (editedContent && tabContent?.tabInfo?.id !== undefined) {
-    const edited = editedContent[tabContent.tabInfo.id];
-    if (edited !== undefined) {
-      return edited;
-    }
-  }
-
+function extractContent(tabContent: TabContent | null | undefined): string {
   if (!tabContent?.extractedContent) {
     return '';
   }
@@ -119,41 +102,34 @@ function extractDomain(url: string): string {
  * Creates a clean, structured format for multiple tab contents
  *
  * @param userMessage - The user's query message
- * @param currentTab - Current active tab content
- * @param additionalTabs - Additional tabs to include
+ * @param tabs - Array of tab contents to include
  * @param options - Formatting options
  * @returns Formatted content and metadata
  */
 export function formatMultiTabContent(
   userMessage: string,
-  currentTab: TabContent | null | undefined,
-  additionalTabs: TabContent[] = [],
+  tabs: TabContent[] = [],
   options: FormatOptions = {}
 ): MultiTabFormatResult {
-  const { editedTabContent, hasSelection = false } = options;
-
-  const allTabs: TabContent[] = [];
-  const currentTabId = currentTab?.tabInfo?.id || null;
-
-  // Combine all tabs
-  if (currentTab) {
-    allTabs.push(currentTab);
-  }
-  allTabs.push(...additionalTabs);
+  const { hasSelection = false } = options;
 
   const sections: string[] = [];
 
-  // If no tabs, just return the user message
-  if (allTabs.length === 0) {
+  // If no tabs, just return the user message with a simple system instruction
+  if (tabs.length === 0) {
+    const formatted = `<system_instruction>
+You are a helpful assistant.
+</system_instruction>
+
+<user_query>
+${userMessage}
+</user_query>`;
+
     return {
-      formatted: userMessage,
+      formatted,
       metadata: {
         totalTabs: 0,
-        currentTabId: null,
-        truncated: false,
-        truncatedCount: 0,
-        truncatedTabIds: [],
-        totalChars: userMessage.length,
+        totalChars: formatted.length,
         format: 'markdown',
       },
     };
@@ -162,25 +138,25 @@ export function formatMultiTabContent(
   // ====================================================================
   // PART 1: BROWSER CONTEXT INSTRUCTION
   // ====================================================================
-  const tabWord = allTabs.length === 1 ? 'web page' : 'web pages';
-  const domains = [...new Set(allTabs.map(tab => extractDomain(extractURL(tab))).filter(Boolean))];
+  const tabWord = tabs.length === 1 ? 'web page' : 'web pages';
+  const domains = [...new Set(tabs.map(tab => extractDomain(extractURL(tab))).filter(Boolean))];
 
   sections.push('<system_instruction>');
-  sections.push(`The user is viewing ${allTabs.length} ${tabWord} in the browser.`);
+  sections.push(`The user is viewing ${tabs.length} ${tabWord} in the browser.`);
   if (domains.length > 0) {
     sections.push(`Source${domains.length > 1 ? 's' : ''}: ${domains.join(', ')}`);
   }
 
   if (hasSelection) {
     sections.push(
-      `Below is the extracted content from ${allTabs.length === 1 ? 'this tab' : 'these tabs'}. Selected portions are marked within the tab content, followed by the user's query about it.`
+      `Below is the extracted content from ${tabs.length === 1 ? 'this tab' : 'these tabs'}. Selected portions are marked within the tab content, followed by the user's query about it.`
     );
     sections.push(
       `Please analyze the provided content to answer the user's query, and do prioritize consideration of the selected content.`
     );
   } else {
     sections.push(
-      `Below is the extracted content from ${allTabs.length === 1 ? 'this tab' : 'these tabs'}, followed by the user's query about it.`
+      `Below is the extracted content from ${tabs.length === 1 ? 'this tab' : 'these tabs'}, followed by the user's query about it.`
     );
     sections.push(`Please analyze the provided content to answer the user's query.`);
   }
@@ -194,11 +170,11 @@ export function formatMultiTabContent(
   sections.push('<tab_content>');
 
   // Process each tab with proper XML structure
-  for (const tab of allTabs) {
+  for (const tab of tabs) {
     const title = extractTitle(tab);
     const url = extractURL(tab);
     const domain = extractDomain(url);
-    const content = extractContent(tab, editedTabContent);
+    const content = extractContent(tab);
 
     // Build tab content with XML metadata and markdown content
     const tabContent = `<tab>
@@ -232,11 +208,7 @@ ${content || '[No content extracted]'}
   return {
     formatted,
     metadata: {
-      totalTabs: allTabs.length,
-      currentTabId,
-      truncated: false,
-      truncatedCount: 0,
-      truncatedTabIds: [],
+      totalTabs: tabs.length,
       totalChars: formatted.length,
       format: 'markdown',
     },

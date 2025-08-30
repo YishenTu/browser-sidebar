@@ -193,6 +193,8 @@ export interface ChatState {
   setLoadedTabs: (tabs: Record<number, TabContent>) => void;
   /** Add or update a single tab's content */
   addLoadedTab: (tabId: number, tabContent: TabContent) => void;
+  /** Update the content of an already loaded tab (for editing) */
+  updateTabContent: (tabId: number, editedContent: string) => void;
   /** Remove a tab from loaded tabs */
   removeLoadedTab: (tabId: number) => void;
   /** Set the currently active tab ID */
@@ -478,6 +480,29 @@ export const useChatStore = create<ChatState>((set, get) => ({
           [tabId]: tabContent,
         },
         tabSelectionOrder: newOrder,
+      };
+    });
+  },
+
+  updateTabContent: (tabId: number, editedContent: string) => {
+    set(state => {
+      const existingTab = state.loadedTabs[tabId];
+      if (!existingTab) {
+        return state;
+      }
+
+      return {
+        ...state,
+        loadedTabs: {
+          ...state.loadedTabs,
+          [tabId]: {
+            ...existingTab,
+            extractedContent: {
+              ...existingTab.extractedContent,
+              content: editedContent,
+            },
+          },
+        },
       };
     });
   },

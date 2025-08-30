@@ -22,8 +22,6 @@ export interface SendMessageOptions {
   skipUserMessage?: boolean;
   /** UI-specific display content (overrides content for display) */
   displayContent?: string;
-  /** Edited content for tabs (tab ID -> edited content) */
-  editedTabContent?: Record<number | string, string>;
 }
 
 /**

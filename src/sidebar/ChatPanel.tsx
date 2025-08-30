@@ -207,6 +207,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
     getPreviousUserMessage,
     removeMessageAndAfter,
     updateMessage,
+    updateTabContent,
   } = useChatStore();
   const { sendMessage, switchProvider, cancelMessage } = useAIChat({
     enabled: true,
@@ -238,9 +239,6 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
   const [editingMessage, setEditingMessage] = useState<{ id: string; content: string } | null>(
     null
   );
-
-  // Store edited content for each tab
-  const [editedTabContent, setEditedTabContent] = useState<Record<number | string, string>>({});
 
   // Handle sending messages
   const handleSendMessage = useCallback(
@@ -301,7 +299,6 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
           await sendMessage(messageContent, {
             streaming: true,
             skipUserMessage: true, // Prevent duplicate user message
-            editedTabContent: editedTabContent,
           });
         } else {
           // Send message with content injection for first message or normal content for subsequent messages
@@ -309,7 +306,6 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
             streaming: true,
             displayContent: displayContent,
             metadata: Object.keys(messageMetadata).length > 0 ? messageMetadata : undefined,
-            editedTabContent: editedTabContent,
           });
         }
       } catch (error) {
@@ -334,7 +330,6 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
       multiTabError,
       multiTabLoading,
       showError,
-      editedTabContent,
     ]
   );
 
@@ -485,23 +480,19 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
   const handleClearTabContent = useCallback(
     (tabId: number) => {
       removeLoadedTab(tabId);
-      // Clear edited content for this tab
-      setEditedTabContent(prev => {
-        const updated = { ...prev };
-        delete updated[tabId];
-        return updated;
-      });
     },
     [removeLoadedTab]
   );
 
-  // Handle content edit callback
-  const handleContentEdit = useCallback((tabId: number | string, editedContent: string) => {
-    setEditedTabContent(prev => ({
-      ...prev,
-      [tabId]: editedContent,
-    }));
-  }, []);
+  // Handle content edit callback - directly update store
+  const handleContentEdit = useCallback(
+    (tabId: number | string, editedContent: string) => {
+      if (typeof tabId === 'number') {
+        updateTabContent(tabId, editedContent);
+      }
+    },
+    [updateTabContent]
+  );
 
   // Update bounds when window resizes
   useEffect(() => {

@@ -98,13 +98,7 @@ export function useMessageHandler({
         return; // Don't send empty messages
       }
 
-      const {
-        streaming = true,
-        skipUserMessage = false,
-        displayContent,
-        metadata,
-        editedTabContent,
-      } = options;
+      const { streaming = true, skipUserMessage = false, displayContent, metadata } = options;
 
       try {
         // Clear any previous errors
@@ -132,19 +126,13 @@ export function useMessageHandler({
 
         if (loadedTabIds.length > 0) {
           // We have loaded tabs, format the content with multi-tab structure
-          const currentTabId = chatStore.getCurrentTabId();
-          const currentTabContent = currentTabId ? loadedTabs[currentTabId] : null;
-
-          // Get additional tabs (all tabs except current)
-          const additionalTabs = loadedTabIds
-            .filter(tabId => tabId !== currentTabId)
+          // Get all loaded tabs
+          const allLoadedTabs = loadedTabIds
             .map(tabId => loadedTabs[tabId])
             .filter((tab): tab is TabContent => Boolean(tab));
 
           // Format the multi-tab content with the new cleaner structure
-          formatResult = formatMultiTabContent(trimmedContent, currentTabContent, additionalTabs, {
-            editedTabContent: editedTabContent,
-          });
+          formatResult = formatMultiTabContent(trimmedContent, allLoadedTabs);
 
           // Use formatted content for AI but keep original for display
           finalContent = formatResult.formatted;
@@ -163,14 +151,6 @@ export function useMessageHandler({
               ...metadata,
               hasTabContext,
               originalUserContent: hasTabContext ? trimmedContent : undefined,
-              // Include truncation info in metadata for UI to display
-              ...(formatResult?.metadata?.truncated && {
-                truncation: {
-                  truncated: true,
-                  truncatedTabCount: formatResult?.metadata?.truncatedCount,
-                  truncatedTabIds: formatResult?.metadata?.truncatedTabIds,
-                },
-              }),
             },
           });
         } else {
