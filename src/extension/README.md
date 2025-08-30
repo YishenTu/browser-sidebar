@@ -19,7 +19,9 @@ extension/
 │       ├── ExtractionQueue.test.ts # Queue tests
 │       └── index.ts        # Queue exports
 └── messaging/              # Message passing utilities
-    └── index.ts            # Message type definitions and utilities
+    ├── index.ts            # MessageBus and convenience functions
+    ├── errors.ts           # Error types and handling utilities
+    └── responses.ts        # Response types and factories
 ```
 
 ## Architecture Overview
