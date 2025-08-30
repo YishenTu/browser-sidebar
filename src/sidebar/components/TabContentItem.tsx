@@ -15,6 +15,8 @@ import { Alert } from '@ui/Alert';
 import { Collapsible } from '@ui/Collapsible';
 import { RegenerateIcon, ExpandIcon, CloseIcon, TableIcon } from '@ui/Icons';
 import { FullscreenModal } from '@ui/FullscreenModal';
+import { useChatStore } from '@/data/store/chat';
+import { useSessionManager } from '@hooks/useSessionManager';
 import '../styles/4-features/tab-content-item.css';
 
 export interface TabContentItemProps {
@@ -58,6 +60,15 @@ export const TabContentItem: React.FC<TabContentItemProps> = ({
   const [isExpanded, setIsExpanded] = useState(false);
   const [editedContent, setEditedContent] = useState<string | null>(null);
   const truncated = content?.metadata?.truncated ?? false;
+
+  // Check if editing should be disabled for current session
+  const { getSessionMessageCount } = useChatStore();
+  const { currentSession } = useSessionManager();
+
+  // Disable editing if the current session has messages
+  const isEditDisabled = currentSession
+    ? getSessionMessageCount(currentSession.tabId, currentSession.url) > 0
+    : false;
 
   // Use full text content, let CSS handle truncation
   const excerpt = content?.excerpt || content?.textContent || '';
@@ -293,7 +304,7 @@ export const TabContentItem: React.FC<TabContentItemProps> = ({
         maxWidth="72vw"
         maxHeight="72vh"
         className="content-full-modal"
-        editable={!!content}
+        editable={!!content && !isEditDisabled}
         content={
           editedContent !== null ? editedContent : content?.content || content?.textContent || ''
         }

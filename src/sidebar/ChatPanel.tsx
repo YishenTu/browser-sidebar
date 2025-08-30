@@ -17,6 +17,7 @@ import { ErrorBanner } from '@components/ErrorBanner';
 import { useChatStore, type ChatMessage } from '@store/chat';
 import { useAIChat } from '@hooks/ai';
 import { useMultiTabExtraction } from '@hooks/useMultiTabExtraction';
+import { useSessionManager } from '@hooks/useSessionManager';
 import { TabContentItem } from '@components/TabContentItem';
 import { ExtractionMode } from '@/types/extraction';
 import { ContentPreview } from '@components/ContentPreview';
@@ -197,11 +198,14 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
 
   // Dark theme is applied by default via CSS variables
 
+  // Session management - initializes session based on tab+URL
+  useSessionManager(); // Initialize session manager for side effects
+
   // Chat store and AI chat integration
   const {
     messages,
     isLoading,
-    clearConversation,
+    clearCurrentSession,
     hasMessages,
     editMessage,
     getPreviousUserMessage,
@@ -214,10 +218,8 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
     autoInitialize: true, // Auto-initialize providers from settings
   });
 
-  // Issue 1 Fix: Clear conversation on component mount to ensure fresh session
-  useEffect(() => {
-    clearConversation();
-  }, [clearConversation]);
+  // Note: Session manager automatically switches to appropriate session on mount
+  // No need to clear conversation anymore - each tab+URL has its own session
 
   // Multi-tab extraction integration (handles both current tab and additional tabs)
   const {
@@ -333,13 +335,13 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
     ]
   );
 
-  // Handle clear conversation
+  // Handle clear conversation (now clears only current session)
   const handleClearConversation = useCallback(() => {
     if (hasMessages() && window.confirm('Clear conversation? This cannot be undone.')) {
-      clearConversation();
+      clearCurrentSession();
       setEditingMessage(null); // Clear edit mode when clearing conversation
     }
-  }, [hasMessages, clearConversation]);
+  }, [hasMessages, clearCurrentSession]);
 
   // Handle edit message
   const handleEditMessage = useCallback((message: ChatMessage) => {
@@ -553,19 +555,13 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
     }
   }, []);
 
-  // Session state management: Cleanup on unmount
+  // Sidebar unmount: do NOT clear chat/session state so history persists across toggles.
+  // Optionally inform background to clear extraction cache without touching in-memory store.
   useEffect(() => {
-    // Cleanup function that runs when component unmounts
     return () => {
       try {
-        // Get loaded tab IDs from the Zustand store for cache cleanup
         const loadedTabIds = useChatStore.getState().getLoadedTabIds();
 
-        // Clear multi-tab state from Zustand store
-        const { clearConversation } = useChatStore.getState();
-        clearConversation(); // This already clears multi-tab state per the store implementation
-
-        // Send cleanup message to background to clear cache for loaded tab IDs
         if (loadedTabIds.length > 0) {
           const cleanupMessage = createMessage({
             type: 'CLEANUP_TAB_CACHE',
@@ -574,16 +570,15 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
             target: 'background',
           });
 
-          // Send cleanup message (fire and forget - no need to wait for response on unmount)
-          chrome.runtime.sendMessage(cleanupMessage).catch(_error => {
-            // Failed to send cleanup message on unmount
+          chrome.runtime.sendMessage(cleanupMessage).catch(() => {
+            // Ignore errors during unmount cleanup
           });
         }
-      } catch (_error) {
-        // Error during session state cleanup
+      } catch {
+        // Ignore cleanup errors on unmount
       }
     };
-  }, []); // Empty dependency array - cleanup only runs on unmount
+  }, []);
 
   // Handle header mouse down for dragging
   const handleHeaderMouseDown = useCallback(

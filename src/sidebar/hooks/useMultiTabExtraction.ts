@@ -79,6 +79,7 @@ export function useMultiTabExtraction(): UseMultiTabExtractionReturn {
     setHasAutoLoaded,
     getHasAutoLoaded,
     getCurrentTabContent,
+    activeSessionKey,
   } = useChatStore();
 
   // Current tab content derived from store (return ExtractedContent | null as per interface)
@@ -402,7 +403,8 @@ export function useMultiTabExtraction(): UseMultiTabExtractionReturn {
   // Auto-extract current tab on mount with proper timing for selection preservation
   useEffect(() => {
     const currentHasAutoLoaded = getHasAutoLoaded();
-    if (!currentHasAutoLoaded && !autoLoadAttempted.current) {
+    // Wait for session to be initialized before auto-extracting
+    if (activeSessionKey && !currentHasAutoLoaded && !autoLoadAttempted.current) {
       // Use requestAnimationFrame + setTimeout to ensure selection has been fully restored
       // This timing matches the selection restoration in sidebarController.ts
       requestAnimationFrame(() => {
@@ -411,7 +413,7 @@ export function useMultiTabExtraction(): UseMultiTabExtractionReturn {
         }, 20); // 20ms delay after frame to ensure all restoration attempts have completed
       });
     }
-  }, []); // Empty deps array - only run on mount
+  }, [activeSessionKey, getHasAutoLoaded, extractCurrentTab]); // Re-run when session is initialized
 
   // Refresh available tabs when loaded tabs change
   useEffect(() => {

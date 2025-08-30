@@ -21,6 +21,8 @@ export type MessageType =
   | 'SEND_TO_AI'
   | 'AI_RESPONSE'
   | 'GET_TAB_ID'
+  | 'GET_TAB_INFO'
+  | 'TAB_CLOSED'
   | 'GET_ALL_TABS'
   | 'EXTRACT_TAB_CONTENT'
   | 'CLEANUP_TAB_CACHE'
@@ -119,6 +121,20 @@ export interface AIResponsePayload {
 
 export interface GetTabIdPayload {
   /** The tab ID */
+  tabId: number;
+}
+
+export interface GetTabInfoPayload {
+  /** The tab ID */
+  tabId: number;
+  /** The tab URL */
+  url: string;
+  /** The tab title */
+  title?: string;
+}
+
+export interface TabClosedPayload {
+  /** The closed tab ID */
   tabId: number;
 }
 
@@ -222,6 +238,14 @@ export interface GetTabIdMessage extends Message<void> {
   type: 'GET_TAB_ID';
 }
 
+export interface GetTabInfoMessage extends Message<void> {
+  type: 'GET_TAB_INFO';
+}
+
+export interface TabClosedMessage extends Message<TabClosedPayload> {
+  type: 'TAB_CLOSED';
+}
+
 export interface GetAllTabsMessage extends Message<void> {
   type: 'GET_ALL_TABS';
 }
@@ -251,6 +275,8 @@ export type TypedMessage =
   | SendToAIMessage
   | AIResponseMessage
   | GetTabIdMessage
+  | GetTabInfoMessage
+  | TabClosedMessage
   | GetAllTabsMessage
   | ExtractTabContentMessage
   | CleanupTabCacheMessage
@@ -350,6 +376,8 @@ export function isValidMessage(obj: unknown): obj is Message {
     'SEND_TO_AI',
     'AI_RESPONSE',
     'GET_TAB_ID',
+    'GET_TAB_INFO',
+    'TAB_CLOSED',
     'GET_ALL_TABS',
     'EXTRACT_TAB_CONTENT',
     'CLEANUP_TAB_CACHE',

@@ -13,6 +13,7 @@ import {
   createMessage,
   ErrorPayload,
   GetTabIdPayload,
+  GetTabInfoPayload,
   GetAllTabsResponsePayload,
   ExtractTabPayload,
   ExtractTabContentResponsePayload,
@@ -244,6 +245,30 @@ export class DefaultHandlers {
   }
 
   /**
+   * Handler for tab info requests - returns the sender's tab ID and URL
+   */
+  static async handleGetTabInfo(
+    message: Message<void>,
+    sender: chrome.runtime.MessageSender
+  ): Promise<Message<GetTabInfoPayload>> {
+    // Ensure sender has tab information
+    if (!sender.tab?.id || !sender.tab?.url) {
+      throw new Error('Unable to determine tab info from sender');
+    }
+
+    return createMessage<GetTabInfoPayload>({
+      type: 'GET_TAB_INFO',
+      payload: {
+        tabId: sender.tab.id,
+        url: sender.tab.url,
+        title: sender.tab.title,
+      },
+      source: 'background',
+      target: message.source,
+    });
+  }
+
+  /**
    * Handler for GET_ALL_TABS requests - returns all accessible tabs
    */
   static async handleGetAllTabs(
@@ -408,6 +433,11 @@ export function createDefaultMessageHandler(): MessageHandlerRegistry {
     'Sidebar state ack'
   );
   registry.registerHandler('GET_TAB_ID', DefaultHandlers.handleGetTabId, 'Return sender tab ID');
+  registry.registerHandler(
+    'GET_TAB_INFO',
+    DefaultHandlers.handleGetTabInfo,
+    'Return sender tab ID and URL'
+  );
   registry.registerHandler(
     'GET_ALL_TABS',
     DefaultHandlers.handleGetAllTabs,

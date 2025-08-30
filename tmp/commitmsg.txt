@@ -1,0 +1,16 @@
+fix(sidebar): persist chat across unmount; guard auto-extract by session
+
+- Remove clearConversation on unmount to preserve in-memory sessions
+- Wait for activeSessionKey before auto-extracting current tab
+- Add session-aware deps to auto-extract effect
+
+refactor(extension): remove unused background session APIs
+
+- Drop SESSION_* message types and handlers
+- Remove background session storage and related imports
+
+feat(shared): add URL normalization utility for session keys
+
+- Provide normalizeUrl helper used for session keys
+
+chore: edit restrictions and plan docs per implementation

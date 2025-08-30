@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { TabContent } from '../../types/tabs';
+import { normalizeUrl } from '../../shared/utils/urlNormalizer';
 
 /**
  * @file Chat Store Implementation
@@ -123,9 +124,39 @@ export interface UpdateMessageOptions {
 }
 
 /**
+ * Session data structure for each tab+URL combination
+ */
+export interface SessionData {
+  // Core message state
+  messages: ChatMessage[];
+  conversationId: string;
+  lastResponseId: string | null;
+
+  // Session-specific UI state
+  isLoading: boolean;
+  error: string | null;
+  activeMessageId: string | null;
+
+  // Multi-tab state
+  loadedTabs: Record<number, TabContent>;
+  tabSelectionOrder: number[];
+  currentTabId: number | null;
+  hasAutoLoaded: boolean;
+
+  // Metadata
+  tabId: number;
+  url: string;
+  createdAt: number;
+  lastAccessedAt: number;
+}
+
+/**
  * Chat store state interface
  */
 export interface ChatState {
+  // Session management
+  sessions: Record<string, SessionData>;
+  activeSessionKey: string | null;
   // Core state
   /** Array of chat messages in chronological order */
   messages: ChatMessage[];
@@ -233,6 +264,28 @@ export interface ChatState {
   getLoadedTabIds: () => number[];
   /** Get loaded tab count */
   getLoadedTabCount: () => number;
+
+  // Session management actions
+  /** Create a session key from tab ID and URL */
+  createSessionKey: (tabId: number, url: string) => string;
+  /** Get or create a session */
+  getOrCreateSession: (tabId: number, url: string) => SessionData;
+  /** Switch to a different session */
+  switchSession: (tabId: number, url: string) => void;
+  /** Clear a specific session */
+  clearSession: (sessionKey: string) => void;
+  /** Clear all sessions for a tab */
+  clearTabSessions: (tabId: number) => void;
+  /** Clear only the current active session */
+  clearCurrentSession: () => void;
+  /** Get the active session */
+  getActiveSession: () => SessionData | null;
+  /** Check if a session exists */
+  hasSession: (tabId: number, url: string) => boolean;
+  /** Get message count for a session */
+  getSessionMessageCount: (tabId: number, url: string) => number;
+  /** Get all session keys */
+  getAllSessionKeys: () => string[];
 }
 
 /**
@@ -266,23 +319,226 @@ function getDefaultStatus(role: MessageRole): MessageStatus {
 }
 
 /**
+ * Helper to create a normalized session key
+ */
+function createSessionKeyInternal(tabId: number, url: string): string {
+  const normalizedUrl = normalizeUrl(url);
+  return `tab_${tabId}:${normalizedUrl}`;
+}
+
+/**
+ * Create a new session with default values
+ */
+function createNewSession(tabId: number, url: string): SessionData {
+  return {
+    messages: [],
+    conversationId: generateConversationId(),
+    lastResponseId: null,
+    isLoading: false,
+    error: null,
+    activeMessageId: null,
+    loadedTabs: {},
+    tabSelectionOrder: [],
+    currentTabId: null,
+    hasAutoLoaded: false,
+    tabId,
+    url: normalizeUrl(url),
+    createdAt: Date.now(),
+    lastAccessedAt: Date.now(),
+  };
+}
+
+/**
  * Create and configure the chat store using Zustand
  */
 export const useChatStore = create<ChatState>((set, get) => ({
-  // Initial state
+  // Session management state
+  sessions: {},
+  activeSessionKey: null,
+
+  // Computed properties that proxy to active session
   messages: [],
   conversationId: null,
   isLoading: false,
   error: null,
   activeMessageId: null,
   lastResponseId: null,
-  // Multi-tab initial state
   loadedTabs: {},
   currentTabId: null,
   hasAutoLoaded: false,
   tabSelectionOrder: [],
 
-  // Message management actions
+  // Session management methods
+  createSessionKey: (tabId: number, url: string) => {
+    return createSessionKeyInternal(tabId, url);
+  },
+
+  getOrCreateSession: (tabId: number, url: string) => {
+    const sessionKey = createSessionKeyInternal(tabId, url);
+    const existingSession = get().sessions[sessionKey];
+
+    if (existingSession) {
+      // Update last accessed time
+      set(state => ({
+        ...state, // Preserve entire state
+        sessions: {
+          ...state.sessions,
+          [sessionKey]: {
+            ...existingSession,
+            lastAccessedAt: Date.now(),
+          },
+        },
+      }));
+      return existingSession;
+    }
+
+    // Create new session
+    const newSession = createNewSession(tabId, url);
+    set(state => ({
+      ...state, // Preserve entire state
+      sessions: {
+        ...state.sessions,
+        [sessionKey]: newSession,
+      },
+    }));
+    return newSession;
+  },
+
+  switchSession: (tabId: number, url: string) => {
+    const sessionKey = createSessionKeyInternal(tabId, url);
+    const session = get().getOrCreateSession(tabId, url);
+
+    // Set active session and update proxied properties
+    set(state => ({
+      ...state, // IMPORTANT: Preserve the entire state including sessions
+      activeSessionKey: sessionKey,
+      // Update all proxied properties from the session
+      messages: session.messages,
+      conversationId: session.conversationId,
+      isLoading: session.isLoading,
+      error: session.error,
+      activeMessageId: session.activeMessageId,
+      lastResponseId: session.lastResponseId,
+      loadedTabs: session.loadedTabs,
+      currentTabId: session.currentTabId,
+      hasAutoLoaded: session.hasAutoLoaded,
+      tabSelectionOrder: session.tabSelectionOrder,
+    }));
+  },
+
+  clearSession: (sessionKey: string) => {
+    set(state => {
+      const remainingSessions = { ...state.sessions };
+      delete remainingSessions[sessionKey];
+      return {
+        sessions: remainingSessions,
+        // If we cleared the active session, reset proxied properties
+        ...(state.activeSessionKey === sessionKey
+          ? {
+              activeSessionKey: null,
+              messages: [],
+              conversationId: null,
+              isLoading: false,
+              error: null,
+              activeMessageId: null,
+              lastResponseId: null,
+              loadedTabs: {},
+              currentTabId: null,
+              hasAutoLoaded: false,
+              tabSelectionOrder: [],
+            }
+          : {}),
+      };
+    });
+  },
+
+  clearTabSessions: (tabId: number) => {
+    set(state => {
+      const sessionKeysToRemove = Object.keys(state.sessions).filter(key =>
+        key.startsWith(`tab_${tabId}:`)
+      );
+
+      const newSessions = { ...state.sessions };
+      sessionKeysToRemove.forEach(key => {
+        delete newSessions[key];
+      });
+
+      // Check if active session was cleared
+      const activeCleared =
+        state.activeSessionKey && sessionKeysToRemove.includes(state.activeSessionKey);
+
+      return {
+        ...state,
+        sessions: newSessions,
+        ...(activeCleared
+          ? {
+              activeSessionKey: null,
+              messages: [],
+              conversationId: null,
+              isLoading: false,
+              error: null,
+              activeMessageId: null,
+              lastResponseId: null,
+              loadedTabs: {},
+              currentTabId: null,
+              hasAutoLoaded: false,
+              tabSelectionOrder: [],
+            }
+          : {}),
+      };
+    });
+  },
+
+  clearCurrentSession: () => {
+    const state = get();
+    if (state.activeSessionKey) {
+      // Create a fresh session for the same tab+URL
+      const session = state.sessions[state.activeSessionKey];
+      if (session) {
+        const newSession = createNewSession(session.tabId, session.url);
+        set(state => ({
+          ...state,
+          sessions: {
+            ...state.sessions,
+            [state.activeSessionKey!]: newSession,
+          },
+          // Update proxied properties
+          messages: [],
+          conversationId: newSession.conversationId,
+          isLoading: false,
+          error: null,
+          activeMessageId: null,
+          lastResponseId: null,
+          loadedTabs: {},
+          currentTabId: null,
+          hasAutoLoaded: false,
+          tabSelectionOrder: [],
+        }));
+      }
+    }
+  },
+
+  getActiveSession: () => {
+    const state = get();
+    return state.activeSessionKey ? state.sessions[state.activeSessionKey] || null : null;
+  },
+
+  hasSession: (tabId: number, url: string) => {
+    const sessionKey = createSessionKeyInternal(tabId, url);
+    return sessionKey in get().sessions;
+  },
+
+  getSessionMessageCount: (tabId: number, url: string) => {
+    const sessionKey = createSessionKeyInternal(tabId, url);
+    const session = get().sessions[sessionKey];
+    return session ? session.messages.length : 0;
+  },
+
+  getAllSessionKeys: () => {
+    return Object.keys(get().sessions);
+  },
+
+  // Message management actions (now operate on active session)
   addMessage: (options: CreateMessageOptions) => {
     const newMessage: ChatMessage = {
       id: options.id || generateMessageId(),
@@ -295,18 +551,38 @@ export const useChatStore = create<ChatState>((set, get) => ({
       metadata: options.metadata,
     };
 
-    set(state => ({
-      ...state,
-      messages: [...state.messages, newMessage],
-    }));
+    set(state => {
+      if (!state.activeSessionKey) return state;
+
+      const session = state.sessions[state.activeSessionKey];
+      if (!session) return state;
+
+      const updatedSession: SessionData = {
+        ...session,
+        messages: [...session.messages, newMessage],
+      };
+
+      return {
+        ...state,
+        sessions: {
+          ...state.sessions,
+          [state.activeSessionKey]: updatedSession,
+        },
+        messages: updatedSession.messages,
+      };
+    });
 
     return newMessage;
   },
 
   updateMessage: (id: string, updates: UpdateMessageOptions) => {
-    set(state => ({
-      ...state,
-      messages: state.messages.map(message =>
+    set(state => {
+      if (!state.activeSessionKey) return state;
+
+      const session = state.sessions[state.activeSessionKey];
+      if (!session) return state;
+
+      const updatedMessages = session.messages.map(message =>
         message.id === id
           ? {
               ...message,
@@ -320,47 +596,113 @@ export const useChatStore = create<ChatState>((set, get) => ({
                 : message.metadata,
             }
           : message
-      ),
-    }));
+      );
+
+      const updatedSession: SessionData = {
+        ...session,
+        messages: updatedMessages,
+      };
+
+      return {
+        ...state,
+        sessions: {
+          ...state.sessions,
+          [state.activeSessionKey]: updatedSession,
+        },
+        messages: updatedMessages,
+      };
+    });
   },
 
   appendToMessage: (id: string, content: string) => {
-    set(state => ({
-      ...state,
-      messages: state.messages.map(message =>
+    set(state => {
+      if (!state.activeSessionKey) return state;
+
+      const session = state.sessions[state.activeSessionKey];
+      if (!session) return state;
+
+      const updatedMessages = session.messages.map(message =>
         message.id === id
           ? {
               ...message,
               content: message.content + content,
             }
           : message
-      ),
-    }));
+      );
+
+      const updatedSession: SessionData = {
+        ...session,
+        messages: updatedMessages,
+      };
+
+      return {
+        ...state,
+        sessions: {
+          ...state.sessions,
+          [state.activeSessionKey]: updatedSession,
+        },
+        messages: updatedMessages,
+      };
+    });
   },
 
   deleteMessage: (id: string) => {
-    set(state => ({
-      ...state,
-      messages: state.messages.filter(message => message.id !== id),
-    }));
+    set(state => {
+      if (!state.activeSessionKey) return state;
+
+      const session = state.sessions[state.activeSessionKey];
+      if (!session) return state;
+
+      const updatedMessages = session.messages.filter(message => message.id !== id);
+
+      const updatedSession: SessionData = {
+        ...session,
+        messages: updatedMessages,
+      };
+
+      return {
+        ...state,
+        sessions: {
+          ...state.sessions,
+          [state.activeSessionKey]: updatedSession,
+        },
+        messages: updatedMessages,
+      };
+    });
   },
 
   editMessage: (id: string) => {
     const state = get();
-    const messageIndex = state.messages.findIndex(msg => msg.id === id);
+    if (!state.activeSessionKey) return undefined;
+
+    const session = state.sessions[state.activeSessionKey];
+    if (!session) return undefined;
+
+    const messageIndex = session.messages.findIndex(msg => msg.id === id);
 
     if (messageIndex === -1) {
       return undefined;
     }
 
     // Get the message to edit
-    const messageToEdit = state.messages[messageIndex];
+    const messageToEdit = session.messages[messageIndex];
 
     // Remove all messages after this one
+    const updatedMessages = session.messages.slice(0, messageIndex + 1);
+    const updatedSession: SessionData = {
+      ...session,
+      messages: updatedMessages,
+      lastResponseId: null, // Reset response ID since we're editing
+    };
+
     set(state => ({
       ...state,
-      messages: state.messages.slice(0, messageIndex + 1),
-      lastResponseId: null, // Reset response ID since we're editing
+      sessions: {
+        ...state.sessions,
+        [state.activeSessionKey!]: updatedSession,
+      },
+      messages: updatedMessages,
+      lastResponseId: null,
     }));
 
     return messageToEdit;
@@ -368,7 +710,12 @@ export const useChatStore = create<ChatState>((set, get) => ({
 
   getPreviousUserMessage: (assistantMessageId: string) => {
     const state = get();
-    const assistantIndex = state.messages.findIndex(msg => msg.id === assistantMessageId);
+    if (!state.activeSessionKey) return undefined;
+
+    const session = state.sessions[state.activeSessionKey];
+    if (!session) return undefined;
+
+    const assistantIndex = session.messages.findIndex(msg => msg.id === assistantMessageId);
 
     if (assistantIndex === -1) {
       return undefined;
@@ -376,8 +723,8 @@ export const useChatStore = create<ChatState>((set, get) => ({
 
     // Find the previous user message
     for (let i = assistantIndex - 1; i >= 0; i--) {
-      if (state.messages[i]?.role === 'user') {
-        return state.messages[i];
+      if (session.messages[i]?.role === 'user') {
+        return session.messages[i];
       }
     }
 
@@ -386,99 +733,281 @@ export const useChatStore = create<ChatState>((set, get) => ({
 
   removeMessageAndAfter: (id: string) => {
     const state = get();
-    const messageIndex = state.messages.findIndex(msg => msg.id === id);
+    if (!state.activeSessionKey) return;
+
+    const session = state.sessions[state.activeSessionKey];
+    if (!session) return;
+
+    const messageIndex = session.messages.findIndex(msg => msg.id === id);
 
     if (messageIndex === -1) {
       return;
     }
 
     // Remove this message and all messages after it
+    const updatedMessages = session.messages.slice(0, messageIndex);
+    const updatedSession: SessionData = {
+      ...session,
+      messages: updatedMessages,
+      lastResponseId: null, // Reset response ID
+    };
+
     set(state => ({
       ...state,
-      messages: state.messages.slice(0, messageIndex),
-      lastResponseId: null, // Reset response ID
+      sessions: {
+        ...state.sessions,
+        [state.activeSessionKey!]: updatedSession,
+      },
+      messages: updatedMessages,
+      lastResponseId: null,
     }));
   },
 
-  // Conversation management actions
+  // Conversation management actions (now delegates to clearCurrentSession)
   clearConversation: () => {
-    set({
-      messages: [],
-      error: null,
-      isLoading: false,
-      activeMessageId: null,
-      lastResponseId: null,
-      // Reset multi-tab state
-      loadedTabs: {},
-      currentTabId: null,
-      hasAutoLoaded: false,
-      tabSelectionOrder: [],
-    });
+    get().clearCurrentSession();
   },
 
   startNewConversation: (conversationId?: string) => {
-    set({
-      conversationId: conversationId || generateConversationId(),
-      messages: [],
-      error: null,
-      isLoading: false,
-      activeMessageId: null,
-      lastResponseId: null,
-      // Reset multi-tab state
-      loadedTabs: {},
-      currentTabId: null,
-      hasAutoLoaded: false,
-      tabSelectionOrder: [],
-    });
+    // This is similar to clearCurrentSession but with a specific conversation ID
+    const state = get();
+    if (state.activeSessionKey) {
+      const session = state.sessions[state.activeSessionKey];
+      if (session) {
+        const newSession = {
+          ...createNewSession(session.tabId, session.url),
+          conversationId: conversationId || generateConversationId(),
+        };
+        set(state => ({
+          ...state,
+          sessions: {
+            ...state.sessions,
+            [state.activeSessionKey!]: newSession,
+          },
+          // Update proxied properties
+          messages: [],
+          conversationId: newSession.conversationId,
+          isLoading: false,
+          error: null,
+          activeMessageId: null,
+          lastResponseId: null,
+          loadedTabs: {},
+          currentTabId: null,
+          hasAutoLoaded: false,
+          tabSelectionOrder: [],
+        }));
+      }
+    }
   },
 
   // State management actions
   setLoading: (loading: boolean) => {
-    set(state => ({ ...state, isLoading: loading }));
+    set(state => {
+      if (!state.activeSessionKey) return { ...state, isLoading: loading };
+
+      const session = state.sessions[state.activeSessionKey];
+      if (!session) return { ...state, isLoading: loading };
+
+      const updatedSession: SessionData = {
+        ...session,
+        isLoading: loading,
+      };
+
+      return {
+        ...state,
+        sessions: {
+          ...state.sessions,
+          [state.activeSessionKey]: updatedSession,
+        },
+        isLoading: loading,
+      };
+    });
   },
 
   setError: (error: string | null) => {
-    set(state => ({ ...state, error }));
+    set(state => {
+      if (!state.activeSessionKey) return { ...state, error };
+
+      const session = state.sessions[state.activeSessionKey];
+      if (!session) return { ...state, isLoading: false };
+
+      const updatedSession: SessionData = {
+        ...session,
+        error,
+      };
+
+      return {
+        ...state,
+        sessions: {
+          ...state.sessions,
+          [state.activeSessionKey]: updatedSession,
+        },
+        error,
+      };
+    });
   },
 
   clearError: () => {
-    set(state => ({ ...state, error: null }));
+    set(state => {
+      if (!state.activeSessionKey) return { ...state, error: null };
+
+      const session = state.sessions[state.activeSessionKey];
+      if (!session) return { ...state, isLoading: false };
+
+      const updatedSession: SessionData = {
+        ...session,
+        error: null,
+      };
+
+      return {
+        ...state,
+        sessions: {
+          ...state.sessions,
+          [state.activeSessionKey]: updatedSession,
+        },
+        error: null,
+      };
+    });
   },
 
   setActiveMessage: (messageId: string | null) => {
-    set(state => ({ ...state, activeMessageId: messageId }));
+    set(state => {
+      if (!state.activeSessionKey) return { ...state, activeMessageId: messageId };
+
+      const session = state.sessions[state.activeSessionKey];
+      if (!session) return { ...state, isLoading: false };
+
+      const updatedSession: SessionData = {
+        ...session,
+        activeMessageId: messageId,
+      };
+
+      return {
+        ...state,
+        sessions: {
+          ...state.sessions,
+          [state.activeSessionKey]: updatedSession,
+        },
+        activeMessageId: messageId,
+      };
+    });
   },
 
   clearActiveMessage: () => {
-    // Use a simpler update that doesn't rely on state spreading
-    set({ activeMessageId: null });
+    set(state => {
+      if (!state.activeSessionKey) return { ...state, activeMessageId: null };
+
+      const session = state.sessions[state.activeSessionKey];
+      if (!session) return { ...state, isLoading: false };
+
+      const updatedSession: SessionData = {
+        ...session,
+        activeMessageId: null,
+      };
+
+      return {
+        ...state,
+        sessions: {
+          ...state.sessions,
+          [state.activeSessionKey]: updatedSession,
+        },
+        activeMessageId: null,
+      };
+    });
   },
 
   setLastResponseId: (responseId: string | null) => {
-    set(state => ({ ...state, lastResponseId: responseId }));
+    set(state => {
+      if (!state.activeSessionKey) return { ...state, lastResponseId: responseId };
+
+      const session = state.sessions[state.activeSessionKey];
+      if (!session) return { ...state, isLoading: false };
+
+      const updatedSession: SessionData = {
+        ...session,
+        lastResponseId: responseId,
+      };
+
+      return {
+        ...state,
+        sessions: {
+          ...state.sessions,
+          [state.activeSessionKey]: updatedSession,
+        },
+        lastResponseId: responseId,
+      };
+    });
   },
 
   getLastResponseId: () => {
-    return get().lastResponseId;
+    const state = get();
+    if (!state.activeSessionKey) return null;
+    const session = state.sessions[state.activeSessionKey];
+    return session ? session.lastResponseId : null;
   },
 
-  // Multi-tab state management actions
+  // Multi-tab state management actions (now work with active session)
   setLoadedTabs: (tabs: Record<number, TabContent>) => {
-    set(state => ({ ...state, loadedTabs: tabs }));
+    set(state => {
+      if (!state.activeSessionKey) return { ...state, loadedTabs: tabs };
+
+      const session = state.sessions[state.activeSessionKey];
+      if (!session) return { ...state, isLoading: false };
+
+      const updatedSession: SessionData = {
+        ...session,
+        loadedTabs: tabs,
+      };
+
+      return {
+        ...state,
+        sessions: {
+          ...state.sessions,
+          [state.activeSessionKey]: updatedSession,
+        },
+        loadedTabs: tabs,
+      };
+    });
   },
 
   addLoadedTab: (tabId: number, tabContent: TabContent) => {
     set(state => {
-      // Update selection order - remove if exists and add to end
-      const newOrder = state.tabSelectionOrder.filter(id => id !== tabId);
+      if (!state.activeSessionKey) {
+        // If no active session, just update the proxy state
+        const newOrder = state.tabSelectionOrder.filter(id => id !== tabId);
+        newOrder.push(tabId);
+        return {
+          ...state,
+          loadedTabs: {
+            ...state.loadedTabs,
+            [tabId]: tabContent,
+          },
+          tabSelectionOrder: newOrder,
+        };
+      }
+
+      const session = state.sessions[state.activeSessionKey];
+      if (!session) return state;
+
+      const newOrder = session.tabSelectionOrder.filter(id => id !== tabId);
       newOrder.push(tabId);
+
+      const updatedSession: SessionData = {
+        ...session,
+        loadedTabs: {
+          ...session.loadedTabs,
+          [tabId]: tabContent,
+        },
+        tabSelectionOrder: newOrder,
+      };
 
       return {
         ...state,
-        loadedTabs: {
-          ...state.loadedTabs,
-          [tabId]: tabContent,
+        sessions: {
+          ...state.sessions,
+          [state.activeSessionKey]: updatedSession,
         },
+        loadedTabs: updatedSession.loadedTabs,
         tabSelectionOrder: newOrder,
       };
     });
@@ -486,109 +1015,249 @@ export const useChatStore = create<ChatState>((set, get) => ({
 
   updateTabContent: (tabId: number, editedContent: string) => {
     set(state => {
-      const existingTab = state.loadedTabs[tabId];
-      if (!existingTab) {
-        return state;
+      if (!state.activeSessionKey) {
+        // If no active session, just update the proxy state
+        const existingTab = state.loadedTabs[tabId];
+        if (!existingTab) return state;
+
+        return {
+          ...state,
+          loadedTabs: {
+            ...state.loadedTabs,
+            [tabId]: {
+              ...existingTab,
+              extractedContent: {
+                ...existingTab.extractedContent,
+                content: editedContent,
+              },
+            },
+          },
+        };
       }
+
+      const session = state.sessions[state.activeSessionKey];
+      if (!session) return state;
+
+      const existingTab = session.loadedTabs[tabId];
+      if (!existingTab) return state;
+
+      const updatedLoadedTabs = {
+        ...session.loadedTabs,
+        [tabId]: {
+          ...existingTab,
+          extractedContent: {
+            ...existingTab.extractedContent,
+            content: editedContent,
+          },
+        },
+      };
+
+      const updatedSession: SessionData = {
+        ...session,
+        loadedTabs: updatedLoadedTabs,
+      };
 
       return {
         ...state,
-        loadedTabs: {
-          ...state.loadedTabs,
-          [tabId]: {
-            ...existingTab,
-            extractedContent: {
-              ...existingTab.extractedContent,
-              content: editedContent,
-            },
-          },
+        sessions: {
+          ...state.sessions,
+          [state.activeSessionKey]: updatedSession,
         },
+        loadedTabs: updatedLoadedTabs,
       };
     });
   },
 
   removeLoadedTab: (tabId: number) => {
     set(state => {
+      if (!state.activeSessionKey) {
+        // If no active session, just update the proxy state
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        const { [tabId]: _removed, ...remainingTabs } = state.loadedTabs;
+        const newOrder = state.tabSelectionOrder.filter(id => id !== tabId);
+
+        return {
+          ...state,
+          loadedTabs: remainingTabs,
+          currentTabId: state.currentTabId === tabId ? null : state.currentTabId,
+          tabSelectionOrder: newOrder,
+        };
+      }
+
+      const session = state.sessions[state.activeSessionKey];
+      if (!session) return state;
+
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      const { [tabId]: _removed, ...remainingTabs } = state.loadedTabs;
-      const newOrder = state.tabSelectionOrder.filter(id => id !== tabId);
+      const { [tabId]: _removed, ...remainingTabs } = session.loadedTabs;
+      const newOrder = session.tabSelectionOrder.filter(id => id !== tabId);
+
+      const updatedSession: SessionData = {
+        ...session,
+        loadedTabs: remainingTabs,
+        currentTabId: session.currentTabId === tabId ? null : session.currentTabId,
+        tabSelectionOrder: newOrder,
+      };
 
       return {
         ...state,
+        sessions: {
+          ...state.sessions,
+          [state.activeSessionKey]: updatedSession,
+        },
         loadedTabs: remainingTabs,
-        // Clear currentTabId if it was the removed tab
-        currentTabId: state.currentTabId === tabId ? null : state.currentTabId,
+        currentTabId: updatedSession.currentTabId,
         tabSelectionOrder: newOrder,
       };
     });
   },
 
   setCurrentTabId: (tabId: number | null) => {
-    set(state => ({ ...state, currentTabId: tabId }));
+    set(state => {
+      if (!state.activeSessionKey) return { ...state, currentTabId: tabId };
+
+      const session = state.sessions[state.activeSessionKey];
+      if (!session) return { ...state, isLoading: false };
+
+      const updatedSession: SessionData = {
+        ...session,
+        currentTabId: tabId,
+      };
+
+      return {
+        ...state,
+        sessions: {
+          ...state.sessions,
+          [state.activeSessionKey]: updatedSession,
+        },
+        currentTabId: tabId,
+      };
+    });
   },
 
   setHasAutoLoaded: (value: boolean) => {
-    set(state => ({ ...state, hasAutoLoaded: value }));
+    set(state => {
+      if (!state.activeSessionKey) return { ...state, hasAutoLoaded: value };
+
+      const session = state.sessions[state.activeSessionKey];
+      if (!session) return { ...state, isLoading: false };
+
+      const updatedSession: SessionData = {
+        ...session,
+        hasAutoLoaded: value,
+      };
+
+      return {
+        ...state,
+        sessions: {
+          ...state.sessions,
+          [state.activeSessionKey]: updatedSession,
+        },
+        hasAutoLoaded: value,
+      };
+    });
   },
 
   getHasAutoLoaded: () => {
-    return get().hasAutoLoaded;
+    const state = get();
+    if (!state.activeSessionKey) return false;
+    const session = state.sessions[state.activeSessionKey];
+    return session ? session.hasAutoLoaded : false;
   },
 
-  // Selectors
+  // Selectors (now work with active session)
   getUserMessages: () => {
-    return get().messages.filter(message => message.role === 'user');
+    const state = get();
+    if (!state.activeSessionKey) return [];
+    const session = state.sessions[state.activeSessionKey];
+    return session ? session.messages.filter(message => message.role === 'user') : [];
   },
 
   getAssistantMessages: () => {
-    return get().messages.filter(message => message.role === 'assistant');
+    const state = get();
+    if (!state.activeSessionKey) return [];
+    const session = state.sessions[state.activeSessionKey];
+    return session ? session.messages.filter(message => message.role === 'assistant') : [];
   },
 
   getLastMessage: () => {
-    const messages = get().messages;
+    const state = get();
+    if (!state.activeSessionKey) return undefined;
+    const session = state.sessions[state.activeSessionKey];
+    if (!session) return undefined;
+    const messages = session.messages;
     return messages.length > 0 ? messages[messages.length - 1] : undefined;
   },
 
   getMessageById: (id: string) => {
-    return get().messages.find(message => message.id === id);
+    const state = get();
+    if (!state.activeSessionKey) return undefined;
+    const session = state.sessions[state.activeSessionKey];
+    return session ? session.messages.find(message => message.id === id) : undefined;
   },
 
   hasMessages: () => {
-    return get().messages.length > 0;
+    const state = get();
+    if (!state.activeSessionKey) return false;
+    const session = state.sessions[state.activeSessionKey];
+    return session ? session.messages.length > 0 : false;
   },
 
   getMessageCount: () => {
-    return get().messages.length;
+    const state = get();
+    if (!state.activeSessionKey) return 0;
+    const session = state.sessions[state.activeSessionKey];
+    return session ? session.messages.length : 0;
   },
 
-  // Multi-tab selectors
+  // Multi-tab selectors (now work with active session)
   getLoadedTabs: () => {
-    return get().loadedTabs;
+    const state = get();
+    if (!state.activeSessionKey) return {};
+    const session = state.sessions[state.activeSessionKey];
+    return session ? session.loadedTabs : {};
   },
 
   getTabContent: (tabId: number) => {
-    return get().loadedTabs[tabId];
+    const state = get();
+    if (!state.activeSessionKey) return undefined;
+    const session = state.sessions[state.activeSessionKey];
+    return session ? session.loadedTabs[tabId] : undefined;
   },
 
   getCurrentTabContent: () => {
     const state = get();
-    return state.currentTabId ? state.loadedTabs[state.currentTabId] : undefined;
+    if (!state.activeSessionKey) return undefined;
+    const session = state.sessions[state.activeSessionKey];
+    if (!session) return undefined;
+    return session.currentTabId ? session.loadedTabs[session.currentTabId] : undefined;
   },
 
   getCurrentTabId: () => {
-    return get().currentTabId;
+    const state = get();
+    if (!state.activeSessionKey) return null;
+    const session = state.sessions[state.activeSessionKey];
+    return session ? session.currentTabId : null;
   },
 
   isTabLoaded: (tabId: number) => {
-    return tabId in get().loadedTabs;
+    const state = get();
+    if (!state.activeSessionKey) return false;
+    const session = state.sessions[state.activeSessionKey];
+    return session ? tabId in session.loadedTabs : false;
   },
 
   getLoadedTabIds: () => {
-    return Object.keys(get().loadedTabs).map(id => parseInt(id, 10));
+    const state = get();
+    if (!state.activeSessionKey) return [];
+    const session = state.sessions[state.activeSessionKey];
+    return session ? Object.keys(session.loadedTabs).map(id => parseInt(id, 10)) : [];
   },
 
   getLoadedTabCount: () => {
-    return Object.keys(get().loadedTabs).length;
+    const state = get();
+    if (!state.activeSessionKey) return 0;
+    const session = state.sessions[state.activeSessionKey];
+    return session ? Object.keys(session.loadedTabs).length : 0;
   },
 }));
 

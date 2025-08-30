@@ -6,7 +6,13 @@
  * message routing between background script and content scripts.
  */
 
-import { Message, createMessage, ToggleSidebarPayload, ErrorPayload } from '@/types/messages';
+import {
+  Message,
+  createMessage,
+  ToggleSidebarPayload,
+  ErrorPayload,
+  TabClosedPayload,
+} from '@/types/messages';
 import { isRestrictedUrl as isRestrictedUrlShared } from '@/shared/utils/restrictedUrls';
 
 /**
@@ -368,6 +374,22 @@ export class SidebarManager {
     // Clean up state when tab is closed
     chrome.tabs.onRemoved.addListener(tabId => {
       this.cleanupTab(tabId);
+
+      // Notify sidebar about tab closure so it can clean up sessions
+      // This message is sent to all extension contexts that might be listening
+      chrome.runtime
+        .sendMessage(
+          createMessage<TabClosedPayload>({
+            type: 'TAB_CLOSED',
+            payload: { tabId },
+            source: 'background',
+            target: 'sidebar',
+          })
+        )
+        .catch(() => {
+          // Ignore errors if no sidebar is listening
+          // This is expected when the sidebar is not open
+        });
     });
 
     // Optional: Clean up state when tab URL changes significantly
