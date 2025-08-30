@@ -24,19 +24,9 @@ Please analyze the provided content to answer the user's query, and do prioritiz
     <domain>example.com</domain>
   </metadata>
   <content>
-# Getting Started with Example Product
+## Selected Content
 
-Welcome to the Example Product documentation. This guide will help you get up and running quickly.
-
-## Installation
-
-To install Example Product, you can use npm:
-
-\`\`\`bash
-npm install example-product
-\`\`\`
-
-## [SELECTED TEXT START] Quick Setup
+Quick Setup
 
 1. Import the library in your project:
    \`\`\`javascript
@@ -50,7 +40,37 @@ npm install example-product
      region: 'us-west-2'
    });
    \`\`\`
-[SELECTED TEXT END]
+
+---
+
+## Full Page Content
+
+# Getting Started with Example Product
+
+Welcome to the Example Product documentation. This guide will help you get up and running quickly.
+
+## Installation
+
+To install Example Product, you can use npm:
+
+\`\`\`bash
+npm install example-product
+\`\`\`
+
+## Quick Setup
+
+1. Import the library in your project:
+   \`\`\`javascript
+   import { ExampleProduct } from 'example-product';
+   \`\`\`
+
+2. Initialize with your configuration:
+   \`\`\`javascript
+   const example = new ExampleProduct({
+     apiKey: 'your-api-key',
+     region: 'us-west-2'
+   });
+   \`\`\`
 
 ## Advanced Configuration
 
@@ -152,11 +172,17 @@ Please analyze the provided content to answer the user's query, and do prioritiz
     <domain>example.com</domain>
   </metadata>
   <content>
+## Selected Content
+
+To initialize the product, use the following configuration...
+
+---
+
+## Full Page Content
+
 # Getting Started
 
-[SELECTED TEXT START]
 To initialize the product, use the following configuration...
-[SELECTED TEXT END]
 
 More content here...
   </content>
@@ -169,13 +195,19 @@ More content here...
     <domain>documentation.dev</domain>
   </metadata>
   <content>
+## Selected Content
+
+The initialize() method accepts a config object with required apiKey field...
+
+---
+
+## Full Page Content
+
 # API Methods
 
 Some content...
 
-[SELECTED TEXT START]
 The initialize() method accepts a config object with required apiKey field...
-[SELECTED TEXT END]
 
 More content...
   </content>
@@ -214,8 +246,8 @@ How do these initialization methods relate to each other?
  *
  * 3. **Better Organization**: Each tab is a separate XML element with:
  *    - Structured metadata (title, url, domain)
+ *    - Content with "Selected Content" and "Full Page Content" sections when applicable
  *    - Content properly escaped for XML
- *    - Selection markers when applicable
  *
  * 4. **Easier Parsing**: AI providers can easily:
  *    - Extract specific tab content
