@@ -155,7 +155,6 @@ export class OpenAIStreamProcessor {
       return typeof event.delta === 'string' ? event.delta : undefined;
     }
 
-    // Legacy patterns for backward compatibility
     if (event.output_text !== undefined && typeof event.output_text === 'string') {
       const currentFullText = event.output_text;
       // Extract only the new portion

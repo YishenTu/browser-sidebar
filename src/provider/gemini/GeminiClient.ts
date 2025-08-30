@@ -131,17 +131,6 @@ export class GeminiClient extends BaseProvider {
       }
     }
 
-    // Log if legacy parameters are provided (but don't fail)
-    if (
-      config['temperature'] !== undefined ||
-      config['topP'] !== undefined ||
-      config['topK'] !== undefined ||
-      config['maxTokens'] !== undefined
-    ) {
-      // Legacy parameters ignored - silently handled
-      // temperature, topP, topK, maxTokens are no longer used
-    }
-
     // Safety settings validation (optional)
     if (config['safetySettings'] !== undefined) {
       if (!Array.isArray(config['safetySettings'])) {

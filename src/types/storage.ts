@@ -12,7 +12,7 @@
 
 import type { ChatMessage, ConversationMetadata } from './chat';
 import type { Settings } from './settings';
-import type { APIKeyStorage as APIKeyStorageType } from './apiKeys';
+import type { APIKeyStorage } from './apiKeys';
 import { isAPIKeyStorage as isAPIKeyStorageFn } from './apiKeys';
 
 // =============================================================================
@@ -128,11 +128,6 @@ export interface SettingsStorage extends Settings {
   /** Storage schema version */
   storageVersion: StorageVersion;
 }
-
-/**
- * Re-export APIKeyStorage from apiKeys module for backward compatibility
- */
-export type APIKeyStorage = APIKeyStorageType;
 
 /**
  * Cache entry metadata

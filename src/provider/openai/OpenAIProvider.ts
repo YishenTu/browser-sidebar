@@ -123,8 +123,6 @@ export class OpenAIProvider extends BaseProvider {
       }
     }
 
-    // Legacy parameters are ignored silently
-
     return {
       isValid: errors.length === 0,
       errors,

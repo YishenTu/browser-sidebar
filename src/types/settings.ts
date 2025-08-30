@@ -132,16 +132,3 @@ export interface SettingsState {
   /** Get provider type for a given model ID */
   getProviderTypeForModel: (modelId: string) => 'openai' | 'gemini' | null;
 }
-
-/**
- * Legacy settings format for migration (v0)
- */
-export interface LegacySettings {
-  fontSize?: string;
-  compactMode?: boolean;
-  temperature?: number;
-  maxTokens?: number;
-  topP?: number;
-  topK?: number;
-  // Add other legacy fields as needed for migration
-}

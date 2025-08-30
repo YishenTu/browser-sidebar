@@ -34,9 +34,8 @@ async function handleContentExtraction(message: Message): Promise<Message> {
     const mode = (message.payload as any)?.mode;
     const extractedContent = await extractContent(extractionOptions, mode);
 
-    // Map ExtractedContent to ContentExtractedPayload format for compatibility
     const responsePayload = {
-      text: extractedContent.content, // Map content to text for backward compatibility
+      text: extractedContent.content,
       title: extractedContent.title,
       url: extractedContent.url,
       metadata: {
@@ -48,9 +47,6 @@ async function handleContentExtraction(message: Message): Promise<Message> {
         textContent: extractedContent.textContent,
         excerpt: extractedContent.excerpt,
         ...extractedContent.metadata,
-        // Include backward compatibility fields
-        hasTables: extractedContent.metadata?.hasTables || false,
-        truncated: extractedContent.metadata?.truncated || false,
       },
     };
 

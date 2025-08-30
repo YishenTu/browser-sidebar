@@ -13,7 +13,6 @@ import type {
   AISettings,
   PrivacySettings,
   APIKeyReferences,
-  LegacySettings,
   Model,
 } from '@/types/settings';
 import { SUPPORTED_MODELS, DEFAULT_MODEL_ID, getProviderTypeForModelId } from '@/config/models';
@@ -170,12 +169,6 @@ const validateAISettings = (ai: unknown): AISettings => {
     AISettings & { temperature?: number; maxTokens?: number }
   >;
 
-  // Log if legacy parameters are being migrated
-  if ('temperature' in a || 'maxTokens' in a) {
-    // Legacy AI settings migration - silently handled
-    // Previously: temperature: a.temperature, maxTokens: a.maxTokens
-  }
-
   return {
     defaultProvider: isValidProvider(a.defaultProvider)
       ? a.defaultProvider
@@ -213,11 +206,6 @@ const validateAPIKeyReferences = (apiKeys: unknown): APIKeyReferences => {
   > &
     Record<string, unknown>;
 
-  // Log if legacy openrouter key is being removed
-  if ('openrouter' in a) {
-    // Legacy openrouter key migration - silently handled
-  }
-
   return {
     openai:
       typeof a.openai === 'string' || a.openai === null
@@ -254,31 +242,6 @@ const migrateSettings = (rawSettings: unknown): Settings => {
       apiKeys: validateAPIKeyReferences(rs.apiKeys),
       selectedModel,
       availableModels,
-    };
-  }
-
-  // Migration from v0 (no version field)
-  if (!rs.version) {
-    const legacySettings = rawSettings as LegacySettings;
-    return {
-      version: SETTINGS_VERSION,
-      ui: {
-        fontSize: isValidFontSize(legacySettings.fontSize)
-          ? legacySettings.fontSize
-          : DEFAULT_SETTINGS.ui.fontSize,
-        compactMode:
-          typeof legacySettings.compactMode === 'boolean'
-            ? legacySettings.compactMode
-            : DEFAULT_SETTINGS.ui.compactMode,
-        showTimestamps: DEFAULT_SETTINGS.ui.showTimestamps,
-        showAvatars: DEFAULT_SETTINGS.ui.showAvatars,
-        animationsEnabled: DEFAULT_SETTINGS.ui.animationsEnabled,
-      },
-      ai: { ...DEFAULT_SETTINGS.ai },
-      privacy: { ...DEFAULT_SETTINGS.privacy },
-      apiKeys: { ...DEFAULT_SETTINGS.apiKeys },
-      selectedModel: DEFAULT_SETTINGS.selectedModel,
-      availableModels: [...DEFAULT_SETTINGS.availableModels],
     };
   }
 

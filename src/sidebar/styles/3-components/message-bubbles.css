@@ -408,24 +408,6 @@
   transition: opacity 0.2s ease;
 }
 
-/* Legacy timestamp styles (for backwards compatibility) */
-.message-timestamp-container {
-  display: flex;
-  align-items: baseline;
-  gap: 6px;
-  margin-top: 4px;
-}
-
-.message-timestamp-container--assistant {
-  margin-left: 16px;
-  padding-left: 6px;
-}
-
-.message-timestamp-container--user {
-  margin-right: 16px;
-  padding-right: 12px;
-}
-
 .ai-sidebar-container .message-model-name {
   font-size: 12px;
   color: #6b7280;
