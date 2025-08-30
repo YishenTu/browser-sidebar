@@ -15,7 +15,7 @@ import { useError } from '@contexts/useError';
 import { getErrorSource } from '@contexts/errorUtils';
 import { ErrorBanner } from '@components/ErrorBanner';
 import { useChatStore, type ChatMessage } from '@store/chat';
-import { useAIChat } from '@hooks/useAIChat';
+import { useAIChat } from '@hooks/ai';
 import { useMultiTabExtraction } from '@hooks/useMultiTabExtraction';
 import { TabContentItem } from '@components/TabContentItem';
 import { ExtractionMode } from '@/types/extraction';
