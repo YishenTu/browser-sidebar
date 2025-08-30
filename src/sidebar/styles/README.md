@@ -13,8 +13,7 @@ styles/
 ├── 2-layout/      # Layout components
 ├── 3-components/  # Reusable UI components
 ├── 4-features/    # Feature-specific styles
-├── index.css      # Main entry with layer definitions
-└── sidebar.css    # Legacy compatibility redirect
+└── index.css      # Main entry with layer definitions
 ```
 
 ## CSS Layers Architecture

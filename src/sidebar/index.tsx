@@ -2,7 +2,7 @@ import ReactDOM from 'react-dom/client';
 import { flushSync } from 'react-dom';
 import { ChatPanel } from './ChatPanel';
 import { ErrorProvider } from '@contexts/ErrorContext';
-import unifiedStyles from './styles/sidebar.css?inline';
+import unifiedStyles from './styles/index.css?inline';
 // Theme is applied inside Sidebar.tsx via settings store effect
 
 let root: ReactDOM.Root | null = null;

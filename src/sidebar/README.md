@@ -100,8 +100,7 @@ sidebar/
 │   │   ├── tab-loading-indicator.css # Loading styles
 │   │   └── tab-mention-dropdown.css # Mention dropdown styles
 │   ├── README.md            # CSS architecture documentation
-│   ├── index.css            # Main style entry point
-│   └── sidebar.css          # Core sidebar styles
+│   └── index.css            # Main style entry point
 ├── utils/                    # Utility functions
 │   ├── contentFormatter.ts  # Content formatting utilities
 │   ├── contentFormatter.example.ts # Formatting examples
