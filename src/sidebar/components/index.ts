@@ -1,4 +1,3 @@
-export { TypingIndicator, type TypingIndicatorProps } from './TypingIndicator';
 export { StreamingText, type StreamingTextProps } from './StreamingText';
 export { CodeBlock } from './CodeBlock';
 export { MarkdownRenderer, type MarkdownRendererProps } from './MarkdownRenderer';

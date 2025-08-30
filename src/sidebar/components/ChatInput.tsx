@@ -3,7 +3,6 @@ import { TextArea, TextAreaProps, CloseIcon } from '@ui/index';
 import { useTabMention } from '@hooks/useTabMention';
 import { TabMentionDropdown } from './TabMentionDropdown';
 import { TabErrorBoundary } from './TabErrorBoundary';
-// import { TabChip } from './TabChip';
 import { calculateCaretDropdownPosition } from '@sidebar/utils/dropdownPosition';
 import type { TabInfo, TabContent } from '@/types/tabs';
 
@@ -70,7 +69,6 @@ export const ChatInput = React.forwardRef<HTMLTextAreaElement, ChatInputProps>(
   ) => {
     // Internal state for uncontrolled mode
     const [internalValue, setInternalValue] = useState(defaultValue || '');
-    // const theme = useSettingsStore(state => state.settings.theme); // Not used after simplification
 
     // Determine if we're in controlled mode
     const isControlled = value !== undefined;
@@ -142,12 +140,6 @@ export const ChatInput = React.forwardRef<HTMLTextAreaElement, ChatInputProps>(
           // Align dropdown with the bordered input container rather than the textarea
           const containerEl = textarea.closest('.chat-input__main') as HTMLElement | null;
           const rect = (containerEl || textarea).getBoundingClientRect();
-          // Constants synced with dropdown CSS (for future height calculation)
-          // const ROW_HEIGHT = 28; // must match .tab-mention-dropdown__option min-height
-          // const PADDING_VERTICAL = 8; // menu padding 4 top + 4 bottom
-          // const BORDER = 2; // 1px top + 1px bottom
-          // const MAX_HEIGHT = 240; // visual cap for menu height
-          // const estimatedHeight = Math.min(filtered.length * ROW_HEIGHT + PADDING_VERTICAL + BORDER, MAX_HEIGHT);
           const x = rect.left;
           const gap = 6;
           // Use fixed-position bottom offset so the dropdown bottom aligns above input, independent of its actual height
@@ -201,12 +193,6 @@ export const ChatInput = React.forwardRef<HTMLTextAreaElement, ChatInputProps>(
               // Align dropdown with the bordered input container rather than the textarea
               const containerEl = textarea.closest('.chat-input__main') as HTMLElement | null;
               const rect = (containerEl || textarea).getBoundingClientRect();
-              // Constants synced with dropdown CSS
-              // const ROW_HEIGHT = 28;
-              // const PADDING_VERTICAL = 8;
-              // const BORDER = 2;
-              // const MAX_HEIGHT = 240;
-              // const estimatedHeight = Math.min(filtered.length * ROW_HEIGHT + PADDING_VERTICAL + BORDER, MAX_HEIGHT);
               const x = rect.left;
               const gap = 6;
               const bottom = Math.max(8, window.innerHeight - rect.top + gap);
@@ -399,20 +385,6 @@ export const ChatInput = React.forwardRef<HTMLTextAreaElement, ChatInputProps>(
 
     // Determine if buttons should be disabled
     const isDisabled = loading || isSending;
-
-    // Get loaded tab info for display as chips (for future use)
-    // const loadedTabsArray = Object.values(loadedTabs || {});
-    // const hasLoadedTabs = loadedTabsArray.length > 0;
-
-    // Handle tab chip removal (for future use)
-    // const handleTabChipRemove = useCallback(
-    //   (tabId: number) => {
-    //     if (onTabRemove) {
-    //       onTabRemove(tabId);
-    //     }
-    //   },
-    //   [onTabRemove]
-    // );
 
     // Focus textarea when component mounts
     useEffect(() => {

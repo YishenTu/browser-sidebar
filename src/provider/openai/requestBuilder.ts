@@ -113,19 +113,6 @@ export function buildRequest(
     };
   }
 
-  // Content analysis for future use - commented out for now
-  // if (request.input && request.input.length > 0) {
-  //   const lastInput = request.input[request.input.length - 1];
-  //   let inputContent = '';
-  //   if (typeof lastInput?.content === 'string') {
-  //     inputContent = lastInput.content;
-  //   } else if (Array.isArray(lastInput?.content) && lastInput.content[0]?.text) {
-  //     inputContent = lastInput.content[0].text;
-  //   }
-  //   const hasMultiTab = inputContent.includes('<current_tab>') && inputContent.includes('<additional_tabs>');
-  //   const hasSelectedText = inputContent.includes('<!-- SEL_START');
-  // }
-
   return request;
 }
 

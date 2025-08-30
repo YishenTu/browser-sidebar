@@ -50,22 +50,3 @@ export async function getCurrentTabIdSafe(): Promise<number | null> {
     return null;
   }
 }
-
-/**
- * Example usage function showing how to use the tab ID utilities
- *
- * @returns Promise that resolves when the example completes
- */
-export async function exampleUsage(): Promise<void> {
-  try {
-    await getCurrentTabId();
-
-    // Use the tab ID for whatever functionality needs it
-    // For example, you might use it to:
-    // - Store tab-specific data in chrome.storage
-    // - Send tab-targeted messages
-    // - Track tab-specific state
-  } catch (error) {
-    // Fallback to safe method
-  }
-}

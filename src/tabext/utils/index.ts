@@ -12,4 +12,4 @@ export { clampText } from './textUtils';
 export type { ClampResult } from './textUtils';
 
 // Tab utilities
-export { getCurrentTabId, getCurrentTabIdSafe, exampleUsage } from './tabUtils';
+export { getCurrentTabId, getCurrentTabIdSafe } from './tabUtils';

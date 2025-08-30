@@ -144,7 +144,6 @@ export class SidebarController {
         restoredSuccessfully = true;
       } catch (e) {
         // Range may no longer be valid if DOM has changed significantly
-        console.debug('Could not restore selection range:', e);
       }
     }
 

@@ -9,7 +9,6 @@
 
 import React, { Component, ErrorInfo, ReactNode } from 'react';
 import { Alert } from '@ui/Alert';
-// import { RegenerateIcon } from '@ui/Icons';
 import '../styles/4-features/tab-error-boundary.css';
 
 export interface TabErrorBoundaryState {

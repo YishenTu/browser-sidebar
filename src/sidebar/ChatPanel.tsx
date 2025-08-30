@@ -20,9 +20,6 @@ import { useMultiTabExtraction } from '@hooks/useMultiTabExtraction';
 import { TabContentItem } from '@components/TabContentItem';
 import { ExtractionMode } from '@/types/extraction';
 import { ContentPreview } from '@components/ContentPreview';
-// Import for Task 2.2: Content Injection with Tab ID tracking
-// import { getCurrentTabIdSafe } from '@tabext/utils/tabUtils';
-// Import for Task 4.4: Session State Management - Cleanup message
 import { createMessage } from '@/types/messages';
 
 // Layout components
