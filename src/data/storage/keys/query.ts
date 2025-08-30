@@ -34,19 +34,19 @@ export async function listAPIKeys(
     // Use appropriate query method based on filters
     if (dbInstance) {
       if (options.provider) {
-        results = await dbInstance.query(DB_STORES.METADATA, {
+        results = (await dbInstance.query(DB_STORES.METADATA, {
           provider: options.provider,
           limit: options.limit,
           offset: options.offset,
-        }) as APIKeyMetadata[];
+        })) as APIKeyMetadata[];
       } else if (options.status) {
-        results = await dbInstance.query(DB_STORES.METADATA, {
+        results = (await dbInstance.query(DB_STORES.METADATA, {
           status: options.status,
           limit: options.limit,
           offset: options.offset,
-        }) as APIKeyMetadata[];
+        })) as APIKeyMetadata[];
       } else {
-        results = await dbInstance.getAll(DB_STORES.METADATA) as APIKeyMetadata[];
+        results = (await dbInstance.getAll(DB_STORES.METADATA)) as APIKeyMetadata[];
       }
     }
 
@@ -95,10 +95,12 @@ export async function listAPIKeys(
     const hasMore = offset + limit < results.length;
 
     // Return metadata-only results (no encrypted payloads)
-    const keys: Array<{ id: string; metadata: APIKeyMetadata }> = paginatedResults.map(metadata => ({
-      id: metadata.id,
-      metadata,
-    }));
+    const keys: Array<{ id: string; metadata: APIKeyMetadata }> = paginatedResults.map(
+      metadata => ({
+        id: metadata.id,
+        metadata,
+      })
+    );
 
     return {
       keys: keys as EncryptedAPIKey[],

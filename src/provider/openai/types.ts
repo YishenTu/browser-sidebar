@@ -18,9 +18,9 @@ export interface OpenAIInputContent {
  */
 export interface OpenAIResponseRequest {
   model: string;
-  input?: Array<{ 
-    role: 'user' | 'assistant'; 
-    content: string | OpenAIInputContent[]
+  input?: Array<{
+    role: 'user' | 'assistant';
+    content: string | OpenAIInputContent[];
   }>;
   instructions?: string;
   previous_response_id?: string;

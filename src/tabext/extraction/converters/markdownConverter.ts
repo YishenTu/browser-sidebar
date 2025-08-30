@@ -297,7 +297,6 @@ export async function htmlToMarkdown(
 
     return markdown;
   } catch (error) {
-
     // Return a basic text extraction as fallback
     try {
       const parser = new DOMParser();

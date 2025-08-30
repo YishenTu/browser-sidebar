@@ -36,11 +36,9 @@ export interface SidebarManagerOptions {
  */
 export class SidebarManager {
   private sidebarStates = new Map<number, SidebarState>();
-  private readonly verbose: boolean;
   private readonly defaultState: boolean;
 
   constructor(options: SidebarManagerOptions = {}) {
-    this.verbose = options.verbose || false;
     this.defaultState = options.defaultState || false;
 
     // Listen for tab closure to clean up state
@@ -83,7 +81,6 @@ export class SidebarManager {
     };
 
     this.sidebarStates.set(tabId, state);
-
 
     return state;
   }
@@ -145,7 +142,6 @@ export class SidebarManager {
    */
   cleanupTab(tabId: number): boolean {
     const removed = this.sidebarStates.delete(tabId);
-
 
     return removed;
   }
@@ -301,7 +297,6 @@ export class SidebarManager {
           target: 'content',
         })
       );
-
     } catch (error) {
       // If content script is not loaded, try to inject it
       if (error instanceof Error && error.message.includes('Could not establish connection')) {
@@ -319,7 +314,6 @@ export class SidebarManager {
    * @param show - Whether to show sidebar after injection
    */
   private async injectContentScript(tabId: number, show: boolean): Promise<void> {
-
     try {
       // The content script should already be injected via manifest.json
       // But if we need to manually inject, we should use chrome.scripting.registerContentScripts

@@ -1,6 +1,6 @@
 /**
  * @file System Prompt Configuration
- * 
+ *
  * Defines the system prompt for the AI Browser Sidebar Assistant
  * that provides context and instructions for AI models.
  */

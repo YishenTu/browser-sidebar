@@ -57,7 +57,7 @@ export const TabContentItem: React.FC<TabContentItemProps> = ({
   const [isHovered, setIsHovered] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
   const [editedContent, setEditedContent] = useState<string | null>(null);
-  const truncated = content?.metadata?.truncated ?? content?.isTruncated ?? false;
+  const truncated = content?.metadata?.truncated ?? false;
 
   // Use full text content, let CSS handle truncation
   const excerpt = content?.excerpt || content?.textContent || '';
@@ -295,9 +295,7 @@ export const TabContentItem: React.FC<TabContentItemProps> = ({
         className="content-full-modal"
         editable={!!content}
         content={
-          editedContent !== null
-            ? editedContent
-            : content?.content || content?.markdown || content?.textContent || ''
+          editedContent !== null ? editedContent : content?.content || content?.textContent || ''
         }
         edited={editedContent !== null}
         onContentSave={newContent => {

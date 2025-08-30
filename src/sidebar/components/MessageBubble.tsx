@@ -1,7 +1,6 @@
 import React from 'react';
 import { ChatMessage, MessageRole, MessageStatus } from '@store/chat';
 import { MarkdownRenderer } from './MarkdownRenderer';
-import { ThinkingWrapper } from './ThinkingWrapper';
 import { SearchSources } from './SearchSources';
 import { Spinner, CopyButton, EditIcon, RegenerateIcon, WarningIcon } from './ui';
 
@@ -101,6 +100,29 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
     return <MarkdownRenderer content={renderText || ''} />;
   })();
 
+  // Helper function to render truncation warning with proper typing
+  const renderTruncationWarning = (): React.ReactElement | null => {
+    if (
+      message.role === 'user' &&
+      message.metadata &&
+      message.metadata['truncation'] &&
+      typeof message.metadata['truncation'] === 'object' &&
+      message.metadata['truncation'] !== null
+    ) {
+      const truncationData = message.metadata['truncation'] as { truncatedTabCount: number };
+      return (
+        <div className="message-truncation-warning">
+          <WarningIcon size={14} />
+          <span>
+            {truncationData.truncatedTabCount} tab
+            {truncationData.truncatedTabCount > 1 ? 's' : ''} excluded due to size limits
+          </span>
+        </div>
+      );
+    }
+    return null;
+  };
+
   return (
     <div
       className={`message-row message-row--${message.role}${className ? ` ${className}` : ''}`}
@@ -109,27 +131,7 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
       {...props}
     >
       <div className={`message-content-wrapper message-content-wrapper--${message.role}`}>
-        {/* Display thinking wrapper for assistant messages with thinking content */}
-        {message.role === 'assistant' &&
-        message.metadata?.['thinking'] &&
-        typeof message.metadata['thinking'] === 'string' ? (
-          <ThinkingWrapper
-            thinking={message.metadata['thinking'] as string}
-            isStreaming={message.metadata?.['thinkingStreaming'] as boolean}
-            initialCollapsed={false}
-            className=""
-          />
-        ) : null}
-
-        {/* Truncation warning for user messages with truncated tab content */}
-        {message.role === 'user' && message.metadata?.['truncation'] && (
-          <div className="message-truncation-warning">
-            <WarningIcon size={14} />
-            <span>
-              {message.metadata['truncation'].truncatedTabCount} tab{message.metadata['truncation'].truncatedTabCount > 1 ? 's' : ''} excluded due to size limits
-            </span>
-          </div>
-        )}
+        {renderTruncationWarning()}
 
         {/* Hover container for bubble and footer */}
         <div className={`message-hover-container message-hover-container--${message.role}`}>

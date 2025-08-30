@@ -23,12 +23,10 @@ export class KeepAlive {
   private intervalId: NodeJS.Timeout | null = null;
   private isRunning = false;
   private readonly interval: number;
-  private readonly verbose: boolean;
   private pingCount = 0;
 
   constructor(options: KeepAliveOptions = {}) {
     this.interval = options.interval || 20000; // 20 seconds default
-    this.verbose = options.verbose || false;
   }
 
   /**
@@ -108,7 +106,6 @@ export class KeepAlive {
       // Use a lightweight Chrome API call to maintain activity
       await chrome.runtime.getPlatformInfo();
 
-
       // Additional lightweight operations to ensure activity
       await this.performAdditionalPings();
     } catch (error) {
@@ -144,7 +141,6 @@ export class KeepAlive {
       // Use a simple calculation as absolute fallback
       const timestamp = Date.now();
       Math.sqrt(timestamp) + Math.random();
-
     } catch (error) {
       // Even fallback ping failed
     }

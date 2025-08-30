@@ -323,18 +323,23 @@ export function createTabInfoFromChromeTab(chromeTab: chrome.tabs.Tab): TabInfo 
   }
 
   // Handle status type conversion
-  const status: 'loading' | 'complete' | undefined = 
-    chromeTab.status === 'loading' ? 'loading' :
-    chromeTab.status === 'complete' ? 'complete' :
-    undefined;
+  const status: 'loading' | 'complete' | undefined =
+    chromeTab.status === 'loading'
+      ? 'loading'
+      : chromeTab.status === 'complete'
+        ? 'complete'
+        : undefined;
 
   // Handle mutedInfo reason type conversion
   const mutedReason = chromeTab.mutedInfo?.reason;
   const typedReason: 'user' | 'capture' | 'extension' | undefined =
-    mutedReason === 'user' ? 'user' :
-    mutedReason === 'capture' ? 'capture' :
-    mutedReason === 'extension' ? 'extension' :
-    undefined;
+    mutedReason === 'user'
+      ? 'user'
+      : mutedReason === 'capture'
+        ? 'capture'
+        : mutedReason === 'extension'
+          ? 'extension'
+          : undefined;
 
   return {
     id: chromeTab.id!,
@@ -404,9 +409,7 @@ export function filterTabs(tabs: TabInfo[], criteria: TabSelectionCriteria): Tab
 
   if (criteria.maxTabs && filtered.length > criteria.maxTabs) {
     // Sort by lastAccessed desc and take the most recent
-    filtered = filtered
-      .sort((a, b) => b.lastAccessed - a.lastAccessed)
-      .slice(0, criteria.maxTabs);
+    filtered = filtered.sort((a, b) => b.lastAccessed - a.lastAccessed).slice(0, criteria.maxTabs);
   }
 
   return filtered;

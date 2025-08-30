@@ -1,6 +1,6 @@
 /**
  * ExtractionQueue - Manages concurrent content extractions with queue system
- * 
+ *
  * Limits concurrent extractions to prevent performance issues and browser throttling.
  * Implements FIFO queueing with proper error handling and Promise resolution.
  */
@@ -32,7 +32,7 @@ export class ExtractionQueue {
       const queueTask: QueueTask<T> = {
         task,
         resolve,
-        reject
+        reject,
       };
 
       this.queue.push(queueTask);
@@ -69,7 +69,7 @@ export class ExtractionQueue {
     try {
       // Execute the task
       const result = await queueTask.task();
-      
+
       // Resolve the Promise
       queueTask.resolve(result);
     } catch (error) {
@@ -89,7 +89,7 @@ export class ExtractionQueue {
     return {
       running: this.running,
       queued: this.queue.length,
-      maxConcurrent: this.maxConcurrent
+      maxConcurrent: this.maxConcurrent,
     };
   }
 

@@ -237,7 +237,8 @@ export async function getAPIKey(state: ServiceState, id: string): Promise<Encryp
 
     // Ensure metadata exists, fallback to embedded metadata if DB read fails
     const metadata = dbInstance ? await dbInstance.get(DB_STORES.METADATA, id) : null;
-    const effectiveMetadata = (encryptedKey.metadata as APIKeyMetadata) || metadata || ({} as APIKeyMetadata);
+    const effectiveMetadata =
+      (encryptedKey.metadata as APIKeyMetadata) || metadata || ({} as APIKeyMetadata);
 
     // Update last used timestamp
     await updateLastUsed(id);

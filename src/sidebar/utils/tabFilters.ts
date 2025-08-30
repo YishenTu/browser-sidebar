@@ -6,17 +6,17 @@
  * based on the current state of loaded tabs and browser restrictions.
  *
  * Usage example in useMultiTabExtraction hook:
- * 
+ *
  * ```typescript
  * import { getAvailableTabs, canLoadTab, isRestrictedUrl } from '@/utils/tabFilters';
- * 
+ *
  * // Replace manual filtering logic:
  * // const available = allTabs.filter(tab => {
  * //   if (currentTabId && tab.id === currentTabId) return false;
  * //   if (loadedTabs[tab.id]) return false;
  * //   return true;
  * // });
- * 
+ *
  * // With utility function:
  * const available = getAvailableTabs(allTabs, currentTabId, loadedTabs);
  * ```
@@ -38,7 +38,7 @@ import { isRestrictedUrl as isRestrictedUrlShared } from '../../shared/utils/res
 
 /**
  * Check if a URL is restricted from content extraction
- * 
+ *
  * Uses the centralized restricted URL utility to ensure consistency
  * between backend and frontend filtering logic.
  *
@@ -165,7 +165,7 @@ export function getFailedTabs(loadedTabs: Record<number, TabContent>): Array<{
     .filter(tab => tab.extractionStatus === 'failed')
     .map(tab => ({
       tab,
-      error: tab.extractionError || 'Unknown extraction error'
+      error: tab.extractionError || 'Unknown extraction error',
     }));
 }
 
@@ -191,14 +191,13 @@ export function getSuccessfulTabs(loadedTabs: Record<number, TabContent>): TabCo
  */
 export function allTabsFinished(loadedTabs: Record<number, TabContent>): boolean {
   const tabs = Object.values(loadedTabs);
-  
+
   if (tabs.length === 0) {
     return true;
   }
 
-  return tabs.every(tab => 
-    tab.extractionStatus === 'completed' || 
-    tab.extractionStatus === 'failed'
+  return tabs.every(
+    tab => tab.extractionStatus === 'completed' || tab.extractionStatus === 'failed'
   );
 }
 
@@ -221,7 +220,7 @@ export function getExtractionStats(loadedTabs: Record<number, TabContent>): {
 } {
   const tabs = Object.values(loadedTabs);
   const total = tabs.length;
-  
+
   if (total === 0) {
     return {
       total: 0,

@@ -334,7 +334,6 @@ const loadFromStorage = async (): Promise<{ settings: Settings; migrated: boolea
       !rawSettings || (rawSettings as Partial<Settings> | undefined)?.version !== SETTINGS_VERSION;
     return { settings: migrateSettings(rawSettings), migrated };
   } catch (error) {
-
     // Fallback to local storage
     try {
       const result = await chrome.storage.local.get([STORAGE_KEY]);

@@ -58,9 +58,11 @@ export async function findKeyByHash(keyHash: string): Promise<string | null> {
           keyData &&
           typeof keyData === 'object' &&
           'keyHash' in keyData &&
-          keyData.keyHash === keyHash
+          keyData.keyHash === keyHash &&
+          'id' in keyData &&
+          typeof (keyData as unknown as { id: unknown }).id === 'string'
         ) {
-          return (keyData as { id: string }).id;
+          return (keyData as unknown as { id: string }).id;
         }
       }
     }

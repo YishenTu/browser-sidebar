@@ -17,7 +17,7 @@ export interface TabChipProps {
 
 /**
  * TabChip Component
- * 
+ *
  * Displays a tab as a removable chip showing favicon, truncated title, and close button.
  * Used in the ChatInput to show currently loaded tabs.
  */
@@ -29,8 +29,8 @@ export const TabChip: React.FC<TabChipProps> = ({
   maxTitleLength = 20,
 }) => {
   // Truncate title if it's too long
-  const truncatedTitle = 
-    tabInfo.title.length > maxTitleLength 
+  const truncatedTitle =
+    tabInfo.title.length > maxTitleLength
       ? `${tabInfo.title.slice(0, maxTitleLength)}...`
       : tabInfo.title;
 
@@ -66,11 +66,11 @@ export const TabChip: React.FC<TabChipProps> = ({
               src={faviconResult.url}
               alt=""
               className="tab-chip__favicon-image"
-              onError={(e) => {
+              onError={e => {
                 // Fallback to Google service or generic icon on error
-                const fallbackResult = getFaviconUrlSync(tabInfo.url, undefined, { 
-                  size: 16, 
-                  useGoogleService: true 
+                const fallbackResult = getFaviconUrlSync(tabInfo.url, undefined, {
+                  size: 16,
+                  useGoogleService: true,
                 });
                 if (fallbackResult.url !== e.currentTarget.src) {
                   e.currentTarget.src = fallbackResult.url;
@@ -83,9 +83,7 @@ export const TabChip: React.FC<TabChipProps> = ({
       </div>
 
       {/* Tab title */}
-      <span className="tab-chip__title">
-        {truncatedTitle}
-      </span>
+      <span className="tab-chip__title">{truncatedTitle}</span>
 
       {/* Remove button */}
       <button

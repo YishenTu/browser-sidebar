@@ -8,11 +8,15 @@ export { MessageBubble, type MessageBubbleProps } from './MessageBubble';
 export { ModelSelector, type ModelSelectorProps } from './ModelSelector';
 export { ThinkingWrapper } from './ThinkingWrapper';
 export { TabLoadingIndicator } from './TabLoadingIndicator';
-export type { 
-  TabLoadingIndicatorProps, 
-  TabLoadingIndicatorStatus, 
-  TabLoadingIndicatorSize 
+export type {
+  TabLoadingIndicatorProps,
+  TabLoadingIndicatorStatus,
+  TabLoadingIndicatorSize,
 } from './TabLoadingIndicator';
 export { TabMentionDropdown, type TabMentionDropdownProps } from './TabMentionDropdown';
 export { ContentPreview, type ContentPreviewProps } from './ContentPreview';
-export { TabErrorBoundary, withTabErrorBoundary, type TabErrorBoundaryProps } from './TabErrorBoundary';
+export {
+  TabErrorBoundary,
+  withTabErrorBoundary,
+  type TabErrorBoundaryProps,
+} from './TabErrorBoundary';

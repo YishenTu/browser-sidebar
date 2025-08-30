@@ -48,8 +48,14 @@ export interface ExtractedContent {
   /** Main content converted to markdown format */
   content: string;
 
+  /** Main content in markdown format (alias for compatibility) */
+  markdown?: string;
+
   /** Plain text version of the content */
   textContent: string;
+
+  /** Word count of the extracted content */
+  wordCount?: number;
 
   /** Brief excerpt or summary of the content (first ~200 chars) */
   excerpt?: string;
@@ -65,6 +71,9 @@ export interface ExtractedContent {
 
   /** Method used to extract the content */
   extractionMethod: ExtractionMethod;
+
+  /** Whether content was truncated due to size limits */
+  isTruncated?: boolean;
 
   /** Content metadata and statistics */
   metadata?: {
@@ -126,16 +135,17 @@ export function isExtractedContent(obj: any): obj is ExtractedContent {
     typeof obj.url === 'string' &&
     typeof obj.domain === 'string' &&
     typeof obj.content === 'string' &&
+    (obj.markdown === undefined || typeof obj.markdown === 'string') &&
     typeof obj.textContent === 'string' &&
+    (obj.wordCount === undefined || typeof obj.wordCount === 'number') &&
+    (obj.isTruncated === undefined || typeof obj.isTruncated === 'boolean') &&
     (obj.excerpt === undefined || typeof obj.excerpt === 'string') &&
     (obj.author === undefined || typeof obj.author === 'string') &&
     (obj.publishedDate === undefined || typeof obj.publishedDate === 'string') &&
     typeof obj.extractedAt === 'number' &&
     ['defuddle', 'selection', 'raw'].includes(obj.extractionMethod) &&
     (obj.metadata === undefined ||
-      (typeof obj.metadata === 'object' &&
-        typeof obj.metadata.hasCodeBlocks === 'boolean' &&
-        typeof obj.metadata.hasTables === 'boolean'))
+      (typeof obj.metadata === 'object' && typeof obj.metadata.hasTables === 'boolean'))
   );
 }
 

@@ -7,7 +7,7 @@
 import { useRef, useCallback } from 'react';
 import { useChatStore } from '@store/chat';
 import { getSystemPrompt } from '@/config/systemPrompt';
-import type { AIProvider } from '../../../types/providers';
+import type { AIProvider, StreamChunk } from '../../../types/providers';
 import type { ChatMessage } from '@store/chat';
 import type { UseStreamHandlerReturn } from './types';
 
@@ -136,7 +136,7 @@ export function useStreamHandler(): UseStreamHandlerReturn {
               // Update metadata with accumulated thinking, preserving existing metadata
               chatStore.updateMessage(assistantMessage.id, {
                 metadata: {
-                  ...currentMsg?.metadata,
+                  ...(currentMsg?.metadata || {}),
                   thinking: thinkingContent,
                   thinkingStreaming: true,
                 },
@@ -153,7 +153,7 @@ export function useStreamHandler(): UseStreamHandlerReturn {
                 // Mark thinking as complete, preserving existing metadata
                 chatStore.updateMessage(assistantMessage.id, {
                   metadata: {
-                    ...currentMsg?.metadata,
+                    ...(currentMsg?.metadata || {}),
                     thinking: thinkingContent,
                     thinkingStreaming: false,
                   },
@@ -168,7 +168,7 @@ export function useStreamHandler(): UseStreamHandlerReturn {
                 const currentMsg = chatStore.getMessageById(assistantMessage.id);
                 chatStore.updateMessage(assistantMessage.id, {
                   metadata: {
-                    ...currentMsg?.metadata,
+                    ...(currentMsg?.metadata || {}),
                     searchResults: searchMetadata,
                   },
                 });
@@ -196,22 +196,22 @@ export function useStreamHandler(): UseStreamHandlerReturn {
           chatStore.updateMessage(assistantMessage.id, {
             status: 'received',
             metadata: {
-              ...finalMsg?.metadata,
+              ...(finalMsg?.metadata || {}),
               partial: true,
               interrupted: true,
               thinking: thinkingContent || undefined,
               thinkingStreaming: false,
-              ...(searchMetadata && { searchResults: searchMetadata }),
+              ...(searchMetadata ? { searchResults: searchMetadata } : {}),
             },
           });
         } else if (!streamInterrupted) {
           chatStore.updateMessage(assistantMessage.id, {
             status: 'received',
             metadata: {
-              ...finalMsg?.metadata,
+              ...(finalMsg?.metadata || {}),
               thinking: thinkingContent || undefined,
               thinkingStreaming: false,
-              ...(searchMetadata && { searchResults: searchMetadata }),
+              ...(searchMetadata ? { searchResults: searchMetadata } : {}),
             },
           });
           // Store response ID if we got one (OpenAI Response API)

@@ -10,7 +10,6 @@ import { startKeepAlive } from './keepAlive';
 import { getSidebarManager } from './sidebarManager';
 import { createMessage, Message, ToggleSidebarPayload } from '@/types/messages';
 
-
 // Initialize subsystems
 const messageHandler = createDefaultMessageHandler();
 const sidebarManager = getSidebarManager({ verbose: true });
@@ -38,15 +37,12 @@ function initializeServiceWorker(): void {
     interval: 20000, // 20 seconds
     verbose: false, // Set to true for debugging
   });
-
-
 }
 
 /**
  * Handle extension installation and updates
  */
 chrome.runtime.onInstalled.addListener(async _details => {
-
   try {
     // Set default extension settings
     await chrome.storage.local.set({
@@ -58,7 +54,6 @@ chrome.runtime.onInstalled.addListener(async _details => {
         rememberState: true,
       },
     });
-
   } catch (error) {
     // Error during installation setup
   }

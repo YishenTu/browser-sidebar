@@ -63,9 +63,9 @@ function extractSources(metadata: unknown): Array<{ url: string; title: string }
     return [];
   }
 
-  return chunks
-    .filter((chunk: { web?: { uri?: string } }) => chunk.web?.uri)
-    .map((chunk: { web: { uri: string; title?: string } }) => ({
+  return (chunks as any[])
+    .filter((chunk: any): boolean => chunk.web?.uri !== undefined)
+    .map((chunk: any) => ({
       url: chunk.web.uri,
       title: chunk.web.title || 'Untitled',
     }));
@@ -87,11 +87,7 @@ function extractCitations(metadata: unknown): Array<{
     return [];
   }
 
-  return supports.map((support: {
-    segment?: { text?: string; startIndex?: number; start_index?: number; endIndex?: number; end_index?: number };
-    groundingChunkIndices?: number[];
-    grounding_chunk_indices?: number[];
-  }) => ({
+  return supports.map((support: any) => ({
     text: support.segment?.text || '',
     startIndex: support.segment?.startIndex || support.segment?.start_index,
     endIndex: support.segment?.endIndex || support.segment?.end_index,
@@ -103,7 +99,10 @@ function extractCitations(metadata: unknown): Array<{
  * Extract search widget content
  */
 function extractSearchWidget(metadata: unknown): string | undefined {
-  const meta = metadata as { searchEntryPoint?: { renderedContent?: string; rendered_content?: string }; search_entry_point?: { renderedContent?: string; rendered_content?: string } };
+  const meta = metadata as {
+    searchEntryPoint?: { renderedContent?: string; rendered_content?: string };
+    search_entry_point?: { renderedContent?: string; rendered_content?: string };
+  };
   const entryPoint = meta.searchEntryPoint || meta.search_entry_point;
 
   if (entryPoint) {

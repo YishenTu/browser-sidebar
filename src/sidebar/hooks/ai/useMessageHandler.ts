@@ -12,6 +12,7 @@ import { formatMultiTabContent } from '../../utils/contentFormatter';
 import { getSystemPrompt } from '@/config/systemPrompt';
 import type { AIProvider } from '../../../types/providers';
 import type { SendMessageOptions, UseMessageHandlerReturn } from './types';
+import type { TabContent } from '../../../types/tabs';
 import { useStreamHandler } from './useStreamHandler';
 
 interface MessageHandlerDeps {
@@ -60,6 +61,7 @@ export function useMessageHandler({
       }
 
       // Get model info for metadata
+      const selectedModel = settingsStore.settings.selectedModel;
       const modelInfo = getModelById(selectedModel);
 
       // Add assistant message to store with model metadata
@@ -70,9 +72,13 @@ export function useMessageHandler({
         metadata: {
           model: modelInfo?.name || 'AI Assistant',
           thinking: response.thinking, // Store thinking separately for UI to render
-          ...(response.metadata?.['searchResults'] && {
-            searchResults: response.metadata['searchResults'],
-          }),
+          ...(response.metadata &&
+          'searchResults' in response.metadata &&
+          response.metadata['searchResults']
+            ? {
+                searchResults: response.metadata['searchResults'],
+              }
+            : {}),
         },
       });
     },
@@ -133,14 +139,10 @@ export function useMessageHandler({
           const additionalTabs = loadedTabIds
             .filter(tabId => tabId !== currentTabId)
             .map(tabId => loadedTabs[tabId])
-            .filter(Boolean);
+            .filter((tab): tab is TabContent => Boolean(tab));
 
           // Format the multi-tab content with the new cleaner structure
           formatResult = formatMultiTabContent(trimmedContent, currentTabContent, additionalTabs, {
-            // Get selection order from store for deterministic truncation
-            selectionOrder: chatStore.tabSelectionOrder,
-            maxChars: 100_000, // 100k character limit
-            format: 'markdown', // Use markdown format within XML structure
             editedTabContent: editedTabContent,
           });
 

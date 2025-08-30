@@ -47,7 +47,11 @@ export class GeminiProvider extends GeminiClient {
     messages: ProviderChatMessage[],
     config?: GeminiChatConfig
   ): Promise<ProviderResponse> {
-    return this.performChat(messages, this.sendMessage.bind(this), config);
+    return this.performChat(
+      messages,
+      this.sendMessage.bind(this),
+      config as Record<string, unknown>
+    );
   }
 
   /**
@@ -57,7 +61,11 @@ export class GeminiProvider extends GeminiClient {
     messages: ProviderChatMessage[],
     config?: GeminiChatConfig
   ): AsyncIterable<StreamChunk> {
-    yield* this.performStreamChat(messages, this.streamMessage.bind(this), config);
+    yield* this.performStreamChat(
+      messages,
+      this.streamMessage.bind(this),
+      config as Record<string, unknown>
+    );
   }
 
   // ============================================================================

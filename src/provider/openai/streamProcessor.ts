@@ -218,12 +218,12 @@ export class OpenAIStreamProcessor {
     // Include metadata
     const metadata: Record<string, unknown> = {};
     if (this.searchMetadata) {
-      metadata.searchResults = this.searchMetadata;
+      metadata['searchResults'] = this.searchMetadata;
     }
     // Include response ID if available
-    const responseId = event.id || event.response_id;
+    const responseId = (event as any).id || (event as any).response_id;
     if (responseId) {
-      metadata.responseId = responseId;
+      metadata['responseId'] = responseId;
     }
     if (Object.keys(metadata).length > 0) {
       chunk.metadata = metadata;
@@ -256,12 +256,12 @@ export class OpenAIStreamProcessor {
     // Include metadata in final chunk
     const metadata: Record<string, unknown> = {};
     if (this.searchMetadata) {
-      metadata.searchResults = this.searchMetadata;
+      metadata['searchResults'] = this.searchMetadata;
     }
     // Include response ID if available
-    const responseId = event.id || event.response_id;
+    const responseId = (event as any).id || (event as any).response_id;
     if (responseId) {
-      metadata.responseId = responseId;
+      metadata['responseId'] = responseId;
     }
     if (Object.keys(metadata).length > 0) {
       chunk.metadata = metadata;

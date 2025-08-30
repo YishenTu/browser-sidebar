@@ -102,17 +102,17 @@ export class TabContentCache {
       // Clear specific tab
       const key = this.getStorageKey(tabId);
       await chrome.storage.session.remove(key);
-      } else {
-        // Clear all tab content
-        const allItems = await chrome.storage.session.get();
-        const keysToRemove = Object.keys(allItems).filter((key) =>
-          key.startsWith(TabContentCache.KEY_PREFIX)
-        );
+    } else {
+      // Clear all tab content
+      const allItems = await chrome.storage.session.get();
+      const keysToRemove = Object.keys(allItems).filter(key =>
+        key.startsWith(TabContentCache.KEY_PREFIX)
+      );
 
-        if (keysToRemove.length > 0) {
-          await chrome.storage.session.remove(keysToRemove);
-        }
+      if (keysToRemove.length > 0) {
+        await chrome.storage.session.remove(keysToRemove);
       }
+    }
   }
 
   /**

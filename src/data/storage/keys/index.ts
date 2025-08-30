@@ -243,7 +243,9 @@ export async function clearCache(): Promise<void> {
 /**
  * Export API keys with optional secret inclusion
  */
-export async function exportKeys(includeSecrets: boolean = false): Promise<Record<string, unknown>> {
+export async function exportKeys(
+  includeSecrets: boolean = false
+): Promise<Record<string, unknown>> {
   return importExport.exportKeys(serviceState, includeSecrets);
 }
 

@@ -57,7 +57,7 @@ export const TabMentionDropdown: React.FC<TabMentionDropdownProps> = ({
 
   const menuRef = useRef<HTMLUListElement>(null);
   const optionRefs = useRef<(HTMLLIElement | null)[]>([]);
-  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const scrollContainerRef = useRef<HTMLUListElement>(null);
 
   // const menuId = useId();
 
@@ -374,8 +374,13 @@ export const TabMentionDropdown: React.FC<TabMentionDropdownProps> = ({
     >
       <ul
         ref={el => {
-          menuRef.current = el;
-          scrollContainerRef.current = el;
+          if (menuRef.current !== el) {
+            (menuRef as React.MutableRefObject<HTMLUListElement | null>).current = el;
+          }
+          if (scrollContainerRef.current !== el) {
+            (scrollContainerRef as React.MutableRefObject<HTMLDivElement | null>).current =
+              el as HTMLDivElement | null;
+          }
         }}
         id="tab-mention-listbox"
         role="listbox"

@@ -96,7 +96,7 @@ export interface ProviderMetadata {
 export class ProviderRegistry {
   private providers: Map<ProviderType, AIProvider> = new Map();
   private activeProviderType: ProviderType | null = null;
-  private eventListeners: Map<RegistryEventType, Set<EventListener<unknown>>> = new Map();
+  private eventListeners: Map<RegistryEventType, Set<EventListener<any>>> = new Map();
 
   constructor() {
     // Initialize event listener maps
@@ -292,7 +292,7 @@ export class ProviderRegistry {
   on<T extends RegistryEventType>(eventType: T, listener: EventListener<T>): void {
     const listeners = this.eventListeners.get(eventType);
     if (listeners) {
-      listeners.add(listener);
+      listeners.add(listener as EventListener<any>);
     }
   }
 
@@ -304,7 +304,7 @@ export class ProviderRegistry {
   off<T extends RegistryEventType>(eventType: T, listener: EventListener<T>): void {
     const listeners = this.eventListeners.get(eventType);
     if (listeners) {
-      listeners.delete(listener);
+      listeners.delete(listener as EventListener<any>);
     }
   }
 
@@ -380,7 +380,7 @@ export class ProviderRegistry {
 
     // Check required properties exist
     const missingProperties = validationSchema.requiredProperties.filter(prop => {
-      const value = provider[prop];
+      const value = (provider as any)[prop];
       return value === undefined || value === null;
     });
 
@@ -390,7 +390,7 @@ export class ProviderRegistry {
 
     // Validate required methods are functions
     const invalidMethods = validationSchema.requiredMethods.filter(
-      method => typeof provider[method] !== 'function'
+      method => typeof (provider as any)[method] !== 'function'
     );
 
     if (invalidMethods.length > 0) {
@@ -403,12 +403,14 @@ export class ProviderRegistry {
     }
 
     // Validate capabilities object
-    if (!provider.capabilities || typeof provider.capabilities !== 'object') {
+    const providerTyped = provider as AIProvider & { capabilities: Record<string, unknown> };
+    if (!providerTyped.capabilities || typeof providerTyped.capabilities !== 'object') {
       throw new Error(`Invalid provider: missing required properties`);
     }
 
     const missingCapabilities = validationSchema.requiredCapabilities.filter(
-      cap => provider.capabilities[cap] === undefined || provider.capabilities[cap] === null
+      cap =>
+        providerTyped.capabilities[cap] === undefined || providerTyped.capabilities[cap] === null
     );
 
     if (missingCapabilities.length > 0) {

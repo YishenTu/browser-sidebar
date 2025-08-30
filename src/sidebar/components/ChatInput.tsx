@@ -85,7 +85,8 @@ export const ChatInput = React.forwardRef<HTMLTextAreaElement, ChatInputProps>(
     // @ Mention functionality state
     const [dropdownPosition, setDropdownPosition] = useState<{
       x: number;
-      y: number;
+      y?: number;
+      bottom?: number;
       width?: number;
     } | null>(null);
     const [filteredTabs, setFilteredTabs] = useState<TabInfo[]>([]);

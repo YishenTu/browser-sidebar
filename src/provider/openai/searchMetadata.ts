@@ -111,7 +111,10 @@ export function handleStreamSearchMetadata(
   messages?: ProviderChatMessage[]
 ): SearchMetadata | null {
   // Handle web search events
-  if (event.type === 'response.output_item.done' && event.item?.type === 'web_search_call') {
+  if (
+    (event as any).type === 'response.output_item.done' &&
+    (event as any).item?.type === 'web_search_call'
+  ) {
     // This is a web search event
     if (extractedMetadata) {
       // We have metadata with a query

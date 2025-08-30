@@ -68,19 +68,46 @@ export interface UseTabMentionReturn {
 /** Default debounce delay in milliseconds */
 const DEFAULT_DEBOUNCE_DELAY = 100;
 
-/** 
+/**
  * Punctuation characters that stop mention detection
  * Includes: sentence punctuation, brackets, quotes, and line breaks
  */
 const DEFAULT_STOP_CHARS = [
   // Sentence punctuation
-  '.', ',', '!', '?', ';', ':', 
+  '.',
+  ',',
+  '!',
+  '?',
+  ';',
+  ':',
   // Brackets and braces
-  '(', ')', '[', ']', '{', '}', '<', '>', 
+  '(',
+  ')',
+  '[',
+  ']',
+  '{',
+  '}',
+  '<',
+  '>',
   // Quotes and code
-  '"', "'", '`', 
+  '"',
+  "'",
+  '`',
   // Line breaks and special chars
-  '\n', '\r', '/', '\\', '|', '#', '$', '%', '^', '&', '*', '=', '+', '~'
+  '\n',
+  '\r',
+  '/',
+  '\\',
+  '|',
+  '#',
+  '$',
+  '%',
+  '^',
+  '&',
+  '*',
+  '=',
+  '+',
+  '~',
 ];
 
 /** Whitespace characters that can precede an @ mention */
@@ -118,12 +145,12 @@ export function useTabMention(options: UseTabMentionOptions = {}): UseTabMention
 
   /**
    * Core mention detection logic
-   * 
+   *
    * Optimized O(1) detection that:
    * 1. Only searches from cursor back to last whitespace (not entire text)
    * 2. Checks @ is preceded by whitespace or at text start
    * 3. Validates query doesn't contain punctuation
-   * 
+   *
    * Performance: O(k) where k is distance from cursor to last whitespace,
    * not O(n) where n is full text length.
    */
@@ -133,7 +160,7 @@ export function useTabMention(options: UseTabMentionOptions = {}): UseTabMention
       if (isComposing) {
         return null;
       }
-      
+
       if (!enabled || !text || cursorPosition < 0) {
         return null;
       }
@@ -142,24 +169,24 @@ export function useTabMention(options: UseTabMentionOptions = {}): UseTabMention
       // This makes detection O(k) where k is word length, not O(n) text length
       let searchStart = cursorPosition - 1;
       let lastWhitespaceIndex = -1;
-      
+
       // Find the last whitespace before cursor (limit search to 100 chars for safety)
       const maxSearchDistance = Math.min(100, cursorPosition);
       for (let i = cursorPosition - 1; i >= Math.max(0, cursorPosition - maxSearchDistance); i--) {
-        if (WHITESPACE_CHARS.includes(text[i]) || stopChars.includes(text[i])) {
+        if (WHITESPACE_CHARS.includes(text[i] ?? '') || stopChars.includes(text[i] ?? '')) {
           lastWhitespaceIndex = i;
           break;
         }
       }
-      
+
       // Search for @ from last whitespace to cursor
       searchStart = lastWhitespaceIndex + 1;
       let atIndex = -1;
-      
+
       for (let i = searchStart; i < cursorPosition && i < text.length; i++) {
         if (text[i] === '@') {
           atIndex = i;
-          // Only keep the most recent @ 
+          // Only keep the most recent @
           // Don't break - continue to find the last one
         }
       }
@@ -172,7 +199,7 @@ export function useTabMention(options: UseTabMentionOptions = {}): UseTabMention
       // Check if @ is at start or preceded by whitespace
       if (atIndex > 0) {
         const charBefore = text[atIndex - 1];
-        if (!WHITESPACE_CHARS.includes(charBefore)) {
+        if (!WHITESPACE_CHARS.includes(charBefore ?? '')) {
           return null;
         }
       }
@@ -200,7 +227,7 @@ export function useTabMention(options: UseTabMentionOptions = {}): UseTabMention
 
   /**
    * Debounced mention detection function
-   * 
+   *
    * Uses a timer to debounce detection calls for performance optimization.
    * The debouncing prevents excessive computation during rapid typing.
    */
@@ -228,7 +255,7 @@ export function useTabMention(options: UseTabMentionOptions = {}): UseTabMention
 
   /**
    * Insert tab reference replacing @ mention
-   * 
+   *
    * Replaces the @ mention with a formatted tab reference and calculates
    * the new cursor position after insertion.
    */
@@ -239,23 +266,23 @@ export function useTabMention(options: UseTabMentionOptions = {}): UseTabMention
       mentionToReplace: MentionDetection
     ): { newText: string; newCursorPosition: number } => {
       const { startIndex } = mentionToReplace;
-      
+
       // Create tab reference format: "Tab: [title] (domain)"
       const tabReference = `Tab: ${tab.title} (${tab.domain})`;
-      
+
       // Find the end of the mention
       // We need to find where the current word ends, not where the cursor is
       let endIndex = startIndex + 1; // Start after @
-      
+
       // Find the end of the word after @
       for (let i = endIndex; i < text.length; i++) {
         const char = text[i];
-        if (WHITESPACE_CHARS.includes(char) || stopChars.includes(char)) {
+        if (WHITESPACE_CHARS.includes(char ?? '') || stopChars.includes(char ?? '')) {
           endIndex = i;
           break;
         }
       }
-      
+
       // If no terminator found, mention goes to end of text
       if (endIndex === startIndex + 1) {
         endIndex = text.length;
@@ -265,7 +292,7 @@ export function useTabMention(options: UseTabMentionOptions = {}): UseTabMention
       const beforeMention = text.substring(0, startIndex);
       const afterMention = text.substring(endIndex);
       const newText = beforeMention + tabReference + afterMention;
-      
+
       // Calculate new cursor position (after the inserted reference)
       const newCursorPosition = startIndex + tabReference.length;
 
@@ -286,14 +313,14 @@ export function useTabMention(options: UseTabMentionOptions = {}): UseTabMention
       clearTimeout(debounceTimer.current);
       debounceTimer.current = null;
     }
-    
+
     setMentionState(null);
     setShowDropdown(false);
   }, []);
 
   /**
    * Manually set mention state
-   * 
+   *
    * Allows external control of the mention state, useful for testing
    * or advanced use cases.
    */

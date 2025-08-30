@@ -183,6 +183,7 @@ export function normalizeUrls(
             }
           }
         } catch (error) {
+          // Ignore URL normalization errors - keep original value
         }
       });
     });

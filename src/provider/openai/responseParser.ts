@@ -170,7 +170,7 @@ export function extractReasoningSummary(payload: unknown): string | undefined {
     if (data?.type === 'reasoning' && data?.summary) {
       if (Array.isArray(data.summary)) {
         const parts = data.summary
-          .map((s: { type?: string; text?: string; content?: string }) => {
+          .map((s: any) => {
             // Handle { type: 'summary_text', text: '...' } format
             if (s?.type === 'summary_text' && s?.text) {
               return s.text;
@@ -188,14 +188,12 @@ export function extractReasoningSummary(payload: unknown): string | undefined {
     // Prefer explicit reasoning output item
     const outputs = data?.output || data?.outputs || data?.response?.output;
     if (Array.isArray(outputs)) {
-      const reasoningItem = outputs.find(
-        (o: { type?: string; item_type?: string }) => (o?.type || o?.item_type) === 'reasoning'
-      );
+      const reasoningItem = outputs.find((o: any) => (o?.type || o?.item_type) === 'reasoning');
       if (reasoningItem) {
-        const summaryArr = reasoningItem.summary || reasoningItem?.data?.summary;
+        const summaryArr = (reasoningItem as any).summary || (reasoningItem as any)?.data?.summary;
         if (Array.isArray(summaryArr)) {
           const parts = summaryArr
-            .map((s: { type?: string; text?: string; content?: string }) => {
+            .map((s: any) => {
               // Handle { type: 'summary_text', text: '...' } format
               if (s?.type === 'summary_text' && s?.text) {
                 return s.text;
@@ -213,12 +211,12 @@ export function extractReasoningSummary(payload: unknown): string | undefined {
     // Some SDKs may surface reasoning directly under payload.reasoning
     const directSummary = data?.reasoning?.summary;
     if (Array.isArray(directSummary)) {
-      const parts = directSummary.map((s: { text?: string }) => s?.text || '').filter(Boolean);
+      const parts = directSummary.map((s: any) => s?.text || '').filter(Boolean);
       if (parts.length) return parts.join('\n');
     }
 
     // Some events may carry a single summary text field
-    const summaryText = payload?.summary?.[0]?.text || payload?.summary_text;
+    const summaryText = (payload as any)?.summary?.[0]?.text || (payload as any)?.summary_text;
     if (summaryText && typeof summaryText === 'string') {
       return summaryText;
     }

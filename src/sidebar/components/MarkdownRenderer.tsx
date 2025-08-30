@@ -56,7 +56,7 @@ const createSanitizeSchema = () => {
 
   // Allow global basic attributes
   const starAttrs: string[] = Array.isArray(schema.attributes['*'])
-    ? [...schema.attributes['*']]
+    ? [...(schema.attributes['*'] as string[])]
     : [];
   for (const attr of ['className', 'aria-hidden', 'role']) {
     if (!starAttrs.includes(attr)) starAttrs.push(attr);
@@ -65,7 +65,9 @@ const createSanitizeSchema = () => {
 
   // Allow inline style only on span/div for KaTeX spacing
   for (const tag of ['span', 'div']) {
-    const attrs = Array.isArray(schema.attributes[tag]) ? [...schema.attributes[tag]] : [];
+    const attrs = Array.isArray(schema.attributes[tag])
+      ? [...(schema.attributes[tag] as string[])]
+      : [];
     if (!attrs.includes('style')) attrs.push('style');
     if (!attrs.includes('className')) attrs.push('className');
     schema.attributes[tag] = attrs;
@@ -97,14 +99,16 @@ const createSanitizeSchema = () => {
   }
 
   // Minimal attributes for MathML
-  const mathAttrs = Array.isArray(schema.attributes['math']) ? [...schema.attributes['math']] : [];
+  const mathAttrs = Array.isArray(schema.attributes['math'])
+    ? [...(schema.attributes['math'] as string[])]
+    : [];
   for (const attr of ['display', 'xmlns']) {
     if (!mathAttrs.includes(attr)) mathAttrs.push(attr);
   }
   schema.attributes['math'] = mathAttrs;
 
   const annotationAttrs = Array.isArray(schema.attributes['annotation'])
-    ? [...schema.attributes['annotation']]
+    ? [...(schema.attributes['annotation'] as string[])]
     : [];
   if (!annotationAttrs.includes('encoding')) annotationAttrs.push('encoding');
   schema.attributes['annotation'] = annotationAttrs;

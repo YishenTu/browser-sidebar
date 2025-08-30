@@ -4,7 +4,7 @@ This document shows a complete example of a Gemini API request with all features
 
 ## Full Request Structure
 
-```javascript
+````javascript
 {
   // System instruction - Proper Gemini format (separate from contents)
   "systemInstruction": {
@@ -15,7 +15,7 @@ This document shows a complete example of a Gemini API request with all features
       }
     ]
   },
-  
+
   // Conversation contents with multi-tab data
   "contents": [
     {
@@ -26,7 +26,7 @@ This document shows a complete example of a Gemini API request with all features
         }
       ]
     },
-    
+
     // For multi-turn conversations, include previous messages
     {
       "role": "model",
@@ -36,9 +36,9 @@ This document shows a complete example of a Gemini API request with all features
         }
       ]
     },
-    
+
     {
-      "role": "user", 
+      "role": "user",
       "parts": [
         {
           "text": "Can you focus more on the efficiency improvements mentioned?"
@@ -46,32 +46,32 @@ This document shows a complete example of a Gemini API request with all features
       ]
     }
   ],
-  
+
   // Generation configuration
   "generationConfig": {
     // Maximum output tokens
     "maxOutputTokens": 8192,
-    
+
     // Thinking configuration for Gemini 2.5 models
     "thinkingConfig": {
       "thinkingBudget": -1,    // -1: dynamic (auto), 0: disabled, >0: specific token budget
       "includeThoughts": true   // Include thinking summaries in response
     },
-    
+
     // Response modalities
     "responseModalities": ["TEXT"],
-    
+
     // Optional stop sequences (if configured)
     "stopSequences": []
   },
-  
+
   // Google Search grounding tool - always enabled
   "tools": [
-    { 
+    {
       "google_search": {}  // Empty object enables Google Search
     }
   ],
-  
+
   // Safety settings (optional, configurable)
   "safetySettings": [
     {
@@ -92,7 +92,7 @@ This document shows a complete example of a Gemini API request with all features
     }
   ]
 }
-```
+````
 
 ## Streaming Response Format (JSON Chunks)
 
@@ -229,18 +229,21 @@ This document shows a complete example of a Gemini API request with all features
 ## Key Features Explained
 
 ### 1. System Instruction
+
 - Loaded from `src/config/systemPrompt.ts`
 - Uses `getSystemPromptForModel()` for model-specific prompts
 - Placed in `systemInstruction` field (NOT in contents)
 - Follows official Gemini API documentation format
 
 ### 2. Multi-Tab Content
+
 - Formatted by `formatMultiTabContent()` function
 - Same XML structure as OpenAI
 - Included in user message parts
 - Preserves markdown and selected text markers
 
 ### 3. Thinking Configuration
+
 - Controlled via `thinkingConfig` in `generationConfig`
 - `thinkingBudget`:
   - `-1`: Dynamic/automatic (default for Gemini 2.5 Pro)
@@ -249,6 +252,7 @@ This document shows a complete example of a Gemini API request with all features
 - Thinking content streamed separately before main response
 
 ### 4. Google Search Grounding
+
 - Always enabled via `tools: [{ google_search: {} }]`
 - Provides:
   - Web search queries used
@@ -257,6 +261,7 @@ This document shows a complete example of a Gemini API request with all features
   - Related search suggestions
 
 ### 5. Safety Settings
+
 - Configurable thresholds per category
 - Options: `BLOCK_NONE`, `BLOCK_ONLY_HIGH`, `BLOCK_MEDIUM_AND_ABOVE`, `BLOCK_LOW_AND_ABOVE`
 - Categories:
@@ -266,6 +271,7 @@ This document shows a complete example of a Gemini API request with all features
   - `HARM_CATEGORY_DANGEROUS_CONTENT`
 
 ### 6. Streaming
+
 - JSON chunks, not SSE format
 - Each chunk contains a `candidates` array
 - Thinking and content streamed separately
@@ -274,6 +280,7 @@ This document shows a complete example of a Gemini API request with all features
 ## Model-Specific Configuration
 
 ### Gemini 2.5 Flash Lite
+
 ```javascript
 {
   "model": "gemini-2.5-flash-lite",
@@ -284,6 +291,7 @@ This document shows a complete example of a Gemini API request with all features
 ```
 
 ### Gemini 2.5 Flash
+
 ```javascript
 {
   "model": "gemini-2.5-flash",
@@ -294,6 +302,7 @@ This document shows a complete example of a Gemini API request with all features
 ```
 
 ### Gemini 2.5 Pro
+
 ```javascript
 {
   "model": "gemini-2.5-pro",
@@ -333,13 +342,13 @@ export function buildRequest(
   chatConfig?: GeminiChatConfig
 ): GeminiRequest {
   const contents = convertMessages(messages);
-  
+
   const request: GeminiRequest = {
     contents,
     generationConfig: buildGenerationConfig(geminiConfig, chatConfig),
     tools: [{ google_search: {} }],
   };
-  
+
   // Add system instruction if provided
   if (chatConfig?.systemPrompt) {
     request.systemInstruction = {
@@ -347,12 +356,12 @@ export function buildRequest(
       parts: [{ text: chatConfig.systemPrompt }]
     };
   }
-  
+
   // Add safety settings if configured
   if (geminiConfig.safetySettings) {
     request.safetySettings = geminiConfig.safetySettings;
   }
-  
+
   return request;
 }
 ```
@@ -365,6 +374,7 @@ POST https://generativelanguage.googleapis.com/v1beta/models/{model}:streamGener
 ```
 
 With API key as query parameter:
+
 ```
 ?key={API_KEY}
 ```

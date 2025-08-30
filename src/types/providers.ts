@@ -74,6 +74,7 @@ export interface OpenAIConfig {
   seed?: number;
   user?: string;
   customOptions?: Record<string, unknown>;
+  [key: string]: unknown; // Index signature for compatibility with Record<string, unknown>
 }
 
 /**
@@ -90,6 +91,7 @@ export interface GeminiConfig {
   }>;
   stopSequences?: string[];
   endpoint?: string; // Optional custom endpoint for testing
+  [key: string]: unknown; // Index signature for compatibility with Record<string, unknown>
 }
 
 /**
@@ -323,7 +325,9 @@ export function isProviderError(value: unknown): value is ProviderError {
     typeof value === 'object' &&
     value !== null &&
     typeof (value as any).type === 'string' &&
-    ['authentication', 'rate_limit', 'network', 'validation', 'unknown'].includes((value as any).type) &&
+    ['authentication', 'rate_limit', 'network', 'validation', 'unknown'].includes(
+      (value as any).type
+    ) &&
     typeof (value as any).message === 'string' &&
     typeof (value as any).code === 'string' &&
     isProviderType((value as any).provider)
@@ -429,7 +433,11 @@ export function validateOpenAIConfig(config: unknown): ProviderValidationResult 
   const errors: string[] = [];
   const cfg = config as Record<string, unknown>;
 
-  if (!cfg['apiKey'] || typeof cfg['apiKey'] !== 'string' || (cfg['apiKey'] as string).trim() === '') {
+  if (
+    !cfg['apiKey'] ||
+    typeof cfg['apiKey'] !== 'string' ||
+    (cfg['apiKey'] as string).trim() === ''
+  ) {
     errors.push('Invalid API key');
   }
 
@@ -482,7 +490,11 @@ export function validateGeminiConfig(config: unknown): ProviderValidationResult 
   const errors: string[] = [];
   const cfg = config as Record<string, unknown>;
 
-  if (!cfg['apiKey'] || typeof cfg['apiKey'] !== 'string' || (cfg['apiKey'] as string).trim() === '') {
+  if (
+    !cfg['apiKey'] ||
+    typeof cfg['apiKey'] !== 'string' ||
+    (cfg['apiKey'] as string).trim() === ''
+  ) {
     errors.push('Invalid API key');
   }
 

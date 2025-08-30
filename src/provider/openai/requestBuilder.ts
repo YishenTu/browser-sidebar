@@ -48,13 +48,17 @@ export function buildRequest(
     const userMessages = messages.filter(m => m.role === 'user');
     const lastUserMessage = userMessages[userMessages.length - 1];
     if (lastUserMessage) {
-      request.input = [{
-        role: 'user',
-        content: [{
-          type: 'input_text',
-          text: lastUserMessage.content
-        }]
-      }];
+      request.input = [
+        {
+          role: 'user',
+          content: [
+            {
+              type: 'input_text',
+              text: lastUserMessage.content,
+            },
+          ],
+        },
+      ];
     }
   } else {
     // No previous response ID - either:
@@ -69,22 +73,28 @@ export function buildRequest(
       // Mid-conversation - send full history for context
       request.input = messages.map(m => ({
         role: m.role as 'user' | 'assistant',
-        content: [{
-          type: 'input_text',
-          text: m.content
-        }],
+        content: [
+          {
+            type: 'input_text',
+            text: m.content,
+          },
+        ],
       }));
     } else {
       // First message in conversation - only include the user message
       const firstUserMessage = messages.find(m => m.role === 'user');
       if (firstUserMessage) {
-        request.input = [{
-          role: 'user',
-          content: [{
-            type: 'input_text',
-            text: firstUserMessage.content
-          }]
-        }];
+        request.input = [
+          {
+            role: 'user',
+            content: [
+              {
+                type: 'input_text',
+                text: firstUserMessage.content,
+              },
+            ],
+          },
+        ];
       }
     }
   }
@@ -142,7 +152,11 @@ export function convertMessagesToInput(messages: ProviderChatMessage[]): string 
 /**
  * Build request options for fetch
  */
-export function buildRequestOptions(apiKey: string, body: unknown, signal?: AbortSignal): RequestInit {
+export function buildRequestOptions(
+  apiKey: string,
+  body: unknown,
+  signal?: AbortSignal
+): RequestInit {
   if (!apiKey) {
     throw new Error('OpenAI API key is not configured. Please add your API key in settings.');
   }

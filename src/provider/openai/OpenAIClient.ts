@@ -81,22 +81,22 @@ export class OpenAIClient {
     }
 
     // Validate API key format
-    if (!config.apiKey || typeof config.apiKey !== 'string') {
+    if (!config['apiKey'] || typeof config['apiKey'] !== 'string') {
       throw new Error('OpenAI API key is required and cannot be empty');
     }
 
-    if (!config.apiKey.startsWith('sk-')) {
+    if (!config['apiKey'].startsWith('sk-')) {
       throw new Error('OpenAI API key must start with "sk-"');
     }
 
     try {
       // Create OpenAI client configuration
       const clientConfig: ConstructorParameters<typeof OpenAI>[0] = {
-        apiKey: config.apiKey,
-        baseURL: config.customOptions?.baseURL || 'https://api.openai.com/v1',
-        timeout: config.customOptions?.timeout || 60000, // 60 seconds
-        maxRetries: config.customOptions?.maxRetries || 3,
-        defaultHeaders: config.customOptions?.headers || {},
+        apiKey: config['apiKey'],
+        baseURL: (config as any).customOptions?.baseURL || 'https://api.openai.com/v1',
+        timeout: (config as any).customOptions?.timeout || 60000, // 60 seconds
+        maxRetries: (config as any).customOptions?.maxRetries || 3,
+        defaultHeaders: (config as any).customOptions?.headers || {},
         // Required for browser environments - we accept the security implications
         // since this is a browser extension where users provide their own API keys
         dangerouslyAllowBrowser: true,
@@ -125,15 +125,15 @@ export class OpenAIClient {
     const errors: string[] = [];
 
     // Validate API key - check type first before checking content
-    if (typeof config.apiKey !== 'string') {
-      if (config.apiKey === null || config.apiKey === undefined) {
+    if (typeof config['apiKey'] !== 'string') {
+      if (config['apiKey'] === null || config['apiKey'] === undefined) {
         errors.push('API key is required and cannot be empty');
       } else {
         errors.push('API key must be a string');
       }
-    } else if (config.apiKey === '') {
+    } else if (config['apiKey'] === '') {
       errors.push('API key is required and cannot be empty');
-    } else if (!config.apiKey.startsWith('sk-')) {
+    } else if (!config['apiKey'].startsWith('sk-')) {
       errors.push('API key must start with "sk-"');
     }
 

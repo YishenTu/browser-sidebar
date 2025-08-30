@@ -219,7 +219,10 @@ export async function setBatch(
  * Listen for storage changes with deserialized values
  */
 export function onChanged(
-  callback: (changes: Record<string, { oldValue?: unknown; newValue?: unknown }>, area: string) => void
+  callback: (
+    changes: Record<string, { oldValue?: unknown; newValue?: unknown }>,
+    area: string
+  ) => void
 ): () => void {
   const listener = (changes: Record<string, chrome.storage.StorageChange>) => {
     const deserializedChanges: Record<string, { oldValue?: unknown; newValue?: unknown }> = {};
@@ -358,7 +361,8 @@ export async function getStorageInfo(area: StorageArea = 'local'): Promise<Stora
     }
 
     // Get quota from storage API constants
-    const quota = (storageAPI as chrome.storage.StorageArea & { QUOTA_BYTES?: number }).QUOTA_BYTES || 5242880; // Default 5MB for local
+    const quota =
+      (storageAPI as chrome.storage.StorageArea & { QUOTA_BYTES?: number }).QUOTA_BYTES || 5242880; // Default 5MB for local
 
     const available = quota - used;
     const usagePercentage = (used / quota) * 100;

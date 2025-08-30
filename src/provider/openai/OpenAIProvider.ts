@@ -18,6 +18,7 @@ import { OpenAIClient } from './OpenAIClient';
 import { buildRequest } from './requestBuilder';
 import { parseResponse, extractSearchMetadataFromEvent } from './responseParser';
 import { OpenAIStreamProcessor } from './streamProcessor';
+import type { OpenAIResponse } from './types';
 import {
   formatError as formatOpenAIError,
   withErrorHandling,
@@ -95,24 +96,28 @@ export class OpenAIProvider extends BaseProvider {
     const errors: string[] = [];
 
     // Validate API key
-    if (!config.apiKey || typeof config.apiKey !== 'string' || config.apiKey.trim() === '') {
+    if (
+      !config['apiKey'] ||
+      typeof config['apiKey'] !== 'string' ||
+      config['apiKey'].trim() === ''
+    ) {
       errors.push('Invalid API key');
-    } else if (!config.apiKey.startsWith('sk-')) {
+    } else if (!config['apiKey'].startsWith('sk-')) {
       errors.push('API key must start with "sk-"');
     }
 
     // Validate model
-    if (!config.model || typeof config.model !== 'string') {
+    if (!config['model'] || typeof config['model'] !== 'string') {
       errors.push('Invalid model');
-    } else if (!modelExists(config.model)) {
-      errors.push(`Unknown model: ${config.model}`);
+    } else if (!modelExists(config['model'])) {
+      errors.push(`Unknown model: ${config['model']}`);
     }
 
     // Validate reasoning effort (only valid parameter for OpenAI)
-    if (config.reasoningEffort !== undefined) {
+    if (config['reasoningEffort'] !== undefined) {
       if (
-        typeof config.reasoningEffort !== 'string' ||
-        !['minimal', 'low', 'medium', 'high'].includes(config.reasoningEffort)
+        typeof config['reasoningEffort'] !== 'string' ||
+        !['minimal', 'low', 'medium', 'high'].includes(config['reasoningEffort'])
       ) {
         errors.push('Invalid reasoning effort');
       }
@@ -145,7 +150,11 @@ export class OpenAIProvider extends BaseProvider {
     messages: ProviderChatMessage[],
     config?: OpenAIChatConfig
   ): Promise<ProviderResponse> {
-    return this.performChat(messages, this.sendMessage.bind(this), config);
+    return this.performChat(
+      messages,
+      this.sendMessage.bind(this),
+      config as Record<string, unknown>
+    );
   }
 
   /**
@@ -155,7 +164,11 @@ export class OpenAIProvider extends BaseProvider {
     messages: ProviderChatMessage[],
     config?: OpenAIChatConfig
   ): AsyncIterable<StreamChunk> {
-    yield* this.performStreamChat(messages, this.streamMessage.bind(this), config);
+    yield* this.performStreamChat(
+      messages,
+      this.streamMessage.bind(this),
+      config as Record<string, unknown>
+    );
   }
 
   // ============================================================================
@@ -191,11 +204,15 @@ export class OpenAIProvider extends BaseProvider {
 
     return withErrorHandling(async () => {
       // Use Responses API with AbortSignal passed via RequestOptions
-      const response = await (openaiInstance as { responses: { create: (req: unknown, opts: unknown) => Promise<unknown> } }).responses.create(request, {
+      const response = await (
+        openaiInstance as {
+          responses: { create: (req: unknown, opts: unknown) => Promise<unknown> };
+        }
+      ).responses.create(request, {
         signal: config?.signal,
       });
 
-      return parseResponse(response, currentConfig.model, messages);
+      return parseResponse(response as OpenAIResponse, currentConfig.model, messages);
     });
   }
 
@@ -232,7 +249,11 @@ export class OpenAIProvider extends BaseProvider {
         // Request logging removed for production
 
         // Use responses.create with stream: true (there is no separate stream method)
-        const asyncIterable = await (openaiInstance as { responses: { create: (req: unknown, opts: unknown) => Promise<unknown> } }).responses.create(request, {
+        const asyncIterable = await (
+          openaiInstance as {
+            responses: { create: (req: unknown, opts: unknown) => Promise<unknown> };
+          }
+        ).responses.create(request, {
           signal: config?.signal,
         });
 
@@ -250,14 +271,14 @@ export class OpenAIProvider extends BaseProvider {
             // This is the ACTUAL response ID from OpenAI, not our generated chunk IDs
             if (
               !capturedResponseId &&
-              event.response?.id &&
-              event.response.id.startsWith('resp_')
+              (event as any).response?.id &&
+              (event as any).response.id.startsWith('resp_')
             ) {
-              capturedResponseId = event.response.id;
+              capturedResponseId = (event as any).response.id;
             }
 
             // Process event and yield chunk if applicable
-            const chunk = processor.processEvent(event);
+            const chunk = processor.processEvent(event as any);
             if (chunk) {
               // Inject the REAL response ID into metadata, not the chunk ID
               if (capturedResponseId) {
@@ -270,9 +291,9 @@ export class OpenAIProvider extends BaseProvider {
             }
 
             // Handle search metadata using centralized logic
-            const searchMetadata = extractSearchMetadataFromEvent(event);
+            const searchMetadata = extractSearchMetadataFromEvent(event as any);
             const updatedMetadata = handleStreamSearchMetadata(
-              event,
+              event as any,
               searchMetadata,
               processor.getSearchMetadata(),
               messages

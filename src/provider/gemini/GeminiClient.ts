@@ -99,7 +99,11 @@ export class GeminiClient extends BaseProvider {
     }
 
     // API Key validation
-    if (!config['apiKey'] || typeof config['apiKey'] !== 'string' || config['apiKey'].trim() === '') {
+    if (
+      !config['apiKey'] ||
+      typeof config['apiKey'] !== 'string' ||
+      config['apiKey'].trim() === ''
+    ) {
       errors.push('Invalid API key');
     }
 
@@ -113,41 +117,41 @@ export class GeminiClient extends BaseProvider {
     // Thinking budget validation (optional, defaults to '0')
     if (config['thinkingBudget'] !== undefined) {
       if (
-        typeof config.thinkingBudget !== 'string' ||
-        !['0', '-1'].includes(config.thinkingBudget)
+        typeof config['thinkingBudget'] !== 'string' ||
+        !['0', '-1'].includes(config['thinkingBudget'])
       ) {
         errors.push('Invalid thinking budget');
       }
     }
 
     // Show thoughts validation (optional, defaults to false)
-    if (config.showThoughts !== undefined) {
-      if (typeof config.showThoughts !== 'boolean') {
+    if (config['showThoughts'] !== undefined) {
+      if (typeof config['showThoughts'] !== 'boolean') {
         errors.push('Invalid show thoughts setting');
       }
     }
 
     // Log if legacy parameters are provided (but don't fail)
     if (
-      config.temperature !== undefined ||
-      config.topP !== undefined ||
-      config.topK !== undefined ||
-      config.maxTokens !== undefined
+      config['temperature'] !== undefined ||
+      config['topP'] !== undefined ||
+      config['topK'] !== undefined ||
+      config['maxTokens'] !== undefined
     ) {
       // Legacy parameters ignored - silently handled
       // temperature, topP, topK, maxTokens are no longer used
     }
 
     // Safety settings validation (optional)
-    if (config.safetySettings !== undefined) {
-      if (!Array.isArray(config.safetySettings)) {
+    if (config['safetySettings'] !== undefined) {
+      if (!Array.isArray(config['safetySettings'])) {
         errors.push('Invalid safety settings format');
       }
     }
 
     // Stop sequences validation (optional)
-    if (config.stopSequences !== undefined) {
-      if (!Array.isArray(config.stopSequences)) {
+    if (config['stopSequences'] !== undefined) {
+      if (!Array.isArray(config['stopSequences'])) {
         errors.push('Invalid stop sequences format');
       }
     }
@@ -192,7 +196,10 @@ export class GeminiClient extends BaseProvider {
   /**
    * Send chat messages and get response
    */
-  async chat(messages: ProviderChatMessage[], _config?: Record<string, unknown>): Promise<ProviderResponse> {
+  async chat(
+    messages: ProviderChatMessage[],
+    _config?: Record<string, unknown>
+  ): Promise<ProviderResponse> {
     this.ensureConfigured();
     this.validateMessages(messages);
 
@@ -202,7 +209,10 @@ export class GeminiClient extends BaseProvider {
   /**
    * Stream chat messages
    */
-  async *streamChat(messages: ProviderChatMessage[], _config?: Record<string, unknown>): AsyncIterable<StreamChunk> {
+  async *streamChat(
+    messages: ProviderChatMessage[],
+    _config?: Record<string, unknown>
+  ): AsyncIterable<StreamChunk> {
     this.ensureConfigured();
     this.validateMessages(messages);
 
@@ -247,46 +257,54 @@ export class GeminiClient extends BaseProvider {
     };
 
     // Handle different error structures
-    if (error) {
+    if (error && typeof error === 'object') {
+      const err = error as Record<string, unknown>;
+
       // Extract message
-      if (error.message) {
-        message = error.message;
-      } else if (error.error?.message) {
-        message = error.error.message;
+      if (typeof err['message'] === 'string') {
+        message = err['message'];
+      } else if (err['error'] && typeof err['error'] === 'object') {
+        const errorObj = err['error'] as Record<string, unknown>;
+        if (typeof errorObj['message'] === 'string') {
+          message = errorObj['message'];
+        }
       }
 
       // Determine error type based on status or code
-      if (error.status === 401 || error.code === 'UNAUTHENTICATED') {
+      if (err['status'] === 401 || err['code'] === 'UNAUTHENTICATED') {
         errorType = 'authentication';
         code = 'GEMINI_AUTH_ERROR';
-      } else if (error.status === 429 || error.code === 'RESOURCE_EXHAUSTED') {
+      } else if (err['status'] === 429 || err['code'] === 'RESOURCE_EXHAUSTED') {
         errorType = 'rate_limit';
         code = 'GEMINI_RATE_LIMIT';
         retryAfter = GEMINI_API_CONFIG.DEFAULT_RETRY_AFTER;
-      } else if (error.status === 400 || error.code === 'INVALID_ARGUMENT') {
+      } else if (err['status'] === 400 || err['code'] === 'INVALID_ARGUMENT') {
         errorType = 'validation';
         code = 'GEMINI_VALIDATION_ERROR';
-      } else if (error.message && error.message.toLowerCase().includes('network')) {
+      } else if (
+        typeof err['message'] === 'string' &&
+        err['message'].toLowerCase().includes('network')
+      ) {
         errorType = 'network';
         code = 'GEMINI_NETWORK_ERROR';
       }
 
       // Add status code to details if available
-      if (error.status) {
-        details.statusCode = error.status;
+      if (typeof err['status'] === 'number') {
+        details['statusCode'] = err['status'];
       }
 
       // Add additional error details
-      if (error.details) {
-        details = { ...details, ...error.details };
+      if (err['details'] && typeof err['details'] === 'object') {
+        details = { ...details, ...err['details'] };
       }
 
       // Add error-specific details
-      if (error.field) {
-        details.field = error.field;
+      if (err['field']) {
+        details['field'] = err['field'];
       }
-      if (error.value) {
-        details.value = error.value;
+      if (err['value']) {
+        details['value'] = err['value'];
       }
     }
 

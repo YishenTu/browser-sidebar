@@ -72,7 +72,7 @@ export abstract class BaseProvider implements AIProvider {
    * Called by concrete providers after successful validation
    */
   protected setConfig(config: ProviderConfig): void {
-    const validation = this.validateConfig(config.config as Record<string, unknown>);
+    const validation = this.validateConfig(config.config as unknown as Record<string, unknown>);
     if (!validation.isValid) {
       throw new Error(`Configuration validation failed: ${validation.errors.join(', ')}`);
     }
@@ -121,13 +121,19 @@ export abstract class BaseProvider implements AIProvider {
    * Send chat messages and get response
    * Must be implemented by concrete providers
    */
-  abstract chat(messages: ProviderChatMessage[], config?: Record<string, unknown>): Promise<ProviderResponse>;
+  abstract chat(
+    messages: ProviderChatMessage[],
+    config?: Record<string, unknown>
+  ): Promise<ProviderResponse>;
 
   /**
    * Stream chat messages
    * Must be implemented by concrete providers
    */
-  abstract streamChat(messages: ProviderChatMessage[], config?: Record<string, unknown>): AsyncIterable<StreamChunk>;
+  abstract streamChat(
+    messages: ProviderChatMessage[],
+    config?: Record<string, unknown>
+  ): AsyncIterable<StreamChunk>;
 
   // ============================================================================
   // Model Methods

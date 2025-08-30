@@ -80,12 +80,13 @@ export function convertToStreamChunk(geminiResponse: unknown, model: string): St
     };
   };
   const candidate = response.candidates?.[0];
+  const candidateTyped = candidate as GeminiCandidate | undefined;
 
   // Extract content and thinking
-  const { content, thinking } = extractContentAndThinking(candidate);
+  const { content, thinking } = extractContentAndThinking(candidateTyped);
 
   // Normalize finish reason
-  const finishReason = normalizeFinishReason(candidate?.finishReason);
+  const finishReason = normalizeFinishReason((candidateTyped as any)?.finishReason);
 
   const chunk: StreamChunk = {
     id: generateChunkId(),
@@ -99,7 +100,7 @@ export function convertToStreamChunk(geminiResponse: unknown, model: string): St
           content: content || undefined,
           thinking: thinking || undefined,
         },
-        finishReason: candidate?.finishReason ? finishReason : null,
+        finishReason: (candidateTyped as any)?.finishReason ? finishReason : null,
       },
     ],
   };
@@ -107,9 +108,9 @@ export function convertToStreamChunk(geminiResponse: unknown, model: string): St
   // Add usage metadata if present
   if (response.usageMetadata) {
     chunk.usage = {
-      promptTokens: response.usageMetadata.promptTokenCount,
-      completionTokens: response.usageMetadata.candidatesTokenCount,
-      totalTokens: response.usageMetadata.totalTokenCount,
+      promptTokens: response.usageMetadata.promptTokenCount || 0,
+      completionTokens: response.usageMetadata.candidatesTokenCount || 0,
+      totalTokens: response.usageMetadata.totalTokenCount || 0,
     };
   }
 

@@ -63,7 +63,7 @@ export function formatError(error: unknown): ProviderError {
   return createProviderError(errorType, message, code, {
     retryAfter,
     details: {
-      statusCode: err?.status || err?.statusCode,
+      statusCode: (err as any)?.status || (err as any)?.statusCode,
       originalError: err,
     },
   });
@@ -92,7 +92,12 @@ export function createProviderError(
     error.retryAfter = details.retryAfter;
   }
   if (details?.details) {
-    error.details = details.details;
+    error.details = details.details as {
+      [key: string]: unknown;
+      statusCode?: number | undefined;
+      timestamp?: Date | undefined;
+      requestId?: string | undefined;
+    };
   }
 
   return error;
@@ -107,6 +112,7 @@ export async function handleErrorResponse(response: Response): Promise<void> {
   try {
     errorData = await response.json();
   } catch {
+    // Ignore parsing errors
     // If we can't parse JSON, create a basic error
     throw formatError({
       error: {

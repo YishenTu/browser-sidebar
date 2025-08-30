@@ -100,6 +100,8 @@ export const FullscreenModal: React.FC<FullscreenModalProps> = ({
         document.body.style.overflow = originalOverflow;
       };
     }
+    // Return undefined for the else case (when !isOpen)
+    return undefined;
   }, [isOpen, handleEscape]);
 
   if (!isOpen) return null;

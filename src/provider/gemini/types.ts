@@ -184,6 +184,7 @@ export interface GeminiChatConfig {
   showThoughts?: boolean;
   signal?: AbortSignal;
   systemPrompt?: string;
+  [key: string]: unknown; // Index signature for compatibility with Record<string, unknown>
 }
 
 /**

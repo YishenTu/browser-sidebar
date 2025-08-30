@@ -12,6 +12,7 @@ import { useProviderManager } from './useProviderManager';
 import { useMessageHandler } from './useMessageHandler';
 import { useMultiTabExtraction } from '../useMultiTabExtraction';
 import type { UseAIChatOptions, UseAIChatReturn } from './types';
+import type { TabContent } from '../../../types/tabs';
 
 /**
  * Custom hook for AI chat functionality with real providers
@@ -71,6 +72,7 @@ export function useAIChat(options: UseAIChatOptions = {}): UseAIChatReturn {
         // Re-initialize providers when settings change
         await initializeProviders();
       } catch (_error) {
+        // Ignore initialization errors - provider will handle retry
       }
     };
 
@@ -89,18 +91,13 @@ export function useAIChat(options: UseAIChatOptions = {}): UseAIChatReturn {
   useEffect(() => {
     if (!enabled) return;
 
-    const { 
-      currentTabContent, 
-      currentTabId, 
-      loadedTabs, 
-      hasAutoLoaded 
-    } = multiTabExtraction;
+    const { currentTabContent, currentTabId, loadedTabs, hasAutoLoaded } = multiTabExtraction;
 
     // Update chat store with current tab information only if changed
     // The Zustand hook returns a snapshot of state/actions; to access
     // the store API use the hook function itself.
     const storeState = useChatStore.getState();
-    
+
     if (currentTabId !== null && storeState.currentTabId !== currentTabId) {
       chatStore.setCurrentTabId(currentTabId);
     }
@@ -115,21 +112,28 @@ export function useAIChat(options: UseAIChatOptions = {}): UseAIChatReturn {
     // we don't need to set it back unless we're adding the current tab
     if (currentTabContent && currentTabId !== null && !loadedTabs[currentTabId]) {
       // Create TabContent structure for current tab
-      const currentTabAsTabContent = {
+      const currentTabAsTabContent: TabContent = {
         tabInfo: {
           id: currentTabId,
           title: currentTabContent.title || 'Current Tab',
           url: currentTabContent.url || '',
+          domain: currentTabContent.url ? new URL(currentTabContent.url).hostname : '',
+          windowId: 0, // Default window ID
           active: true,
+          index: 0, // Default index
+          pinned: false, // Default pinned state
           lastAccessed: Date.now(),
         },
         extractedContent: currentTabContent,
         extractionStatus: 'completed' as const,
         isStale: false,
       };
-      
+
       // Only update if current tab is not already in loaded tabs
-      const updatedTabs = { ...loadedTabs, [currentTabId]: currentTabAsTabContent };
+      const updatedTabs: Record<number, TabContent> = {
+        ...loadedTabs,
+        [currentTabId]: currentTabAsTabContent,
+      };
       chatStore.setLoadedTabs(updatedTabs);
     }
   }, [

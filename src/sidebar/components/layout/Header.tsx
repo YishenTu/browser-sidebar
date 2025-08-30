@@ -75,9 +75,13 @@ export const Header: React.FC<HeaderProps> = ({
     }
 
     if (extractedContent) {
-      const wordCount = extractedContent.metadata?.wordCount ?? extractedContent.wordCount ?? 0;
+      // Calculate word count from textContent if not available in metadata
+      const estimatedWordCount = extractedContent.textContent
+        ? extractedContent.textContent.split(/\s+/).filter(word => word.length > 0).length
+        : 0;
+      const wordCount = estimatedWordCount;
       const method = extractedContent.extractionMethod;
-      const truncated = extractedContent.metadata?.truncated || extractedContent.isTruncated;
+      const truncated = extractedContent.metadata?.truncated ?? false;
 
       const title = `Content extracted (${method}) • ${wordCount.toLocaleString()} words${truncated ? ' • Truncated' : ''}`;
 

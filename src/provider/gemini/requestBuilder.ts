@@ -44,7 +44,7 @@ export function buildRequest(
   // Add system instruction if provided
   if (chatConfig?.systemPrompt) {
     request.systemInstruction = {
-      parts: [{ text: chatConfig.systemPrompt }]
+      parts: [{ text: chatConfig.systemPrompt }],
     };
   }
 
@@ -71,8 +71,8 @@ export function convertMessages(messages: ProviderChatMessage[]): GeminiContent[
     }
 
     // Add multimodal attachments
-    if (message.metadata?.['attachments']) {
-      for (const attachment of message.metadata['attachments']) {
+    if (message.metadata?.['attachments'] && Array.isArray(message.metadata['attachments'])) {
+      for (const attachment of message.metadata['attachments'] as any[]) {
         if (attachment.type === 'image') {
           const imagePart = processImageAttachment(attachment);
           if (imagePart) {
@@ -108,14 +108,18 @@ function processImageAttachment(attachment: unknown): GeminiPart | null {
   const [, mimeType, data] = matches;
 
   // Validate supported image types
-  if (!isSupportedImageType(mimeType)) {
-    throw new Error(`Unsupported image type: ${mimeType}`);
+  if (!mimeType || !data) {
+    throw new Error('Invalid image data format');
+  }
+
+  if (!isSupportedImageType(mimeType!)) {
+    throw new Error(`Unsupported image type: ${mimeType!}`);
   }
 
   return {
     inlineData: {
-      mimeType,
-      data,
+      mimeType: mimeType!,
+      data: data!,
     },
   };
 }

@@ -146,6 +146,7 @@ export function useProviderManager(enabled = true): UseProviderManagerReturn {
           const provider = await factoryRef.current.createProvider(config);
           registryRef.current.register(provider);
         } catch (error) {
+          // Skip invalid provider configurations
         }
       }
 
@@ -159,6 +160,7 @@ export function useProviderManager(enabled = true): UseProviderManagerReturn {
         }
       }
     } catch (error) {
+      // Provider initialization can fail silently - UI will show appropriate error
     } finally {
       isInitializingRef.current = false;
     }

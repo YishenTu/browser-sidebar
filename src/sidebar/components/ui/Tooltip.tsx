@@ -21,7 +21,7 @@ export interface TooltipProps {
 
 /**
  * Tooltip Component
- * 
+ *
  * A simple tooltip component that shows content on hover or focus.
  * Handles positioning within Shadow DOM and provides accessibility features.
  */
@@ -60,7 +60,7 @@ export const Tooltip: React.FC<TooltipProps> = ({
     const tooltipRect = tooltipRef.current.getBoundingClientRect();
     const viewportWidth = window.innerWidth;
     const viewportHeight = window.innerHeight;
-    
+
     let top = 0;
     let left = 0;
     let newPosition = position;
@@ -69,40 +69,40 @@ export const Tooltip: React.FC<TooltipProps> = ({
       case 'top':
         top = triggerRect.top - tooltipRect.height - 8;
         left = triggerRect.left + (triggerRect.width - tooltipRect.width) / 2;
-        
+
         // Check if tooltip would go above viewport
         if (top < 8) {
           newPosition = 'bottom';
           top = triggerRect.bottom + 8;
         }
         break;
-        
+
       case 'bottom':
         top = triggerRect.bottom + 8;
         left = triggerRect.left + (triggerRect.width - tooltipRect.width) / 2;
-        
+
         // Check if tooltip would go below viewport
         if (top + tooltipRect.height > viewportHeight - 8) {
           newPosition = 'top';
           top = triggerRect.top - tooltipRect.height - 8;
         }
         break;
-        
+
       case 'left':
         top = triggerRect.top + (triggerRect.height - tooltipRect.height) / 2;
         left = triggerRect.left - tooltipRect.width - 8;
-        
+
         // Check if tooltip would go left of viewport
         if (left < 8) {
           newPosition = 'right';
           left = triggerRect.right + 8;
         }
         break;
-        
+
       case 'right':
         top = triggerRect.top + (triggerRect.height - tooltipRect.height) / 2;
         left = triggerRect.right + 8;
-        
+
         // Check if tooltip would go right of viewport
         if (left + tooltipRect.width > viewportWidth - 8) {
           newPosition = 'left';
@@ -116,18 +116,18 @@ export const Tooltip: React.FC<TooltipProps> = ({
     top = Math.max(8, Math.min(top, viewportHeight - tooltipRect.height - 8));
 
     setActualPosition(newPosition);
-    
+
     return { top, left };
   };
 
   const showTooltip = () => {
     if (disabled || !content) return;
-    
+
     if (hideTimeoutRef.current) {
       clearTimeout(hideTimeoutRef.current);
       hideTimeoutRef.current = null;
     }
-    
+
     showTimeoutRef.current = window.setTimeout(() => {
       setIsVisible(true);
       showTimeoutRef.current = null;
@@ -139,7 +139,7 @@ export const Tooltip: React.FC<TooltipProps> = ({
       clearTimeout(showTimeoutRef.current);
       showTimeoutRef.current = null;
     }
-    
+
     hideTimeoutRef.current = window.setTimeout(() => {
       setIsVisible(false);
       hideTimeoutRef.current = null;
@@ -149,7 +149,7 @@ export const Tooltip: React.FC<TooltipProps> = ({
   // Handle mouse events
   const handleMouseEnter = () => showTooltip();
   const handleMouseLeave = () => hideTooltip();
-  
+
   // Handle focus events for keyboard accessibility
   const handleFocus = () => showTooltip();
   const handleBlur = () => hideTooltip();
@@ -166,7 +166,7 @@ export const Tooltip: React.FC<TooltipProps> = ({
 
   // Calculate position when tooltip becomes visible
   const [tooltipStyle, setTooltipStyle] = useState<React.CSSProperties>({});
-  
+
   useEffect(() => {
     if (isVisible && tooltipRef.current) {
       const position = calculatePosition();
@@ -199,9 +199,7 @@ export const Tooltip: React.FC<TooltipProps> = ({
           }}
           onMouseLeave={hideTooltip}
         >
-          <div className="tooltip__content">
-            {content}
-          </div>
+          <div className="tooltip__content">{content}</div>
           <div className={`tooltip__arrow tooltip__arrow--${actualPosition}`} />
         </div>
       )}

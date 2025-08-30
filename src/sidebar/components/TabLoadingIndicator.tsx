@@ -47,14 +47,14 @@ export interface TabLoadingIndicatorProps extends React.HTMLAttributes<HTMLDivEl
 
 /**
  * TabLoadingIndicator Component
- * 
+ *
  * A versatile loading indicator for tab extraction states with:
  * - Loading spinner with optional text
  * - Error state with retry functionality
  * - Multiple sizes for different UI contexts
  * - Smooth transitions between states
  * - Full accessibility support
- * 
+ *
  * Usage:
  * ```tsx
  * <TabLoadingIndicator
@@ -118,9 +118,7 @@ export const TabLoadingIndicator: React.FC<TabLoadingIndicatorProps> = ({
         className="tab-loading-indicator__spinner"
       />
       {showText && loadingText && (
-        <span className={`tab-loading-indicator__text ${config.text}`}>
-          {loadingText}
-        </span>
+        <span className={`tab-loading-indicator__text ${config.text}`}>{loadingText}</span>
       )}
     </div>
   );
@@ -135,9 +133,7 @@ export const TabLoadingIndicator: React.FC<TabLoadingIndicatorProps> = ({
           aria-hidden="true"
         />
         {showText && (
-          <span className={`tab-loading-indicator__text ${config.text}`}>
-            {errorMessage}
-          </span>
+          <span className={`tab-loading-indicator__text ${config.text}`}>{errorMessage}</span>
         )}
       </div>
       {hasRetry && (

@@ -150,7 +150,8 @@ export class ErrorClassifier {
     }
 
     // Handle HTTP status codes
-    const status = (error as any).status || (error as any).statusCode || (error as any).response?.status;
+    const status =
+      (error as any).status || (error as any).statusCode || (error as any).response?.status;
     if (status) {
       if (status === 401 || status === 403) {
         return ErrorType.AUTHENTICATION;
@@ -186,7 +187,10 @@ export class ErrorClassifier {
       if ((error as any).code === 'RESOURCE_EXHAUSTED') {
         return ErrorType.RATE_LIMIT;
       }
-      if ((error as any).code === 'INVALID_ARGUMENT' && (error as any).message?.includes('context')) {
+      if (
+        (error as any).code === 'INVALID_ARGUMENT' &&
+        (error as any).message?.includes('context')
+      ) {
         return ErrorType.CONTEXT_EXCEEDED;
       }
     }
