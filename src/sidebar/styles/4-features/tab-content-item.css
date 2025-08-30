@@ -252,7 +252,8 @@
   align-items: center;
   padding: 4px 12px;
   border-top: 1px solid rgba(75, 85, 99, 0.2);
-  min-height: 24px;
+  height: 32px; /* Fixed height instead of min-height */
+  flex-shrink: 0; /* Prevent shrinking */
 }
 
 /* Debug info on the left */
