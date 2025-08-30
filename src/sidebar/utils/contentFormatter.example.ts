@@ -2,100 +2,235 @@
  * Example output of the new content formatter
  * Clean markdown with minimal XML tags as separators
  * Includes browser context instruction for clarity
+ *
+ * Note: Dynamic content changes based on:
+ * - Number of tabs (1 web page vs 2+ web pages)
+ * - Presence of text selection(s) - marked within tab content
  */
 
 const exampleOutput = `
-<browser_context>
+<system_instruction>
 The user is viewing 2 web pages in the browser.
-Sources: x.com, reddit.com
-Below is the extracted content from these tabs, followed by the user question.
-Please analyze this content to answer the user query.
-</browser_context>
+Sources: example.com, documentation.dev
+Below is the extracted content from these tabs. Selected portions are marked within the tab content, followed by the user's query about it.
+Please analyze the provided content to answer the user's query, and do prioritize consideration of the selected content.
+</system_instruction>
 
 <tab_content>
 <tab>
   <metadata>
-    <title>Thariq on X: "is there a polymarket for who the antichrist is" / X</title>
-    <url>https://x.com/trq212/status/1960923999862509938</url>
-    <domain>x.com</domain>
+    <title>Example Product Documentation</title>
+    <url>https://example.com/docs/getting-started</url>
+    <domain>example.com</domain>
   </metadata>
   <content>
-**Thariq** @trq212 2025-08-28
+# Getting Started with Example Product
 
-is there a polymarket for who the antichrist is
+Welcome to the Example Product documentation. This guide will help you get up and running quickly.
 
-* * *
+## Installation
 
-**jeff** @jeffreyhuber 2025-08-28
+To install Example Product, you can use npm:
 
-bet
+\`\`\`bash
+npm install example-product
+\`\`\`
 
-* * *
+## [SELECTED TEXT START] Quick Setup
 
-**DNC Operative Groyper** @StochNoticer 2025-08-28
+1. Import the library in your project:
+   \`\`\`javascript
+   import { ExampleProduct } from 'example-product';
+   \`\`\`
 
-No nigga, he OWNS it
+2. Initialize with your configuration:
+   \`\`\`javascript
+   const example = new ExampleProduct({
+     apiKey: 'your-api-key',
+     region: 'us-west-2'
+   });
+   \`\`\`
+[SELECTED TEXT END]
+
+## Advanced Configuration
+
+For more complex setups, you can customize various options...
   </content>
 </tab>
 
 <tab>
   <metadata>
-    <title>Gemini 2.5 Pro has a dramatic, literary tone, whereas GPT-5 Thinking is more plain and straightforward. : r/Bard</title>
-    <url>https://www.reddit.com/r/Bard/comments/1n1z3xy/gemini_25_pro_has_a_dramatic_literary_tone/</url>
-    <domain>reddit.com</domain>
+    <title>API Reference - Example Product</title>
+    <url>https://documentation.dev/api/v2/reference</url>
+    <domain>documentation.dev</domain>
   </metadata>
   <content>
-While Gemini 2.5 Pro is superior when it comes to conversational fun, GPT-5 Thinking seems to win at intellectual debate. Unlike Gemini, it doesn't flatter, and its perceived hallucination rate is lower, so it feels more trustworthy. So it would be nice if Gemini 3.0 launched with a straightforward tone like GPT-5 Thinking.
+# API Reference
 
-## Comments
+## Core Methods
 
-> **bludgeonerV** • 10 points •
-> 
-> Just create a Gem with the personality you want, it's extremely good at fitting the style you tell it to.
-> 
-> I have one set up for language learning that gives me completely toneless information in the exact format i told it to, optimized for text to speech with no fluff at all.
+### initialize(config)
+Initializes the Example Product instance with the provided configuration.
 
-> **abbumm** • 7 points •
-> 
-> Uhh nah thanks, I enjoy Gemini precisely because it's so good at humanities. Don't flatten it out. And I had GPT-5-High get physics questions wrong with Gemini 2.5 Pro getting the same questions right (I'm a physics teacher and researcher). I was disappointed with GPT-5's release :( I hope OpenAI returns to be competitive because that's really not it
+**Parameters:**
+- \`config\` (Object): Configuration object
+  - \`apiKey\` (string): Your API key
+  - \`region\` (string): AWS region (default: 'us-east-1')
+  - \`timeout\` (number): Request timeout in milliseconds (default: 5000)
 
-> **Klutzy_Telephone468** • 1 point •
-> 
-> I like the conversational tone. It helps when you ask LLM to explain complex topics
+**Returns:** Promise<Instance>
+
+### process(data)
+Processes the input data according to the configured rules.
+
+**Parameters:**
+- \`data\` (Object|Array): The data to process
+
+**Returns:** Promise<ProcessedResult>
+
+## Error Handling
+
+All methods return promises that may reject with the following error types:
+- \`AuthenticationError\`: Invalid or missing API key
+- \`ValidationError\`: Invalid input parameters
+- \`NetworkError\`: Connection or timeout issues
   </content>
 </tab>
 
 </tab_content>
 
 <user_query>
-what does these two pages say?
+How do I initialize this product with my API key?
+</user_query>
+`;
+
+/**
+ * Example with single tab and no selection
+ */
+const exampleSingleTab = `
+<system_instruction>
+The user is viewing 1 web page in the browser.
+Source: example.com
+Below is the extracted content from this tab, followed by the user's query about it.
+Please analyze the provided content to answer the user's query.
+</system_instruction>
+
+<tab_content>
+<tab>
+  <metadata>
+    <title>Example Page</title>
+    <url>https://example.com/page</url>
+    <domain>example.com</domain>
+  </metadata>
+  <content>
+Page content here...
+  </content>
+</tab>
+</tab_content>
+
+<user_query>
+What is this page about?
+</user_query>
+`;
+
+/**
+ * Example with multiple tabs having multiple selections
+ */
+const exampleMultipleSelections = `
+<system_instruction>
+The user is viewing 3 web pages in the browser.
+Sources: example.com, documentation.dev, api.example.org
+Below is the extracted content from these tabs. Selected portions are marked within the tab content, followed by the user's query about it.
+Please analyze the provided content to answer the user's query, and do prioritize consideration of the selected content.
+</system_instruction>
+
+<tab_content>
+<tab>
+  <metadata>
+    <title>Example Product Documentation</title>
+    <url>https://example.com/docs/getting-started</url>
+    <domain>example.com</domain>
+  </metadata>
+  <content>
+# Getting Started
+
+[SELECTED TEXT START]
+To initialize the product, use the following configuration...
+[SELECTED TEXT END]
+
+More content here...
+  </content>
+</tab>
+
+<tab>
+  <metadata>
+    <title>API Reference</title>
+    <url>https://documentation.dev/api/reference</url>
+    <domain>documentation.dev</domain>
+  </metadata>
+  <content>
+# API Methods
+
+Some content...
+
+[SELECTED TEXT START]
+The initialize() method accepts a config object with required apiKey field...
+[SELECTED TEXT END]
+
+More content...
+  </content>
+</tab>
+
+<tab>
+  <metadata>
+    <title>Examples Gallery</title>
+    <url>https://api.example.org/examples</url>
+    <domain>api.example.org</domain>
+  </metadata>
+  <content>
+# Code Examples
+
+Various code examples without any selection...
+  </content>
+</tab>
+</tab_content>
+
+<user_query>
+How do these initialization methods relate to each other?
 </user_query>
 `;
 
 /**
  * Benefits of the new structure:
- * 
+ *
  * 1. **Clear Separation**: Three distinct parts with XML labels
- *    - <browser_context>: System instruction explaining the context
+ *    - <system_instruction>: System instruction explaining the context with dynamic text
  *    - <tab_content>: The actual tab content with structured metadata
  *    - <user_query>: The user's actual question
- * 
- * 2. **Better Organization**: Each tab is a separate XML element with:
+ *
+ * 2. **Dynamic Context**: System instruction adapts based on:
+ *    - Number of tabs (singular/plural forms)
+ *    - Presence of text selection(s) - simply mentions they are marked in content
+ *
+ * 3. **Better Organization**: Each tab is a separate XML element with:
  *    - Structured metadata (title, url, domain)
  *    - Content properly escaped for XML
- *    - No unnecessary identifiers or status flags
- * 
- * 3. **Easier Parsing**: AI providers can easily:
+ *    - Selection markers when applicable
+ *
+ * 4. **Easier Parsing**: AI providers can easily:
  *    - Extract specific tab content
  *    - Understand the context before the query
- *    - Focus on the actual user question at the end
- * 
- * 4. **Truncation Support**: When content is truncated:
+ *    - Focus on selected content when present
+ *    - Process the user question at the end
+ *
+ * 5. **Truncation Support**: When content is truncated:
  *    - Individual tabs can be marked as truncated
  *    - A truncation notice is included
  *    - Metadata shows which tabs were omitted
- * 
- * 5. **System Context**: Moved to API system parameter for cleaner separation
+ *
+ * 6. **Simple Selection Handling**:
+ *    - No complex logic for tracking which tabs have selections
+ *    - Just mentions selections are marked within the content
  */
 
-export { exampleOutput };
+export { exampleOutput, exampleSingleTab, exampleMultipleSelections };

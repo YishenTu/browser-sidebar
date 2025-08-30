@@ -1,6 +1,6 @@
 /**
  * Sidebar Utilities
- * 
+ *
  * Collection of utility functions for the sidebar components
  */
 
@@ -14,15 +14,13 @@ export {
   useDropdownPosition,
   type DropdownPosition,
   type DropdownDimensions,
-  type CaretPosition
+  type CaretPosition,
 } from './dropdownPosition';
 
 export {
   formatMultiTabContent,
-  estimateFormattedSize,
-  isValidTabContent,
   type MultiTabFormatResult,
-  type FormatOptions
+  type FormatOptions,
 } from './contentFormatter';
 
 export {
@@ -36,7 +34,7 @@ export {
   allTabsFinished,
   getExtractionStats,
   isValidTabId,
-  isValidTabInfo
+  isValidTabInfo,
 } from './tabFilters';
 
 export {
@@ -47,5 +45,5 @@ export {
   preloadFavicon,
   useFavicon,
   type FaviconOptions,
-  type FaviconResult
+  type FaviconResult,
 } from './favicon';
