@@ -139,7 +139,6 @@ src/
 │   │   ├── MessageList.tsx # Virtualized list
 │   │   ├── ModelSelector.tsx # Model selection
 │   │   ├── Settings/       # Settings UI
-│   │   ├── TabChip.tsx     # Tab selection chips
 │   │   ├── TabContentItem.tsx # Tab content display
 │   │   ├── TabMentionDropdown.tsx # @ mention UI
 │   │   └── ThinkingWrapper.tsx # Reasoning display
@@ -158,7 +157,6 @@ src/
 │       └── 4-features/     # Feature-specific styles
 ├── tabext/         # Content extraction system
 │   ├── index.ts            # Content script entry
-│   ├── extractorLoader.ts  # Dynamic loading
 │   ├── core/               # Core functionality
 │   │   ├── documentPatcher.ts # DOM patches
 │   │   ├── messageHandler.ts # Message handling

@@ -7,7 +7,6 @@ The tabext module is the content script portion of the browser extension that ru
 ```
 tabext/
 ├── index.ts                    # Entry point & initialization
-├── extractorLoader.ts          # Dynamic extraction module loader
 ├── core/                       # Core functionality
 │   ├── index.ts               # Core exports
 │   ├── documentPatcher.ts     # Document API patches for assets

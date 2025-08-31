@@ -70,7 +70,6 @@ Content script for extracting and processing web page content.
 **Structure:**
 
 - `index.ts` - Content script entry point
-- `extractorLoader.ts` - Dynamic extractor selection
 - `core/` - Core functionality (documentPatcher, messageHandler, sidebarController)
 - `extraction/` - Extraction logic (analyzers, converters, extractors, orchestrator)
 - `utils/` - DOM and text utilities
@@ -89,8 +88,6 @@ Unified interface for multiple AI providers with BYOK architecture.
 - `BaseProvider.ts` - Abstract base class
 - `ProviderFactory.ts` - Factory pattern implementation
 - `ProviderRegistry.ts` - Singleton registry
-- `apiKeyValidation.ts` - Key validation utilities
-- `errors.ts` - Provider-specific errors
 
 **OpenAI (`openai/`):**
 
@@ -129,9 +126,32 @@ Centralized data management with state, persistence, and security.
 
 **Store (`store/`):**
 
-- `chat.ts` - Chat conversation state
-- `settings.ts` - Application settings
-- `index.ts` - Store exports
+Hierarchical delegation pattern with specialized stores:
+
+```
+SessionStore (Master - holds all session data in memory)
+    ├── MessageStore (delegates to active session)
+    ├── TabStore (delegates to active session)
+    └── UIStore (delegates to active session)
+```
+
+- `chat.ts` - Exports for all chat-related stores
+- `stores/sessionStore.ts` - Master store for session management
+- `stores/messageStore.ts` - Message CRUD operations (delegated)
+- `stores/tabStore.ts` - Tab content state (delegated)
+- `stores/uiStore.ts` - UI state management (delegated)
+- `settings.ts` - Application settings with persistence
+- `utils/chatHelpers.ts` - Session key generation and helpers
+
+**Session Management:**
+
+- **Session Keys**: `tab_${tabId}:${normalizedUrl}` format
+- **URL Normalization**: Includes query params, excludes hash fragments
+- **Memory-only**: No persistence, sessions lost on restart
+- **Clearing Strategies**:
+  - `clearCurrentSession()` - Resets data but keeps session key
+  - `clearSession(key)` - Removes specific session entirely
+  - `clearTabSessions(tabId)` - Removes all tab sessions (on tab close)
 
 **Storage (`storage/`):**
 

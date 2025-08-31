@@ -16,3 +16,4 @@
 - [ ] 14. more provider
 - [ ] 15. openai compatible provider
 - [ ] 16. new setting logic
+- [ ] 17.

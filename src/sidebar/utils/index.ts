@@ -19,18 +19,4 @@ export {
 
 export { formatTabContent, type TabFormatResult, type FormatOptions } from './contentFormatter';
 
-export {
-  isRestrictedUrl,
-  canLoadTab,
-  getAvailableTabs,
-  isTabLoading,
-  getTabsByStatus,
-  getFailedTabs,
-  getSuccessfulTabs,
-  allTabsFinished,
-  getExtractionStats,
-  isValidTabId,
-  isValidTabInfo,
-} from './tabFilters';
-
 export { getDomSafeFaviconUrlSync } from './favicon';

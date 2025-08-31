@@ -9,10 +9,6 @@ provider/
 ├── BaseProvider.ts         # Abstract base class for all providers
 ├── ProviderFactory.ts      # Factory pattern for provider creation
 ├── ProviderRegistry.ts     # Singleton registry for provider instances
-├── apiKeyValidation.ts     # API key validation with live testing
-├── errors.ts              # Standardized error types and utilities
-├── streamParser.ts        # Stream parsing for SSE and NDJSON
-├── validation.ts          # Input validation utilities
 ├── openai/                # OpenAI provider implementation
 │   ├── OpenAIProvider.ts  # OpenAI-specific logic
 │   ├── OpenAIClient.ts    # API client wrapper

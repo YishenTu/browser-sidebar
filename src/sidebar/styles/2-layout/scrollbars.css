@@ -31,12 +31,6 @@
 
 /* Specific component scrollbar overrides */
 
-/* Chat input tab chips */
-.chat-input__tab-chips::-webkit-scrollbar {
-  width: 4px;
-  height: 4px;
-}
-
 /* Code display areas */
 .katex-display::-webkit-scrollbar,
 .code-block-pre::-webkit-scrollbar {

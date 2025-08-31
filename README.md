@@ -14,6 +14,7 @@ A privacy‑focused browser extension for AI‑powered chat with web content usi
 - 🔄 **Smart Context Management**: OpenAI Response API with intelligent conversation continuity
 - 📑 **Content Extraction**: Smart page content capture with markdown conversion
 - 🎯 **Multi-Tab Context**: Smart @ mention system to aggregate content from multiple browser tabs with visual management
+- 💾 **Session Management**: Tab+URL based sessions with automatic cleanup on tab close
 
 ## Tech Stack
 
@@ -186,9 +187,49 @@ The extension supports aggregating content from multiple browser tabs in your co
 
 - **Local Processing**: All content extraction happens locally in your browser
 - **No Data Collection**: Tab content is never sent to extension servers
-- **Encrypted Storage**: Content is cached locally with encryption
-- **Automatic Cleanup**: Cache is cleared when you close the sidebar
+- **Encrypted Storage**: API keys are encrypted, sessions are memory-only
+- **Automatic Cleanup**: Sessions cleared on tab close, cache expires after 5 minutes
 - **BYOK**: Your API keys remain under your control
+
+## Session Management
+
+The extension uses an intelligent session management system to maintain separate conversation contexts:
+
+### Session Architecture
+
+- **Session Keys**: Each unique tab+URL combination gets its own session (`tab_123:https://example.com/page?id=456`)
+- **URL Normalization**: Query parameters create different sessions, hash fragments don't
+- **Memory-Only Storage**: All sessions exist only in memory - no disk persistence
+- **Hierarchical Stores**: SessionStore holds all data, other stores delegate to active session
+
+### Session Lifecycle
+
+**Sessions Continue When:**
+
+- Refreshing the same page (F5)
+- Hiding/showing the sidebar (React stays mounted)
+- Navigating to same URL with different hash
+- Returning to a previously visited URL in the same tab
+
+**New Sessions Created When:**
+
+- Opening a new tab
+- Navigating to a different URL (including different query params)
+- First visit to a URL in a tab
+
+**Sessions Cleared When:**
+
+- Tab is closed (all sessions for that tab removed automatically)
+- User clicks "Clear conversation" (current session reset)
+- Browser/extension restarts (all sessions lost)
+
+### Sidebar Behavior
+
+- **First Click**: Injects sidebar → mounts React → creates/retrieves session
+- **Hide (Click X or Icon)**: CSS hide only - React stays mounted, session preserved
+- **Show Again**: CSS show - no re-mount, conversation continues exactly where left off
+- **Page Navigation**: Full unmount → must manually reopen → session retrieved if exists
+- **Tab Close**: Automatic cleanup via `TAB_CLOSED` event
 
 ## Project Structure
 

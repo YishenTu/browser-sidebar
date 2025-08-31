@@ -155,28 +155,129 @@ Used by `@components/ModelSelector` in the ChatPanel header. Manages:
 - API key storage (encrypted via storage layer)
 - Provider-specific settings
 
-### Chat Store
+### Chat Store - Modular Architecture
+
+The chat functionality has been refactored into a **hierarchical delegation pattern** with specialized stores:
+
+```
+SessionStore (Master - holds all session data)
+    ├── MessageStore (delegates operations to active session)
+    ├── TabStore (delegates operations to active session)
+    └── UIStore (delegates operations to active session)
+```
+
+#### Session Store (`stores/sessionStore.ts`)
+
+**Master store** that holds all session data in memory:
 
 ```ts
-// src/data/store/chat.ts
-interface ChatState {
-  messages: ChatMessage[];
-  activeMessage: StreamingMessage | null;
-  isLoading: boolean;
-  error: string | null;
-  addMessage: (message: ChatMessage) => void;
-  updateMessage: (id: string, updates: Partial<ChatMessage>) => void;
-  setActiveMessage: (message: StreamingMessage) => void;
-  clearActiveMessage: () => void;
+interface SessionState {
+  sessions: Record<string, SessionData>;
+  activeSessionKey: string | null;
+
+  // Session management
+  createSessionKey: (tabId: number, url: string) => string;
+  getOrCreateSession: (tabId: number, url: string) => SessionData;
+  switchSession: (tabId: number, url: string) => SessionData;
+  updateActiveSession: (updates: Partial<SessionData>) => void;
+
+  // Clearing strategies
+  clearSession: (sessionKey: string) => void; // Remove specific session
+  clearTabSessions: (tabId: number) => void; // Remove all sessions for tab
+  clearCurrentSession: () => void; // Reset current session data
 }
 ```
 
-Manages conversation state with support for:
+**Session Key Format**: `tab_${tabId}:${normalizedUrl}`
 
-- Message history with metadata
-- Real-time streaming updates
-- Thinking content display
-- Error states
+- URL normalization includes query params, excludes hash fragments
+- Example: `tab_123:https://example.com/page?id=456`
+
+#### Message Store (`stores/messageStore.ts`)
+
+**Delegated store** that operates on the active session:
+
+```ts
+interface MessageState {
+  // All operations delegate to SessionStore's active session
+  addMessage: (options: CreateMessageOptions) => ChatMessage;
+  updateMessage: (id: string, updates: UpdateMessageOptions) => void;
+  appendToMessage: (id: string, content: string) => void;
+  deleteMessage: (id: string) => void;
+  editMessage: (id: string) => ChatMessage | undefined;
+
+  // Selectors retrieve from active session
+  getMessages: () => ChatMessage[];
+  getUserMessages: () => ChatMessage[];
+  getAssistantMessages: () => ChatMessage[];
+}
+```
+
+#### Tab Store (`stores/tabStore.ts`)
+
+**Delegated store** for tab content management:
+
+```ts
+interface TabState {
+  // All operations delegate to SessionStore's active session
+  setLoadedTabs: (tabs: Record<number, TabContent>) => void;
+  addLoadedTab: (tabId: number, tabContent: TabContent) => void;
+  updateTabContent: (tabId: number, editedContent: string) => void;
+  removeLoadedTab: (tabId: number) => void;
+
+  // Selectors retrieve from active session
+  getLoadedTabs: () => Record<number, TabContent>;
+  getTabContent: (tabId: number) => TabContent | undefined;
+  getCurrentTabContent: () => TabContent | undefined;
+}
+```
+
+#### UI Store (`stores/uiStore.ts`)
+
+**Delegated store** for UI state:
+
+```ts
+interface UIState {
+  // All operations delegate to SessionStore's active session
+  setLoading: (loading: boolean) => void;
+  setError: (error: string | null) => void;
+  setActiveMessageId: (id: string | null) => void;
+  setLastResponseId: (id: string | null) => void;
+
+  // Selectors retrieve from active session
+  isLoading: () => boolean;
+  getError: () => string | null;
+  getActiveMessageId: () => string | null;
+}
+```
+
+### Session Lifecycle
+
+**When Sessions Continue:**
+
+- Same tab + same normalized URL (page refresh, hash changes)
+- Sidebar hidden/shown (React stays mounted)
+- Return to previously visited URL in same tab
+
+**When Sessions are Created:**
+
+- New tab opened
+- Navigate to different URL (different query params = new session)
+- First visit to a URL in a tab
+
+**When Sessions are Cleared:**
+
+- Tab closed → all sessions for that tab removed
+- User clicks "Clear conversation" → current session reset
+- Browser/extension restart → all sessions lost (memory-only)
+
+**Sidebar Mount/Unmount:**
+
+- **Mount**: Icon click → inject → mount React → retrieve/create session
+- **Hide**: Icon click → CSS hide (React mounted, session preserved)
+- **Show**: Icon click → CSS show (no re-mount, session continues)
+- **Navigate**: Full unmount → must reopen → session retrieved if exists
+- **Tab close**: Full unmount → `TAB_CLOSED` → sessions cleared
 
 ## Chrome Extension Integration
 

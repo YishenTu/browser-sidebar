@@ -46,7 +46,6 @@
 /* Feature-specific and complex component styles */
 @import './4-features/multi-tab-content.css' layer(features);
 @import './4-features/search-sources.css' layer(features);
-@import './4-features/tab-chip.css' layer(features);
 @import './4-features/tab-content-item.css' layer(features);
 @import './4-features/tab-error-boundary.css' layer(features);
 @import './4-features/tab-loading-indicator.css' layer(features);

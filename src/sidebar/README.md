@@ -26,7 +26,6 @@ sidebar/
 │   ├── Settings/             # Settings components
 │   │   └── Settings.tsx      # Main settings interface
 │   ├── StreamingText.tsx     # Real-time text streaming display
-│   ├── TabChip.tsx          # Tab selection chip
 │   ├── TabContentItem.tsx   # Tab content display item
 │   ├── TabErrorBoundary.tsx # Error boundary for tab operations
 │   ├── TabLoadingIndicator.tsx # Loading state for tabs
@@ -94,7 +93,6 @@ sidebar/
 │   ├── 4-features/          # Feature layer
 │   │   ├── multi-tab-content.css # Multi-tab styles
 │   │   ├── search-sources.css # Search source styles
-│   │   ├── tab-chip.css     # Tab chip styles
 │   │   ├── tab-content-item.css # Tab content styles
 │   │   ├── tab-error-boundary.css # Error boundary styles
 │   │   ├── tab-loading-indicator.css # Loading styles
@@ -106,8 +104,7 @@ sidebar/
 │   ├── contentFormatter.example.ts # Formatting examples
 │   ├── dropdownPosition.ts  # Dropdown positioning logic
 │   ├── favicon.ts           # Favicon utilities
-│   ├── index.ts             # Utility exports
-│   └── tabFilters.ts        # Tab filtering logic
+│   └── index.ts             # Utility exports
 └── constants.ts             # Sidebar constants
 ```
 
@@ -149,7 +146,6 @@ The main orchestrator component that:
 
 - **ContentPreview**: Extracted content with metadata
 - **TabContentItem**: Individual tab content display
-- **TabChip**: Selectable tab indicators
 - **TabMentionDropdown**: Autocomplete for @tab mentions
 
 #### UI Library (`components/ui/`)

@@ -68,41 +68,74 @@ Chrome Storage API
 
 #### Chat Store (`chat.ts`)
 
-Refactored into modular architecture with specialized stores:
+Refactored into modular architecture with specialized stores following a **hierarchical delegation pattern**:
+
+```
+SessionStore (Master - holds all data)
+    ├── MessageStore (delegates to active session)
+    ├── TabStore (delegates to active session)
+    └── UIStore (delegates to active session)
+```
 
 **Store Modules:**
 
-1. **Session Store** (`stores/sessionStore.ts`):
+1. **Session Store** (`stores/sessionStore.ts`) - **Master Store**:
+   - Holds all session data in memory (no persistence)
    - Tab+URL based session management
-   - Active session tracking
-   - Session switching and cleanup
-   - Session persistence
+   - Session key format: `tab_${tabId}:${normalizedUrl}`
+   - URL normalization: includes query params, excludes hash
+   - Active session tracking and switching
+   - Session lifecycle management
 
-2. **Message Store** (`stores/messageStore.ts`):
-   - Message CRUD operations
+2. **Message Store** (`stores/messageStore.ts`) - **Delegated Store**:
+   - No direct data storage - operates on active session
+   - Message CRUD operations via `updateActiveSession()`
    - Streaming message updates
    - Message editing and deletion
    - Message history management
 
-3. **Tab Store** (`stores/tabStore.ts`):
+3. **Tab Store** (`stores/tabStore.ts`) - **Delegated Store**:
+   - No direct data storage - operates on active session
    - Multi-tab content management
    - Tab selection ordering
    - Current tab tracking
    - Auto-load state
 
-4. **UI Store** (`stores/uiStore.ts`):
+4. **UI Store** (`stores/uiStore.ts`) - **Delegated Store**:
+   - No direct data storage - operates on active session
    - Loading states
    - Error handling
    - Active message tracking
    - Response ID management
 
+**Session Management Strategy:**
+
+- **Session Creation**: New session per unique tab+URL combination
+- **Session Continuation**: Same tab + same normalized URL preserves session
+- **Session Switching**: Navigation within same tab switches sessions (both kept in memory)
+- **Session Clearing**:
+  - `clearCurrentSession()`: Resets current session data but keeps key
+  - `clearSession(key)`: Removes specific session entirely
+  - `clearTabSessions(tabId)`: Removes all sessions for a tab (triggered on tab close)
+- **No Persistence**: All sessions exist only in memory, lost on browser/extension restart
+
+**Sidebar Mount/Unmount Behavior:**
+
+- **Mount**: Extension icon click → inject sidebar → mount React → retrieve/create session
+- **Hide**: Extension icon click → CSS hide (React stays mounted, session preserved)
+- **Show**: Extension icon click → CSS show (no re-mount, session continues)
+- **Navigation**: Full unmount → must manually reopen → session retrieved if exists
+- **Tab Close**: Full unmount → `TAB_CLOSED` event → all tab sessions cleared
+
 **Key Actions:**
 
-- `addMessage` - Add new message (messageStore)
-- `updateMessage` - Update existing message (messageStore)
 - `switchSession` - Switch to different tab session (sessionStore)
-- `setLoadedTabs` - Update loaded tab content (tabStore)
-- `setLoading` - Update loading state (uiStore)
+- `clearCurrentSession` - Reset current session data (sessionStore)
+- `clearTabSessions` - Remove all sessions for a tab (sessionStore)
+- `addMessage` - Add new message to active session (messageStore)
+- `updateMessage` - Update existing message in active session (messageStore)
+- `setLoadedTabs` - Update loaded tab content in active session (tabStore)
+- `setLoading` - Update loading state in active session (uiStore)
 
 #### Settings Store (`settings.ts`)
 
