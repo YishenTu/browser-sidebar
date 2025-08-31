@@ -1,6 +1,6 @@
 import React from 'react';
 import type { TabInfo } from '@/types/tabs';
-import { getFaviconUrlSync } from '@/sidebar/utils/favicon';
+import { getDomSafeFaviconUrlSync } from '@/sidebar/utils/favicon';
 
 export interface TabChipProps {
   /** Tab information to display */
@@ -60,18 +60,17 @@ export const TabChip: React.FC<TabChipProps> = ({
       {/* Favicon */}
       <div className="tab-chip__favicon">
         {(() => {
-          const faviconResult = getFaviconUrlSync(tabInfo.url, tabInfo.favIconUrl, { size: 16 });
+          const faviconResult = getDomSafeFaviconUrlSync(tabInfo.url, tabInfo.favIconUrl, 16);
           return (
             <img
               src={faviconResult.url}
               alt=""
               className="tab-chip__favicon-image"
+              loading="eager"
+              decoding="async"
               onError={e => {
                 // Fallback to Google service or generic icon on error
-                const fallbackResult = getFaviconUrlSync(tabInfo.url, undefined, {
-                  size: 16,
-                  useGoogleService: true,
-                });
+                const fallbackResult = getDomSafeFaviconUrlSync(tabInfo.url, undefined, 16);
                 if (fallbackResult.url !== e.currentTarget.src) {
                   e.currentTarget.src = fallbackResult.url;
                 }

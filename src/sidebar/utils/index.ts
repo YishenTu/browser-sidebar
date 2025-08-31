@@ -33,13 +33,4 @@ export {
   isValidTabInfo,
 } from './tabFilters';
 
-export {
-  getFaviconUrl,
-  getFaviconUrlSync,
-  clearFaviconCache,
-  getFaviconCacheStats,
-  preloadFavicon,
-  useFavicon,
-  type FaviconOptions,
-  type FaviconResult,
-} from './favicon';
+export { getDomSafeFaviconUrlSync } from './favicon';

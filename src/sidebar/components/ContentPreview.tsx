@@ -85,6 +85,7 @@ export const ContentPreview: React.FC<ContentPreviewProps> = ({
           onClearContent={() => onClearTabContent(currentTabContent.tabInfo.id)}
           onContentEdit={onContentEdit}
           tabId={currentTabContent.tabInfo.id}
+          tabInfo={currentTabContent.tabInfo}
           className="tab-content-preview-item"
         />
       )}
@@ -104,6 +105,7 @@ export const ContentPreview: React.FC<ContentPreviewProps> = ({
           onClearContent={() => onClearTabContent(tabContent.tabInfo.id)}
           onContentEdit={onContentEdit}
           tabId={tabContent.tabInfo.id}
+          tabInfo={tabContent.tabInfo}
           className="tab-content-preview-item"
         />
       ))}

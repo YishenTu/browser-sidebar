@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useRef, useEffect } from 'react';
+import React, { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import { TextArea, TextAreaProps, CloseIcon } from '@ui/index';
 import { useTabMention } from '@hooks/useTabMention';
 import { TabMentionDropdown } from './TabMentionDropdown';
@@ -98,11 +98,42 @@ export const ChatInput = React.forwardRef<HTMLTextAreaElement, ChatInputProps>(
     // Merge refs
     React.useImperativeHandle(ref, () => textAreaRef.current!, []);
 
+    // Track current query for memoization
+    const [currentMentionQuery, setCurrentMentionQuery] = useState<string>('');
+
+    // Memoize filtered tabs based on current query to avoid re-filtering on every render
+    const memoizedFilteredTabs = useMemo(() => {
+      if (!currentMentionQuery.trim()) {
+        return availableTabs.slice(0, 10); // Show first 10 tabs if no query
+      }
+
+      const lowerQuery = currentMentionQuery.toLowerCase();
+      return availableTabs
+        .filter(
+          tab =>
+            tab.title.toLowerCase().includes(lowerQuery) ||
+            tab.domain.toLowerCase().includes(lowerQuery) ||
+            tab.url.toLowerCase().includes(lowerQuery)
+        )
+        .slice(0, 10); // Limit to 10 results
+    }, [currentMentionQuery, availableTabs]);
+
     // Filter tabs based on mention query
     const filterTabsByQuery = useCallback(
       (query: string): TabInfo[] => {
+        // Update current query for memoization
+        if (query !== currentMentionQuery) {
+          setCurrentMentionQuery(query);
+        }
+
+        // Return memoized result if query matches
+        if (query === currentMentionQuery) {
+          return memoizedFilteredTabs;
+        }
+
+        // Otherwise compute immediately for responsiveness
         if (!query.trim()) {
-          return availableTabs.slice(0, 10); // Show first 10 tabs if no query
+          return availableTabs.slice(0, 10);
         }
 
         const lowerQuery = query.toLowerCase();
@@ -113,9 +144,9 @@ export const ChatInput = React.forwardRef<HTMLTextAreaElement, ChatInputProps>(
               tab.domain.toLowerCase().includes(lowerQuery) ||
               tab.url.toLowerCase().includes(lowerQuery)
           )
-          .slice(0, 10); // Limit to 10 results
+          .slice(0, 10);
       },
-      [availableTabs]
+      [availableTabs, currentMentionQuery, memoizedFilteredTabs]
     );
 
     // Handle cursor position change for mention detection

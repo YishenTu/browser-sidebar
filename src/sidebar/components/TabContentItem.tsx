@@ -8,6 +8,7 @@
 
 import React, { useState } from 'react';
 import type { ExtractedContent } from '@/types/extraction';
+import type { TabInfo } from '@/types/tabs';
 import { ExtractionMode } from '@/types/extraction';
 import { Spinner } from '@ui/Spinner';
 import { Alert } from '@ui/Alert';
@@ -17,6 +18,7 @@ import { RegenerateIcon, ExpandIcon, CloseIcon, TableIcon } from '@ui/Icons';
 import { FullscreenModal } from '@ui/FullscreenModal';
 import { useSessionStore } from '@/data/store/chat';
 import { useSessionManager } from '@hooks/useSessionManager';
+import { getDomSafeFaviconUrlSync } from '@sidebar/utils/favicon';
 import '../styles/4-features/tab-content-item.css';
 
 export interface TabContentItemProps {
@@ -36,6 +38,8 @@ export interface TabContentItemProps {
   className?: string;
   /** Optional tab identifier for tab scenarios */
   tabId?: number | string;
+  /** Optional tab info for enhanced favicon support */
+  tabInfo?: TabInfo;
 }
 
 /**
@@ -54,6 +58,7 @@ export const TabContentItem: React.FC<TabContentItemProps> = ({
   onContentEdit,
   className = '',
   tabId,
+  tabInfo,
 }) => {
   const [showFullContent, setShowFullContent] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
@@ -123,20 +128,37 @@ export const TabContentItem: React.FC<TabContentItemProps> = ({
     }
 
     if (content) {
+      // Use favicon utility for better caching and browser favicon support
+      const faviconResult = getDomSafeFaviconUrlSync(
+        tabInfo?.url || content.url || 'https://example.com',
+        tabInfo?.favIconUrl,
+        16
+      );
+
       return (
         <div className="content-preview-header">
           <div className="content-preview-header-content">
             <div className="content-preview-header-main">
               <div className="content-preview-title-wrapper">
                 <img
-                  src={`https://www.google.com/s2/favicons?domain=${encodeURIComponent(new URL(content.url || 'https://example.com').hostname)}&sz=16`}
+                  src={faviconResult.url}
                   alt=""
                   className="content-preview-favicon"
                   width="16"
                   height="16"
+                  loading="eager"
+                  decoding="async"
                   onError={e => {
-                    // Hide on error instead of using data URL fallback
-                    (e.target as HTMLImageElement).style.display = 'none';
+                    const fallback = getDomSafeFaviconUrlSync(
+                      tabInfo?.url || content.url || '',
+                      undefined,
+                      16
+                    );
+                    if (fallback.url && fallback.url !== (e.target as HTMLImageElement).src) {
+                      (e.target as HTMLImageElement).src = fallback.url;
+                    } else {
+                      (e.target as HTMLImageElement).style.display = 'none';
+                    }
                   }}
                 />
                 <span className="content-preview-title">{content.title}</span>

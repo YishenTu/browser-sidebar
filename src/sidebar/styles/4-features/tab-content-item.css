@@ -9,8 +9,12 @@
 /* Level 1: Main outer container */
 .content-preview {
   border-radius: 10px;
-  margin: 0; /* No gap between items - controlled by parent */
+  margin: 0 0 2px 0; /* 2px gap between items */
   padding: 0 12px; /* Add left and right padding */
+}
+
+.content-preview:last-child {
+  margin-bottom: 0; /* Remove bottom margin for last item */
 }
 
 /* Level 2: Inner wrapper container */

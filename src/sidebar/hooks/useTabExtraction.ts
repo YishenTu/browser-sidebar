@@ -6,7 +6,7 @@
  * Auto-loads current tab ONCE on mount and provides manual tab extraction via @ mentions.
  */
 
-import { useState, useCallback, useEffect, useRef } from 'react';
+import { useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import type { TabContent, TabInfo } from '@/types/tabs';
 import type { ExtractedContent } from '@/types/extraction';
 import { ExtractionMode } from '@/types/extraction';
@@ -416,10 +416,18 @@ export function useTabExtraction(): UseTabExtractionReturn {
     }
   }, [activeSessionKey, getHasAutoLoaded, extractCurrentTab]); // Re-run when session is initialized
 
-  // Refresh available tabs when loaded tabs change
+  // Memoize loaded tabs keys to avoid unnecessary refreshes
+  const loadedTabsCount = useMemo(() => Object.keys(loadedTabs).length, [loadedTabs]);
+
+  // Refresh available tabs when loaded tabs change (debounced to avoid rapid updates)
   useEffect(() => {
-    refreshAvailableTabs();
-  }, [currentTabId, Object.keys(loadedTabs).length, refreshAvailableTabs]); // Only depend on keys length, not full object
+    // Add a small delay to batch multiple tab changes
+    const timeoutId = setTimeout(() => {
+      refreshAvailableTabs();
+    }, 100);
+
+    return () => clearTimeout(timeoutId);
+  }, [currentTabId, loadedTabsCount, refreshAvailableTabs]); // Use memoized count
 
   return {
     // State

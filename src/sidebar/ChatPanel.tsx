@@ -243,6 +243,51 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
     error: tabExtractionError,
   } = useTabExtraction();
 
+  // Keep a local copy of the current tab's TabInfo (to get real favIconUrl)
+  const [currentTabInfo, setCurrentTabInfo] = useState<{
+    favIconUrl?: string;
+    url?: string;
+    title?: string;
+    domain?: string;
+  } | null>(null);
+
+  // When currentTabId is known, fetch full tab list once and extract current tab's info
+  useEffect(() => {
+    let didCancel = false;
+    (async () => {
+      if (!currentTabId) return;
+      try {
+        const msg = createMessage({
+          type: 'GET_ALL_TABS',
+          source: 'sidebar',
+          target: 'background',
+        });
+        const resp = await chrome.runtime.sendMessage(msg);
+        const tabs = resp?.payload?.tabs as Array<{
+          id: number;
+          favIconUrl?: string;
+          url: string;
+          title: string;
+          domain: string;
+        }>;
+        const ct = Array.isArray(tabs) ? tabs.find(t => t.id === currentTabId) : undefined;
+        if (!didCancel && ct) {
+          setCurrentTabInfo({
+            favIconUrl: ct.favIconUrl,
+            url: ct.url,
+            title: ct.title,
+            domain: ct.domain,
+          });
+        }
+      } catch {
+        // Ignore failures; fallback logic will handle icons
+      }
+    })();
+    return () => {
+      didCancel = true;
+    };
+  }, [currentTabId]);
+
   // Settings panel state
   const [showSettings, setShowSettings] = useState(false);
 
@@ -685,12 +730,14 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
                 ? {
                     tabInfo: {
                       id: currentTabId || 0,
-                      title: currentTabContent.title || 'Current Tab',
-                      url: currentTabContent.url || '',
+                      title: currentTabInfo?.title || currentTabContent.title || 'Current Tab',
+                      url: currentTabInfo?.url || currentTabContent.url || '',
                       domain:
+                        currentTabInfo?.domain ||
                         currentTabContent.domain ||
                         new URL(currentTabContent.url || 'https://example.com').hostname,
-                      favIconUrl: '', // ExtractedContent doesn't have favIconUrl
+                      // Prefer actual current tab favicon if available
+                      favIconUrl: currentTabInfo?.favIconUrl,
                       windowId: 0, // Required field - using default
                       active: true, // Current tab is active
                       index: 0, // Required field - using default
@@ -722,6 +769,12 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
             onReextract={options => extractCurrentTab(options)}
             onClearContent={() => currentTabId && removeLoadedTab(currentTabId)}
             className="tab-content-preview-item"
+            // Get tabInfo from loadedTabs if current tab is loaded
+            tabInfo={
+              currentTabId && loadedTabs[currentTabId]
+                ? loadedTabs[currentTabId].tabInfo
+                : undefined
+            }
           />
         ))}
 
