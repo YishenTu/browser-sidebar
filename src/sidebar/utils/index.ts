@@ -17,11 +17,7 @@ export {
   type CaretPosition,
 } from './dropdownPosition';
 
-export {
-  formatMultiTabContent,
-  type MultiTabFormatResult,
-  type FormatOptions,
-} from './contentFormatter';
+export { formatTabContent, type TabFormatResult, type FormatOptions } from './contentFormatter';
 
 export {
   isRestrictedUrl,

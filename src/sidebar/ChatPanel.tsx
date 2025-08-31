@@ -14,9 +14,15 @@ import { useSettingsStore } from '@store/settings';
 import { useError } from '@contexts/useError';
 import { getErrorSource } from '@contexts/errorUtils';
 import { ErrorBanner } from '@components/ErrorBanner';
-import { useChatStore, type ChatMessage } from '@store/chat';
+import {
+  useSessionStore,
+  useMessageStore,
+  useTabStore,
+  useUIStore,
+  type ChatMessage,
+} from '@store/chat';
 import { useAIChat } from '@hooks/ai';
-import { useMultiTabExtraction } from '@hooks/useMultiTabExtraction';
+import { useTabExtraction } from '@hooks/useTabExtraction';
 import { useSessionManager } from '@hooks/useSessionManager';
 import { TabContentItem } from '@components/TabContentItem';
 import { ExtractionMode } from '@/types/extraction';
@@ -202,17 +208,20 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
   useSessionManager(); // Initialize session manager for side effects
 
   // Chat store and AI chat integration
-  const {
-    messages,
-    isLoading,
-    clearCurrentSession,
-    hasMessages,
-    editMessage,
-    getPreviousUserMessage,
-    removeMessageAndAfter,
-    updateMessage,
-    updateTabContent,
-  } = useChatStore();
+  const sessionStore = useSessionStore();
+  const messageStore = useMessageStore();
+  const tabStore = useTabStore();
+  const uiStore = useUIStore();
+
+  const messages = messageStore.getMessages();
+  const isLoading = uiStore.isLoading();
+  const clearCurrentSession = sessionStore.clearCurrentSession;
+  const hasMessages = messageStore.hasMessages;
+  const editMessage = messageStore.editMessage;
+  const getPreviousUserMessage = messageStore.getPreviousUserMessage;
+  const removeMessageAndAfter = messageStore.removeMessageAndAfter;
+  const updateMessage = messageStore.updateMessage;
+  const updateTabContent = tabStore.updateTabContent;
   const { sendMessage, switchProvider, cancelMessage } = useAIChat({
     enabled: true,
     autoInitialize: true, // Auto-initialize providers from settings
@@ -221,7 +230,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
   // Note: Session manager automatically switches to appropriate session on mount
   // No need to clear conversation anymore - each tab+URL has its own session
 
-  // Multi-tab extraction integration (handles both current tab and additional tabs)
+  // Tab extraction integration (handles both current tab and additional tabs)
   const {
     currentTabContent,
     currentTabId,
@@ -230,9 +239,9 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
     extractCurrentTab,
     extractTabById,
     removeLoadedTab,
-    loading: multiTabLoading,
-    error: multiTabError,
-  } = useMultiTabExtraction();
+    loading: tabExtractionLoading,
+    error: tabExtractionError,
+  } = useTabExtraction();
 
   // Settings panel state
   const [showSettings, setShowSettings] = useState(false);
@@ -276,14 +285,14 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
 
         // Handle content extraction errors or missing content for first message
         if (isFirstMessage) {
-          if (multiTabError) {
+          if (tabExtractionError) {
             // Silently proceed without webpage context if extraction failed
-          } else if (!currentTabContent && !multiTabLoading) {
+          } else if (!currentTabContent && !tabExtractionLoading) {
             // Silently proceed without webpage context if no content available
           }
         }
 
-        // Multi-tab extraction system will handle content injection
+        // Tab extraction system will handle content injection
         // Just pass the user input directly - formatting happens in useMessageHandler
         // The displayContent remains the user input for UI display
 
@@ -329,8 +338,8 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
       updateMessage,
       messages,
       currentTabContent,
-      multiTabError,
-      multiTabLoading,
+      tabExtractionError,
+      tabExtractionLoading,
       showError,
     ]
   );
@@ -455,7 +464,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
     [selectedModel, getProviderTypeForModel, updateSelectedModel, switchProvider, showError]
   );
 
-  // Multi-tab callback handlers
+  // Tab extraction callback handlers
   const handleRemoveTab = useCallback(
     (tabId: number) => {
       removeLoadedTab(tabId);
@@ -560,7 +569,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
   useEffect(() => {
     return () => {
       try {
-        const loadedTabIds = useChatStore.getState().getLoadedTabIds();
+        const loadedTabIds = useTabStore.getState().getLoadedTabIds();
 
         if (loadedTabIds.length > 0) {
           const cleanupMessage = createMessage({
@@ -656,8 +665,8 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
         onMouseDown={handleHeaderMouseDown}
         isDragging={isDragging}
         extractedContent={currentTabContent}
-        contentLoading={multiTabLoading}
-        contentError={multiTabError}
+        contentLoading={tabExtractionLoading}
+        contentError={tabExtractionError}
       />
 
       {/* Centralized Error Banner */}
@@ -666,8 +675,8 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
       {/* Content Extraction Preview - Only render if there's actual content or loading/error state */}
       {(currentTabContent ||
         Object.keys(loadedTabs).length > 0 ||
-        multiTabLoading ||
-        multiTabError) &&
+        tabExtractionLoading ||
+        tabExtractionError) &&
         (currentTabContent || Object.keys(loadedTabs).length > 0 ? (
           // Multi-tab mode: show ContentPreview
           <ContentPreview
@@ -689,7 +698,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
                       lastAccessed: currentTabContent.extractedAt || Date.now(),
                     },
                     extractedContent: currentTabContent,
-                    extractionStatus: multiTabLoading ? 'extracting' : 'completed',
+                    extractionStatus: tabExtractionLoading ? 'extracting' : 'completed',
                     isStale: false,
                   }
                 : null
@@ -707,12 +716,12 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
           // Fallback to single-tab mode: show TabContentItem only if there's loading/error state
           <TabContentItem
             content={currentTabContent}
-            loading={multiTabLoading}
-            error={multiTabError}
+            loading={tabExtractionLoading}
+            error={tabExtractionError}
             onContentEdit={handleContentEdit}
             onReextract={options => extractCurrentTab(options)}
             onClearContent={() => currentTabId && removeLoadedTab(currentTabId)}
-            className="multi-tab-content-preview-item"
+            className="tab-content-preview-item"
           />
         ))}
 

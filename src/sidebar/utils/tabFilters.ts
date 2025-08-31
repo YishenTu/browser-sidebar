@@ -1,11 +1,11 @@
 /**
  * @file Tab Filtering Utilities
  *
- * Pure utility functions for filtering available tabs in multi-tab extraction.
+ * Pure utility functions for filtering available tabs in tab extraction.
  * Provides functions for checking duplicates, restrictions, and availability
  * based on the current state of loaded tabs and browser restrictions.
  *
- * Usage example in useMultiTabExtraction hook:
+ * Usage example in useTabExtraction hook:
  *
  * ```typescript
  * import { getAvailableTabs, canLoadTab, isRestrictedUrl } from '@/utils/tabFilters';

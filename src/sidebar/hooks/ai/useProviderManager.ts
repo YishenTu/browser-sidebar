@@ -191,8 +191,8 @@ export function useProviderManager(enabled = true): UseProviderManagerReturn {
         // Clear OpenAI response ID when switching to a different provider
         // This ensures clean state when switching between providers
         if (providerType !== 'openai') {
-          const { useChatStore } = await import('@store/chat');
-          useChatStore.getState().setLastResponseId(null);
+          const { useUIStore } = await import('@store/chat');
+          useUIStore.getState().setLastResponseId(null);
         }
 
         // Update settings store

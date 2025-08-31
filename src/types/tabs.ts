@@ -2,7 +2,7 @@
  * @file Tab Type Definitions
  *
  * Type definitions for tab-related data structures in the browser extension.
- * Includes interfaces for tab information, content management, and multi-tab
+ * Includes interfaces for tab information, content management, and tab
  * extraction state handling with serializable types for Chrome storage.
  */
 
@@ -15,7 +15,7 @@ import { ExtractedContent } from './extraction';
 /**
  * Tab information interface extending subset of chrome.tabs.Tab
  *
- * Contains essential tab metadata needed for multi-tab content extraction
+ * Contains essential tab metadata needed for tab content extraction
  * and management. Uses serializable types compatible with Chrome storage.
  */
 export interface TabInfo {
@@ -66,7 +66,7 @@ export interface TabInfo {
  * Tab content including extracted content and metadata
  *
  * Combines tab information with extracted content data for comprehensive
- * tab content management and multi-tab aggregation.
+ * tab content management and aggregation.
  */
 export interface TabContent {
   /** Tab information */
@@ -108,12 +108,12 @@ export interface TabContent {
 }
 
 /**
- * Multi-tab extraction state management interface
+ * Tab extraction state management interface
  *
- * Manages state for multiple tabs during content extraction operations.
+ * Manages state for tabs during content extraction operations.
  * Uses serializable Record types instead of Map for Chrome storage compatibility.
  */
-export interface MultiTabExtractionState {
+export interface TabExtractionState {
   /** Map of tab ID to TabContent (serializable Record) */
   tabs: Record<number, TabContent>;
 
@@ -273,12 +273,12 @@ export function isTabContent(obj: unknown): obj is TabContent {
 }
 
 /**
- * Type guard to check if an object is a valid MultiTabExtractionState
+ * Type guard to check if an object is a valid TabExtractionState
  *
  * @param obj - Object to validate
- * @returns True if the object is a valid MultiTabExtractionState
+ * @returns True if the object is a valid TabExtractionState
  */
-export function isMultiTabExtractionState(obj: unknown): obj is MultiTabExtractionState {
+export function isTabExtractionState(obj: unknown): obj is TabExtractionState {
   if (!obj || typeof obj !== 'object') {
     return false;
   }
@@ -416,11 +416,11 @@ export function filterTabs(tabs: TabInfo[], criteria: TabSelectionCriteria): Tab
 }
 
 /**
- * Create an empty MultiTabExtractionState
+ * Create an empty TabExtractionState
  *
- * @returns Initial multi-tab extraction state
+ * @returns Initial tab extraction state
  */
-export function createEmptyMultiTabState(): MultiTabExtractionState {
+export function createEmptyTabState(): TabExtractionState {
   return {
     tabs: {},
     selectedTabIds: [],
@@ -432,12 +432,12 @@ export function createEmptyMultiTabState(): MultiTabExtractionState {
 }
 
 /**
- * Serialize MultiTabExtractionState for storage
+ * Serialize TabExtractionState for storage
  *
  * @param state - State to serialize
  * @returns Serialized state object
  */
-export function serializeMultiTabState(state: MultiTabExtractionState): Record<string, unknown> {
+export function serializeTabState(state: TabExtractionState): Record<string, unknown> {
   return {
     ...state,
     // Ensure tabs Record is properly serialized
@@ -446,13 +446,13 @@ export function serializeMultiTabState(state: MultiTabExtractionState): Record<s
 }
 
 /**
- * Deserialize MultiTabExtractionState from storage
+ * Deserialize TabExtractionState from storage
  *
  * @param data - Serialized state data
- * @returns MultiTabExtractionState or null if invalid
+ * @returns TabExtractionState or null if invalid
  */
-export function deserializeMultiTabState(data: unknown): MultiTabExtractionState | null {
-  if (!isMultiTabExtractionState(data)) {
+export function deserializeTabState(data: unknown): TabExtractionState | null {
+  if (!isTabExtractionState(data)) {
     return null;
   }
 

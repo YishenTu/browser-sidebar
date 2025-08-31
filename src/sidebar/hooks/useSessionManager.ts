@@ -6,7 +6,7 @@
  */
 
 import { useEffect, useRef } from 'react';
-import { useChatStore } from '@/data/store/chat';
+import { useSessionStore } from '@/data/store/chat';
 import { createMessage } from '@/types/messages';
 
 /**
@@ -37,7 +37,7 @@ export interface SessionInfo {
  * ```
  */
 export function useSessionManager() {
-  const { switchSession, clearTabSessions } = useChatStore();
+  const { switchSession, clearTabSessions } = useSessionStore();
   const currentSessionRef = useRef<SessionInfo | null>(null);
 
   // Get current tab info on mount and switch to appropriate session
@@ -109,7 +109,7 @@ export function useSessionManager() {
  * ```
  */
 export function useSessionEditRestriction(): boolean {
-  const { getSessionMessageCount } = useChatStore();
+  const { getSessionMessageCount } = useSessionStore();
   const { currentSession } = useSessionManager();
 
   if (!currentSession) {

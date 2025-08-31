@@ -2,7 +2,7 @@
  * @file Content Preview Component
  *
  * Main container component for displaying extracted content from browser tabs.
- * Handles both single tab and multi-tab scenarios, orchestrating TabContentItem components.
+ * Handles both single tab and multiple tab scenarios, orchestrating TabContentItem components.
  * Includes warning for excessive tabs and individual tab management controls.
  */
 
@@ -57,14 +57,14 @@ export const ContentPreview: React.FC<ContentPreviewProps> = ({
   }
 
   return (
-    <div className={`multi-tab-content-preview ${className}`}>
+    <div className={`tab-content-preview ${className}`}>
       {/* Warning for excessive tabs */}
       {hasExcessiveTabs && (
         <Alert
           type="warning"
           message={`You have ${totalTabs} tabs loaded. Consider reducing the number for better performance.`}
           dismissible={false}
-          className="multi-tab-warning"
+          className="tab-warning"
           showIcon={true}
         />
       )}
@@ -85,7 +85,7 @@ export const ContentPreview: React.FC<ContentPreviewProps> = ({
           onClearContent={() => onClearTabContent(currentTabContent.tabInfo.id)}
           onContentEdit={onContentEdit}
           tabId={currentTabContent.tabInfo.id}
-          className="multi-tab-content-preview-item"
+          className="tab-content-preview-item"
         />
       )}
 
@@ -104,7 +104,7 @@ export const ContentPreview: React.FC<ContentPreviewProps> = ({
           onClearContent={() => onClearTabContent(tabContent.tabInfo.id)}
           onContentEdit={onContentEdit}
           tabId={tabContent.tabInfo.id}
-          className="multi-tab-content-preview-item"
+          className="tab-content-preview-item"
         />
       ))}
     </div>

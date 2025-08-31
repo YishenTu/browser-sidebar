@@ -6,7 +6,7 @@
  *
  * @example
  * ```typescript
- * const result = formatMultiTabContent(
+ * const result = formatTabContent(
  *   "Analyze these pages for common themes",
  *   currentTab,
  *   [tab1, tab2, tab3]
@@ -23,7 +23,7 @@ import { TabContent } from '../../types/tabs';
 // Types and Interfaces
 // ============================================================================
 
-export interface MultiTabFormatResult {
+export interface TabFormatResult {
   /** Formatted content ready for AI processing */
   formatted: string;
   /** Metadata about the formatting */
@@ -106,11 +106,11 @@ function extractDomain(url: string): string {
  * @param options - Formatting options
  * @returns Formatted content and metadata
  */
-export function formatMultiTabContent(
+export function formatTabContent(
   userMessage: string,
   tabs: TabContent[] = [],
   options: FormatOptions = {}
-): MultiTabFormatResult {
+): TabFormatResult {
   const { hasSelection = false } = options;
 
   const sections: string[] = [];

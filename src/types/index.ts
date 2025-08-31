@@ -130,7 +130,7 @@ export {
 export type {
   TabInfo,
   TabContent,
-  MultiTabExtractionState,
+  TabExtractionState,
   TabSelectionCriteria,
   TabGrouping,
 } from './tabs';
@@ -138,12 +138,12 @@ export type {
 export {
   isTabInfo,
   isTabContent,
-  isMultiTabExtractionState,
+  isTabExtractionState,
   createTabInfoFromChromeTab,
   filterTabs,
-  createEmptyMultiTabState,
-  serializeMultiTabState,
-  deserializeMultiTabState,
+  createEmptyTabState,
+  serializeTabState,
+  deserializeTabState,
 } from './tabs';
 
 // Note: CSS module declarations are in css.d.ts as ambient declarations

@@ -3,7 +3,7 @@
  *
  * Component for displaying extracted content from a single browser tab.
  * Shows title, domain, and excerpt with loading and error states.
- * Used as the atomic unit within ContentPreview for multi-tab scenarios.
+ * Used as the atomic unit within ContentPreview for tab scenarios.
  */
 
 import React, { useState } from 'react';
@@ -15,7 +15,7 @@ import { Alert } from '@ui/Alert';
 import { Collapsible } from '@ui/Collapsible';
 import { RegenerateIcon, ExpandIcon, CloseIcon, TableIcon } from '@ui/Icons';
 import { FullscreenModal } from '@ui/FullscreenModal';
-import { useChatStore } from '@/data/store/chat';
+import { useSessionStore } from '@/data/store/chat';
 import { useSessionManager } from '@hooks/useSessionManager';
 import '../styles/4-features/tab-content-item.css';
 
@@ -34,7 +34,7 @@ export interface TabContentItemProps {
   onContentEdit?: (tabId: number | string, editedContent: string) => void;
   /** Custom CSS class */
   className?: string;
-  /** Optional tab identifier for multi-tab scenarios */
+  /** Optional tab identifier for tab scenarios */
   tabId?: number | string;
 }
 
@@ -62,7 +62,7 @@ export const TabContentItem: React.FC<TabContentItemProps> = ({
   const truncated = content?.metadata?.truncated ?? false;
 
   // Check if editing should be disabled for current session
-  const { getSessionMessageCount } = useChatStore();
+  const { getSessionMessageCount } = useSessionStore();
   const { currentSession } = useSessionManager();
 
   // Disable editing if the current session has messages

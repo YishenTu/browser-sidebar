@@ -5,14 +5,15 @@
  */
 
 import { useRef, useCallback } from 'react';
-import { useChatStore } from '@store/chat';
+import { useMessageStore, useUIStore } from '@store/chat';
 import { getSystemPrompt } from '@/config/systemPrompt';
 import type { AIProvider, StreamChunk } from '../../../types/providers';
 import type { ChatMessage } from '@store/chat';
 import type { UseStreamHandlerReturn } from './types';
 
 export function useStreamHandler(): UseStreamHandlerReturn {
-  const chatStore = useChatStore();
+  const messageStore = useMessageStore();
+  const uiStore = useUIStore();
   const abortControllerRef = useRef<AbortController | null>(null);
 
   /**
@@ -30,10 +31,10 @@ export function useStreamHandler(): UseStreamHandlerReturn {
 
       try {
         // Set active message for streaming
-        chatStore.setActiveMessage(assistantMessage.id);
+        uiStore.setActiveMessage(assistantMessage.id);
 
         // Get current messages from store
-        const currentMessages = useChatStore.getState().messages;
+        const currentMessages = useMessageStore.getState().getMessages();
 
         // Build messages array for the provider
         let messages;
@@ -85,7 +86,7 @@ export function useStreamHandler(): UseStreamHandlerReturn {
         abortControllerRef.current = new AbortController();
 
         // Get last response ID for conversation continuity (OpenAI Response API)
-        const previousResponseId = chatStore.getLastResponseId();
+        const previousResponseId = uiStore.getLastResponseId();
 
         // Get the system prompt
         const systemPrompt = getSystemPrompt();
@@ -132,9 +133,9 @@ export function useStreamHandler(): UseStreamHandlerReturn {
             if (thinking) {
               thinkingContent += thinking;
               // Get current message to preserve its metadata
-              const currentMsg = chatStore.getMessageById(assistantMessage.id);
+              const currentMsg = messageStore.getMessageById(assistantMessage.id);
               // Update metadata with accumulated thinking, preserving existing metadata
-              chatStore.updateMessage(assistantMessage.id, {
+              messageStore.updateMessage(assistantMessage.id, {
                 metadata: {
                   ...(currentMsg?.metadata || {}),
                   thinking: thinkingContent,
@@ -149,9 +150,9 @@ export function useStreamHandler(): UseStreamHandlerReturn {
               if (isThinkingPhase && thinkingContent) {
                 isThinkingPhase = false;
                 // Get current message to preserve its metadata
-                const currentMsg = chatStore.getMessageById(assistantMessage.id);
+                const currentMsg = messageStore.getMessageById(assistantMessage.id);
                 // Mark thinking as complete, preserving existing metadata
-                chatStore.updateMessage(assistantMessage.id, {
+                messageStore.updateMessage(assistantMessage.id, {
                   metadata: {
                     ...(currentMsg?.metadata || {}),
                     thinking: thinkingContent,
@@ -160,13 +161,13 @@ export function useStreamHandler(): UseStreamHandlerReturn {
                 });
               }
               // Append the content chunk
-              chatStore.appendToMessage(assistantMessage.id, content);
+              messageStore.appendToMessage(assistantMessage.id, content);
               lastSuccessfulContent += content;
 
               // Update search metadata if we have it
               if (searchMetadata) {
-                const currentMsg = chatStore.getMessageById(assistantMessage.id);
-                chatStore.updateMessage(assistantMessage.id, {
+                const currentMsg = messageStore.getMessageById(assistantMessage.id);
+                messageStore.updateMessage(assistantMessage.id, {
                   metadata: {
                     ...(currentMsg?.metadata || {}),
                     searchResults: searchMetadata,
@@ -182,7 +183,7 @@ export function useStreamHandler(): UseStreamHandlerReturn {
 
           // Append recovery message if we got partial content
           if (lastSuccessfulContent && lastSuccessfulContent.length > 0) {
-            chatStore.appendToMessage(
+            messageStore.appendToMessage(
               assistantMessage.id,
               '\n\n[Stream interrupted. Message may be incomplete.]'
             );
@@ -190,10 +191,10 @@ export function useStreamHandler(): UseStreamHandlerReturn {
         }
 
         // Get current message to preserve its metadata
-        const finalMsg = chatStore.getMessageById(assistantMessage.id);
+        const finalMsg = messageStore.getMessageById(assistantMessage.id);
         // Mark streaming complete or partial
         if (streamInterrupted && lastSuccessfulContent.length > 0) {
-          chatStore.updateMessage(assistantMessage.id, {
+          messageStore.updateMessage(assistantMessage.id, {
             status: 'received',
             metadata: {
               ...(finalMsg?.metadata || {}),
@@ -205,7 +206,7 @@ export function useStreamHandler(): UseStreamHandlerReturn {
             },
           });
         } else if (!streamInterrupted) {
-          chatStore.updateMessage(assistantMessage.id, {
+          messageStore.updateMessage(assistantMessage.id, {
             status: 'received',
             metadata: {
               ...(finalMsg?.metadata || {}),
@@ -216,7 +217,7 @@ export function useStreamHandler(): UseStreamHandlerReturn {
           });
           // Store response ID if we got one (OpenAI Response API)
           if (responseId) {
-            chatStore.setLastResponseId(responseId);
+            uiStore.setLastResponseId(responseId);
           }
         } else {
           throw new Error('Stream interrupted before receiving any content');
@@ -245,7 +246,7 @@ export function useStreamHandler(): UseStreamHandlerReturn {
           errorMessage += ' (You can try sending the message again)';
         }
 
-        chatStore.updateMessage(assistantMessage.id, {
+        messageStore.updateMessage(assistantMessage.id, {
           status: 'error',
           error: errorMessage,
         });
@@ -253,7 +254,7 @@ export function useStreamHandler(): UseStreamHandlerReturn {
       } finally {
         // Only clear active message if the store is still available
         try {
-          chatStore.clearActiveMessage();
+          uiStore.clearActiveMessage();
         } catch (cleanupError) {
           // Ignore errors during cleanup (component may be unmounted)
           // Failed to clear active message in finally block - non-critical
@@ -261,7 +262,7 @@ export function useStreamHandler(): UseStreamHandlerReturn {
         abortControllerRef.current = null;
       }
     },
-    [chatStore]
+    [messageStore, uiStore]
   );
 
   /**
@@ -274,17 +275,17 @@ export function useStreamHandler(): UseStreamHandlerReturn {
     }
     // Only clear active message if the store is still available
     try {
-      chatStore.clearActiveMessage();
+      uiStore.clearActiveMessage();
     } catch (error) {
       // Ignore errors during cleanup (component may be unmounted)
       // Failed to clear active message during cleanup - non-critical
     }
-  }, [chatStore]);
+  }, [uiStore]);
 
   /**
    * Check if currently streaming
    */
-  const isStreaming = chatStore.activeMessageId !== null;
+  const isStreaming = uiStore.getActiveMessageId() !== null;
 
   return {
     handleStreamingResponse,

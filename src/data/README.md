@@ -7,7 +7,18 @@ The data module provides comprehensive state management, persistence, and securi
 ```
 data/
 ├── store/                    # State management layer
-│   ├── chat.ts              # Chat conversations and messages
+│   ├── stores/              # Specialized store modules
+│   │   ├── sessionStore.ts  # Browser tab session management
+│   │   ├── messageStore.ts  # Message CRUD operations
+│   │   ├── tabStore.ts      # Multi-tab content state
+│   │   └── uiStore.ts       # UI state (loading, errors)
+│   ├── types/               # Type definitions
+│   │   ├── message.ts       # Message-related types
+│   │   ├── session.ts       # Session-related types
+│   │   └── index.ts         # Type exports
+│   ├── utils/               # Helper utilities
+│   │   └── chatHelpers.ts   # ID generation, session creation
+│   ├── chat.ts              # Main chat store exports
 │   ├── settings.ts          # User preferences and API keys
 │   ├── index.ts             # Store exports
 │   └── README.md            # Store documentation
@@ -57,23 +68,41 @@ Chrome Storage API
 
 #### Chat Store (`chat.ts`)
 
-Manages conversation state and streaming:
+Refactored into modular architecture with specialized stores:
 
-**State Management:**
+**Store Modules:**
 
-- Conversations array with messages
-- Active conversation tracking
-- Streaming state for real-time updates
-- Token usage monitoring
-- Error handling
+1. **Session Store** (`stores/sessionStore.ts`):
+   - Tab+URL based session management
+   - Active session tracking
+   - Session switching and cleanup
+   - Session persistence
+
+2. **Message Store** (`stores/messageStore.ts`):
+   - Message CRUD operations
+   - Streaming message updates
+   - Message editing and deletion
+   - Message history management
+
+3. **Tab Store** (`stores/tabStore.ts`):
+   - Multi-tab content management
+   - Tab selection ordering
+   - Current tab tracking
+   - Auto-load state
+
+4. **UI Store** (`stores/uiStore.ts`):
+   - Loading states
+   - Error handling
+   - Active message tracking
+   - Response ID management
 
 **Key Actions:**
 
-- `addMessage` - Add new message
-- `updateMessage` - Update existing message
-- `startStreaming` - Begin streaming response
-- `appendToStream` - Add streaming chunks
-- `endStreaming` - Complete streaming
+- `addMessage` - Add new message (messageStore)
+- `updateMessage` - Update existing message (messageStore)
+- `switchSession` - Switch to different tab session (sessionStore)
+- `setLoadedTabs` - Update loaded tab content (tabStore)
+- `setLoading` - Update loading state (uiStore)
 
 #### Settings Store (`settings.ts`)
 
@@ -172,20 +201,33 @@ Sensitive data protection:
 
 ### Zustand Integration
 
-**Store Pattern:**
+**Modular Store Pattern:**
 
 ```typescript
-interface ChatStore {
-  // State
-  conversations: Conversation[];
-  activeId: string | null;
+// Specialized stores with focused responsibilities
+interface SessionState {
+  sessions: Record<string, SessionData>;
+  activeSessionKey: string | null;
+  switchSession: (tabId: number, url: string) => SessionData;
+  clearSession: (sessionKey: string) => void;
+}
 
-  // Actions
-  addMessage: (message: Message) => void;
-  setActiveConversation: (id: string) => void;
+interface MessageState {
+  addMessage: (options: CreateMessageOptions) => ChatMessage;
+  updateMessage: (id: string, updates: UpdateMessageOptions) => void;
+  getMessages: () => ChatMessage[];
+}
 
-  // Computed
-  get activeConversation(): Conversation | null;
+interface TabState {
+  addLoadedTab: (tabId: number, content: TabContent) => void;
+  getLoadedTabs: () => Record<number, TabContent>;
+  getCurrentTabId: () => number | null;
+}
+
+interface UIState {
+  setLoading: (loading: boolean) => void;
+  setError: (error: string | null) => void;
+  getActiveMessageId: () => string | null;
 }
 ```
 
@@ -217,18 +259,26 @@ persist(
 ### Chat Operations
 
 ```typescript
-import { useChatStore } from '@data/store';
+import { useMessageStore, useUIStore, useSessionStore, useTabStore } from '@data/store/chat';
+
+// Session management
+const sessionStore = useSessionStore();
+sessionStore.switchSession(tabId, url);
 
 // Add message
-const addMessage = useChatStore(state => state.addMessage);
-addMessage({
+const messageStore = useMessageStore();
+const message = messageStore.addMessage({
   role: 'user',
   content: 'Hello!',
 });
 
-// Stream response
-const startStreaming = useChatStore(state => state.startStreaming);
-startStreaming();
+// Update UI state
+const uiStore = useUIStore();
+uiStore.setLoading(true);
+
+// Manage tabs
+const tabStore = useTabStore();
+tabStore.addLoadedTab(tabId, tabContent);
 ```
 
 ### Settings Management
@@ -372,6 +422,7 @@ const migrations = {
 - v2.0: Conversation-based messages
 - v2.1: Encrypted API keys
 - v3.0: Zustand migration
+- v4.0: Modular store architecture with specialized stores
 
 ## Testing
 

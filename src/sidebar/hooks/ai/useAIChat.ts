@@ -7,10 +7,10 @@
 
 import { useEffect, useMemo } from 'react';
 import { useSettingsStore } from '@store/settings';
-import { useChatStore } from '@store/chat';
+import { useTabStore, useUIStore } from '@store/chat';
 import { useProviderManager } from './useProviderManager';
 import { useMessageHandler } from './useMessageHandler';
-import { useMultiTabExtraction } from '../useMultiTabExtraction';
+import { useTabExtraction } from '../useTabExtraction';
 import type { UseAIChatOptions, UseAIChatReturn } from './types';
 import type { TabContent } from '../../../types/tabs';
 
@@ -23,11 +23,12 @@ import type { TabContent } from '../../../types/tabs';
 export function useAIChat(options: UseAIChatOptions = {}): UseAIChatReturn {
   const { enabled = true, autoInitialize = false } = options;
 
-  const chatStore = useChatStore();
+  const tabStore = useTabStore();
+  const uiStore = useUIStore();
   const settings = useSettingsStore(state => state.settings);
 
-  // Initialize multi-tab extraction hook
-  const multiTabExtraction = useMultiTabExtraction();
+  // Initialize tab extraction hook
+  const tabExtraction = useTabExtraction();
 
   // Initialize provider manager
   const providerManager = useProviderManager(enabled);
@@ -48,7 +49,7 @@ export function useAIChat(options: UseAIChatOptions = {}): UseAIChatReturn {
       try {
         await initializeProviders();
       } catch (_error) {
-        chatStore.setError('Failed to initialize AI providers');
+        uiStore.setError('Failed to initialize AI providers');
       }
     };
 
@@ -60,7 +61,7 @@ export function useAIChat(options: UseAIChatOptions = {}): UseAIChatReturn {
     settings?.apiKeys?.google,
     settings?.selectedModel,
     initializeProviders,
-    chatStore,
+    tabStore,
   ]);
 
   // Sync providers with settings changes
@@ -87,28 +88,28 @@ export function useAIChat(options: UseAIChatOptions = {}): UseAIChatReturn {
     initializeProviders,
   ]);
 
-  // Sync multi-tab extraction state with chat store
+  // Sync tab extraction state with chat store
   useEffect(() => {
     if (!enabled) return;
 
-    const { currentTabContent, currentTabId, loadedTabs, hasAutoLoaded } = multiTabExtraction;
+    const { currentTabContent, currentTabId, loadedTabs, hasAutoLoaded } = tabExtraction;
 
     // Update chat store with current tab information only if changed
     // The Zustand hook returns a snapshot of state/actions; to access
     // the store API use the hook function itself.
-    const storeState = useChatStore.getState();
+    const tabStoreState = useTabStore.getState();
 
-    if (currentTabId !== null && storeState.currentTabId !== currentTabId) {
-      chatStore.setCurrentTabId(currentTabId);
+    if (currentTabId !== null && tabStoreState.getCurrentTabId() !== currentTabId) {
+      tabStore.setCurrentTabId(currentTabId);
     }
 
     // Update has auto-loaded state only if changed
-    if (storeState.hasAutoLoaded !== hasAutoLoaded) {
-      chatStore.setHasAutoLoaded(hasAutoLoaded);
+    if (tabStoreState.getHasAutoLoaded() !== hasAutoLoaded) {
+      tabStore.setHasAutoLoaded(hasAutoLoaded);
     }
 
     // Only update loaded tabs if there's an actual change
-    // Since loadedTabs already comes from the store via useMultiTabExtraction,
+    // Since loadedTabs already comes from the store via useTabExtraction,
     // we don't need to set it back unless we're adding the current tab
     if (currentTabContent && currentTabId !== null && !loadedTabs[currentTabId]) {
       // Create TabContent structure for current tab
@@ -134,15 +135,15 @@ export function useAIChat(options: UseAIChatOptions = {}): UseAIChatReturn {
         ...loadedTabs,
         [currentTabId]: currentTabAsTabContent,
       };
-      chatStore.setLoadedTabs(updatedTabs);
+      tabStore.setLoadedTabs(updatedTabs);
     }
   }, [
     enabled,
-    multiTabExtraction.currentTabContent,
-    multiTabExtraction.currentTabId,
-    multiTabExtraction.loadedTabs,
-    multiTabExtraction.hasAutoLoaded,
-    chatStore,
+    tabExtraction.currentTabContent,
+    tabExtraction.currentTabId,
+    tabExtraction.loadedTabs,
+    tabExtraction.hasAutoLoaded,
+    tabStore,
   ]);
 
   // Cleanup on unmount only (empty dependency array)
@@ -164,9 +165,9 @@ export function useAIChat(options: UseAIChatOptions = {}): UseAIChatReturn {
       isStreaming,
       getStats,
       // Multi-tab extraction functionality
-      multiTabExtraction,
+      tabExtraction,
     }),
-    [sendMessage, cancelMessage, switchProvider, isStreaming, getStats, multiTabExtraction]
+    [sendMessage, cancelMessage, switchProvider, isStreaming, getStats, tabExtraction]
   );
 }
 

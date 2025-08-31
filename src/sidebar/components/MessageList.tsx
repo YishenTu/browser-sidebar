@@ -1,6 +1,6 @@
 import React, { useRef, useEffect, useState, useCallback, useMemo } from 'react';
 import { VariableSizeList as List } from 'react-window';
-import { ChatMessage } from '@store/chat';
+import type { ChatMessage } from '@store/chat';
 import { MessageBubble } from './MessageBubble';
 
 /**

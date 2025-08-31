@@ -1,7 +1,7 @@
 /**
- * @file React Hook for Multi-Tab Content Extraction
+ * @file React Hook for Tab Content Extraction
  *
- * Custom hook that provides multi-tab content extraction functionality for the sidebar,
+ * Custom hook that provides tab content extraction functionality for the sidebar,
  * integrating with the background script to extract and manage content from multiple browser tabs.
  * Auto-loads current tab ONCE on mount and provides manual tab extraction via @ mentions.
  */
@@ -16,12 +16,12 @@ import type {
   ExtractTabPayload,
 } from '@/types/messages';
 import { createMessage } from '@/types/messages';
-import { useChatStore } from '@/data/store/chat';
+import { useSessionStore, useTabStore, useUIStore } from '@/data/store/chat';
 
 /**
- * Multi-tab extraction hook return interface
+ * Tab extraction hook return interface
  */
-export interface UseMultiTabExtractionReturn {
+export interface UseTabExtractionReturn {
   // State
   /** Currently loaded tab content (auto-loaded from current tab) */
   currentTabContent: ExtractedContent | null;
@@ -56,7 +56,7 @@ export interface UseMultiTabExtractionReturn {
 }
 
 /**
- * Hook for managing multi-tab content extraction
+ * Hook for managing tab content extraction
  *
  * This hook provides functionality for:
  * - Auto-loading current tab content ONCE on mount
@@ -65,22 +65,23 @@ export interface UseMultiTabExtractionReturn {
  * - Preventing duplicate tab loading
  * - Tracking extraction status and errors
  *
- * @returns Hook interface with state and actions for multi-tab extraction
+ * @returns Hook interface with state and actions for tab extraction
  */
-export function useMultiTabExtraction(): UseMultiTabExtractionReturn {
+export function useTabExtraction(): UseTabExtractionReturn {
   // Zustand store integration for session persistence
-  const {
-    loadedTabs,
-    currentTabId,
-    hasAutoLoaded,
-    addLoadedTab,
-    removeLoadedTab,
-    setCurrentTabId,
-    setHasAutoLoaded,
-    getHasAutoLoaded,
-    getCurrentTabContent,
-    activeSessionKey,
-  } = useChatStore();
+  const sessionStore = useSessionStore();
+  const tabStore = useTabStore();
+
+  const loadedTabs = tabStore.getLoadedTabs();
+  const currentTabId = tabStore.getCurrentTabId();
+  const hasAutoLoaded = tabStore.getHasAutoLoaded();
+  const addLoadedTab = tabStore.addLoadedTab;
+  const removeLoadedTab = tabStore.removeLoadedTab;
+  const setCurrentTabId = tabStore.setCurrentTabId;
+  const setHasAutoLoaded = tabStore.setHasAutoLoaded;
+  const getHasAutoLoaded = tabStore.getHasAutoLoaded;
+  const getCurrentTabContent = tabStore.getCurrentTabContent;
+  const activeSessionKey = sessionStore.activeSessionKey;
 
   // Current tab content derived from store (return ExtractedContent | null as per interface)
   const currentTab = getCurrentTabContent();
@@ -386,8 +387,8 @@ export function useMultiTabExtraction(): UseMultiTabExtractionReturn {
    * Clear all loaded tabs
    */
   const clearAllTabs = useCallback((): void => {
-    // Use Zustand store's clearConversation which resets multi-tab state
-    const { clearConversation } = useChatStore.getState();
+    // Use Zustand store's clearConversation which resets tab state
+    const { clearConversation } = useUIStore.getState();
     clearConversation();
 
     setError(null);
