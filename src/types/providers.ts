@@ -201,7 +201,10 @@ export interface ResponseMetadata {
   timestamp: Date;
   requestId?: string;
   model?: string;
-  searchResults?: SearchResult[];
+  // Some providers (OpenRouter web search) surface citations as an object
+  // like { sources: SearchResult[] } that our UI reads directly.
+  // Keep union for forward compatibility while not breaking existing callers.
+  searchResults?: SearchResult[] | { sources: SearchResult[] };
   cacheDiscount?: number;
   [key: string]: unknown;
 }

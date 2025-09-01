@@ -56,7 +56,8 @@ export function buildRequest({
   };
 
   // Add reasoning configuration based on model
-  const modelConfig = getModelById(modelId);
+  // Use the base model id for lookup (exclude transient suffix like :online)
+  const modelConfig = getModelById(baseModelId);
 
   if (modelId.startsWith('anthropic/')) {
     // Anthropic models use max_tokens for reasoning

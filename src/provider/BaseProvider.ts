@@ -9,8 +9,7 @@
  * - initialize()
  * - validateConfig()
  * - testConnection()
- * - chat()
- * - streamChat()
+ * - streamChat() // streaming only
  * - getModels()
  * - getModel()
  * - formatError()
