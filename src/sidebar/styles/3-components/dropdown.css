@@ -28,8 +28,9 @@
 }
 
 .dropdown__trigger:focus {
-  border-color: var(--focus-ring, #0066cc);
-  box-shadow: 0 0 0 3px var(--focus-ring-shadow, rgba(0, 102, 204, 0.1));
+  outline: none;
+  border-color: var(--dropdown-border, #d1d5db);
+  box-shadow: none;
 }
 
 .dropdown__trigger--open {

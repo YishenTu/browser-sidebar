@@ -46,7 +46,7 @@
 .model-selector .dropdown__trigger:focus,
 .model-selector__trigger:focus {
   outline: none;
-  background: rgba(75, 85, 99, 0.2); /* Subtle focus background */
+  background: transparent; /* No focus background */
   border: none;
   box-shadow: none;
 }
