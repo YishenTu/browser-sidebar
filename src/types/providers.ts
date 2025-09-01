@@ -294,8 +294,7 @@ export interface AIProvider {
   validateConfig(config: unknown): ProviderValidationResult;
   testConnection(): Promise<boolean>;
 
-  // Chat methods
-  chat(messages: ProviderChatMessage[], config?: unknown): Promise<ProviderResponse>;
+  // Chat method - streaming only
   streamChat(messages: ProviderChatMessage[], config?: unknown): AsyncIterable<StreamChunk>;
 
   // Model methods

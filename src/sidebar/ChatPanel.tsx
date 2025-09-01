@@ -353,13 +353,11 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
 
           // Send message without creating a duplicate user message
           await sendMessage(messageContent, {
-            streaming: true,
             skipUserMessage: true, // Prevent duplicate user message
           });
         } else {
           // Send message with content injection for first message or normal content for subsequent messages
           await sendMessage(messageContent, {
-            streaming: true,
             displayContent: displayContent,
             metadata: Object.keys(messageMetadata).length > 0 ? messageMetadata : undefined,
           });
@@ -437,7 +435,6 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
       // Send a new AI response without adding a new user message
       try {
         await sendMessage(previousUserMessage.content, {
-          streaming: true,
           skipUserMessage: true, // This prevents adding a duplicate user message
         });
       } catch (error) {

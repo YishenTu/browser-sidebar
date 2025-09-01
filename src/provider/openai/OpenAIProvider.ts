@@ -16,14 +16,9 @@
 import { BaseProvider } from '../BaseProvider';
 import { OpenAIClient } from './OpenAIClient';
 import { buildRequest } from './requestBuilder';
-import { parseResponse, extractSearchMetadataFromEvent } from './responseParser';
+import { extractSearchMetadataFromEvent } from './responseParser';
 import { OpenAIStreamProcessor } from './streamProcessor';
-import type { OpenAIResponse } from './types';
-import {
-  formatError as formatOpenAIError,
-  withErrorHandling,
-  withErrorHandlingGenerator,
-} from './errorHandler';
+import { formatError as formatOpenAIError, withErrorHandlingGenerator } from './errorHandler';
 import { handleStreamSearchMetadata } from './searchMetadata';
 import {
   getModelsByProvider,
@@ -34,7 +29,6 @@ import {
 import type {
   ProviderConfig,
   ProviderChatMessage,
-  ProviderResponse,
   StreamChunk,
   ProviderValidationResult,
   OpenAIConfig,
@@ -142,20 +136,6 @@ export class OpenAIProvider extends BaseProvider {
   }
 
   /**
-   * Send chat messages using OpenAI Response API
-   */
-  async chat(
-    messages: ProviderChatMessage[],
-    config?: OpenAIChatConfig
-  ): Promise<ProviderResponse> {
-    return this.performChat(
-      messages,
-      this.sendMessage.bind(this),
-      config as Record<string, unknown>
-    );
-  }
-
-  /**
    * Stream chat messages using OpenAI Response API
    */
   async *streamChat(
@@ -172,47 +152,6 @@ export class OpenAIProvider extends BaseProvider {
   // ============================================================================
   // Internal Chat Implementation
   // ============================================================================
-
-  /**
-   * Send a single chat request to OpenAI API
-   */
-  private async sendMessage(
-    messages: ProviderChatMessage[],
-    config?: OpenAIChatConfig
-  ): Promise<ProviderResponse> {
-    this.ensureConfigured();
-
-    const openaiInstance = this.openaiClient.getOpenAIInstance();
-    if (!openaiInstance) {
-      throw new Error('OpenAI client not initialized');
-    }
-
-    const currentConfig = this.getConfig()?.config as OpenAIConfig;
-    if (!currentConfig) {
-      throw new Error('Provider configuration not found');
-    }
-
-    const request = buildRequest(messages, currentConfig, {
-      ...config,
-      previousResponseId: config?.previousResponseId,
-      systemPrompt: config?.systemPrompt,
-    });
-
-    // Request logging removed for production
-
-    return withErrorHandling(async () => {
-      // Use Responses API with AbortSignal passed via RequestOptions
-      const response = await (
-        openaiInstance as {
-          responses: { create: (req: unknown, opts: unknown) => Promise<unknown> };
-        }
-      ).responses.create(request, {
-        signal: config?.signal,
-      });
-
-      return parseResponse(response as OpenAIResponse, currentConfig.model, messages);
-    });
-  }
 
   /**
    * Stream chat messages from OpenAI API

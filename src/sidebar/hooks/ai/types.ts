@@ -12,8 +12,6 @@ import type { UseTabExtractionReturn } from '../useTabExtraction';
  * Options for sending messages
  */
 export interface SendMessageOptions {
-  /** Whether to use streaming response (default: true) */
-  streaming?: boolean;
   /** Custom timeout in milliseconds */
   timeout?: number;
   /** Additional metadata */

@@ -9,7 +9,6 @@ import { useMessageStore, useUIStore, useTabStore } from '@store/chat';
 import { useSettingsStore } from '@store/settings';
 import { getModelById } from '@/config/models';
 import { formatTabContent } from '../../utils/contentFormatter';
-import { getSystemPrompt } from '@/config/systemPrompt';
 import type { AIProvider } from '../../../types/providers';
 import type { SendMessageOptions, UseMessageHandlerReturn } from './types';
 import type { TabContent } from '../../../types/tabs';
@@ -30,64 +29,6 @@ export function useMessageHandler({
   const { handleStreamingResponse, cancelStreaming } = useStreamHandler();
 
   /**
-   * Handle non-streaming response from provider
-   */
-  const handleNonStreamingResponse = useCallback(
-    async (provider: AIProvider): Promise<void> => {
-      // Create messages array for provider (only non-empty messages)
-      const messages = messageStore
-        .getMessages()
-        .filter(msg => msg.content.trim() !== '')
-        .map(msg => ({
-          id: msg.id,
-          role: msg.role,
-          content: msg.content,
-          timestamp: new Date(msg.timestamp),
-        }));
-
-      // Get last response ID for conversation continuity (OpenAI Response API)
-      const previousResponseId = uiStore.getLastResponseId();
-
-      // Get the system prompt
-      const systemPrompt = getSystemPrompt();
-
-      // Get response from provider with response ID if available
-      const response = await provider.chat(messages, {
-        previousResponseId: previousResponseId || undefined,
-        systemPrompt,
-      });
-
-      // Store new response ID if present (for OpenAI Response API)
-      if (response.metadata?.['responseId']) {
-        uiStore.setLastResponseId(response.metadata['responseId'] as string);
-      }
-
-      // Get model info for metadata
-      const selectedModel = settingsStore.settings.selectedModel;
-      const modelInfo = getModelById(selectedModel);
-
-      // Add assistant message to store with model metadata
-      messageStore.addMessage({
-        role: 'assistant',
-        content: response.content,
-        status: 'received',
-        metadata: {
-          model: modelInfo?.name || 'AI Assistant',
-          thinking: response.thinking, // Store thinking separately for UI to render
-          ...(response.metadata &&
-          'searchResults' in response.metadata &&
-          response.metadata['searchResults']
-            ? {
-                searchResults: response.metadata['searchResults'],
-              }
-            : {}),
-        },
-      });
-    },
-    [messageStore, settingsStore]
-  );
-
-  /**
    * Send a message to the active AI provider
    */
   const sendMessage = useCallback(
@@ -100,7 +41,7 @@ export function useMessageHandler({
         return; // Don't send empty messages
       }
 
-      const { streaming = true, skipUserMessage = false, displayContent, metadata } = options;
+      const { skipUserMessage = false, displayContent, metadata } = options;
 
       try {
         // Clear any previous errors
@@ -177,26 +118,26 @@ export function useMessageHandler({
         }
 
         try {
-          if (streaming && typeof provider.streamChat === 'function') {
-            // Get the selected model from settings
-            const selectedModel = settingsStore.settings.selectedModel;
-            const modelInfo = getModelById(selectedModel);
-
-            // Create assistant message for streaming with model metadata
-            const assistantMessage = messageStore.addMessage({
-              role: 'assistant',
-              content: '',
-              status: 'streaming',
-              metadata: {
-                model: modelInfo?.name || 'AI Assistant',
-              },
-            });
-
-            await handleStreamingResponse(provider, assistantMessage, userMessage);
-          } else {
-            // Non-streaming response
-            await handleNonStreamingResponse(provider);
+          // Always use streaming
+          if (typeof provider.streamChat !== 'function') {
+            throw new Error('Provider does not support streaming');
           }
+
+          // Get the selected model from settings
+          const selectedModel = settingsStore.settings.selectedModel;
+          const modelInfo = getModelById(selectedModel);
+
+          // Create assistant message for streaming with model metadata
+          const assistantMessage = messageStore.addMessage({
+            role: 'assistant',
+            content: '',
+            status: 'streaming',
+            metadata: {
+              model: modelInfo?.name || 'AI Assistant',
+            },
+          });
+
+          await handleStreamingResponse(provider, assistantMessage, userMessage);
 
           // Mark user message as sent on success
           messageStore.updateMessage(userMessage.id, {
@@ -226,14 +167,7 @@ export function useMessageHandler({
         uiStore.setLoading(false);
       }
     },
-    [
-      enabled,
-      messageStore,
-      settingsStore,
-      getActiveProvider,
-      handleStreamingResponse,
-      handleNonStreamingResponse,
-    ]
+    [enabled, messageStore, settingsStore, getActiveProvider, handleStreamingResponse]
   );
 
   /**

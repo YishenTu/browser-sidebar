@@ -21,7 +21,6 @@ import type {
   ProviderType,
   ProviderConfig,
   ProviderChatMessage,
-  ProviderResponse,
   StreamChunk,
   ModelConfig,
   ProviderCapabilities,
@@ -116,15 +115,6 @@ export abstract class BaseProvider implements AIProvider {
   // ============================================================================
   // Chat Methods
   // ============================================================================
-
-  /**
-   * Send chat messages and get response
-   * Must be implemented by concrete providers
-   */
-  abstract chat(
-    messages: ProviderChatMessage[],
-    config?: Record<string, unknown>
-  ): Promise<ProviderResponse>;
 
   /**
    * Stream chat messages
@@ -315,22 +305,6 @@ export abstract class BaseProvider implements AIProvider {
     if (!this.isConfigured()) {
       throw new Error('Provider not initialized');
     }
-  }
-
-  /**
-   * Wrapper for chat that includes validation and tracking
-   */
-  protected async performChat(
-    messages: ProviderChatMessage[],
-    chatImplementation: (
-      messages: ProviderChatMessage[],
-      config?: Record<string, unknown>
-    ) => Promise<ProviderResponse>,
-    config?: Record<string, unknown>
-  ): Promise<ProviderResponse> {
-    this.validateMessages(messages);
-    this.trackRequest();
-    return await chatImplementation(messages, config);
   }
 
   /**

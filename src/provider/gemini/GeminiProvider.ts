@@ -17,16 +17,15 @@
 import { GeminiClient } from './GeminiClient';
 import { GeminiStreamProcessor } from './streamProcessor';
 import { buildRequest, buildHeaders, buildApiUrl } from './requestBuilder';
-import { parseResponse, convertToStreamChunk, processStreamChunk } from './responseParser';
-import { handleErrorResponse, withErrorHandling, withErrorHandlingGenerator } from './errorHandler';
+import { convertToStreamChunk, processStreamChunk } from './responseParser';
+import { handleErrorResponse, withErrorHandlingGenerator } from './errorHandler';
 import type {
   ProviderChatMessage,
-  ProviderResponse,
   StreamChunk,
   GeminiConfig,
   FinishReason,
 } from '../../types/providers';
-import type { GeminiChatConfig, GeminiResponse } from './types';
+import type { GeminiChatConfig } from './types';
 
 /**
  * Google Gemini provider extending GeminiClient
@@ -39,20 +38,6 @@ export class GeminiProvider extends GeminiClient {
   // ============================================================================
   // Chat Implementation
   // ============================================================================
-
-  /**
-   * Send chat messages and get response
-   */
-  override async chat(
-    messages: ProviderChatMessage[],
-    config?: GeminiChatConfig
-  ): Promise<ProviderResponse> {
-    return this.performChat(
-      messages,
-      this.sendMessage.bind(this),
-      config as Record<string, unknown>
-    );
-  }
 
   /**
    * Stream chat messages
@@ -71,42 +56,6 @@ export class GeminiProvider extends GeminiClient {
   // ============================================================================
   // Internal Chat Implementation
   // ============================================================================
-
-  /**
-   * Send a single chat request to Gemini API
-   */
-  private async sendMessage(
-    messages: ProviderChatMessage[],
-    config?: GeminiChatConfig
-  ): Promise<ProviderResponse> {
-    this.ensureConfigured();
-
-    const geminiConfig = this.getConfig()?.config as GeminiConfig;
-    const request = buildRequest(messages, geminiConfig, config);
-    const url = buildApiUrl(
-      `/models/${geminiConfig.model}:generateContent`,
-      geminiConfig.apiKey,
-      geminiConfig.endpoint
-    );
-
-    // Request logging removed for production
-
-    return withErrorHandling(async () => {
-      const response = await fetch(url, {
-        method: 'POST',
-        headers: buildHeaders(geminiConfig.apiKey),
-        body: JSON.stringify(request),
-        signal: config?.signal,
-      });
-
-      if (!response.ok) {
-        await handleErrorResponse(response);
-      }
-
-      const data: GeminiResponse = await response.json();
-      return parseResponse(data, geminiConfig.model, this.type, config);
-    });
-  }
 
   /**
    * Stream chat messages from Gemini API
