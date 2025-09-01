@@ -61,6 +61,7 @@ const DEFAULT_SETTINGS: Settings = {
   apiKeys: {
     openai: null,
     google: null,
+    openrouter: null,
   },
   selectedModel: DEFAULT_MODEL_ID,
   availableModels: [...DEFAULT_AVAILABLE_MODELS],
@@ -76,9 +77,12 @@ const isValidFontSize = (fontSize: unknown): fontSize is 'small' | 'medium' | 'l
 /**
  * Validate AI provider value
  */
-const isValidProvider = (provider: unknown): provider is 'openai' | 'gemini' | null => {
+const isValidProvider = (
+  provider: unknown
+): provider is 'openai' | 'gemini' | 'openrouter' | null => {
   return (
-    provider === null || (typeof provider === 'string' && ['openai', 'gemini'].includes(provider))
+    provider === null ||
+    (typeof provider === 'string' && ['openai', 'gemini', 'openrouter'].includes(provider))
   );
 };
 
@@ -95,15 +99,16 @@ const isValidSelectedModel = (modelId: unknown, availableModels: Model[]): boole
 /**
  * Map model provider display name to provider type
  */
-const getProviderTypeFromModel = (model: Model): 'openai' | 'gemini' | null => {
+const getProviderTypeFromModel = (model: Model): 'openai' | 'gemini' | 'openrouter' | null => {
   // Try centralized config first
   const providerType = getProviderTypeForModelId(model.id);
   if (providerType) return providerType;
 
   // Fallback for any models not in centralized config
-  const providerMapping: Record<string, 'openai' | 'gemini' | null> = {
+  const providerMapping: Record<string, 'openai' | 'gemini' | 'openrouter' | null> = {
     OpenAI: 'openai',
     Google: 'gemini',
+    openrouter: 'openrouter',
   };
 
   return providerMapping[model.provider] || null;
@@ -201,9 +206,7 @@ const validatePrivacySettings = (privacy: unknown): PrivacySettings => {
  * Validate API key references
  */
 const validateAPIKeyReferences = (apiKeys: unknown): APIKeyReferences => {
-  const a = (apiKeys && typeof apiKeys === 'object' ? apiKeys : {}) as Partial<
-    APIKeyReferences & { openrouter?: string }
-  > &
+  const a = (apiKeys && typeof apiKeys === 'object' ? apiKeys : {}) as Partial<APIKeyReferences> &
     Record<string, unknown>;
 
   return {
@@ -215,6 +218,10 @@ const validateAPIKeyReferences = (apiKeys: unknown): APIKeyReferences => {
       typeof a.google === 'string' || a.google === null
         ? (a.google as string | null)
         : DEFAULT_SETTINGS.apiKeys.google,
+    openrouter:
+      typeof a.openrouter === 'string' || a.openrouter === null
+        ? (a.openrouter as string | null)
+        : DEFAULT_SETTINGS.apiKeys.openrouter,
   };
 };
 

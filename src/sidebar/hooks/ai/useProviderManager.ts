@@ -8,7 +8,7 @@ import { useRef, useCallback, useEffect } from 'react';
 import { useSettingsStore } from '@store/settings';
 import { ProviderRegistry } from '../../../provider/ProviderRegistry';
 import { ProviderFactory } from '../../../provider/ProviderFactory';
-import { SUPPORTED_MODELS } from '../../../config/models';
+import { SUPPORTED_MODELS, DEFAULT_OPENROUTER_MODEL_ID } from '../../../config/models';
 import type { ProviderType, AIProvider, ProviderConfig } from '../../../types/providers';
 import type { UseProviderManagerReturn, AIStats } from './types';
 
@@ -20,7 +20,9 @@ export function useProviderManager(enabled = true): UseProviderManagerReturn {
   const factoryRef = useRef<ProviderFactory | null>(null);
 
   // Track initialization state
-  const lastInitializedKeysRef = useRef<{ openai?: string; google?: string }>({});
+  const lastInitializedKeysRef = useRef<{ openai?: string; google?: string; openrouter?: string }>(
+    {}
+  );
   const lastInitializedModelRef = useRef<string | null>(null);
   const isInitializingRef = useRef<boolean>(false);
 
@@ -65,7 +67,8 @@ export function useProviderManager(enabled = true): UseProviderManagerReturn {
       // Check if API keys or selected model have changed
       const keysChanged =
         apiKeys.openai !== lastInitializedKeysRef.current.openai ||
-        apiKeys.google !== lastInitializedKeysRef.current.google;
+        apiKeys.google !== lastInitializedKeysRef.current.google ||
+        apiKeys.openrouter !== lastInitializedKeysRef.current.openrouter;
 
       const modelChanged = settings.selectedModel !== lastInitializedModelRef.current;
 
@@ -83,6 +86,7 @@ export function useProviderManager(enabled = true): UseProviderManagerReturn {
       lastInitializedKeysRef.current = {
         openai: apiKeys.openai || undefined,
         google: apiKeys.google || undefined,
+        openrouter: apiKeys.openrouter || undefined,
       };
       lastInitializedModelRef.current = settings.selectedModel;
 
@@ -104,6 +108,9 @@ export function useProviderManager(enabled = true): UseProviderManagerReturn {
       // Find fallback models
       const defaultOpenAIModel = SUPPORTED_MODELS.find(m => m.provider === 'openai');
       const defaultGeminiModel = SUPPORTED_MODELS.find(m => m.provider === 'gemini');
+      const defaultOpenRouterModel =
+        SUPPORTED_MODELS.find(m => m.id === DEFAULT_OPENROUTER_MODEL_ID) ||
+        SUPPORTED_MODELS.find(m => m.provider === 'openrouter');
 
       if (apiKeys.openai) {
         const openAIModel =
@@ -140,6 +147,20 @@ export function useProviderManager(enabled = true): UseProviderManagerReturn {
         }
       }
 
+      if (apiKeys.openrouter) {
+        const openrouterModel =
+          selectedModel?.provider === 'openrouter' ? selectedModel : defaultOpenRouterModel;
+        if (openrouterModel) {
+          providerConfigs.push({
+            type: 'openrouter',
+            config: {
+              apiKey: apiKeys.openrouter,
+              model: openrouterModel.id,
+            },
+          });
+        }
+      }
+
       // Create and register providers
       for (const config of providerConfigs) {
         try {
@@ -152,7 +173,12 @@ export function useProviderManager(enabled = true): UseProviderManagerReturn {
 
       // Set active provider based on selected model
       if (selectedModel && registryRef.current) {
-        const targetProvider = selectedModel.provider === 'openai' ? 'openai' : 'gemini';
+        const providerMap: Record<string, 'openai' | 'gemini' | 'openrouter'> = {
+          openai: 'openai',
+          gemini: 'gemini',
+          openrouter: 'openrouter',
+        };
+        const targetProvider = providerMap[selectedModel.provider] ?? 'openai';
         if (registryRef.current.hasProvider(targetProvider)) {
           registryRef.current.setActiveProvider(targetProvider);
         } else if (providerConfigs.length > 0 && providerConfigs[0]) {

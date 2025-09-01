@@ -6,11 +6,15 @@
 export interface ModelConfig {
   id: string;
   name: string;
-  provider: 'openai' | 'gemini';
+  provider: 'openai' | 'gemini' | 'openrouter';
   // OpenAI specific
   reasoningEffort?: 'minimal' | 'low' | 'medium' | 'high';
   // Gemini specific - '0' for off, '-1' for dynamic
   thinkingBudget?: '0' | '-1';
+  // OpenRouter specific - max tokens for Anthropic models
+  reasoningMaxTokens?: number;
+  // Note: OpenRouter models can use either reasoningEffort (for OpenAI/DeepSeek models)
+  // or reasoningMaxTokens (for Anthropic models) depending on the underlying model type
 }
 
 export const SUPPORTED_MODELS: ModelConfig[] = [
@@ -50,10 +54,25 @@ export const SUPPORTED_MODELS: ModelConfig[] = [
     provider: 'openai',
     reasoningEffort: 'medium',
   },
+  // OpenRouter models
+  {
+    id: 'anthropic/claude-sonnet-4',
+    name: 'Claude Sonnet 4 (OpenRouter)',
+    provider: 'openrouter',
+    reasoningMaxTokens: 8000, // Anthropic models use max_tokens for reasoning
+  },
+  // You can add more OpenRouter models here with their specific configs:
+  // {
+  //   id: 'openai/gpt-4o',
+  //   name: 'GPT-4o (OpenRouter)',
+  //   provider: 'openrouter',
+  //   reasoningEffort: 'medium', // OpenAI models via OpenRouter use effort
+  // },
   // Append more models as needed
 ];
 
 export const DEFAULT_MODEL_ID = 'gpt-5-nano';
+export const DEFAULT_OPENROUTER_MODEL_ID = 'anthropic/claude-sonnet-4';
 
 /**
  * Get model configuration by ID
@@ -65,7 +84,9 @@ export function getModelById(id: string): ModelConfig | undefined {
 /**
  * Get provider type for a given model ID
  */
-export function getProviderTypeForModelId(modelId: string): 'openai' | 'gemini' | undefined {
+export function getProviderTypeForModelId(
+  modelId: string
+): 'openai' | 'gemini' | 'openrouter' | undefined {
   const model = getModelById(modelId);
   return model?.provider;
 }
@@ -89,7 +110,9 @@ export function supportsThinking(modelId: string): boolean {
 /**
  * Get all models for a specific provider
  */
-export function getModelsByProvider(providerType: 'openai' | 'gemini'): ModelConfig[] {
+export function getModelsByProvider(
+  providerType: 'openai' | 'gemini' | 'openrouter'
+): ModelConfig[] {
   return SUPPORTED_MODELS.filter(model => model.provider === providerType);
 }
 

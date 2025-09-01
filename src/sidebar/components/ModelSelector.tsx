@@ -48,6 +48,8 @@ export function ModelSelector({
       return !!apiKeys?.openai;
     } else if (providerType === 'gemini') {
       return !!apiKeys?.google;
+    } else if (providerType === 'openrouter') {
+      return !!apiKeys?.openrouter;
     }
     return false;
   }, [providerType, apiKeys]);
@@ -56,6 +58,7 @@ export function ModelSelector({
   const dropdownGroups = useMemo<DropdownGroup[]>(() => {
     const openaiModels = getModelsByProvider('openai');
     const geminiModels = getModelsByProvider('gemini');
+    const openrouterModels = getModelsByProvider('openrouter');
 
     const groups: DropdownGroup[] = [];
 
@@ -73,6 +76,16 @@ export function ModelSelector({
       groups.push({
         label: 'Google Gemini',
         options: geminiModels.map(model => ({
+          value: model.id,
+          label: model.name,
+        })),
+      });
+    }
+
+    if (openrouterModels.length > 0) {
+      groups.push({
+        label: 'OpenRouter',
+        options: openrouterModels.map(model => ({
           value: model.id,
           label: model.name,
         })),

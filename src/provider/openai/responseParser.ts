@@ -11,6 +11,7 @@ import type {
   FinishReason,
   StreamChunk,
   ProviderChatMessage,
+  SearchResult,
 } from '../../types/providers';
 import type {
   OpenAIResponse,
@@ -82,9 +83,16 @@ export function parseResponse(
 
   // Add search metadata if present
   if (searchMetadata) {
+    const searchResults: SearchResult[] = searchMetadata.sources.map(source => ({
+      title: source.title,
+      url: source.url,
+      snippet: source.snippet,
+      domain: new URL(source.url).hostname,
+    }));
+
     providerResponse.metadata = {
       ...providerResponse.metadata,
-      searchResults: searchMetadata,
+      searchResults,
     };
   }
 

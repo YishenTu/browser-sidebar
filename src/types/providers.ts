@@ -21,7 +21,7 @@ export type { ModelConfig };
 /**
  * Supported AI provider types
  */
-export type ProviderType = 'openai' | 'gemini';
+export type ProviderType = 'openai' | 'gemini' | 'openrouter';
 
 /**
  * Chat message roles for AI providers
@@ -37,6 +37,15 @@ export type ErrorType = 'authentication' | 'rate_limit' | 'network' | 'validatio
  * Reasoning effort levels for OpenAI models
  */
 export type ReasoningEffort = 'minimal' | 'low' | 'medium' | 'high';
+
+/**
+ * OpenRouter reasoning configuration
+ */
+export interface OpenRouterReasoningConfig {
+  effort?: 'low' | 'medium' | 'high';
+  maxTokens?: number;
+  exclude?: boolean;
+}
 
 /**
  * Thinking budget for Gemini models
@@ -95,11 +104,25 @@ export interface GeminiConfig {
 }
 
 /**
+ * OpenRouter provider configuration
+ */
+export interface OpenRouterConfig {
+  apiKey: string;
+  model: string;
+  reasoning?: OpenRouterReasoningConfig;
+  headers?: {
+    referer?: string;
+    title?: string;
+  };
+  [key: string]: unknown; // Index signature for compatibility with Record<string, unknown>
+}
+
+/**
  * Generic provider configuration wrapper
  */
 export interface ProviderConfig {
   type: ProviderType;
-  config: OpenAIConfig | GeminiConfig;
+  config: OpenAIConfig | GeminiConfig | OpenRouterConfig;
 }
 
 // ============================================================================
@@ -161,6 +184,16 @@ export interface Usage {
 }
 
 /**
+ * Search result from web search
+ */
+export interface SearchResult {
+  title: string;
+  url: string;
+  snippet?: string;
+  domain?: string;
+}
+
+/**
  * Response metadata
  */
 export interface ResponseMetadata {
@@ -168,6 +201,8 @@ export interface ResponseMetadata {
   timestamp: Date;
   requestId?: string;
   model?: string;
+  searchResults?: SearchResult[];
+  cacheDiscount?: number;
   [key: string]: unknown;
 }
 
@@ -313,7 +348,7 @@ export interface AIProvider {
  * Type guard for provider types
  */
 export function isProviderType(value: unknown): value is ProviderType {
-  return typeof value === 'string' && ['openai', 'gemini'].includes(value);
+  return typeof value === 'string' && ['openai', 'gemini', 'openrouter'].includes(value);
 }
 
 /**
@@ -532,6 +567,44 @@ export function validateGeminiConfig(config: unknown): ProviderValidationResult 
 }
 
 /**
+ * Validate OpenRouter configuration
+ */
+export function validateOpenRouterConfig(config: unknown): ProviderValidationResult {
+  const errors: string[] = [];
+  const cfg = config as Record<string, unknown>;
+
+  if (
+    !cfg['apiKey'] ||
+    typeof cfg['apiKey'] !== 'string' ||
+    (cfg['apiKey'] as string).trim() === ''
+  ) {
+    errors.push('Invalid API key');
+  }
+
+  if (!cfg['model'] || typeof cfg['model'] !== 'string') {
+    errors.push('Invalid model');
+  }
+
+  // Validate reasoning config if present
+  if (cfg['reasoning']) {
+    const reasoning = cfg['reasoning'] as any;
+    if (reasoning.effort && !['low', 'medium', 'high'].includes(reasoning.effort)) {
+      errors.push('Invalid reasoning effort');
+    }
+    if (reasoning.maxTokens !== undefined) {
+      if (typeof reasoning.maxTokens !== 'number' || reasoning.maxTokens <= 0) {
+        errors.push('Invalid reasoning max tokens');
+      }
+    }
+  }
+
+  return {
+    isValid: errors.length === 0,
+    errors,
+  };
+}
+
+/**
  * Validate generic provider configuration
  */
 export function validateProviderConfig(config: ProviderConfig): ProviderValidationResult {
@@ -547,6 +620,8 @@ export function validateProviderConfig(config: ProviderConfig): ProviderValidati
       return validateOpenAIConfig(config.config);
     case 'gemini':
       return validateGeminiConfig(config.config);
+    case 'openrouter':
+      return validateOpenRouterConfig(config.config);
     default:
       return {
         isValid: false,

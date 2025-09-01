@@ -105,6 +105,7 @@ export function useStreamHandler(): UseStreamHandlerReturn {
         let searchMetadata: unknown = null; // Store search metadata from stream
         let responseId: string | null = null; // Store response ID from stream
 
+        let lastStreamError: unknown = null;
         try {
           for await (const chunk of stream) {
             // Check if cancelled
@@ -179,6 +180,7 @@ export function useStreamHandler(): UseStreamHandlerReturn {
         } catch (streamError) {
           // Streaming was interrupted
           streamInterrupted = true;
+          lastStreamError = streamError;
           // Stream error handled silently
 
           // Append recovery message if we got partial content
@@ -220,6 +222,10 @@ export function useStreamHandler(): UseStreamHandlerReturn {
             uiStore.setLastResponseId(responseId);
           }
         } else {
+          // Surface the underlying error if available; otherwise emit generic message
+          if (lastStreamError instanceof Error) {
+            throw lastStreamError;
+          }
           throw new Error('Stream interrupted before receiving any content');
         }
       } catch (error) {

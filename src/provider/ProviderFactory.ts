@@ -16,6 +16,7 @@
 
 import { OpenAIProvider } from './openai/OpenAIProvider';
 import { GeminiProvider } from './gemini/GeminiProvider';
+import { OpenRouterProvider } from './openrouter/OpenRouterProvider';
 import { ProviderRegistry } from './ProviderRegistry';
 import { getModelById } from '../config/models';
 import type {
@@ -24,9 +25,15 @@ import type {
   AIProvider,
   OpenAIConfig,
   GeminiConfig,
+  OpenRouterConfig,
   ProviderValidationResult,
 } from '../types/providers';
-import { validateOpenAIConfig, validateGeminiConfig, isProviderType } from '../types/providers';
+import {
+  validateOpenAIConfig,
+  validateGeminiConfig,
+  validateOpenRouterConfig,
+  isProviderType,
+} from '../types/providers';
 
 // ============================================================================
 // Provider Factory Class
@@ -36,7 +43,7 @@ import { validateOpenAIConfig, validateGeminiConfig, isProviderType } from '../t
  * Factory for creating and configuring AI provider instances
  */
 export class ProviderFactory {
-  private static readonly SUPPORTED_PROVIDERS: ProviderType[] = ['openai', 'gemini'];
+  private static readonly SUPPORTED_PROVIDERS: ProviderType[] = ['openai', 'gemini', 'openrouter'];
 
   // ============================================================================
   // Provider Creation
@@ -68,6 +75,9 @@ export class ProviderFactory {
         break;
       case 'gemini':
         provider = new GeminiProvider();
+        break;
+      case 'openrouter':
+        provider = new OpenRouterProvider();
         break;
       default:
         throw new Error(`Unsupported provider type: ${config.type}`);
@@ -168,6 +178,8 @@ export class ProviderFactory {
         return validateOpenAIConfig(config.config);
       case 'gemini':
         return validateGeminiConfig(config.config);
+      case 'openrouter':
+        return validateOpenRouterConfig(config.config);
       default:
         return {
           isValid: false,
@@ -316,6 +328,40 @@ export class ProviderFactory {
       model,
       thinkingBudget: '0',
       showThoughts: false,
+    };
+  }
+
+  /**
+   * Create an OpenRouter provider with specific configuration
+   * @param config OpenRouter-specific configuration
+   * @returns Configured OpenRouter provider
+   */
+  async createOpenRouterProvider(config: OpenRouterConfig): Promise<OpenRouterProvider> {
+    const providerConfig: ProviderConfig = {
+      type: 'openrouter',
+      config,
+    };
+    const provider = await this.createProvider(providerConfig);
+    // We know this is an OpenRouterProvider because we passed type: 'openrouter'
+    return provider as unknown as OpenRouterProvider;
+  }
+
+  /**
+   * Generate default OpenRouter configuration
+   * @param apiKey API key for OpenRouter
+   * @param model Model to use (defaults to anthropic/claude-sonnet-4)
+   * @returns Default OpenRouter configuration
+   */
+  createDefaultOpenRouterConfig(
+    apiKey: string,
+    model: string = 'anthropic/claude-sonnet-4'
+  ): OpenRouterConfig {
+    return {
+      apiKey,
+      model,
+      reasoning: {
+        effort: 'medium',
+      },
     };
   }
 }

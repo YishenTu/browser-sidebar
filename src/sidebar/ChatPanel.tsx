@@ -470,6 +470,8 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
           hasApiKey = !!apiKeys?.openai;
         } else if (providerType === 'gemini') {
           hasApiKey = !!apiKeys?.google;
+        } else if (providerType === 'openrouter') {
+          hasApiKey = !!apiKeys?.openrouter;
         }
 
         if (!hasApiKey) {

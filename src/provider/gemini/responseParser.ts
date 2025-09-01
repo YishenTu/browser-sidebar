@@ -11,6 +11,7 @@ import type {
   FinishReason,
   StreamChunk,
   ProviderType,
+  SearchResult,
 } from '../../types/providers';
 import type { GeminiResponse, GeminiCandidate, GeminiChatConfig } from './types';
 import { FINISH_REASON_MAP } from './types';
@@ -58,10 +59,21 @@ export function parseResponse(
   // Add search metadata if present
   const searchMetadata = extractSearchMetadata(data);
   if (searchMetadata) {
-    response.metadata = {
-      ...response.metadata,
-      searchResults: searchMetadata,
-    };
+    const formattedMetadata = searchMetadata as ReturnType<typeof formatSearchMetadata>;
+    const searchResults: SearchResult[] =
+      formattedMetadata?.sources?.map(source => ({
+        title: source.title,
+        url: source.url,
+        snippet: undefined,
+        domain: new URL(source.url).hostname,
+      })) || [];
+
+    if (searchResults.length > 0) {
+      response.metadata = {
+        ...response.metadata,
+        searchResults,
+      };
+    }
   }
 
   return response;

@@ -5,12 +5,16 @@ import '../../styles/3-components/settings.css';
 export function Settings() {
   const [openaiKey, setOpenaiKey] = useState('');
   const [geminiKey, setGeminiKey] = useState('');
+  const [openrouterKey, setOpenrouterKey] = useState('');
   const [openaiValid, setOpenaiValid] = useState<boolean | null>(null);
   const [geminiValid, setGeminiValid] = useState<boolean | null>(null);
+  const [openrouterValid, setOpenrouterValid] = useState<boolean | null>(null);
   const [openaiVerifying, setOpenaiVerifying] = useState(false);
   const [geminiVerifying, setGeminiVerifying] = useState(false);
+  const [openrouterVerifying, setOpenrouterVerifying] = useState(false);
   const [openaiMasked, setOpenaiMasked] = useState(true);
   const [geminiMasked, setGeminiMasked] = useState(true);
+  const [openrouterMasked, setOpenrouterMasked] = useState(true);
 
   // Load existing API keys on mount
   useEffect(() => {
@@ -25,6 +29,11 @@ export function Settings() {
     if (apiKeys?.google) {
       setGeminiKey(apiKeys.google);
       setGeminiValid(true); // Mark as valid if already saved
+    }
+
+    if (apiKeys?.openrouter) {
+      setOpenrouterKey(apiKeys.openrouter);
+      setOpenrouterValid(true); // Mark as valid if already saved
     }
   }, []);
 
@@ -92,13 +101,47 @@ export function Settings() {
     }
   }, [geminiKey]);
 
+  const handleVerifyAndSaveOpenRouter = useCallback(async () => {
+    if (!openrouterKey.trim()) return;
+
+    setOpenrouterVerifying(true);
+    setOpenrouterValid(null);
+
+    try {
+      // Test the OpenRouter API key with a minimal request
+      const response = await fetch('https://openrouter.ai/api/v1/models', {
+        method: 'GET',
+        headers: {
+          Authorization: `Bearer ${openrouterKey}`,
+        },
+      });
+
+      const isValid = response.ok;
+      setOpenrouterValid(isValid);
+
+      // If valid, save the key
+      if (isValid) {
+        const state = useSettingsStore.getState();
+        const currentApiKeys = state.settings.apiKeys || {};
+        const updatedApiKeys = { ...currentApiKeys, openrouter: openrouterKey };
+        await state.updateAPIKeyReferences(updatedApiKeys);
+      }
+    } catch (error) {
+      setOpenrouterValid(false);
+    } finally {
+      setOpenrouterVerifying(false);
+    }
+  }, [openrouterKey]);
+
   const handleResetAll = useCallback(async () => {
     if (confirm('Are you sure you want to remove all saved API keys?')) {
       // Clear the input fields
       setOpenaiKey('');
       setGeminiKey('');
+      setOpenrouterKey('');
       setOpenaiValid(null);
       setGeminiValid(null);
+      setOpenrouterValid(null);
 
       // Reset settings to defaults
       const resetToDefaults = useSettingsStore.getState().resetToDefaults;
@@ -192,6 +235,45 @@ export function Settings() {
           <p className="settings-status settings-status--valid">✓ API key is valid and saved</p>
         )}
         {!geminiVerifying && geminiValid === false && (
+          <p className="settings-status settings-status--invalid">✗ Invalid API key</p>
+        )}
+      </div>
+
+      {/* OpenRouter API Key */}
+      <div className="settings-section settings-section--openrouter">
+        <label className="settings-label">OpenRouter API Key</label>
+        <div className="settings-input-group">
+          <div className="settings-input-wrapper">
+            <input
+              type="text"
+              value={getMaskedValue(openrouterKey, openrouterMasked)}
+              onChange={e => {
+                if (!openrouterMasked) {
+                  setOpenrouterKey(e.target.value);
+                  setOpenrouterValid(null);
+                }
+              }}
+              onFocus={() => setOpenrouterMasked(false)}
+              onBlur={() => setOpenrouterMasked(true)}
+              placeholder="sk-or-..."
+              className={`settings-input ${openrouterMasked && openrouterKey ? 'settings-input--masked' : ''}`}
+            />
+          </div>
+          <button
+            onClick={handleVerifyAndSaveOpenRouter}
+            disabled={!openrouterKey.trim() || openrouterVerifying}
+            className="settings-button"
+          >
+            {openrouterVerifying ? 'Verifying...' : 'Verify & Save'}
+          </button>
+        </div>
+        {openrouterVerifying && (
+          <p className="settings-status settings-status--verifying">Verifying API key...</p>
+        )}
+        {!openrouterVerifying && openrouterValid === true && (
+          <p className="settings-status settings-status--valid">✓ API key is valid and saved</p>
+        )}
+        {!openrouterVerifying && openrouterValid === false && (
           <p className="settings-status settings-status--invalid">✗ Invalid API key</p>
         )}
       </div>

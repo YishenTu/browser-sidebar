@@ -13,7 +13,7 @@ export type FontSize = 'small' | 'medium' | 'large';
 /**
  * Supported AI providers - matches ProviderType from providers.ts
  */
-export type AIProvider = 'openai' | 'gemini' | null;
+export type AIProvider = 'openai' | 'gemini' | 'openrouter' | null;
 
 /**
  * AI model definition with provider and availability information
@@ -75,6 +75,8 @@ export interface APIKeyReferences {
   openai: string | null;
   /** Google/Gemini API key reference */
   google: string | null;
+  /** OpenRouter API key reference */
+  openrouter: string | null;
 }
 
 /**
@@ -130,5 +132,5 @@ export interface SettingsState {
   /** Get available models (optionally filter by availability) */
   getAvailableModels: (availableOnly?: boolean) => Model[];
   /** Get provider type for a given model ID */
-  getProviderTypeForModel: (modelId: string) => 'openai' | 'gemini' | null;
+  getProviderTypeForModel: (modelId: string) => 'openai' | 'gemini' | 'openrouter' | null;
 }

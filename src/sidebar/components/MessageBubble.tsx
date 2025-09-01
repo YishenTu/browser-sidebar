@@ -2,6 +2,7 @@ import React from 'react';
 import { ChatMessage, MessageRole, MessageStatus } from '@store/chat';
 import { MarkdownRenderer } from './MarkdownRenderer';
 import { SearchSources } from './SearchSources';
+import { ThinkingWrapper } from './ThinkingWrapper';
 import { Spinner, CopyButton, EditIcon, RegenerateIcon, WarningIcon } from './ui';
 
 /**
@@ -132,6 +133,14 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
     >
       <div className={`message-content-wrapper message-content-wrapper--${message.role}`}>
         {renderTruncationWarning()}
+        {message.role === 'assistant' && message.metadata?.['thinking'] ? (
+          <ThinkingWrapper
+            thinking={message.metadata['thinking'] as string}
+            isStreaming={(message.metadata?.['thinkingStreaming'] as boolean) || false}
+            initialCollapsed={false}
+            className="message-thinking"
+          />
+        ) : null}
 
         {/* Hover container for bubble and footer */}
         <div className={`message-hover-container message-hover-container--${message.role}`}>
