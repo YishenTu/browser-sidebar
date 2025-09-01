@@ -45,8 +45,10 @@ export function buildRequest({
   // Handle model ID and web search suffix
   // Strip any existing suffix for config lookup
   const baseModelId = config.model.split(':')[0] || config.model;
-  // Always add :online suffix for OpenRouter models to enable web search by default
-  const modelId = `${baseModelId}:online`;
+  // Optionally add :online suffix for OpenRouter models to enable web search
+  // Set enableWebSearch to true to add the suffix
+  const enableWebSearch = false; // Toggle this to enable/disable web search
+  const modelId = enableWebSearch ? `${baseModelId}:online` : baseModelId;
 
   // Build base request
   const request: OpenRouterRequestOptions = {

@@ -20,17 +20,25 @@ provider/
 │   ├── streamProcessor.ts # Stream processing
 │   ├── types.ts          # OpenAI types
 │   └── README.md         # OpenAI documentation
-└── gemini/                # Gemini provider implementation
-    ├── GeminiProvider.ts  # Gemini-specific logic
-    ├── GeminiClient.ts    # API client wrapper
-    ├── errorHandler.ts    # Gemini error handling
-    ├── index.ts          # Gemini exports
+├── gemini/                # Gemini provider implementation
+│   ├── GeminiProvider.ts  # Gemini-specific logic
+│   ├── GeminiClient.ts    # API client wrapper
+│   ├── errorHandler.ts    # Gemini error handling
+│   ├── index.ts          # Gemini exports
+│   ├── requestBuilder.ts  # Request construction
+│   ├── responseParser.ts  # Response parsing
+│   ├── searchMetadata.ts  # Search metadata handling
+│   ├── streamProcessor.ts # Stream processing
+│   ├── types.ts          # Gemini types
+│   └── README.md         # Gemini documentation
+└── openrouter/            # OpenRouter provider implementation
+    ├── OpenRouterProvider.ts  # OpenRouter-specific logic
+    ├── OpenRouterClient.ts    # API client wrapper
+    ├── errorHandler.ts    # OpenRouter error handling
+    ├── index.ts          # OpenRouter exports
     ├── requestBuilder.ts  # Request construction
-    ├── responseParser.ts  # Response parsing
-    ├── searchMetadata.ts  # Search metadata handling
     ├── streamProcessor.ts # Stream processing
-    ├── types.ts          # Gemini types
-    └── README.md         # Gemini documentation
+    └── types.ts          # OpenRouter types
 ```
 
 ## Architecture Overview
@@ -46,9 +54,13 @@ Provider Interface (unified API)
     ├─ OpenAI Provider
     │   ├─ GPT-5 Models
     │   └─ Response API
-    └─ Gemini Provider
-        ├─ Gemini 2.5 Models
-        └─ GenerateContent API
+    ├─ Gemini Provider
+    │   ├─ Gemini 2.5 Models
+    │   └─ GenerateContent API
+    └─ OpenRouter Provider
+        ├─ Multiple Model Access
+        ├─ Unified API Gateway
+        └─ Web Search Integration
 ```
 
 ## Core Components
@@ -186,6 +198,44 @@ Located in `gemini/` subdirectory.
 }
 ```
 
+### OpenRouter Provider
+
+Located in `openrouter/` subdirectory.
+
+**Supported Models:**
+
+- `anthropic/claude-sonnet-4` - Claude Sonnet 4 with reasoning
+- Any OpenRouter-supported model can be added via configuration
+
+**Key Features:**
+
+- Access to 200+ models through single API
+- Automatic web search integration (`:online` suffix)
+- Unified streaming format
+- Model-specific reasoning support:
+  - Anthropic models: `max_tokens` for reasoning
+  - OpenAI/DeepSeek models: `effort`-based reasoning
+- Prompt caching for Anthropic/Gemini models
+- Search result metadata extraction
+
+**Configuration:**
+
+```typescript
+{
+  apiKey: string;        // Required OpenRouter API key
+  model: string;         // Model selection (e.g., 'anthropic/claude-sonnet-4')
+  reasoning?: {          // Optional reasoning configuration
+    maxTokens?: number;  // For Anthropic models
+    effort?: 'minimal' | 'low' | 'medium' | 'high'; // For OpenAI/DeepSeek
+    exclude?: boolean;   // Disable reasoning
+  };
+}
+```
+
+**Web Search:**
+
+OpenRouter automatically enables web search by appending `:online` to model IDs. Search results are extracted from annotations and available in the stream metadata.
+
 ## Streaming Architecture
 
 ### Processing Pipeline
@@ -206,7 +256,7 @@ UI Component
 
 **Supported Formats:**
 
-- Server-Sent Events (SSE) - OpenAI
+- Server-Sent Events (SSE) - OpenAI, OpenRouter
 - Newline-Delimited JSON (NDJSON) - Gemini
 
 **Features:**
@@ -430,9 +480,9 @@ if (DEBUG) console.log('Provider:', data);
 ### Planned Features
 
 1. **Additional Providers**
-   - Claude API
    - Local models (Ollama)
    - Custom providers
+   - Direct Claude API (in addition to OpenRouter access)
 
 2. **Advanced Streaming**
    - WebSocket support

@@ -23,7 +23,6 @@ import remarkMath from 'remark-math';
 import rehypeSanitize, { defaultSchema } from 'rehype-sanitize';
 import rehypeKatex from 'rehype-katex';
 import { CodeBlock } from './CodeBlock';
-import 'katex/dist/katex.min.css';
 
 // =============================================================================
 // Types and Interfaces
@@ -225,29 +224,8 @@ type HeadingProps = React.HTMLAttributes<HTMLElement> & {
 };
 const HeadingRenderer = ({ level, children }: HeadingProps) => {
   const Tag = `h${level}` as keyof JSX.IntrinsicElements;
-
-  const getHeadingClasses = (level: number): string => {
-    const baseClasses = 'font-bold text-gray-900 dark:text-gray-100';
-
-    switch (level) {
-      case 1:
-        return `${baseClasses} text-2xl m-0 p-0 leading-tight`;
-      case 2:
-        return `${baseClasses} text-xl m-0 p-0 leading-tight`;
-      case 3:
-        return `${baseClasses} text-lg m-0 p-0 leading-tight`;
-      case 4:
-        return `${baseClasses} text-base m-0 p-0 leading-tight`;
-      case 5:
-        return `${baseClasses} text-sm m-0 p-0 leading-tight`;
-      case 6:
-        return `${baseClasses} text-xs m-0 p-0 leading-tight`;
-      default:
-        return `${baseClasses} text-base m-0 p-0 leading-tight`;
-    }
-  };
-
-  return <Tag className={getHeadingClasses(level)}>{children}</Tag>;
+  // Keep markup minimal; spacing and typography handled in CSS
+  return <Tag className="markdown-heading">{children}</Tag>;
 };
 
 /**
@@ -272,21 +250,7 @@ const ListRenderer = ({
 }) => {
   const Tag = ordered ? 'ol' : 'ul';
 
-  // Force minimal indentation with inline styles that override everything
-  const listStyle: React.CSSProperties = {
-    paddingLeft: '12px', // Ultra minimal space for bullets/numbers
-    marginLeft: '0',
-    margin: '0',
-    listStylePosition: 'outside',
-  };
-
-  const listClasses = ordered ? 'list-decimal m-0 p-0' : 'list-disc m-0 p-0';
-
-  return (
-    <Tag className={listClasses} style={listStyle} {...props}>
-      {children}
-    </Tag>
-  );
+  return <Tag {...props}>{children}</Tag>;
 };
 
 /**
@@ -337,7 +301,6 @@ const LinkRenderer = ({
       target={isExternal ? '_blank' : undefined}
       rel={isExternal ? 'noopener noreferrer' : undefined}
       onClick={handleClick}
-      className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 underline"
       aria-label={`Link to ${href}`}
       {...props}
     >
@@ -350,12 +313,7 @@ const LinkRenderer = ({
  * Custom code renderer (inline)
  */
 const InlineCodeRenderer = ({ children, ...props }: React.ComponentProps<'code'>) => (
-  <code
-    className="bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100 px-1 rounded text-sm font-mono"
-    {...props}
-  >
-    {children}
-  </code>
+  <code {...props}>{children}</code>
 );
 
 // We will render both inline and block code via the `code` component mapping below.
@@ -363,21 +321,14 @@ const InlineCodeRenderer = ({ children, ...props }: React.ComponentProps<'code'>
 /**
  * Custom horizontal rule renderer
  */
-const HrRenderer = (props: React.ComponentProps<'hr'>) => (
-  <hr className="border-gray-300 dark:border-gray-600 my-1" {...props} />
-);
+const HrRenderer = (props: React.ComponentProps<'hr'>) => <hr className="markdown-hr" {...props} />;
 
 /**
  * Custom table renderer
  */
 const TableRenderer = ({ children, ...props }: React.ComponentProps<'table'>) => (
   <div className="overflow-x-auto">
-    <table
-      className="min-w-full border-collapse border border-gray-300 dark:border-gray-600"
-      {...props}
-    >
-      {children}
-    </table>
+    <table {...props}>{children}</table>
   </div>
 );
 
@@ -385,48 +336,32 @@ const TableRenderer = ({ children, ...props }: React.ComponentProps<'table'>) =>
  * Custom table head renderer
  */
 const TheadRenderer = ({ children, ...props }: React.ComponentProps<'thead'>) => (
-  <thead className="bg-gray-50 dark:bg-gray-800" {...props}>
-    {children}
-  </thead>
+  <thead {...props}>{children}</thead>
 );
 
 /**
  * Custom table body renderer
  */
 const TbodyRenderer = ({ children, ...props }: React.ComponentProps<'tbody'>) => (
-  <tbody className="divide-y divide-gray-200 dark:divide-gray-700" {...props}>
-    {children}
-  </tbody>
+  <tbody {...props}>{children}</tbody>
 );
 
 /**
  * Custom table row renderer
  */
 const TrRenderer = ({ children, ...props }: React.ComponentProps<'tr'>) => (
-  <tr className="hover:bg-gray-50 dark:hover:bg-gray-800" {...props}>
-    {children}
-  </tr>
+  <tr {...props}>{children}</tr>
 );
 
 /**
  * Custom table cell renderers
  */
 const ThRenderer = ({ children, ...props }: React.ComponentProps<'th'>) => (
-  <th
-    className="border border-gray-300 dark:border-gray-600 px-2 py-1 bg-gray-100 dark:bg-gray-800 font-semibold text-left"
-    {...props}
-  >
-    {children}
-  </th>
+  <th {...props}>{children}</th>
 );
 
 const TdRenderer = ({ children, ...props }: React.ComponentProps<'td'>) => (
-  <td
-    className="border border-gray-300 dark:border-gray-600 px-2 py-1 text-gray-800 dark:text-gray-200"
-    {...props}
-  >
-    {children}
-  </td>
+  <td {...props}>{children}</td>
 );
 
 // =============================================================================
@@ -472,7 +407,13 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({
         // Render KaTeX first, then sanitize its output
         [
           rehypeKatex as typeof rehypeKatex,
-          { throwOnError: false, strict: 'ignore', trust: false, errorColor: '#ef4444' },
+          {
+            throwOnError: false,
+            strict: 'ignore',
+            trust: false,
+            errorColor: '#ef4444',
+            output: 'html', // Only output HTML, not MathML
+          },
         ],
         ...(sanitizeHtml
           ? [[rehypeSanitize, sanitizeSchema] as [typeof rehypeSanitize, typeof sanitizeSchema]]
@@ -523,7 +464,7 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({
                 codeText = String(codeElement.props.children);
               }
 
-              return <CodeBlock code={codeText} language={language} className="m-0" />;
+              return <CodeBlock code={codeText} language={language} />;
             }
           }
 

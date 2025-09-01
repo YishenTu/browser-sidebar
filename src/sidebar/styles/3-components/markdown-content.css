@@ -7,8 +7,10 @@
 /* Ensure markdown paragraphs use base font size with higher specificity */
 .ai-sidebar-container .ai-sidebar-body p,
 .ai-sidebar-container [role='article'] p {
-  font-size: var(--md-font-size, var(--font-size-base)); /* 14px */
-  line-height: var(--md-line-height, var(--line-height-base)); /* 1.4 */
+  font-size: var(--md-font-size, var(--font-size-base));
+  /* 14px */
+  line-height: var(--md-line-height, var(--line-height-base));
+  /* 1.4 */
 }
 
 /* Code blocks will be handled by the new minimal component */
@@ -23,24 +25,44 @@
 
 /* Markdown paragraph styles */
 .markdown-p {
-  margin: 0;
+  margin: 0.75em 0;
   padding: 0;
-  line-height: inherit;
+  line-height: 1.6;
   text-align: inherit;
   color: inherit;
 }
 
+/* Inline code (exclude code blocks) */
+.markdown-renderer :not(pre) > code {
+  background: var(--code-bg);
+  color: var(--code-text);
+  padding: 0 0.25rem;
+  border-radius: var(--radius-sm);
+  font-family: var(--font-family-mono);
+  font-size: 0.875em; /* slightly smaller than body */
+}
+
+/* Markdown heading styles: ensure consistent vertical rhythm */
+.markdown-renderer h1,
+.markdown-renderer h2,
+.markdown-renderer h3,
+.markdown-renderer h4,
+.markdown-renderer h5,
+.markdown-renderer h6 {
+  /* Equal vertical spacing for headings */
+  margin-top: 0.75em;
+  margin-bottom: 0.75em;
+}
+
 /* Markdown blockquote styles */
 .markdown-blockquote {
-  margin: 0;
-  padding-left: 4px;
-  padding-top: 0;
-  padding-bottom: 0;
-  padding-right: 0;
-  border-left: 2px solid #3b82f6;
+  margin: 1em 0;
+  padding: 0.75em 1em;
+  border-left: 3px solid #3b82f6;
   background: rgba(59, 130, 246, 0.1);
   font-style: italic;
   color: #9ca3af;
+  line-height: 1.6;
 }
 
 [data-theme='light'] .markdown-blockquote {
@@ -50,9 +72,41 @@
 
 /* Markdown list item styles */
 .markdown-li {
-  margin: 0;
+  margin: 0.25em 0;
   padding: 0;
+  line-height: 1.6;
   color: inherit;
+}
+
+/* Lists: reset.css removes default bullets; restore for markdown */
+.markdown-renderer ul {
+  list-style: disc outside;
+  padding-left: 16px;
+  margin: 0.75em 0;
+}
+
+.markdown-renderer ol {
+  list-style: decimal outside;
+  padding-left: 16px;
+  margin: 0.75em 0;
+}
+
+/* Links inside markdown */
+.markdown-renderer a {
+  color: var(--text-link);
+  text-decoration: underline;
+}
+.markdown-renderer a:hover {
+  color: var(--text-link-hover);
+}
+
+/* Markdown horizontal rule styles - override reset.css */
+.markdown-hr {
+  margin: 1.5rem 0 !important;
+  padding: 0;
+  height: 0;
+  border: 0;
+  border-top: 1px solid var(--border-secondary);
 }
 
 /* Markdown list styles - handled by component with inline styles for now */
@@ -68,7 +122,8 @@
   max-width: 100%;
   border-collapse: collapse;
   margin: 1em 0;
-  font-size: var(--font-size-sm); /* Tables stay smaller for readability */
+  font-size: var(--font-size-sm);
+  /* Tables stay smaller for readability */
 }
 
 .ai-sidebar-container .ai-sidebar-body thead {

@@ -34,6 +34,8 @@
 @import './3-components/copy-button.css' layer(components);
 @import './3-components/dropdown.css' layer(components);
 @import './3-components/fullscreen-modal.css' layer(components);
+/* KaTeX base styles must be inside Shadow DOM */
+@import 'katex/dist/katex.min.css' layer(components);
 @import './3-components/katex-math.css' layer(components);
 @import './3-components/markdown-content.css' layer(components);
 @import './3-components/message-bubbles.css' layer(components);

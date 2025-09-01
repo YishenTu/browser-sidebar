@@ -38,7 +38,8 @@
 
 .model-selector .dropdown__trigger:hover:not(:disabled),
 .model-selector__trigger:hover:not(:disabled) {
-  background: rgba(75, 85, 99, 0.2); /* Subtle hover background */
+  /* Remove hover background - no visual change on hover */
+  background: transparent;
   border: none;
 }
 

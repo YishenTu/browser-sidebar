@@ -3,6 +3,18 @@
  * Mathematical equations and formula display
  * ============================================================================= */
 
+/* Hide MathML output if it's still being generated despite output: 'html' */
+.katex-mathml {
+  /* Using position absolute and clip to hide while keeping accessibility */
+  position: absolute !important;
+  clip: rect(1px, 1px, 1px, 1px) !important;
+  padding: 0 !important;
+  border: 0 !important;
+  height: 1px !important;
+  width: 1px !important;
+  overflow: hidden !important;
+}
+
 /* Override KaTeX colors for dark theme compatibility */
 .katex {
   font-size: 1.1em;
