@@ -136,6 +136,17 @@ const normalizeDisplayMathSafely = (input: string): string => {
     return `__MD_CODE_INLINE_${idx}__`;
   });
 
+  // Escape currency dollars so remark-math doesn't treat them as inline math
+  // Patterns:
+  //  - $123 or $ 123 or $-123 (minus can be hyphen or U+2212)
+  //  - $(123) common negative format in finance
+  // Do NOT touch math like $E=mc^2$ (letter after $)
+  text = text
+    // $[spaces][- or −]digits
+    .replace(/\$(?=\s*[-−]?\d)/g, '\\$')
+    // $( [spaces][- or −]? digits )
+    .replace(/\$(?=\s*\(\s*[-−]?\d)/g, '\\$');
+
   // Normalize display math: safely convert $$...$$ to block form without lookbehind
   {
     let i = 0;
