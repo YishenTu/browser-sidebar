@@ -28,28 +28,63 @@ export function processStreamChunk(chunk: ChatCompletionChunk): StreamChunk | nu
 
   // Process choices
   for (const choice of chunk.choices) {
+    // Handle both message and delta structures
+    const data = (choice as any).message || choice.delta;
+
     // Normalize reasoning across providers
-    const deltaWithReasoning = choice.delta as {
+    const deltaWithReasoning = data as {
       reasoning?: string;
-      reasoning_details?: Array<
-        | { type: 'reasoning.text'; text?: string }
-        | { type: 'reasoning.summary'; summary?: string }
-        | { type: string; [k: string]: unknown }
-      >;
-    } & typeof choice.delta;
+      reasoning_details?: Array<{
+        type: 'reasoning.text' | 'reasoning.summary' | 'reasoning.encrypted';
+        text?: string;
+        summary?: string;
+        data?: string;
+        id?: string;
+        format?: string;
+        index?: number;
+        signature?: string | null;
+      }>;
+    } & typeof data;
 
     let thinking: string | undefined;
-    if (typeof deltaWithReasoning?.reasoning === 'string') {
+
+    // First check for simple reasoning field (used by some models)
+    if (typeof deltaWithReasoning?.reasoning === 'string' && deltaWithReasoning.reasoning) {
       thinking = deltaWithReasoning.reasoning;
-    } else if (Array.isArray(deltaWithReasoning?.reasoning_details)) {
-      // Concatenate any text/summary details for a simple thinking view
+    }
+    // Then check for reasoning_details array (OpenAI/Anthropic format)
+    else if (
+      Array.isArray(deltaWithReasoning?.reasoning_details) &&
+      deltaWithReasoning.reasoning_details.length > 0
+    ) {
+      // Process reasoning_details according to the documented format
       const parts: string[] = [];
-      for (const d of deltaWithReasoning.reasoning_details) {
-        if ('text' in d && typeof (d as any).text === 'string') parts.push((d as any).text);
-        if ('summary' in d && typeof (d as any).summary === 'string')
-          parts.push((d as any).summary);
+      for (const detail of deltaWithReasoning.reasoning_details) {
+        switch (detail.type) {
+          case 'reasoning.text':
+            if (detail.text) parts.push(detail.text);
+            break;
+          case 'reasoning.summary':
+            if (detail.summary) parts.push(detail.summary);
+            break;
+          case 'reasoning.encrypted':
+            // Skip encrypted reasoning or show placeholder
+            if (detail.data && detail.data !== '[REDACTED]') {
+              parts.push('[Reasoning content]');
+            }
+            break;
+          default:
+            // Handle any other type that might have text or summary
+            if ('text' in detail && detail.text) {
+              parts.push(detail.text as string);
+            } else if ('summary' in detail && detail.summary) {
+              parts.push(detail.summary as string);
+            }
+        }
       }
-      if (parts.length) thinking = parts.join('\n');
+      if (parts.length > 0) {
+        thinking = parts.join('\n');
+      }
     }
 
     const processedChoice = {
@@ -92,25 +127,6 @@ export function processStreamChunk(chunk: ChatCompletionChunk): StreamChunk | nu
       streamChunk.metadata = {
         searchResults: { sources: searchResults },
       };
-    }
-  }
-
-  // Extract cache discount from usage if present
-  if (chunk.usage) {
-    const usageWithCache = chunk.usage as {
-      cache_creation_input_tokens?: number;
-      cache_read_input_tokens?: number;
-    } & typeof chunk.usage;
-    if (usageWithCache.cache_creation_input_tokens || usageWithCache.cache_read_input_tokens) {
-      const cacheTokens =
-        (usageWithCache.cache_creation_input_tokens || 0) +
-        (usageWithCache.cache_read_input_tokens || 0);
-      if (cacheTokens > 0) {
-        streamChunk.metadata = {
-          ...streamChunk.metadata,
-          cacheDiscount: cacheTokens,
-        };
-      }
     }
   }
 

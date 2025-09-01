@@ -102,7 +102,7 @@ src/provider/openrouter/
   - `model`: append `:online` unless already present.
   - `messages`: convert to OpenAI Chat format; put system prompt into a leading `system` message if provided.
   - `stream: true` always.
-  - `usage: { include: true }` to surface cache/usage in tail event.
+  - (Removed) usage inclusion: do not set `usage: { include: true }` in requests.
   - Reasoning:
     - If model slug starts with `anthropic/`: `reasoning: { max_tokens: config.reasoning?.maxTokens ?? 8000 }` (ensure budget leaves output tokens).
     - If starts with `openai/` (or other models that support effort): `reasoning: { effort: config.reasoning?.effort ?? 'medium', ...(config.reasoning?.exclude ? { exclude: true } : {}) }`.
@@ -140,7 +140,7 @@ src/provider/openrouter/
 ## Prompt Caching
 
 - Anthropic/Gemini via OpenRouter: support `cache_control` breakpoints on large parts only.
-- Add `usage: { include: true }` and surface `cache_discount` in `ProviderResponse.metadata.cacheDiscount` if present.
+- Do not include `usage` in requests. If providers emit usage/cache tokens implicitly, surface `cache_discount` in `ProviderResponse.metadata.cacheDiscount` when present.
 
 ## Performance Notes
 

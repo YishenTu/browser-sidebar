@@ -7,10 +7,10 @@ export interface ModelConfig {
   id: string;
   name: string;
   provider: 'openai' | 'gemini' | 'openrouter';
-  // OpenAI specific
-  reasoningEffort?: 'minimal' | 'low' | 'medium' | 'high';
   // Gemini specific - '0' for off, '-1' for dynamic
   thinkingBudget?: '0' | '-1';
+  // OpenAI specific
+  reasoningEffort?: 'minimal' | 'low' | 'medium' | 'high';
   // OpenRouter specific - max tokens for Anthropic models
   reasoningMaxTokens?: number;
   // Note: OpenRouter models can use either reasoningEffort (for OpenAI/DeepSeek models)
@@ -61,14 +61,10 @@ export const SUPPORTED_MODELS: ModelConfig[] = [
     provider: 'openrouter',
     reasoningMaxTokens: 8000, // Anthropic models use max_tokens for reasoning
   },
-  // You can add more OpenRouter models here with their specific configs:
-  // {
-  //   id: 'openai/gpt-4o',
-  //   name: 'GPT-4o (OpenRouter)',
-  //   provider: 'openrouter',
-  //   reasoningEffort: 'medium', // OpenAI models via OpenRouter use effort
-  // },
-  // Append more models as needed
+  // Add more OpenRouter models as needed - just specify either:
+  // - reasoningEffort for OpenAI/DeepSeek/Grok models
+  // - reasoningMaxTokens for Anthropic models
+  // - neither if the model doesn't support reasoning
 ];
 
 export const DEFAULT_MODEL_ID = 'gpt-5-nano';

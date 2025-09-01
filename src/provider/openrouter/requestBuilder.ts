@@ -3,7 +3,7 @@
  */
 
 import type { ProviderChatMessage, OpenRouterConfig } from '@/types/providers';
-import type { OpenRouterRequestOptions, OpenRouterTextPart } from './types';
+import type { OpenRouterRequestOptions } from './types';
 import { getModelById } from '@/config/models';
 
 interface BuildRequestOptions {
@@ -42,11 +42,11 @@ export function buildRequest({
     }
   }
 
-  // Model slug for this request. Enable Web Search by default via `:online`.
-  // Do NOT mutate the stored model id; only alter the request-time slug.
-  // If the caller already included `:online`, respect it.
-  const baseModelId = config.model;
-  const modelId = baseModelId.includes(':online') ? baseModelId : `${baseModelId}:online`;
+  // Handle model ID and web search suffix
+  // Strip any existing suffix for config lookup
+  const baseModelId = config.model.split(':')[0] || config.model;
+  // Always add :online suffix for OpenRouter models to enable web search by default
+  const modelId = `${baseModelId}:online`;
 
   // Build base request
   const request: OpenRouterRequestOptions = {
@@ -56,58 +56,57 @@ export function buildRequest({
   };
 
   // Add reasoning configuration based on model
-  // Use the base model id for lookup (exclude transient suffix like :online)
+  // Use the base model id for lookup (exclude any suffix)
   const modelConfig = getModelById(baseModelId);
 
-  if (modelId.startsWith('anthropic/')) {
-    // Anthropic models use max_tokens for reasoning
-    const defaultMaxTokens = modelConfig?.reasoningMaxTokens ?? 8000;
-    request.reasoning = {
-      max_tokens: config.reasoning?.maxTokens ?? defaultMaxTokens,
-    };
-  } else if (modelId.startsWith('openai/') || modelId.startsWith('deepseek/')) {
-    // OpenAI and DeepSeek models use effort-based reasoning
-    const defaultEffort = modelConfig?.reasoningEffort ?? 'medium';
-    const effort = config.reasoning?.effort ?? defaultEffort;
-    // Map "minimal" to "low" for OpenAI compatibility
-    const mappedEffort = effort === 'minimal' ? 'low' : effort;
-    request.reasoning = {
-      effort: mappedEffort as 'low' | 'medium' | 'high',
-      ...(config.reasoning?.exclude ? { exclude: true } : {}),
-    };
-  }
+  // Check if model config specifies reasoning support
+  if (modelConfig && (modelConfig.reasoningEffort || modelConfig.reasoningMaxTokens)) {
+    // Build reasoning configuration according to model's configuration
+    const reasoning: any = {};
 
-  // Add cache_control on message text parts for large bodies (Anthropic/Gemini via OpenRouter)
-  if (modelId.startsWith('anthropic/') || modelId.startsWith('google/')) {
-    const shouldCache = (text: string) => text.length > 2000;
-
-    // System prompt
-    if (typeof request.messages[0]?.content === 'string' && request.messages[0].role === 'system') {
-      const text = request.messages[0].content as string;
-      if (shouldCache(text)) {
-        const part: OpenRouterTextPart = {
-          type: 'text',
-          text,
-          cache_control: { type: 'ephemeral' },
-        };
-        request.messages[0].content = [part];
-      }
+    if (modelConfig.reasoningMaxTokens !== undefined) {
+      // Model uses max_tokens for reasoning (e.g., Anthropic models)
+      reasoning.max_tokens = config.reasoning?.maxTokens ?? modelConfig.reasoningMaxTokens;
+    } else if (modelConfig.reasoningEffort !== undefined) {
+      // Model uses effort-based reasoning (e.g., OpenAI, DeepSeek models)
+      reasoning.effort = config.reasoning?.effort ?? modelConfig.reasoningEffort;
     }
 
-    // User messages
+    // Add exclude flag if specified
+    if (config.reasoning?.exclude) {
+      reasoning.exclude = true;
+    }
+
+    // Add reasoning configuration if we have any settings
+    if (Object.keys(reasoning).length > 0) {
+      request.reasoning = reasoning;
+    }
+  }
+
+  // Add cache_control for models that support it
+  // Only cache large content blocks (>2000 chars) to maximize efficiency
+  if (modelConfig && supportsCaching(baseModelId)) {
+    const shouldCache = (text: string) => text.length > 2000;
+
     for (let i = 0; i < request.messages.length; i++) {
       const msg = request.messages[i];
-      if (msg && msg.role === 'user' && typeof msg.content === 'string') {
-        const text = msg.content as string;
-        if (shouldCache(text)) {
-          const part: OpenRouterTextPart = {
+      if (!msg) continue;
+
+      if (typeof msg.content === 'string' && shouldCache(msg.content)) {
+        // Convert string content to multipart format with cache_control
+        const text = msg.content;
+        msg.content = [
+          {
             type: 'text',
-            text,
+            text: text,
             cache_control: { type: 'ephemeral' },
-          };
-          const message = request.messages[i];
-          if (message) {
-            message.content = [part];
+          },
+        ];
+      } else if (Array.isArray(msg.content)) {
+        // For existing multipart content, add cache_control to large text parts
+        for (const part of msg.content) {
+          if (part.type === 'text' && part.text && shouldCache(part.text) && !part.cache_control) {
+            part.cache_control = { type: 'ephemeral' };
           }
         }
       }
@@ -121,16 +120,19 @@ export function buildRequest({
  * Check if a model supports reasoning
  */
 export function supportsReasoning(modelId: string): boolean {
-  return (
-    modelId.startsWith('anthropic/') ||
-    modelId.startsWith('openai/') ||
-    modelId.startsWith('deepseek/')
-  );
+  // Strip any suffix before lookup
+  const baseId = modelId.split(':')[0] || modelId;
+  const modelConfig = getModelById(baseId);
+  return !!(modelConfig && (modelConfig.reasoningEffort || modelConfig.reasoningMaxTokens));
 }
 
 /**
  * Check if a model supports caching
  */
 export function supportsCaching(modelId: string): boolean {
-  return modelId.startsWith('anthropic/') || modelId.startsWith('google/');
+  // Strip any suffix before checking
+  const baseId = modelId.split(':')[0] || modelId;
+  // For now, cache support is still based on provider prefixes
+  // This could be moved to ModelConfig in the future if needed
+  return baseId.startsWith('anthropic/') || baseId.startsWith('google/');
 }
