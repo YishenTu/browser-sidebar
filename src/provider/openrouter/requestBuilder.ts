@@ -42,12 +42,14 @@ export function buildRequest({
     }
   }
 
-  // Get model ID and append :online suffix for web search
-  const modelId = config.model;
+  // Model slug for this request. Enable Web Search by default via `:online`.
+  // Do NOT mutate the stored model id; only alter the request-time slug.
+  // If the caller already included `:online`, respect it.
+  const baseModelId = config.model;
+  const modelId = baseModelId.includes(':online') ? baseModelId : `${baseModelId}:online`;
 
   // Build base request
   const request: OpenRouterRequestOptions = {
-    // Do NOT mutate model id. Respect caller-selected slug (may already include ':online' or native search).
     model: modelId,
     messages: formattedMessages,
     stream: true,

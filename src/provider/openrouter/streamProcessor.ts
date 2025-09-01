@@ -90,7 +90,7 @@ export function processStreamChunk(chunk: ChatCompletionChunk): StreamChunk | nu
 
     if (searchResults.length > 0) {
       streamChunk.metadata = {
-        searchResults,
+        searchResults: { sources: searchResults },
       };
     }
   }
@@ -203,7 +203,7 @@ export function processSSELine(line: string): StreamChunk | null {
       if (searchResults.length > 0) {
         streamChunk.metadata = {
           ...streamChunk.metadata,
-          searchResults,
+          searchResults: { sources: searchResults },
         };
       }
     }
