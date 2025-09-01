@@ -4,7 +4,7 @@
 - [x] 2. copy button for both user msg and ai response
 - [x] 3. regeneration button for ai response
 - [x] 4. edit button for user msg
-- [ ] 5. latex render fix
+- [x] 5. latex render fix
 - [x] 6. reasoning summary
 - [x] 7. web search
 - [x] 8. openai use response id to maintain chat history
@@ -22,8 +22,8 @@
 
 # Setting Re-factor
 
-1. implement openrouter provider (default model: claude sonnet 4)
-2. openai compatible provider: deepseek, kimi, qwen
-3. new setting UI, build up openai_compatible/ , integrating with new UI
-4. turn config/ into defaultConfig/
-5. slash command integration
+- [x] 1. implement openrouter provider (default model: claude sonnet 4)
+- [ ] 2. openai compatible provider: deepseek, kimi, qwen
+- [ ] 3. new setting UI, build up openai_compatible/ , integrating with new UI
+- [ ] 4. turn config/ into defaultConfig/
+- [ ] 5. slash command integration
