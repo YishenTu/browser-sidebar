@@ -17,6 +17,7 @@
 import { OpenAIProvider } from './openai/OpenAIProvider';
 import { GeminiProvider } from './gemini/GeminiProvider';
 import { OpenRouterProvider } from './openrouter/OpenRouterProvider';
+import { OpenAICompatibleProvider } from './openai-compat/OpenAICompatibleProvider';
 import { ProviderRegistry } from './ProviderRegistry';
 import { getModelById } from '../config/models';
 import type {
@@ -32,6 +33,7 @@ import {
   validateOpenAIConfig,
   validateGeminiConfig,
   validateOpenRouterConfig,
+  validateOpenAICompatibleConfig,
   isProviderType,
 } from '../types/providers';
 
@@ -43,7 +45,12 @@ import {
  * Factory for creating and configuring AI provider instances
  */
 export class ProviderFactory {
-  private static readonly SUPPORTED_PROVIDERS: ProviderType[] = ['openai', 'gemini', 'openrouter'];
+  private static readonly SUPPORTED_PROVIDERS: ProviderType[] = [
+    'openai',
+    'gemini',
+    'openrouter',
+    'openai_compat',
+  ];
 
   // ============================================================================
   // Provider Creation
@@ -78,6 +85,9 @@ export class ProviderFactory {
         break;
       case 'openrouter':
         provider = new OpenRouterProvider();
+        break;
+      case 'openai_compat':
+        provider = new OpenAICompatibleProvider();
         break;
       default:
         throw new Error(`Unsupported provider type: ${config.type}`);
@@ -180,6 +190,8 @@ export class ProviderFactory {
         return validateGeminiConfig(config.config);
       case 'openrouter':
         return validateOpenRouterConfig(config.config);
+      case 'openai_compat':
+        return validateOpenAICompatibleConfig(config.config);
       default:
         return {
           isValid: false,

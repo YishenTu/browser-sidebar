@@ -15,7 +15,13 @@ import type {
   APIKeyReferences,
   Model,
 } from '@/types/settings';
-import { SUPPORTED_MODELS, DEFAULT_MODEL_ID, getProviderTypeForModelId } from '@/config/models';
+import {
+  SUPPORTED_MODELS,
+  DEFAULT_MODEL_ID,
+  getProviderTypeForModelId,
+  getModelsByProviderId,
+} from '@/config/models';
+import { listOpenAICompatProviders } from '@/data/storage/keys/compat';
 
 /**
  * Current settings schema version
@@ -510,5 +516,65 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
     const { availableModels } = get().settings;
     const model = availableModels.find(m => m.id === modelId);
     return model ? getProviderTypeFromModel(model) : null;
+  },
+
+  /**
+   * Refresh available models to include OpenAI-compatible providers
+   */
+  refreshAvailableModelsWithCompat: async () => {
+    try {
+      const currentSettings = get().settings;
+      const allModels: Model[] = [...DEFAULT_AVAILABLE_MODELS];
+
+      // Get all configured compat providers
+      const compatProviders = await listOpenAICompatProviders();
+
+      for (const provider of compatProviders) {
+        const knownProviders = ['deepseek', 'qwen', 'zhipu', 'kimi'];
+
+        if (knownProviders.includes(provider.id)) {
+          // For built-in providers, get their predefined models
+          const providerModels = getModelsByProviderId(provider.id);
+
+          // Add models that aren't already in the list
+          for (const model of providerModels) {
+            if (!allModels.some(m => m.id === model.id)) {
+              allModels.push({
+                id: model.id,
+                name: model.name,
+                provider: model.provider,
+                available: true,
+              });
+            }
+          }
+        } else if (provider.model) {
+          // For custom providers with a default model
+          const customModel: Model = {
+            id: provider.model.id,
+            name: provider.model.name,
+            provider: provider.name,
+            available: true,
+          };
+
+          // Add if not already present
+          if (!allModels.some(m => m.id === customModel.id)) {
+            allModels.push(customModel);
+          }
+        }
+      }
+
+      // Update the available models in settings with a new array to ensure change detection
+      const updatedSettings = {
+        ...currentSettings,
+        availableModels: [...allModels], // Force new array reference
+      };
+
+      set({ settings: updatedSettings });
+
+      // Save to storage
+      await saveToStorage(updatedSettings);
+    } catch (error) {
+      console.error('Failed to refresh models with compat providers:', error);
+    }
   },
 }));

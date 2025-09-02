@@ -363,7 +363,7 @@ export class ProviderRegistry {
         'getModel',
         'formatError',
       ],
-      validTypes: ['openai', 'gemini', 'openrouter'] as const,
+      validTypes: ['openai', 'gemini', 'openrouter', 'openai_compat'] as const,
       requiredCapabilities: [
         'streaming',
         'temperature',

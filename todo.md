@@ -9,7 +9,7 @@
 - [x] 7. web search
 - [x] 8. openai use response id to maintain chat history
 - [x] 9. system prompt
-- [ ] 10.
+- [ ] 10. proper encryption for api keys
 - [x] 11. multi tab extraction
 - [x] 12. handle selection
 - [x] 13. full html extraction approach
@@ -17,6 +17,7 @@
 - [ ] 15. more provider
 - [ ] 16. openai compatible provider
 - [ ] 17. slash command
+- [ ] 18. msg routing through backend proxy?
 
 ---
 

@@ -13,7 +13,7 @@ export type FontSize = 'small' | 'medium' | 'large';
 /**
  * Supported AI providers - matches ProviderType from providers.ts
  */
-export type AIProvider = 'openai' | 'gemini' | 'openrouter' | null;
+export type AIProvider = 'openai' | 'gemini' | 'openrouter' | 'openai_compat' | null;
 
 /**
  * AI model definition with provider and availability information
@@ -133,4 +133,6 @@ export interface SettingsState {
   getAvailableModels: (availableOnly?: boolean) => Model[];
   /** Get provider type for a given model ID */
   getProviderTypeForModel: (modelId: string) => 'openai' | 'gemini' | 'openrouter' | null;
+  /** Refresh available models by merging OpenAI-compatible providers */
+  refreshAvailableModelsWithCompat: () => Promise<void>;
 }

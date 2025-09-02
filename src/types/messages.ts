@@ -26,6 +26,7 @@ export type MessageType =
   | 'GET_ALL_TABS'
   | 'EXTRACT_TAB_CONTENT'
   | 'CLEANUP_TAB_CACHE'
+  | 'PROXY_REQUEST'
   | 'ERROR'
   | 'PING'
   | 'PONG';
@@ -381,6 +382,7 @@ export function isValidMessage(obj: unknown): obj is Message {
     'GET_ALL_TABS',
     'EXTRACT_TAB_CONTENT',
     'CLEANUP_TAB_CACHE',
+    'PROXY_REQUEST',
     'ERROR',
     'PING',
     'PONG',

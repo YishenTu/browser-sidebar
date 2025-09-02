@@ -42,9 +42,12 @@ export const PERFORMANCE_THRESHOLDS = {
 } as const;
 
 /** Provider API endpoints for connection testing */
-export const PROVIDER_ENDPOINTS = {
+export const PROVIDER_ENDPOINTS: Partial<Record<string, string | null>> = {
   openai: 'https://api.openai.com/v1/models',
   anthropic: 'https://api.anthropic.com/v1/complete',
   google: 'https://generativelanguage.googleapis.com/v1/models',
+  gemini: 'https://generativelanguage.googleapis.com/v1beta/models',
+  openrouter: 'https://openrouter.ai/api/v1/models',
+  openai_compat: null,
   custom: null,
-} as const;
+};

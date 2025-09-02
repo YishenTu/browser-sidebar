@@ -21,7 +21,7 @@ export type { ModelConfig };
 /**
  * Supported AI provider types
  */
-export type ProviderType = 'openai' | 'gemini' | 'openrouter';
+export type ProviderType = 'openai' | 'gemini' | 'openrouter' | 'openai_compat';
 
 /**
  * Chat message roles for AI providers
@@ -118,11 +118,22 @@ export interface OpenRouterConfig {
 }
 
 /**
+ * OpenAI-Compatible provider configuration
+ */
+export interface OpenAICompatibleConfig {
+  apiKey: string;
+  model: string;
+  baseURL: string;
+  headers?: Record<string, string>;
+  [key: string]: unknown; // Index signature for compatibility with Record<string, unknown>
+}
+
+/**
  * Generic provider configuration wrapper
  */
 export interface ProviderConfig {
   type: ProviderType;
-  config: OpenAIConfig | GeminiConfig | OpenRouterConfig;
+  config: OpenAIConfig | GeminiConfig | OpenRouterConfig | OpenAICompatibleConfig;
 }
 
 // ============================================================================
@@ -351,7 +362,9 @@ export interface AIProvider {
  * Type guard for provider types
  */
 export function isProviderType(value: unknown): value is ProviderType {
-  return typeof value === 'string' && ['openai', 'gemini', 'openrouter'].includes(value);
+  return (
+    typeof value === 'string' && ['openai', 'gemini', 'openrouter', 'openai_compat'].includes(value)
+  );
 }
 
 /**
@@ -608,6 +621,41 @@ export function validateOpenRouterConfig(config: unknown): ProviderValidationRes
 }
 
 /**
+ * Validate OpenAI-Compatible configuration
+ */
+export function validateOpenAICompatibleConfig(config: unknown): ProviderValidationResult {
+  const errors: string[] = [];
+  const cfg = config as Record<string, unknown>;
+
+  if (
+    !cfg['apiKey'] ||
+    typeof cfg['apiKey'] !== 'string' ||
+    (cfg['apiKey'] as string).trim() === ''
+  ) {
+    errors.push('Invalid API key');
+  }
+
+  if (!cfg['model'] || typeof cfg['model'] !== 'string') {
+    errors.push('Invalid model');
+  }
+
+  if (!cfg['baseURL'] || typeof cfg['baseURL'] !== 'string') {
+    errors.push('Invalid base URL');
+  } else {
+    try {
+      new URL(cfg['baseURL'] as string);
+    } catch {
+      errors.push('Invalid base URL format');
+    }
+  }
+
+  return {
+    isValid: errors.length === 0,
+    errors,
+  };
+}
+
+/**
  * Validate generic provider configuration
  */
 export function validateProviderConfig(config: ProviderConfig): ProviderValidationResult {
@@ -625,6 +673,8 @@ export function validateProviderConfig(config: ProviderConfig): ProviderValidati
       return validateGeminiConfig(config.config);
     case 'openrouter':
       return validateOpenRouterConfig(config.config);
+    case 'openai_compat':
+      return validateOpenAICompatibleConfig(config.config);
     default:
       return {
         isValid: false,

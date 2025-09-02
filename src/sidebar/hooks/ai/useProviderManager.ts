@@ -8,7 +8,13 @@ import { useRef, useCallback, useEffect } from 'react';
 import { useSettingsStore } from '@store/settings';
 import { ProviderRegistry } from '../../../provider/ProviderRegistry';
 import { ProviderFactory } from '../../../provider/ProviderFactory';
-import { SUPPORTED_MODELS, DEFAULT_OPENROUTER_MODEL_ID } from '../../../config/models';
+import {
+  SUPPORTED_MODELS,
+  DEFAULT_OPENROUTER_MODEL_ID,
+  OPENAI_COMPAT_PROVIDER_IDS,
+  getModelsByProviderId,
+} from '../../../config/models';
+import { listOpenAICompatProviders, getCompatProviderById } from '@/data/storage/keys/compat';
 import type { ProviderType, AIProvider, ProviderConfig } from '../../../types/providers';
 import type { UseProviderManagerReturn, AIStats } from './types';
 
@@ -100,6 +106,13 @@ export function useProviderManager(enabled = true): UseProviderManagerReturn {
         registryRef.current.unregister(providerType);
       }
 
+      // Ensure available models include OpenAI-compatible entries before any selection
+      try {
+        await settingsStore.refreshAvailableModelsWithCompat();
+      } catch {
+        // Ignore errors during model refresh
+      }
+
       // Create provider configurations
       const providerConfigs: ProviderConfig[] = [];
       const selectedModelId = settings.selectedModel;
@@ -161,6 +174,42 @@ export function useProviderManager(enabled = true): UseProviderManagerReturn {
         }
       }
 
+      // OpenAI-compatible providers (built-in and custom) via encrypted storage
+      const compatProviders = await listOpenAICompatProviders();
+      let selectedCompat: { id: string; modelId: string } | null = null;
+
+      // Determine if selected model belongs to a compat provider
+      for (const pid of OPENAI_COMPAT_PROVIDER_IDS as readonly string[]) {
+        const models = getModelsByProviderId(pid);
+        if (models.some(m => m.id === selectedModelId)) {
+          selectedCompat = { id: pid as string, modelId: selectedModelId };
+          break;
+        }
+      }
+      if (!selectedCompat) {
+        for (const p of compatProviders) {
+          if (p.model && p.model.id === selectedModelId) {
+            selectedCompat = { id: p.id, modelId: p.model.id };
+            break;
+          }
+        }
+      }
+
+      if (selectedCompat) {
+        const full = await getCompatProviderById(selectedCompat.id);
+        if (full) {
+          providerConfigs.push({
+            type: 'openai_compat',
+            config: {
+              apiKey: full.apiKey,
+              model: selectedCompat.modelId,
+              baseURL: full.baseURL,
+              metadata: { providerId: full.id },
+            } as unknown as any,
+          });
+        }
+      }
+
       // Create and register providers
       for (const config of providerConfigs) {
         try {
@@ -173,12 +222,16 @@ export function useProviderManager(enabled = true): UseProviderManagerReturn {
 
       // Set active provider based on selected model
       if (selectedModel && registryRef.current) {
-        const providerMap: Record<string, 'openai' | 'gemini' | 'openrouter'> = {
+        const providerMap: Record<string, 'openai' | 'gemini' | 'openrouter' | 'openai_compat'> = {
           openai: 'openai',
           gemini: 'gemini',
           openrouter: 'openrouter',
         };
-        const targetProvider = providerMap[selectedModel.provider] ?? 'openai';
+        // If selected model is compat, force openai_compat
+        let targetProvider = providerMap[selectedModel.provider] ?? 'openai';
+        if (selectedCompat) {
+          targetProvider = 'openai_compat';
+        }
         if (registryRef.current.hasProvider(targetProvider)) {
           registryRef.current.setActiveProvider(targetProvider);
         } else if (providerConfigs.length > 0 && providerConfigs[0]) {

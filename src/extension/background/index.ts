@@ -9,6 +9,7 @@ import { createDefaultMessageHandler } from './messageHandler';
 import { startKeepAlive } from './keepAlive';
 import { getSidebarManager } from './sidebarManager';
 import { createMessage, Message, ToggleSidebarPayload } from '@/types/messages';
+import { handleProxyRequest, ProxyRequest, handleProxyStreamPort } from './proxyHandler';
 
 // Initialize subsystems
 const messageHandler = createDefaultMessageHandler();
@@ -30,6 +31,13 @@ function initializeServiceWorker(): void {
     'CLOSE_SIDEBAR',
     (message, sender) => sidebarManager.handleCloseSidebar(message as Message<void>, sender),
     'Close sidebar'
+  );
+
+  // Register proxy handlers for CORS-restricted APIs
+  messageHandler.registerHandler(
+    'PROXY_REQUEST',
+    async (message, sender) => handleProxyRequest(message.payload as ProxyRequest, sender),
+    'Proxy API request through background'
   );
 
   // Start keep-alive system to prevent service worker suspension
@@ -91,6 +99,15 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
   // Return true to indicate we will send a response asynchronously
   return true;
+});
+
+/**
+ * Handle long-lived proxy streaming connections
+ */
+chrome.runtime.onConnect.addListener(port => {
+  if (port.name === 'proxy-stream') {
+    handleProxyStreamPort(port);
+  }
 });
 
 /**

@@ -6,7 +6,7 @@
 export interface ModelConfig {
   id: string;
   name: string;
-  provider: 'openai' | 'gemini' | 'openrouter';
+  provider: 'openai' | 'gemini' | 'openrouter' | 'openai_compat' | string;
   // Gemini specific - '0' for off, '-1' for dynamic
   thinkingBudget?: '0' | '-1';
   // OpenAI specific
@@ -65,10 +65,42 @@ export const SUPPORTED_MODELS: ModelConfig[] = [
   // - reasoningEffort for OpenAI/DeepSeek/Grok models
   // - reasoningMaxTokens for Anthropic models
   // - neither if the model doesn't support reasoning
+
+  // OpenAI-compatible provider models
+  // DeepSeek
+  {
+    id: 'deepseek-chat',
+    name: 'DeepSeek Chat',
+    provider: 'deepseek',
+  },
+  // Qwen (Alibaba Cloud)
+  {
+    id: 'qwen3-235b-a22b-instruct-2507',
+    name: 'Qwen3 235B A22B Instruct',
+    provider: 'qwen',
+  },
+  // Zhipu AI
+  {
+    id: 'glm-4.5-x',
+    name: 'GLM 4.5 X',
+    provider: 'zhipu',
+  },
+  // Kimi (Moonshot AI)
+  {
+    id: 'kimi-k2-turbo-preview',
+    name: 'Kimi K2 Turbo',
+    provider: 'kimi',
+  },
 ];
 
 export const DEFAULT_MODEL_ID = 'gpt-5-nano';
 export const DEFAULT_OPENROUTER_MODEL_ID = 'anthropic/claude-sonnet-4';
+
+// Default models for OpenAI-compatible providers
+export const DEFAULT_DEEPSEEK_MODEL_ID = 'deepseek-chat';
+export const DEFAULT_QWEN_MODEL_ID = 'qwen3-235b-a22b-instruct-2507';
+export const DEFAULT_ZHIPU_MODEL_ID = 'glm-4.5-x';
+export const DEFAULT_KIMI_MODEL_ID = 'kimi-k2-turbo-preview';
 
 /**
  * Get model configuration by ID
@@ -84,7 +116,7 @@ export function getProviderTypeForModelId(
   modelId: string
 ): 'openai' | 'gemini' | 'openrouter' | undefined {
   const model = getModelById(modelId);
-  return model?.provider;
+  return model?.provider as 'openai' | 'gemini' | 'openrouter' | undefined;
 }
 
 /**
@@ -107,7 +139,7 @@ export function supportsThinking(modelId: string): boolean {
  * Get all models for a specific provider
  */
 export function getModelsByProvider(
-  providerType: 'openai' | 'gemini' | 'openrouter'
+  providerType: 'openai' | 'gemini' | 'openrouter' | string
 ): ModelConfig[] {
   return SUPPORTED_MODELS.filter(model => model.provider === providerType);
 }
@@ -117,4 +149,53 @@ export function getModelsByProvider(
  */
 export function modelExists(modelId: string): boolean {
   return SUPPORTED_MODELS.some(model => model.id === modelId);
+}
+
+/**
+ * Built-in OpenAI-compatible provider IDs
+ */
+import { OPENAI_COMPAT_PRESETS } from '@/provider/openai-compat/presets';
+
+// Derive built-in OpenAI-compatible provider IDs from presets to avoid drift
+export const OPENAI_COMPAT_PROVIDER_IDS = OPENAI_COMPAT_PRESETS.map(p => p.id) as readonly string[];
+
+/**
+ * Check if a provider ID is an OpenAI-compatible provider
+ */
+export function isOpenAICompatProvider(providerId: string): boolean {
+  return providerId === 'openai_compat' || OPENAI_COMPAT_PROVIDER_IDS.includes(providerId);
+}
+
+/**
+ * Get models by provider ID (including OpenAI-compatible providers)
+ */
+export function getModelsByProviderId(providerId: string): ModelConfig[] {
+  // For built-in OpenAI-compatible providers, we'll add their models later
+  // For now, return models filtered by provider
+  return SUPPORTED_MODELS.filter(model => model.provider === providerId);
+}
+
+/**
+ * Get the default model ID for a provider
+ */
+export function getDefaultModelForProvider(providerId: string): string | undefined {
+  switch (providerId) {
+    case 'openai':
+      return DEFAULT_MODEL_ID;
+    case 'openrouter':
+      return DEFAULT_OPENROUTER_MODEL_ID;
+    case 'deepseek':
+      return DEFAULT_DEEPSEEK_MODEL_ID;
+    case 'qwen':
+      return DEFAULT_QWEN_MODEL_ID;
+    case 'zhipu':
+      return DEFAULT_ZHIPU_MODEL_ID;
+    case 'kimi':
+      return DEFAULT_KIMI_MODEL_ID;
+    default: {
+      // Try to find the first model for this provider
+      const models = getModelsByProviderId(providerId);
+      return models.length > 0 && models[0] ? models[0].id : undefined;
+    }
+  }
 }

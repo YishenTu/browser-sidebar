@@ -472,6 +472,11 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
           hasApiKey = !!apiKeys?.google;
         } else if (providerType === 'openrouter') {
           hasApiKey = !!apiKeys?.openrouter;
+        } else {
+          // For OpenAI-compatible providers, check if the model exists in available models
+          // If it's there, it means the provider has been configured
+          const availableModels = state.settings.availableModels;
+          hasApiKey = availableModels.some(m => m.id === modelId && m.available);
         }
 
         if (!hasApiKey) {

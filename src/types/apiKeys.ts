@@ -18,9 +18,22 @@ import type { StorageVersion } from './storage';
 // =============================================================================
 
 /**
+ * Compat provider type for storage
+ */
+export type CompatProvider = `compat-${string}`;
+
+/**
  * Supported AI providers for API keys
  */
-export type APIProvider = 'openai' | 'anthropic' | 'google' | 'custom';
+export type APIProvider =
+  | 'openai'
+  | 'anthropic'
+  | 'google'
+  | 'custom'
+  | 'openrouter'
+  | 'gemini'
+  | 'openai_compat'
+  | CompatProvider;
 
 /**
  * API key types based on provider tiers
@@ -174,6 +187,11 @@ export interface APIKeyConfiguration {
   rotation?: RotationConfig;
   /** Security settings */
   security?: APIKeySecurityConfig;
+  /** Default model for non-built-in providers */
+  defaultModel?: {
+    id: string;
+    name: string;
+  };
 }
 
 // =============================================================================
@@ -623,23 +641,33 @@ export const DEFAULT_PROVIDER_RULES: ProviderValidationRules = {
 /**
  * Default key type mapping based on key format
  */
-export const DEFAULT_KEY_TYPE_DETECTION: Record<APIProvider, (key: string) => APIKeyType> = {
-  openai: (_key: string) => {
-    // OpenAI doesn't have different formats for different tiers
-    return 'standard';
-  },
-  anthropic: (_key: string) => {
-    // Anthropic uses consistent format for all tiers
-    return 'standard';
-  },
-  google: (_key: string) => {
-    // Google API keys don't indicate tier in the key format
-    return 'standard';
-  },
-  custom: (_key: string) => {
-    return 'standard';
-  },
-};
+export const DEFAULT_KEY_TYPE_DETECTION: Partial<Record<APIProvider, (key: string) => APIKeyType>> =
+  {
+    openai: (_key: string) => {
+      // OpenAI doesn't have different formats for different tiers
+      return 'standard';
+    },
+    anthropic: (_key: string) => {
+      // Anthropic uses consistent format for all tiers
+      return 'standard';
+    },
+    google: (_key: string) => {
+      // Google API keys don't indicate tier in the key format
+      return 'standard';
+    },
+    custom: (_key: string) => {
+      return 'standard';
+    },
+    gemini: (_key: string) => {
+      return 'standard';
+    },
+    openrouter: (_key: string) => {
+      return 'standard';
+    },
+    openai_compat: (_key: string) => {
+      return 'standard';
+    },
+  };
 
 // =============================================================================
 // Utility Functions
@@ -674,7 +702,10 @@ export function detectProvider(key: string): APIProvider | null {
  * Validate API key format for a specific provider
  */
 export function validateKeyFormat(key: string, provider: APIProvider): ValidationResult {
-  const rule = DEFAULT_PROVIDER_RULES[provider];
+  // For compat providers and those without rules, use custom validation
+  const rule =
+    DEFAULT_PROVIDER_RULES[provider as keyof ProviderValidationRules] ||
+    DEFAULT_PROVIDER_RULES.custom;
   const errors: string[] = [];
   const warnings: string[] = [];
 
@@ -702,13 +733,16 @@ export function validateKeyFormat(key: string, provider: APIProvider): Validatio
     warnings.push(`Key appears to be for ${detectedProvider}, not ${provider}`);
   }
 
+  const keyTypeDetector = DEFAULT_KEY_TYPE_DETECTION[provider];
+  const keyType = keyTypeDetector ? keyTypeDetector(key) : 'standard';
+
   return {
     isValid: errors.length === 0,
     errors,
     warnings,
     provider: detectedProvider || provider,
-    keyType: DEFAULT_KEY_TYPE_DETECTION[provider](key),
-    estimatedTier: DEFAULT_KEY_TYPE_DETECTION[provider](key),
+    keyType,
+    estimatedTier: keyType,
   };
 }
 

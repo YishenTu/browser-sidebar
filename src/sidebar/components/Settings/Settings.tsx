@@ -1,5 +1,12 @@
 import { useState, useCallback, useEffect } from 'react';
 import { useSettingsStore } from '@store/settings';
+import {
+  addOrUpdateOpenAICompatProvider,
+  getCompatProviderById,
+  listOpenAICompatProviders,
+  clearAllOpenAICompatProviders,
+} from '@/data/storage/keys/compat';
+import { getPresetById } from '@/provider/openai-compat/presets';
 import '../../styles/3-components/settings.css';
 
 export function Settings() {
@@ -15,6 +22,14 @@ export function Settings() {
   const [openaiMasked, setOpenaiMasked] = useState(true);
   const [geminiMasked, setGeminiMasked] = useState(true);
   const [openrouterMasked, setOpenrouterMasked] = useState(true);
+
+  // OpenAI-compatible provider states
+  const [selectedCompatProvider, setSelectedCompatProvider] = useState<string>('deepseek');
+  const [compatApiKey, setCompatApiKey] = useState('');
+  const [compatValid, setCompatValid] = useState<boolean | null>(null);
+  const [compatVerifying, setCompatVerifying] = useState(false);
+  const [compatMasked, setCompatMasked] = useState(true);
+  const [savedCompatProviders, setSavedCompatProviders] = useState<string[]>([]);
 
   // Load existing API keys on mount
   useEffect(() => {
@@ -35,7 +50,24 @@ export function Settings() {
       setOpenrouterKey(apiKeys.openrouter);
       setOpenrouterValid(true); // Mark as valid if already saved
     }
-  }, []);
+
+    // Load saved compat providers
+    loadCompatProviders();
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const loadCompatProviders = async () => {
+    const providers = await listOpenAICompatProviders();
+    setSavedCompatProviders(providers.map(p => p.id));
+
+    // Load the currently selected provider's key if it exists
+    if (selectedCompatProvider) {
+      const provider = await getCompatProviderById(selectedCompatProvider);
+      if (provider) {
+        setCompatApiKey(provider.apiKey);
+        setCompatValid(true);
+      }
+    }
+  };
 
   const handleVerifyAndSaveOpenAI = useCallback(async () => {
     if (!openaiKey.trim()) return;
@@ -133,9 +165,126 @@ export function Settings() {
     }
   }, [openrouterKey]);
 
+  // Handle compat provider selection change
+  const handleCompatProviderChange = useCallback(async (providerId: string) => {
+    setSelectedCompatProvider(providerId);
+    setCompatValid(null);
+
+    // Load the API key for the selected provider if it exists
+    const provider = await getCompatProviderById(providerId);
+    if (provider) {
+      setCompatApiKey(provider.apiKey);
+      setCompatValid(true);
+    } else {
+      setCompatApiKey('');
+      setCompatValid(null);
+    }
+  }, []);
+
+  // Verify and save compat provider
+  const handleVerifyAndSaveCompat = useCallback(async () => {
+    if (!compatApiKey.trim()) return;
+
+    setCompatVerifying(true);
+    setCompatValid(null);
+
+    try {
+      // Get the base URL from the preset configuration
+      const preset = getPresetById(selectedCompatProvider);
+      if (!preset) {
+        setCompatValid(false);
+        setCompatVerifying(false);
+        return;
+      }
+
+      const baseURL = preset.baseURL;
+
+      // Test the API key
+      // Some endpoints (e.g., Kimi) require proxying to avoid CORS
+      const shouldProxy = baseURL.startsWith('https://api.moonshot.cn');
+      let response: Response;
+
+      if (shouldProxy) {
+        const { createMessage } = await import('@/types/messages');
+        const msg = createMessage({
+          type: 'PROXY_REQUEST',
+          source: 'sidebar',
+          target: 'background',
+          payload: {
+            url: `${baseURL}/models`,
+            method: 'GET',
+            headers: {
+              Authorization: `Bearer ${compatApiKey}`,
+              'Content-Type': 'application/json',
+            },
+          },
+        });
+
+        response = await new Promise((resolve, reject) => {
+          chrome.runtime.sendMessage(msg, (res: unknown) => {
+            if (chrome.runtime.lastError) {
+              reject(new Error(chrome.runtime.lastError.message));
+              return;
+            }
+            if (!res) {
+              reject(new Error('No response from proxy'));
+              return;
+            }
+            resolve(
+              new Response(res.body, {
+                status: res.status,
+                statusText: res.statusText,
+                headers: new Headers(res.headers || { 'content-type': 'application/json' }),
+              })
+            );
+          });
+        });
+      } else {
+        response = await fetch(`${baseURL}/models`, {
+          method: 'GET',
+          headers: {
+            Authorization: `Bearer ${compatApiKey}`,
+            'Content-Type': 'application/json',
+          },
+        });
+      }
+
+      if (response.ok) {
+        setCompatValid(true);
+
+        // Save the provider
+        await addOrUpdateOpenAICompatProvider({
+          id: selectedCompatProvider,
+          apiKey: compatApiKey,
+          baseURL: baseURL,
+        });
+
+        // Update saved providers list
+        if (!savedCompatProviders.includes(selectedCompatProvider)) {
+          setSavedCompatProviders([...savedCompatProviders, selectedCompatProvider]);
+        }
+
+        // Refresh available models
+        await useSettingsStore.getState().refreshAvailableModelsWithCompat();
+
+        // Trigger the same update mechanism as standard providers to force ModelSelector reload
+        const state = useSettingsStore.getState();
+        const currentApiKeys = state.settings.apiKeys || {};
+        // Re-set the same API keys to trigger a store update (same as standard providers do)
+        await state.updateAPIKeyReferences(currentApiKeys);
+      } else {
+        setCompatValid(false);
+      }
+    } catch (error) {
+      setCompatValid(false);
+    } finally {
+      setCompatVerifying(false);
+    }
+  }, [compatApiKey, selectedCompatProvider, savedCompatProviders]);
+
   const handleResetAll = useCallback(async () => {
     if (confirm('Are you sure you want to remove all saved API keys?')) {
-      // Clear the input fields
+      // Clear the input fields for standard providers
       setOpenaiKey('');
       setGeminiKey('');
       setOpenrouterKey('');
@@ -143,9 +292,20 @@ export function Settings() {
       setGeminiValid(null);
       setOpenrouterValid(null);
 
-      // Reset settings to defaults
+      // Clear the input fields for compat providers
+      setCompatApiKey('');
+      setCompatValid(null);
+      setSavedCompatProviders([]);
+
+      // Reset standard provider settings to defaults
       const resetToDefaults = useSettingsStore.getState().resetToDefaults;
       await resetToDefaults();
+
+      // Clear all OpenAI-compatible providers
+      await clearAllOpenAICompatProviders();
+
+      // Refresh available models after clearing
+      await useSettingsStore.getState().refreshAvailableModelsWithCompat();
     }
   }, []);
 
@@ -274,6 +434,62 @@ export function Settings() {
           <p className="settings-status settings-status--valid">✓ API key is valid and saved</p>
         )}
         {!openrouterVerifying && openrouterValid === false && (
+          <p className="settings-status settings-status--invalid">✗ Invalid API key</p>
+        )}
+      </div>
+
+      {/* OpenAI-Compatible Providers */}
+      <div className="settings-section settings-section--compat">
+        <label className="settings-label">OpenAI-Compatible Provider</label>
+
+        {/* Provider Selector */}
+        <div className="settings-input-group" style={{ marginBottom: '10px' }}>
+          <select
+            value={selectedCompatProvider}
+            onChange={e => handleCompatProviderChange(e.target.value)}
+            className="settings-input"
+            style={{ width: '100%' }}
+          >
+            <option value="deepseek">DeepSeek</option>
+            <option value="qwen">Qwen</option>
+            <option value="zhipu">Zhipu</option>
+            <option value="kimi">Kimi</option>
+          </select>
+        </div>
+
+        {/* API Key Input */}
+        <div className="settings-input-group">
+          <div className="settings-input-wrapper">
+            <input
+              type="text"
+              value={getMaskedValue(compatApiKey, compatMasked)}
+              onChange={e => {
+                if (!compatMasked) {
+                  setCompatApiKey(e.target.value);
+                  setCompatValid(null);
+                }
+              }}
+              onFocus={() => setCompatMasked(false)}
+              onBlur={() => setCompatMasked(true)}
+              placeholder="Enter API key..."
+              className={`settings-input ${compatMasked && compatApiKey ? 'settings-input--masked' : ''}`}
+            />
+          </div>
+          <button
+            onClick={handleVerifyAndSaveCompat}
+            disabled={!compatApiKey.trim() || compatVerifying}
+            className="settings-button"
+          >
+            {compatVerifying ? 'Verifying...' : 'Verify & Save'}
+          </button>
+        </div>
+        {compatVerifying && (
+          <p className="settings-status settings-status--verifying">Verifying API key...</p>
+        )}
+        {!compatVerifying && compatValid === true && (
+          <p className="settings-status settings-status--valid">✓ API key is valid and saved</p>
+        )}
+        {!compatVerifying && compatValid === false && (
           <p className="settings-status settings-status--invalid">✗ Invalid API key</p>
         )}
       </div>
