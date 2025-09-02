@@ -14,10 +14,10 @@
 - [x] 12. handle selection
 - [x] 13. full html extraction approach
 - [ ] 14. new setting logic
-- [ ] 15. more provider
+- [x] 15. openrouter provider
 - [ ] 16. openai compatible provider
 - [ ] 17. slash command
-- [ ] 18. msg routing through backend proxy?
+- [ ] 19. send to chatwaise?
 
 ---
 

@@ -49,6 +49,53 @@ npm install
 npm run dev
 ```
 
+### Mermaid Diagram
+
+```mermaid
+graph TD
+  %% UI & Settings
+  Settings["Settings Panel - sidebar"] -->|Verify and Save| Storage["Chrome Storage - local or sync"]
+  Storage --> ProviderMgr["Provider Manager - Registry/Factory"]
+  ProviderMgr --> ActiveProv["Active Provider - OpenAI Gemini OpenRouter OpenAI-Compat"]
+
+  %% Chat entry and formatting
+  ChatPanel["ChatPanel UI"] -->|prompt| MsgFmt["Message Formatter - useMessageHandler"]
+  MsgFmt -->|include tab context| ReqBuilder["Provider Request Builder"]
+
+  %% Extraction path
+  ChatPanel -.->|mention extract| BG["Background Service Worker - Message Handler"]
+  BG --> TabMgr["Tab Manager"]
+  TabMgr --> CS["Content Scripts - Defuddle engine"]
+  CS -->|cleaned markdown| BG
+  BG -->|extracted content| ChatPanel
+
+  %% Transport decision
+  ReqBuilder --> Transport{Transport}
+  Transport -->|CORS OK| Direct["Direct Fetch - SDK"]
+  Transport -->|CORS blocked| Proxy["Background Proxy"]
+
+  %% Proxy branching
+  Proxy -->|non-stream| BG
+  Proxy -.->|stream SSE| Port["Port - proxy-stream"]
+  Port --> BG
+
+  %% Upstream and back
+  Direct --> API["Provider API"]
+  BG --> API
+  API -->|SSE/data| Direct
+  API -->|SSE/data| BG
+  BG -->|chunks| Port
+  Port -->|chunks| Stream["ReadableStream"]
+
+  %% Stream processing to UI
+  Direct -->|chunks| StreamProc["Stream Processor"]
+  Stream -->|chunks| StreamProc
+  StreamProc --> UI["Chat UI Body"]
+
+  %% Session & state
+  UI --> Sessions["Zustand Stores - in-memory sessions"]
+```
+
 ### Build
 
 ```bash
@@ -281,6 +328,99 @@ browser-sidebar/
 └── docs/              # Documentation
     └── stages/        # Implementation stage guides
 ```
+
+## Architecture & Data Flow
+
+This section shows how data moves through the extension — where API keys are stored, how chat requests are formed and streamed, how responses are handled, and how tab content is extracted and injected.
+
+### High‑Level Flow
+
+```
+┌─────────────┐        ┌──────────────────┐        ┌────────────────────┐
+│  Settings   │  save  │  Chrome Storage  │  read  │  Provider Manager   │
+│ (Sidebar UI)├──────▶ │  (local/sync)    ├──────▶ │ (Registry/Factory)  │
+└─────┬───────┘        └────────┬─────────┘        └──────────┬─────────┘
+      │                          init providers                         │
+      │                                                                ▼
+      │                                                        ┌──────────────┐
+      │                                                        │ Active       │
+      │                                                        │ Provider     │
+      │                                                        │ (OpenAI,     │
+      │                                                        │  Gemini,     │
+      │                                                        │  OpenRouter, │
+      │                                                        │  OpenAI‑Compat)
+      │                                                        └─────┬────────┘
+      │                                                              │
+      │                                                              │ stream
+      │                                                              ▼
+┌─────▼────────┐  input  ┌─────────────────┐   build   ┌────────────────────┐
+│ ChatPanel UI │ ─────▶  │ Message Handler │ ───────▶  │ Provider Request    │
+│ (collects    │         │ (format prompt  │           │ Builder (provider)  │
+│  prompt)     │         │  + tab context) │           └──────────┬─────────┘
+└─────┬────────┘         └────────┬────────┘                      │
+      │                            │                               │ fetch
+      │ extract                    │                               │
+      ▼                            │                         ┌──────▼──────────┐
+┌──────────────┐  msg     ┌────────▼─────────┐  DOM        │ Network Transport │
+│ Tab Content  │ ───────▶ │ Background SW    │ ─────────▶  │  (Direct or       │
+│ (content     │          │  (Tab Manager +  │  content    │   Background       │
+│  script)     │ ◀─────── │  Proxy Handler)  │  extract    │   Proxy)           │
+└──────────────┘  result  └────────┬─────────┘             └────────┬──────────┘
+                                    │                                │
+                                    │                                │
+                                    │                         ┌──────▼───────────┐
+                                    │                         │ Provider API     │
+                                    │                         │ (OpenAI, Gemini, │
+                                    │                         │  OpenRouter,     │
+                                    │                         │  Kimi, etc.)     │
+                                    │                         └────────┬─────────┘
+                                    │                                  │
+                                    └──────────────────────────────────┘
+```
+
+### Key Paths
+
+- **BYOK (API keys):**
+  - UI: `src/sidebar/components/Settings/Settings.tsx` verifies and saves keys.
+  - Storage: Keys are stored in extension storage (Chrome local/sync). OpenAI‑compatible providers are stored via `src/data/storage/keys/compat.ts` (local; no cloud sync). Keys are only used on device.
+  - Discovery: Model groups in the Model Selector include compat providers found by `listOpenAICompatProviders()`.
+
+- **Model selection & provider initialization:**
+  - UI: `src/sidebar/components/ModelSelector.tsx` groups models by provider; when you choose a model it updates the selected model in the settings store.
+  - Manager: `src/sidebar/hooks/ai/useProviderManager.ts` reads settings, creates providers via `src/provider/ProviderFactory.ts`, registers them in `src/provider/ProviderRegistry.ts`, and sets the active provider that will serve chat.
+
+- **Tab content extraction:**
+  - Triggered from ChatPanel through `useTabExtraction` and the @‑mention UI.
+  - Messages: Sidebar sends `GET_ALL_TABS` / `EXTRACT_TAB_CONTENT` to the background.
+  - Background: `TabManager` coordinates content scripts in `src/tabext/*` to extract and clean DOM → Markdown (Defuddle engine, converters, cleaners).
+  - Result: Extracted content is returned to the sidebar and previewed; the message formatter includes it as context automatically.
+
+- **Chat request build & send:**
+  - Prompt capture: `src/sidebar/ChatPanel.tsx` collects the user’s input; `useMessageHandler` formats it with any extracted tab context.
+  - Request build: Each provider converts messages to its API format (e.g., `src/provider/openai-compat/requestBuilder.ts`). For OpenAI‑Compat we currently omit temperature/top_p/max_tokens defaults.
+  - Transport:
+    - Direct: If the endpoint allows CORS, the OpenAI/Gemini/OpenRouter SDKs stream directly from the page.
+    - Background proxy (only when needed): For CORS‑restricted endpoints like Kimi, `src/provider/openai-compat/ProxiedOpenAIClient.ts` routes non‑stream requests via `PROXY_REQUEST` and true SSE via a long‑lived Port (`proxy-stream`) to `src/extension/background/proxyHandler.ts`.
+
+- **Streaming and response handling:**
+  - Stream processing: Provider stream processors normalize SSE chunks into the app’s `StreamChunk` format (OpenAI‑Compat reuses OpenRouter stream mapping in `src/provider/openai-compat/streamProcessor.ts`).
+  - UI update: The stream is consumed by the chat hooks; partial tokens render in the Body component. Finish reasons/usage are tracked when provided.
+
+- **Chat history & sessions:**
+  - State: Conversations are kept in Zustand stores (`src/data/store`) and keyed to a session (tab+URL). History is kept in memory for privacy and performance; clearing or tab close resets as configured.
+  - Session manager: `useSessionManager` ensures the right session is active per tab+URL; switching pages creates/loads the appropriate session.
+
+### Components and Responsibilities
+
+- Sidebar UI: `src/sidebar/ChatPanel.tsx`, components in `src/sidebar/components/*`.
+- Settings & keys: `src/sidebar/components/Settings/Settings.tsx`, storage helpers under `src/data/storage/*`.
+- Providers: `src/provider/*` (OpenAI, Gemini, OpenRouter, OpenAI‑Compat).
+- Background services: `src/extension/background/*` (message handler, proxy handler, tab manager, keep‑alive).
+- Content extraction: `src/tabext/*` (Defuddle engine, converters, utilities).
+
+### Privacy
+
+- BYOK: Keys are used locally by the extension; requests go directly from the user’s browser to the chosen AI provider. For Kimi/other CORS‑blocked domains, the background service worker fetches cross‑origin and relays the stream — still on the user’s device.
 
 ## Documentation
 
