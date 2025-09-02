@@ -401,20 +401,24 @@ export function useTabExtraction(): UseTabExtractionReturn {
     refreshAvailableTabs();
   }, [refreshAvailableTabs]);
 
-  // Auto-extract current tab on mount with proper timing for selection preservation
+  // Reset autoLoadAttempted when hasAutoLoaded is false (new or cleared session)
   useEffect(() => {
-    const currentHasAutoLoaded = getHasAutoLoaded();
-    // Wait for session to be initialized before auto-extracting
-    if (activeSessionKey && !currentHasAutoLoaded && !autoLoadAttempted.current) {
-      // Use requestAnimationFrame + setTimeout to ensure selection has been fully restored
-      // This timing matches the selection restoration in sidebarController.ts
+    if (!hasAutoLoaded) {
+      autoLoadAttempted.current = false;
+    }
+  }, [activeSessionKey, hasAutoLoaded]);
+
+  // Auto-extract current tab when session is ready and hasn't been loaded yet
+  useEffect(() => {
+    if (activeSessionKey && !hasAutoLoaded && !autoLoadAttempted.current) {
+      // Delay to preserve text selection on page
       requestAnimationFrame(() => {
         setTimeout(() => {
           extractCurrentTab();
-        }, 20); // 20ms delay after frame to ensure all restoration attempts have completed
+        }, 20);
       });
     }
-  }, [activeSessionKey, getHasAutoLoaded, extractCurrentTab]); // Re-run when session is initialized
+  }, [activeSessionKey, hasAutoLoaded, extractCurrentTab]);
 
   // Memoize loaded tabs keys to avoid unnecessary refreshes
   const loadedTabsCount = useMemo(() => Object.keys(loadedTabs).length, [loadedTabs]);
