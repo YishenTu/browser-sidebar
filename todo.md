@@ -28,3 +28,7 @@
 - [ ] 3. new setting UI, build up openai_compatible/ , integrating with new UI
 - [ ] 4. turn config/ into defaultConfig/
 - [ ] 5. slash command integration
+
+# Architecture Re-factor
+
+- [ ] refactor
