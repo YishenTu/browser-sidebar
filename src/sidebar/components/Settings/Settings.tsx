@@ -6,8 +6,14 @@ import {
   listOpenAICompatProviders,
   clearAllOpenAICompatProviders,
 } from '@/data/storage/keys/compat';
-import { getPresetById } from '@/provider/openai-compat/presets';
+import { getPresetById } from '@/config/models';
 import '../../styles/3-components/settings.css';
+import {
+  validateOpenAIKey,
+  validateGeminiKey,
+  validateOpenRouterKey,
+  validateCompatProvider,
+} from '@services/engine';
 
 export function Settings() {
   const [openaiKey, setOpenaiKey] = useState('');
@@ -76,15 +82,8 @@ export function Settings() {
     setOpenaiValid(null);
 
     try {
-      // Test the OpenAI API key with a minimal request
-      const response = await fetch('https://api.openai.com/v1/models', {
-        method: 'GET',
-        headers: {
-          Authorization: `Bearer ${openaiKey}`,
-        },
-      });
-
-      const isValid = response.ok;
+      // Validate via service (uses transport under the hood)
+      const isValid = await validateOpenAIKey(openaiKey);
       setOpenaiValid(isValid);
 
       // If valid, save the key
@@ -108,15 +107,8 @@ export function Settings() {
     setGeminiValid(null);
 
     try {
-      // Test the Gemini API key with a minimal request
-      const response = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models?key=${geminiKey}`,
-        {
-          method: 'GET',
-        }
-      );
-
-      const isValid = response.ok;
+      // Validate via service
+      const isValid = await validateGeminiKey(geminiKey);
       setGeminiValid(isValid);
 
       // If valid, save the key
@@ -140,15 +132,8 @@ export function Settings() {
     setOpenrouterValid(null);
 
     try {
-      // Test the OpenRouter API key with a minimal request
-      const response = await fetch('https://openrouter.ai/api/v1/models', {
-        method: 'GET',
-        headers: {
-          Authorization: `Bearer ${openrouterKey}`,
-        },
-      });
-
-      const isValid = response.ok;
+      // Validate via service
+      const isValid = await validateOpenRouterKey(openrouterKey);
       setOpenrouterValid(isValid);
 
       // If valid, save the key
@@ -199,57 +184,10 @@ export function Settings() {
 
       const baseURL = preset.baseURL;
 
-      // Test the API key
-      // Some endpoints (e.g., Kimi) require proxying to avoid CORS
-      const shouldProxy = baseURL.startsWith('https://api.moonshot.cn');
-      let response: Response;
+      // Validate via service (handles proxying)
+      const ok = await validateCompatProvider(baseURL, compatApiKey);
 
-      if (shouldProxy) {
-        const { createMessage } = await import('@/types/messages');
-        const msg = createMessage({
-          type: 'PROXY_REQUEST',
-          source: 'sidebar',
-          target: 'background',
-          payload: {
-            url: `${baseURL}/models`,
-            method: 'GET',
-            headers: {
-              Authorization: `Bearer ${compatApiKey}`,
-              'Content-Type': 'application/json',
-            },
-          },
-        });
-
-        response = await new Promise((resolve, reject) => {
-          chrome.runtime.sendMessage(msg, (res: unknown) => {
-            if (chrome.runtime.lastError) {
-              reject(new Error(chrome.runtime.lastError.message));
-              return;
-            }
-            if (!res) {
-              reject(new Error('No response from proxy'));
-              return;
-            }
-            resolve(
-              new Response(res.body, {
-                status: res.status,
-                statusText: res.statusText,
-                headers: new Headers(res.headers || { 'content-type': 'application/json' }),
-              })
-            );
-          });
-        });
-      } else {
-        response = await fetch(`${baseURL}/models`, {
-          method: 'GET',
-          headers: {
-            Authorization: `Bearer ${compatApiKey}`,
-            'Content-Type': 'application/json',
-          },
-        });
-      }
-
-      if (response.ok) {
+      if (ok) {
         setCompatValid(true);
 
         // Save the provider

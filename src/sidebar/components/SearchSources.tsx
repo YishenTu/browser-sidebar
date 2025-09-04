@@ -18,7 +18,7 @@ export const SearchSources: React.FC<SearchSourcesProps> = ({ sources, className
     <div className={`search-sources ${className}`}>
       <Collapsible
         header={`Sources (${sources.length})`}
-        initialCollapsed={false}
+        initialCollapsed={true}
         headerClassName="search-sources-summary"
         contentClassName="search-sources-list"
         showChevron={false}

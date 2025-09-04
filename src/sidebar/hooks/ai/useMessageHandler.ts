@@ -2,21 +2,297 @@
  * @file Message Handler Hook
  *
  * Handles sending messages and managing responses from AI providers.
+ * Supports both legacy hook-based streaming and new ChatService-based streaming
+ * controlled by the refactorMode feature flag.
  */
 
-import { useCallback } from 'react';
-import { useMessageStore, useUIStore, useTabStore } from '@store/chat';
+import { useCallback, useRef, useEffect, useMemo } from 'react';
+import {
+  useMessageStore,
+  useUIStore,
+  useTabStore,
+  type MessageState,
+  type UIState,
+} from '@store/chat';
 import { useSettingsStore } from '@store/settings';
 import { getModelById } from '@/config/models';
-import { formatTabContent } from '../../utils/contentFormatter';
-import type { AIProvider } from '../../../types/providers';
+import { getSystemPrompt } from '@/config/systemPrompt';
+import { formatTabContent } from '../../../services/chat/contentFormatter';
+import { ChatService } from '../../../services/chat/ChatService';
+import type { AIProvider, ProviderChatMessage, StreamChunk } from '../../../types/providers';
 import type { SendMessageOptions, UseMessageHandlerReturn } from './types';
 import type { TabContent } from '../../../types/tabs';
-import { useStreamHandler } from './useStreamHandler';
+import type { ChatMessage } from '@store/chat';
 
 interface MessageHandlerDeps {
   getActiveProvider: () => AIProvider | null;
   enabled?: boolean;
+}
+
+/**
+ * Helper function to convert chat messages to provider message format
+ */
+function convertToProviderMessages(
+  currentMessages: ChatMessage[],
+  assistantMessage: ChatMessage,
+  userMessage?: ChatMessage
+): ProviderChatMessage[] {
+  let messages: ProviderChatMessage[];
+
+  if (userMessage && currentMessages.filter(m => m.role === 'user' && m.content).length === 1) {
+    // First message case - use the userMessage directly
+    messages = [
+      {
+        id: userMessage.id,
+        role: userMessage.role as 'user',
+        content: userMessage.content,
+        timestamp:
+          userMessage.timestamp instanceof Date
+            ? userMessage.timestamp
+            : new Date(userMessage.timestamp),
+      },
+    ];
+  } else {
+    // Get messages from store for follow-up messages
+    messages = currentMessages
+      .filter(msg => {
+        // Exclude the empty assistant message we just created
+        if (msg.id === assistantMessage.id) {
+          return false;
+        }
+        // Include all non-empty messages
+        if (!msg.content || msg.content.trim() === '') {
+          return false;
+        }
+        return true;
+      })
+      .map(msg => ({
+        id: msg.id,
+        role: msg.role as 'user' | 'assistant',
+        content: msg.content,
+        timestamp: new Date(msg.timestamp),
+      }));
+  }
+
+  return messages;
+}
+
+/**
+ * Enhanced streaming handler using ChatService
+ */
+function createChatServiceStreamHandler(
+  messageStore: MessageState,
+  uiStore: UIState,
+  chatServiceRef: React.MutableRefObject<ChatService | null>
+) {
+  return async (
+    provider: AIProvider,
+    assistantMessage: ChatMessage,
+    userMessage?: ChatMessage
+  ): Promise<void> => {
+    if (!chatServiceRef.current) {
+      throw new Error('Chat service not initialized');
+    }
+
+    // Set the provider on the chat service
+    chatServiceRef.current.setProvider(provider);
+
+    try {
+      // Set active message for streaming
+      uiStore.setActiveMessage(assistantMessage.id);
+
+      // Get current messages from store
+      const currentMessages = useMessageStore.getState().getMessages();
+
+      // Build messages array for the provider
+      const messages = convertToProviderMessages(currentMessages, assistantMessage, userMessage);
+
+      // Ensure we have at least one message
+      if (messages.length === 0) {
+        throw new Error('No valid messages to send to AI provider');
+      }
+
+      // Get last response ID for conversation continuity (OpenAI Response API)
+      const previousResponseId = uiStore.getLastResponseId();
+
+      // Get the system prompt
+      const systemPrompt = getSystemPrompt();
+
+      // Start streaming using ChatService
+      const stream = chatServiceRef.current.stream(messages, {
+        previousResponseId: previousResponseId || undefined,
+        systemPrompt,
+      });
+
+      let lastSuccessfulContent = '';
+      let thinkingContent = '';
+      let isThinkingPhase = true; // Track if we're still in thinking phase
+      let streamInterrupted = false;
+      let searchMetadata: unknown = null; // Store search metadata from stream
+      let responseId: string | null = null; // Store response ID from stream
+
+      let lastStreamError: unknown = null;
+      try {
+        for await (const chunk of stream) {
+          // Check if cancelled
+          if (!chatServiceRef.current?.isStreaming()) {
+            streamInterrupted = true;
+            break;
+          }
+
+          // Extract thinking and content from streaming chunk
+          const thinking = (chunk as StreamChunk)?.choices?.[0]?.delta?.thinking || '';
+          const content = (chunk as StreamChunk)?.choices?.[0]?.delta?.content || '';
+
+          // Check for search metadata in the chunk (it comes from the StreamChunk type now)
+          // Gemini sends this in the last chunk with the complete response
+          if (chunk.metadata?.['searchResults']) {
+            searchMetadata = chunk.metadata['searchResults'];
+          }
+
+          // Check for response ID in the chunk (OpenAI Response API)
+          // Only use the responseId from metadata, NOT the chunk.id which is locally generated
+          if (chunk.metadata?.['responseId']) {
+            responseId = chunk.metadata?.['responseId'] as string;
+          }
+
+          // Handle thinking content - append deltas for real-time streaming
+          if (thinking) {
+            thinkingContent += thinking;
+            // Get current message to preserve its metadata
+            const currentMsg = messageStore.getMessageById(assistantMessage.id);
+            // Update metadata with accumulated thinking, preserving existing metadata
+            messageStore.updateMessage(assistantMessage.id, {
+              metadata: {
+                ...(currentMsg?.metadata || {}),
+                thinking: thinkingContent,
+                thinkingStreaming: true,
+              },
+            });
+          }
+
+          // Handle regular content
+          if (content) {
+            // Mark end of thinking phase when content starts
+            if (isThinkingPhase && thinkingContent) {
+              isThinkingPhase = false;
+              // Get current message to preserve its metadata
+              const currentMsg = messageStore.getMessageById(assistantMessage.id);
+              // Mark thinking as complete, preserving existing metadata
+              messageStore.updateMessage(assistantMessage.id, {
+                metadata: {
+                  ...(currentMsg?.metadata || {}),
+                  thinking: thinkingContent,
+                  thinkingStreaming: false,
+                },
+              });
+            }
+            // Append the content chunk
+            messageStore.appendToMessage(assistantMessage.id, content);
+            lastSuccessfulContent += content;
+
+            // Update search metadata if we have it
+            if (searchMetadata) {
+              const currentMsg = messageStore.getMessageById(assistantMessage.id);
+              messageStore.updateMessage(assistantMessage.id, {
+                metadata: {
+                  ...(currentMsg?.metadata || {}),
+                  searchResults: searchMetadata,
+                },
+              });
+            }
+          }
+        }
+      } catch (streamError) {
+        // Streaming was interrupted
+        streamInterrupted = true;
+        lastStreamError = streamError;
+        // Stream error handled silently
+
+        // Append recovery message if we got partial content
+        if (lastSuccessfulContent && lastSuccessfulContent.length > 0) {
+          messageStore.appendToMessage(
+            assistantMessage.id,
+            '\n\n[Stream interrupted. Message may be incomplete.]'
+          );
+        }
+      }
+
+      // Get current message to preserve its metadata
+      const finalMsg = messageStore.getMessageById(assistantMessage.id);
+      // Mark streaming complete or partial
+      if (streamInterrupted && lastSuccessfulContent.length > 0) {
+        messageStore.updateMessage(assistantMessage.id, {
+          status: 'received',
+          metadata: {
+            ...(finalMsg?.metadata || {}),
+            partial: true,
+            interrupted: true,
+            thinking: thinkingContent || undefined,
+            thinkingStreaming: false,
+            ...(searchMetadata ? { searchResults: searchMetadata } : {}),
+          },
+        });
+      } else if (!streamInterrupted) {
+        messageStore.updateMessage(assistantMessage.id, {
+          status: 'received',
+          metadata: {
+            ...(finalMsg?.metadata || {}),
+            thinking: thinkingContent || undefined,
+            thinkingStreaming: false,
+            ...(searchMetadata ? { searchResults: searchMetadata } : {}),
+          },
+        });
+        // Store response ID if we got one (OpenAI Response API)
+        if (responseId) {
+          uiStore.setLastResponseId(responseId);
+        }
+      } else {
+        // Surface the underlying error if available; otherwise emit generic message
+        if (lastStreamError instanceof Error) {
+          throw lastStreamError;
+        }
+        throw new Error('Stream interrupted before receiving any content');
+      }
+    } catch (error) {
+      // Handle streaming error
+      let errorMessage = 'An unexpected error occurred';
+
+      if (error instanceof Error) {
+        errorMessage = error.message;
+      }
+
+      // Try to get more specific error from provider
+      const providerError = provider.formatError?.(error as Error);
+      if (providerError) {
+        errorMessage = providerError.message;
+      }
+
+      // Check if this is a recoverable network error
+      const isNetworkError =
+        errorMessage.toLowerCase().includes('network') ||
+        errorMessage.toLowerCase().includes('timeout') ||
+        errorMessage.toLowerCase().includes('connection');
+
+      if (isNetworkError) {
+        errorMessage += ' (You can try sending the message again)';
+      }
+
+      messageStore.updateMessage(assistantMessage.id, {
+        status: 'error',
+        error: errorMessage,
+      });
+      throw error;
+    } finally {
+      // Only clear active message if the store is still available
+      try {
+        uiStore.clearActiveMessage();
+      } catch (cleanupError) {
+        // Ignore errors during cleanup (component may be unmounted)
+        // Failed to clear active message in finally block - non-critical
+      }
+    }
+  };
 }
 
 export function useMessageHandler({
@@ -26,7 +302,22 @@ export function useMessageHandler({
   const messageStore = useMessageStore();
   const uiStore = useUIStore();
   const settingsStore = useSettingsStore();
-  const { handleStreamingResponse, cancelStreaming } = useStreamHandler();
+
+  // ChatService for refactor mode
+  const chatServiceRef = useRef<ChatService | null>(null);
+
+  // Initialize ChatService for refactor mode
+  useEffect(() => {
+    if (enabled && !chatServiceRef.current) {
+      chatServiceRef.current = new ChatService();
+    }
+  }, [enabled]);
+
+  // Enhanced streaming handler using ChatService
+  const handleStreamingResponse = useMemo(
+    () => createChatServiceStreamHandler(messageStore, uiStore, chatServiceRef),
+    [messageStore, uiStore, chatServiceRef]
+  );
 
   /**
    * Send a message to the active AI provider
@@ -63,23 +354,27 @@ export function useMessageHandler({
         let hasTabContext = false;
         let formatResult: ReturnType<typeof formatTabContent> | undefined;
 
+        // Check if this is the first message in the conversation
+        const existingMessages = messageStore.getMessages();
+        const isFirstMessage = existingMessages.filter(m => m.role === 'user').length === 0;
+
         // Check if we have loaded tabs to include
         const loadedTabs = useTabStore.getState().getLoadedTabs();
         const loadedTabIds = Object.keys(loadedTabs).map(id => parseInt(id, 10));
 
-        if (loadedTabIds.length > 0) {
-          // We have loaded tabs, format the content with tab structure
-          // Get all loaded tabs
+        // Always format the first message (with or without tabs)
+        if (isFirstMessage) {
+          // Get all loaded tabs (may be empty array)
           const allLoadedTabs = loadedTabIds
             .map(tabId => loadedTabs[tabId])
             .filter((tab): tab is TabContent => Boolean(tab));
 
-          // Format the tab content with the new cleaner structure
+          // Format the content - will add system instruction even if no tabs
           formatResult = formatTabContent(trimmedContent, allLoadedTabs);
 
           // Use formatted content for AI but keep original for display
           finalContent = formatResult.formatted;
-          hasTabContext = true;
+          hasTabContext = allLoadedTabs.length > 0;
         }
 
         // Add user message to chat store (unless we're regenerating)
@@ -167,20 +462,30 @@ export function useMessageHandler({
         uiStore.setLoading(false);
       }
     },
-    [enabled, messageStore, settingsStore, getActiveProvider, handleStreamingResponse]
+    [enabled, messageStore, uiStore, settingsStore, getActiveProvider, handleStreamingResponse]
   );
 
   /**
    * Cancel the current message/streaming operation
    */
   const cancelMessage = useCallback(() => {
-    cancelStreaming();
+    // Use ChatService cancellation
+    if (chatServiceRef.current) {
+      chatServiceRef.current.cancel();
+    }
     uiStore.setLoading(false);
-  }, [cancelStreaming, messageStore]);
+  }, [uiStore]);
+
+  /**
+   * Check if currently streaming
+   */
+  const isStreaming = useCallback(() => {
+    return chatServiceRef.current?.isStreaming() ?? false;
+  }, []);
 
   return {
     sendMessage,
     cancelMessage,
-    isStreaming: () => useUIStore.getState().getActiveMessageId() !== null,
+    isStreaming,
   };
 }

@@ -35,7 +35,7 @@ Background Service Worker
     ├─ Keep-Alive System
     └─ Content Caching
         ↓
-Content Script (tabext)
+Content Script (content)
     ↓
 Sidebar UI (React)
 ```

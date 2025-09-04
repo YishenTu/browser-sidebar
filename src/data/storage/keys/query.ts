@@ -129,22 +129,25 @@ export async function getKeysByProvider(
     const results = dbInstance ? await dbInstance.query(DB_STORES.METADATA, { provider }) : [];
 
     // Convert to EncryptedAPIKey format (metadata only)
-    return results.map((metadata: any) => ({
-      id: metadata.id,
-      metadata: metadata as APIKeyMetadata,
-      encryptedData: {
-        data: new Uint8Array(),
-        iv: new Uint8Array(),
-        algorithm: 'AES-GCM' as const,
-        version: 1,
-      },
-      keyHash: '',
-      checksum: '',
-      storageVersion: 1,
-      configuration: {},
-      usageStats: undefined,
-      rotationStatus: undefined,
-    }));
+    return results.map((metadata: unknown) => {
+      const meta = metadata as APIKeyMetadata;
+      return {
+        id: meta.id,
+        metadata: meta,
+        encryptedData: {
+          data: new Uint8Array(),
+          iv: new Uint8Array(),
+          algorithm: 'AES-GCM' as const,
+          version: 1,
+        },
+        keyHash: '',
+        checksum: '',
+        storageVersion: 1,
+        configuration: {},
+        usageStats: undefined,
+        rotationStatus: undefined,
+      };
+    });
   } catch (error) {
     throw new Error(
       `Failed to get keys for provider ${provider}: ${error instanceof Error ? error.message : 'Unknown error'}`

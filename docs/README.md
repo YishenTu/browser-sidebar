@@ -26,7 +26,7 @@ Detailed implementation guides for each development stage.
 - **[Stage 4: AI Provider System](./stages/task-stage-4.md)**  
   22 tasks - AI integrations, streaming, rate limiting
 - **[Stage 5: Tab Content Extraction](./stages/task-stage-5.md)**  
-  21 tasks - Tab content capture module under `src/tabext/` (single/multi-tab extraction, formatting, integration)
+  21 tasks - Tab content capture module under `src/content/` (single/multi-tab extraction, formatting, integration)
 
 ### [Architecture](./architecture/)
 

@@ -3,7 +3,6 @@ import { TextArea, TextAreaProps, CloseIcon } from '@ui/index';
 import { useTabMention } from '@hooks/useTabMention';
 import { TabMentionDropdown } from './TabMentionDropdown';
 import { TabErrorBoundary } from './TabErrorBoundary';
-import { calculateCaretDropdownPosition } from '@sidebar/utils/dropdownPosition';
 import type { TabInfo, TabContent } from '@/types/tabs';
 
 export interface ChatInputProps extends Omit<TextAreaProps, 'onKeyDown' | 'value' | 'onChange'> {
@@ -183,13 +182,7 @@ export const ChatInput = React.forwardRef<HTMLTextAreaElement, ChatInputProps>(
         setFilteredTabs([]);
         setDropdownPosition(null);
       }
-    }, [
-      currentValue,
-      detectMention,
-      filterTabsByQuery,
-      enableMentions,
-      calculateCaretDropdownPosition,
-    ]);
+    }, [currentValue, detectMention, filterTabsByQuery, enableMentions]);
 
     // Handle value changes
     const handleValueChange = useCallback(
@@ -237,13 +230,7 @@ export const ChatInput = React.forwardRef<HTMLTextAreaElement, ChatInputProps>(
           }
         }
       },
-      [
-        handleValueChange,
-        detectMention,
-        filterTabsByQuery,
-        enableMentions,
-        calculateCaretDropdownPosition,
-      ]
+      [handleValueChange, detectMention, filterTabsByQuery, enableMentions]
     );
 
     // Send message

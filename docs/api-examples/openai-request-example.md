@@ -196,7 +196,7 @@ data: [DONE]
 
 ## Configuration in Code
 
-Location: `src/provider/openai/requestBuilder.ts`
+Location: `src/core/ai/openai/requestBuilder.ts`
 
 ```javascript
 export function buildRequest(

@@ -208,11 +208,11 @@ export interface MigrationScript {
   /** Human-readable description */
   description: string;
   /** Forward migration function */
-  up: (data: any) => any;
+  up: (data: unknown) => unknown;
   /** Rollback migration function */
-  down: (data: any) => any;
+  down: (data: unknown) => unknown;
   /** Optional validation function */
-  validation?: (data: any) => boolean;
+  validation?: (data: unknown) => boolean;
   /** Optional dependencies (version numbers that must run first) */
   dependencies?: StorageVersion[];
 }
@@ -259,15 +259,20 @@ export function isSerializableValue(value: unknown): value is SerializableValue 
  * Type guard for StorageContainer
  */
 export function isStorageContainer(value: unknown): value is StorageContainer {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const obj = value as Record<string, unknown>;
+  const metadata = obj['metadata'] as Record<string, unknown> | null;
+
   return (
-    typeof value === 'object' &&
-    value !== null &&
-    typeof (value as any).version === 'number' &&
-    (value as any).data !== undefined &&
-    typeof (value as any).metadata === 'object' &&
-    (value as any).metadata !== null &&
-    typeof (value as any).metadata.createdAt === 'number' &&
-    typeof (value as any).metadata.serializedAt === 'number'
+    typeof obj['version'] === 'number' &&
+    obj['data'] !== undefined &&
+    typeof metadata === 'object' &&
+    metadata !== null &&
+    typeof metadata['createdAt'] === 'number' &&
+    typeof metadata['serializedAt'] === 'number'
   );
 }
 
@@ -275,16 +280,20 @@ export function isStorageContainer(value: unknown): value is StorageContainer {
  * Type guard for ConversationStorage
  */
 export function isConversationStorage(value: unknown): value is ConversationStorage {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const obj = value as Record<string, unknown>;
+
   return (
-    typeof value === 'object' &&
-    value !== null &&
-    typeof (value as any).id === 'string' &&
-    typeof (value as any).title === 'string' &&
-    Array.isArray((value as any).messages) &&
-    typeof (value as any).metadata === 'object' &&
-    typeof (value as any).encrypted === 'boolean' &&
-    typeof (value as any).lastAccessed === 'number' &&
-    typeof (value as any).storageVersion === 'number'
+    typeof obj['id'] === 'string' &&
+    typeof obj['title'] === 'string' &&
+    Array.isArray(obj['messages']) &&
+    typeof obj['metadata'] === 'object' &&
+    typeof obj['encrypted'] === 'boolean' &&
+    typeof obj['lastAccessed'] === 'number' &&
+    typeof obj['storageVersion'] === 'number'
   );
 }
 
@@ -292,14 +301,18 @@ export function isConversationStorage(value: unknown): value is ConversationStor
  * Type guard for SettingsStorage
  */
 export function isSettingsStorage(value: unknown): value is SettingsStorage {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const obj = value as Record<string, unknown>;
+
   return (
-    typeof value === 'object' &&
-    value !== null &&
-    typeof (value as any).version === 'number' &&
-    typeof (value as any).encrypted === 'boolean' &&
-    typeof (value as any).lastModified === 'number' &&
-    typeof (value as any).storageVersion === 'number' &&
-    typeof (value as any).theme === 'string'
+    typeof obj['version'] === 'number' &&
+    typeof obj['encrypted'] === 'boolean' &&
+    typeof obj['lastModified'] === 'number' &&
+    typeof obj['storageVersion'] === 'number' &&
+    typeof obj['theme'] === 'string'
   );
 }
 
@@ -312,16 +325,21 @@ export const isAPIKeyStorage = isAPIKeyStorageFn;
  * Type guard for CacheEntry
  */
 export function isCacheEntry(value: unknown): value is CacheEntry {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const obj = value as Record<string, unknown>;
+  const metadata = obj['metadata'] as Record<string, unknown> | null;
+
   return (
-    typeof value === 'object' &&
-    value !== null &&
-    typeof (value as any).key === 'string' &&
-    (value as any).value !== undefined &&
-    typeof (value as any).metadata === 'object' &&
-    (value as any).metadata !== null &&
-    typeof (value as any).metadata.createdAt === 'number' &&
-    typeof (value as any).metadata.expiresAt === 'number' &&
-    typeof (value as any).storageVersion === 'number'
+    typeof obj['key'] === 'string' &&
+    obj['value'] !== undefined &&
+    typeof metadata === 'object' &&
+    metadata !== null &&
+    typeof metadata['createdAt'] === 'number' &&
+    typeof metadata['expiresAt'] === 'number' &&
+    typeof obj['storageVersion'] === 'number'
   );
 }
 
@@ -329,14 +347,18 @@ export function isCacheEntry(value: unknown): value is CacheEntry {
  * Type guard for CacheStorage
  */
 export function isCacheStorage(value: unknown): value is CacheStorage {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const obj = value as Record<string, unknown>;
+
   return (
-    typeof value === 'object' &&
-    value !== null &&
-    typeof (value as any).entries === 'object' &&
-    typeof (value as any).maxSize === 'number' &&
-    typeof (value as any).currentSize === 'number' &&
-    typeof (value as any).cleanupInterval === 'number' &&
-    typeof (value as any).storageVersion === 'number'
+    typeof obj['entries'] === 'object' &&
+    typeof obj['maxSize'] === 'number' &&
+    typeof obj['currentSize'] === 'number' &&
+    typeof obj['cleanupInterval'] === 'number' &&
+    typeof obj['storageVersion'] === 'number'
   );
 }
 
@@ -344,15 +366,19 @@ export function isCacheStorage(value: unknown): value is CacheStorage {
  * Type guard for StorageSchema
  */
 export function isStorageSchema(value: unknown): value is StorageSchema {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const obj = value as Record<string, unknown>;
+
   return (
-    typeof value === 'object' &&
-    value !== null &&
-    typeof (value as any).version === 'number' &&
-    typeof (value as any).conversations === 'object' &&
-    typeof (value as any).settings === 'object' &&
-    typeof (value as any).apiKeys === 'object' &&
-    typeof (value as any).cache === 'object' &&
-    Array.isArray((value as any).migrations)
+    typeof obj['version'] === 'number' &&
+    typeof obj['conversations'] === 'object' &&
+    typeof obj['settings'] === 'object' &&
+    typeof obj['apiKeys'] === 'object' &&
+    typeof obj['cache'] === 'object' &&
+    Array.isArray(obj['migrations'])
   );
 }
 
@@ -414,7 +440,7 @@ function serializeValue(value: unknown): SerializableValue {
     typeof value === 'number' ||
     typeof value === 'boolean'
   ) {
-    return value;
+    return value as SerializableValue;
   }
 
   if (value instanceof Date) {
@@ -518,9 +544,9 @@ export function deserializeDate(serialized: SerializableValue): Date {
   if (
     typeof serialized === 'object' &&
     serialized !== null &&
-    (serialized as any).__type === 'Date'
+    (serialized as Record<string, unknown>).__type === 'Date'
   ) {
-    return new Date((serialized as any).value);
+    return new Date((serialized as Record<string, unknown>).value as string);
   }
   throw new Error('Invalid serialized Date format');
 }
@@ -542,9 +568,12 @@ export function deserializeMap<K = unknown, V = unknown>(serialized: Serializabl
   if (
     typeof serialized === 'object' &&
     serialized !== null &&
-    (serialized as any).__type === 'Map'
+    (serialized as Record<string, unknown>).__type === 'Map'
   ) {
-    const entries = (serialized as any).entries as [SerializableValue, SerializableValue][];
+    const entries = (serialized as Record<string, unknown>).entries as [
+      SerializableValue,
+      SerializableValue,
+    ][];
     return new Map(entries.map(([k, v]) => [deserializeValue(k) as K, deserializeValue(v) as V]));
   }
   throw new Error('Invalid serialized Map format');
@@ -567,9 +596,9 @@ export function deserializeSet<T = unknown>(serialized: SerializableValue): Set<
   if (
     typeof serialized === 'object' &&
     serialized !== null &&
-    (serialized as any).__type === 'Set'
+    (serialized as Record<string, unknown>).__type === 'Set'
   ) {
-    const values = (serialized as any).values as SerializableValue[];
+    const values = (serialized as Record<string, unknown>).values as SerializableValue[];
     return new Set(values.map(v => deserializeValue(v) as T));
   }
   throw new Error('Invalid serialized Set format');
@@ -697,9 +726,12 @@ export function needsMigration(data: { version?: number }, targetVersion: number
 /**
  * Apply migrations to data
  */
-export async function applyMigrations(data: any, migrations: MigrationScript[]): Promise<any> {
-  let currentData = { ...data };
-  const currentVersion = currentData.version || 0;
+export async function applyMigrations(
+  data: unknown,
+  migrations: MigrationScript[]
+): Promise<unknown> {
+  let currentData = { ...(data as Record<string, unknown>) };
+  const currentVersion = (currentData['version'] as number) || 0;
 
   // Sort migrations by version
   const sortedMigrations = migrations
@@ -713,8 +745,8 @@ export async function applyMigrations(data: any, migrations: MigrationScript[]):
         throw new Error(`Pre-migration validation failed for version ${migration.version}`);
       }
 
-      currentData = migration.up(currentData);
-      currentData.version = migration.version;
+      currentData = migration.up(currentData) as Record<string, unknown>;
+      currentData['version'] = migration.version;
     } catch (error) {
       throw new Error(
         `Migration to version ${migration.version} failed: ${error instanceof Error ? error.message : 'Unknown error'}`

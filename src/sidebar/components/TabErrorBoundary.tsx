@@ -298,7 +298,7 @@ export function withTabErrorBoundary<P extends object>(
   Component: React.ComponentType<P>,
   boundaryProps?: Partial<TabErrorBoundaryProps>
 ) {
-  const WrappedComponent = React.forwardRef<any, P>((props, ref) => {
+  const WrappedComponent = React.forwardRef<unknown, P>((props, ref) => {
     const componentProps = { ...props } as P;
     return (
       <TabErrorBoundary {...boundaryProps}>

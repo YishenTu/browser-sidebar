@@ -17,6 +17,4 @@ export {
   type CaretPosition,
 } from './dropdownPosition';
 
-export { formatTabContent, type TabFormatResult, type FormatOptions } from './contentFormatter';
-
 export { getDomSafeFaviconUrlSync } from './favicon';

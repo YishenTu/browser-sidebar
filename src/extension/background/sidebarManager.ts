@@ -14,6 +14,14 @@ import {
   TabClosedPayload,
 } from '@/types/messages';
 import { isRestrictedUrl as isRestrictedUrlShared } from '@/shared/utils/restrictedUrls';
+import {
+  getTab as platformGetTab,
+  waitForTabReady,
+  sendMessageToTab,
+  addTabRemovedListener,
+  addTabUpdatedListener,
+} from '@platform/chrome/tabs';
+import { sendMessage } from '@platform/chrome/runtime';
 
 /**
  * Sidebar state information for a tab
@@ -294,15 +302,16 @@ export class SidebarManager {
     try {
       // Always send TOGGLE_SIDEBAR with explicit show/hide payload
       // This prevents confusion between toggle and explicit state setting
-      await chrome.tabs.sendMessage(
-        tabId,
-        createMessage<ToggleSidebarPayload>({
-          type: 'TOGGLE_SIDEBAR',
-          payload: { show },
-          source: 'background',
-          target: 'content',
-        })
-      );
+      const toggleMessage = createMessage<ToggleSidebarPayload>({
+        type: 'TOGGLE_SIDEBAR',
+        payload: { show },
+        source: 'background',
+        target: 'content',
+      });
+
+      await sendMessageToTab<ToggleSidebarPayload, unknown>(tabId, toggleMessage, {
+        timeout: 3000,
+      });
     } catch (error) {
       // If content script is not loaded, try to inject it
       if (error instanceof Error && error.message.includes('Could not establish connection')) {
@@ -326,24 +335,10 @@ export class SidebarManager {
       // or rely on the manifest declaration. For now, just retry sending the message.
 
       // Check if tab is ready
-      const tab = await chrome.tabs.get(tabId);
+      const tab = await platformGetTab(tabId);
+      if (!tab) return;
       if (tab.status !== 'complete') {
-        // Wait for tab to be ready
-        await new Promise<void>(resolve => {
-          const listener = (updatedTabId: number, changeInfo: chrome.tabs.TabChangeInfo) => {
-            if (updatedTabId === tabId && changeInfo.status === 'complete') {
-              chrome.tabs.onUpdated.removeListener(listener);
-              resolve();
-            }
-          };
-          chrome.tabs.onUpdated.addListener(listener);
-
-          // Timeout after 5 seconds
-          setTimeout(() => {
-            chrome.tabs.onUpdated.removeListener(listener);
-            resolve();
-          }, 5000);
-        });
+        await waitForTabReady(tabId, 5000, 100);
       }
 
       // The content script should be auto-injected by manifest.json
@@ -351,15 +346,16 @@ export class SidebarManager {
       await new Promise(resolve => setTimeout(resolve, 150));
 
       // Send the message directly (don't call sendToContentScript to avoid recursion)
-      await chrome.tabs.sendMessage(
-        tabId,
-        createMessage<ToggleSidebarPayload>({
-          type: 'TOGGLE_SIDEBAR',
-          payload: { show },
-          source: 'background',
-          target: 'content',
-        })
-      );
+      const toggleMessage = createMessage<ToggleSidebarPayload>({
+        type: 'TOGGLE_SIDEBAR',
+        payload: { show },
+        source: 'background',
+        target: 'content',
+      });
+
+      await sendMessageToTab<ToggleSidebarPayload, unknown>(tabId, toggleMessage, {
+        timeout: 3000,
+      });
     } catch (injectionError) {
       throw new Error(`Content script injection failed: ${injectionError}`);
     }
@@ -372,28 +368,23 @@ export class SidebarManager {
    */
   private setupTabListeners(): void {
     // Clean up state when tab is closed
-    chrome.tabs.onRemoved.addListener(tabId => {
+    addTabRemovedListener(tabId => {
       this.cleanupTab(tabId);
 
       // Notify sidebar about tab closure so it can clean up sessions
       // This message is sent to all extension contexts that might be listening
-      chrome.runtime
-        .sendMessage(
-          createMessage<TabClosedPayload>({
-            type: 'TAB_CLOSED',
-            payload: { tabId },
-            source: 'background',
-            target: 'sidebar',
-          })
-        )
-        .catch(() => {
-          // Ignore errors if no sidebar is listening
-          // This is expected when the sidebar is not open
-        });
+      const tabClosedMessage = createMessage<TabClosedPayload>({
+        type: 'TAB_CLOSED',
+        payload: { tabId },
+        source: 'background',
+        target: 'sidebar',
+      });
+
+      sendMessage(tabClosedMessage as Message).finally(() => void 0);
     });
 
     // Optional: Clean up state when tab URL changes significantly
-    chrome.tabs.onUpdated.addListener((tabId, changeInfo) => {
+    addTabUpdatedListener((tabId, changeInfo) => {
       if (changeInfo.url && isRestrictedUrlShared(changeInfo.url)) {
         this.cleanupTab(tabId);
       }

@@ -353,7 +353,8 @@ export function createTabInfoFromChromeTab(chromeTab: chrome.tabs.Tab): TabInfo 
     pinned: chromeTab.pinned || false,
     status,
     // Use Chrome's lastAccessed if available (Chrome 121+), fallback to current time
-    lastAccessed: (chromeTab as any).lastAccessed ?? Date.now(),
+    lastAccessed:
+      (chromeTab as chrome.tabs.Tab & { lastAccessed?: number }).lastAccessed ?? Date.now(),
     audible: chromeTab.audible,
     mutedInfo: chromeTab.mutedInfo
       ? {

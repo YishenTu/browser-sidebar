@@ -7,6 +7,7 @@
 
 import type { StorageArea, StorageSchema, MigrationScript } from '@/types/storage';
 import { serialize, deserialize, getCurrentVersion, applyMigrations } from '@/types/storage';
+import * as ChromeStorage from '@platform/chrome/storage';
 import { DEFAULT_MODEL_ID } from '@/config/models';
 
 // =============================================================================
@@ -52,12 +53,7 @@ async function withRetry<T>(operation: () => Promise<T>, retryCount = 0): Promis
   }
 }
 
-/**
- * Get storage area API
- */
-function getStorageAreaAPI(area: StorageArea = 'local'): chrome.storage.StorageArea {
-  return area === 'sync' ? chrome.storage.sync : chrome.storage.local;
-}
+// (Deprecated) Direct chrome.storage usage removed in favor of @platform/chrome/storage
 
 // =============================================================================
 // Basic Storage Operations
@@ -71,14 +67,7 @@ export async function get<T = unknown>(
   area: StorageArea = 'local'
 ): Promise<T | null> {
   return withRetry(async () => {
-    const storageAPI = getStorageAreaAPI(area);
-    const result = await storageAPI.get([key]);
-
-    if (!(key in result)) {
-      return null;
-    }
-
-    const value = result[key];
+    const value = await ChromeStorage.get<unknown>(key, area);
 
     // If it's a serialized string, deserialize it
     if (typeof value === 'string') {
@@ -90,7 +79,7 @@ export async function get<T = unknown>(
       }
     }
 
-    return value as T;
+    return (value as T) ?? null;
   });
 }
 
@@ -103,8 +92,6 @@ export async function set<T = unknown>(
   area: StorageArea = 'local'
 ): Promise<void> {
   return withRetry(async () => {
-    const storageAPI = getStorageAreaAPI(area);
-
     // Serialize complex objects
     let serializedValue: unknown = value;
     if (
@@ -121,7 +108,7 @@ export async function set<T = unknown>(
       }
     }
 
-    await storageAPI.set({ [key]: serializedValue });
+    await ChromeStorage.set(key, serializedValue, area);
   });
 }
 
@@ -130,8 +117,7 @@ export async function set<T = unknown>(
  */
 export async function remove(key: string, area: StorageArea = 'local'): Promise<void> {
   return withRetry(async () => {
-    const storageAPI = getStorageAreaAPI(area);
-    await storageAPI.remove([key]);
+    await ChromeStorage.remove(key, area);
   });
 }
 
@@ -140,8 +126,7 @@ export async function remove(key: string, area: StorageArea = 'local'): Promise<
  */
 export async function clear(area: StorageArea = 'local'): Promise<void> {
   return withRetry(async () => {
-    const storageAPI = getStorageAreaAPI(area);
-    await storageAPI.clear();
+    await ChromeStorage.clear(area);
   });
 }
 
@@ -157,8 +142,10 @@ export async function getBatch(
   area: StorageArea = 'local'
 ): Promise<Record<string, unknown>> {
   return withRetry(async () => {
-    const storageAPI = getStorageAreaAPI(area);
-    const result = await storageAPI.get(keys);
+    const result = (await ChromeStorage.getMultiple<Record<string, unknown>>(keys, area)) as Record<
+      string,
+      unknown
+    >;
 
     // Deserialize any serialized values
     const deserializedResult: Record<string, unknown> = {};
@@ -186,8 +173,6 @@ export async function setBatch(
   area: StorageArea = 'local'
 ): Promise<void> {
   return withRetry(async () => {
-    const storageAPI = getStorageAreaAPI(area);
-
     // Serialize complex objects
     const serializedItems: Record<string, unknown> = {};
     for (const [key, value] of Object.entries(items)) {
@@ -207,7 +192,7 @@ export async function setBatch(
       }
     }
 
-    await storageAPI.set(serializedItems);
+    await ChromeStorage.setMultiple(serializedItems as Record<string, unknown>, area);
   });
 }
 
@@ -224,51 +209,40 @@ export function onChanged(
     area: string
   ) => void
 ): () => void {
-  const listener = (changes: Record<string, chrome.storage.StorageChange>) => {
+  // Delegate to platform listener and deserialize string values
+  return ChromeStorage.addStorageListener<Record<string, unknown>>((changes, areaName) => {
     const deserializedChanges: Record<string, { oldValue?: unknown; newValue?: unknown }> = {};
-
     for (const [key, change] of Object.entries(changes)) {
-      deserializedChanges[key] = {};
-
+      if (!change) continue;
+      const entry: { oldValue?: unknown; newValue?: unknown } = {};
       if (change.oldValue !== undefined) {
-        if (typeof change.oldValue === 'string') {
-          try {
-            deserializedChanges[key].oldValue = deserialize(change.oldValue);
-          } catch {
-            deserializedChanges[key].oldValue = change.oldValue;
-          }
-        } else {
-          deserializedChanges[key].oldValue = change.oldValue;
-        }
+        entry.oldValue =
+          typeof change.oldValue === 'string'
+            ? (() => {
+                try {
+                  return deserialize(change.oldValue as string);
+                } catch {
+                  return change.oldValue;
+                }
+              })()
+            : change.oldValue;
       }
-
       if (change.newValue !== undefined) {
-        if (typeof change.newValue === 'string') {
-          try {
-            deserializedChanges[key].newValue = deserialize(change.newValue);
-          } catch {
-            deserializedChanges[key].newValue = change.newValue;
-          }
-        } else {
-          deserializedChanges[key].newValue = change.newValue;
-        }
+        entry.newValue =
+          typeof change.newValue === 'string'
+            ? (() => {
+                try {
+                  return deserialize(change.newValue as string);
+                } catch {
+                  return change.newValue;
+                }
+              })()
+            : change.newValue;
       }
+      deserializedChanges[key] = entry;
     }
-
-    callback(deserializedChanges, 'local');
-  };
-
-  // Add listener to local storage changes
-  if (chrome.storage.local.onChanged) {
-    chrome.storage.local.onChanged.addListener(listener);
-  }
-
-  // Return unsubscribe function
-  return () => {
-    if (chrome.storage.local.onChanged) {
-      chrome.storage.local.onChanged.removeListener(listener);
-    }
-  };
+    callback(deserializedChanges, areaName);
+  });
 }
 
 // =============================================================================
@@ -314,7 +288,7 @@ export async function migrate(migrations: MigrationScript[]): Promise<StorageSch
       currentData = existingData;
     }
 
-    const currentVersion = (currentData as any).version || 0;
+    const currentVersion = (currentData as StorageSchema).version || 0;
 
     // Apply migrations if needed
     let migratedData = currentData;
@@ -353,25 +327,12 @@ export interface StorageInfo {
  */
 export async function getStorageInfo(area: StorageArea = 'local'): Promise<StorageInfo> {
   return withRetry(async () => {
-    const storageAPI = getStorageAreaAPI(area);
-
-    let used = 0;
-    if (storageAPI.getBytesInUse) {
-      used = await storageAPI.getBytesInUse();
-    }
-
-    // Get quota from storage API constants
-    const quota =
-      (storageAPI as chrome.storage.StorageArea & { QUOTA_BYTES?: number }).QUOTA_BYTES || 5242880; // Default 5MB for local
-
-    const available = quota - used;
-    const usagePercentage = (used / quota) * 100;
-
+    const q = await ChromeStorage.getStorageQuota(area);
     return {
-      used,
-      quota,
-      available,
-      usagePercentage,
+      used: q.used,
+      quota: q.quota,
+      available: q.available,
+      usagePercentage: q.usagePercent,
     };
   });
 }

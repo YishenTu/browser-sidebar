@@ -9,12 +9,16 @@ import {
   Message,
   MessageType,
   MessageSource,
+  TypedMessage,
   createMessage,
   isValidMessage,
 } from '../../types/messages';
-import { ErrorCode, ExtensionError, handleChromeError, logError, isRetriableError } from './errors';
+import { ErrorCode, ExtensionError, logError, isRetriableError } from './errors';
 import type { StandardResponse } from './responses';
 import { createErrorResponse, createSuccessResponse } from './responses';
+import { addMessageListener, sendMessage as platformSendMessage } from '@platform/chrome/runtime';
+import { sendMessageToTab } from '@platform/chrome/tabs';
+import type { MessageListener as PlatformMessageListener } from '@platform/chrome/runtime';
 
 // Minimal validation: ensure basic message structure via type guard
 function validateMessage(message: unknown): { isValid: boolean; error?: string } {
@@ -58,11 +62,8 @@ export type UnsubscribeFunction = () => void;
 interface MessageSubscription {
   type: MessageType;
   listener: MessageListener;
-  chromeListener: (
-    message: unknown,
-    sender: chrome.runtime.MessageSender,
-    sendResponse: (response?: unknown) => void
-  ) => boolean;
+  chromeListener: PlatformMessageListener;
+  removeListener?: () => void;
 }
 
 /**
@@ -351,21 +352,22 @@ export class MessageBus {
       }
     };
 
+    // Add Chrome listener using platform wrapper
+    const removeListener = addMessageListener(chromeListener as PlatformMessageListener);
+
     // Store subscription
     this.subscriptions.set(subscriptionId, {
       type,
       listener: listener as MessageListener,
       chromeListener,
+      removeListener,
     });
-
-    // Add Chrome listener
-    chrome.runtime.onMessage.addListener(chromeListener);
 
     // Return unsubscribe function
     return () => {
       const subscription = this.subscriptions.get(subscriptionId);
-      if (subscription) {
-        chrome.runtime.onMessage.removeListener(subscription.chromeListener);
+      if (subscription && subscription.removeListener) {
+        subscription.removeListener();
         this.subscriptions.delete(subscriptionId);
       }
     };
@@ -387,37 +389,61 @@ export class MessageBus {
    */
   private async sendMessage<R = unknown>(message: Message, tabId?: number): Promise<R> {
     return new Promise((resolve, reject) => {
-      const handleResponse = (response: unknown) => {
-        // Check for Chrome runtime errors
-        const chromeError = handleChromeError('sendMessage', this.source);
-        if (chromeError) {
-          reject(chromeError);
-          return;
-        }
-
-        // Handle no response (connection closed)
-        if (response === undefined) {
-          reject(
-            new ExtensionError(
-              'No response received - target may not be available',
-              ErrorCode.MESSAGE_SEND_FAILED,
-              { target: message.target },
-              this.source
-            )
-          );
-          return;
-        }
-
-        resolve(response as R);
-      };
-
       try {
         if (tabId !== undefined) {
-          // Send to specific tab
-          chrome.tabs.sendMessage(tabId, message, handleResponse);
+          // Send to specific tab using platform wrapper
+          sendMessageToTab(tabId, message)
+            .then(result => {
+              if (result.success) {
+                resolve(result.response as R);
+              } else {
+                reject(
+                  new ExtensionError(
+                    result.error || 'Tab message send failed',
+                    ErrorCode.MESSAGE_SEND_FAILED,
+                    { target: message.target },
+                    this.source
+                  )
+                );
+              }
+            })
+            .catch(error => {
+              reject(
+                new ExtensionError(
+                  `Failed to send tab message: ${error instanceof Error ? error.message : String(error)}`,
+                  ErrorCode.MESSAGE_SEND_FAILED,
+                  { target: message.target },
+                  this.source
+                )
+              );
+            });
         } else {
-          // Send to runtime (background/popup/etc.)
-          chrome.runtime.sendMessage(message, handleResponse);
+          // Send to runtime using platform wrapper
+          platformSendMessage(message as TypedMessage)
+            .then(result => {
+              if (result.success) {
+                resolve(result.data as R);
+              } else {
+                reject(
+                  new ExtensionError(
+                    result.error?.message || 'Runtime message send failed',
+                    ErrorCode.MESSAGE_SEND_FAILED,
+                    { target: message.target },
+                    this.source
+                  )
+                );
+              }
+            })
+            .catch(error => {
+              reject(
+                new ExtensionError(
+                  `Failed to send runtime message: ${error instanceof Error ? error.message : String(error)}`,
+                  ErrorCode.MESSAGE_SEND_FAILED,
+                  { target: message.target },
+                  this.source
+                )
+              );
+            });
         }
       } catch (error) {
         reject(
@@ -488,7 +514,9 @@ export class MessageBus {
    */
   destroy(): void {
     for (const subscription of this.subscriptions.values()) {
-      chrome.runtime.onMessage.removeListener(subscription.chromeListener);
+      if (subscription.removeListener) {
+        subscription.removeListener();
+      }
     }
     this.subscriptions.clear();
     this.isListenerRegistered = false;

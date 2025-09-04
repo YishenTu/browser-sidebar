@@ -95,7 +95,7 @@ Content scripts in MV3 execute in an isolated world by default. For programmatic
   "content_scripts": [
     {
       "matches": ["<all_urls>"],
-      "js": ["src/tabext/index.ts"],
+      "js": ["src/content/index.ts"],
       "run_at": "document_idle",
       "all_frames": false
     }

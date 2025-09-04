@@ -79,28 +79,6 @@ export type RotationStatus =
 // =============================================================================
 
 /**
- * Rate limiting configuration for API keys
- */
-export interface RateLimitConfig {
-  /** Maximum requests per minute */
-  requestsPerMinute?: number;
-  /** Maximum requests per hour */
-  requestsPerHour?: number;
-  /** Maximum requests per day */
-  requestsPerDay?: number;
-  /** Maximum tokens per minute */
-  tokensPerMinute?: number;
-  /** Maximum tokens per hour */
-  tokensPerHour?: number;
-  /** Maximum tokens per day */
-  tokensPerDay?: number;
-  /** Whether to enforce rate limits strictly */
-  enforceLimit: boolean;
-  /** Grace period before enforcing limits (seconds) */
-  gracePeriod?: number;
-}
-
-/**
  * API endpoint configuration
  */
 export interface APIEndpointConfig {
@@ -116,43 +94,6 @@ export interface APIEndpointConfig {
   retryDelay?: number;
   /** Whether to use keep-alive connections */
   keepAlive?: boolean;
-}
-
-/**
- * Proxy configuration for API requests
- */
-export interface ProxyConfig {
-  /** Whether proxy is enabled */
-  enabled: boolean;
-  /** Proxy host */
-  host?: string;
-  /** Proxy port */
-  port?: number;
-  /** Proxy protocol */
-  protocol?: 'http' | 'https' | 'socks4' | 'socks5';
-  /** Proxy authentication */
-  auth?: {
-    username: string;
-    password: string;
-  };
-  /** Bypass proxy for specific hosts */
-  bypass?: string[];
-}
-
-/**
- * Key rotation configuration
- */
-export interface RotationConfig {
-  /** Whether automatic rotation is enabled */
-  enabled: boolean;
-  /** Rotation interval in days */
-  intervalDays?: number;
-  /** Days before expiration to warn user */
-  warnDays?: number;
-  /** Whether to automatically rotate without user confirmation */
-  autoRotate?: boolean;
-  /** Maximum number of old keys to keep */
-  keepOldKeys?: number;
 }
 
 /**
@@ -177,14 +118,8 @@ export interface APIKeySecurityConfig {
  * Complete API key configuration
  */
 export interface APIKeyConfiguration {
-  /** Rate limiting settings */
-  rateLimit?: RateLimitConfig;
   /** API endpoint configuration */
   endpoint?: APIEndpointConfig;
-  /** Proxy settings */
-  proxy?: ProxyConfig;
-  /** Key rotation settings */
-  rotation?: RotationConfig;
   /** Security settings */
   security?: APIKeySecurityConfig;
   /** Default model for non-built-in providers */
@@ -278,11 +213,11 @@ export interface APIKeyUsageStats {
 }
 
 /**
- * Key rotation tracking information
+ * API key rotation status tracking
  */
 export interface APIKeyRotationStatus {
   /** Current rotation status */
-  status: RotationStatus;
+  status: 'none' | 'pending' | 'in_progress' | 'completed' | 'failed';
   /** When key was last rotated */
   lastRotation?: number;
   /** When next rotation is scheduled */
@@ -358,6 +293,8 @@ export interface ProviderValidationRules {
   openai: ProviderValidationRule;
   anthropic: ProviderValidationRule;
   google: ProviderValidationRule;
+  openrouter: ProviderValidationRule;
+  gemini?: ProviderValidationRule;
   custom: ProviderValidationRule;
 }
 
@@ -583,8 +520,6 @@ export interface APIKeyManager {
   // Rotation operations
   /** Rotate an API key */
   rotateKey: (id: string) => Promise<KeyRotationResult>;
-  /** Schedule key rotation */
-  scheduleRotation: (id: string, config: RotationConfig) => Promise<void>;
   /** Cancel scheduled rotation */
   cancelRotation: (id: string) => Promise<boolean>;
 
@@ -608,11 +543,12 @@ export interface APIKeyManager {
  */
 export const DEFAULT_PROVIDER_RULES: ProviderValidationRules = {
   openai: {
-    pattern: /^sk-[A-Za-z0-9]{48}$/,
-    minLength: 51,
-    maxLength: 51,
+    // OpenAI keys can vary (project/org scoped). Be permissive but require sk- prefix.
+    pattern: /^sk-[A-Za-z0-9_-]{20,200}$/,
+    minLength: 23,
+    maxLength: 204,
     requiredPrefix: 'sk-',
-    description: 'OpenAI API keys start with "sk-" followed by 48 alphanumeric characters',
+    description: 'OpenAI API keys start with "sk-" (length varies by key type)',
   },
   anthropic: {
     pattern: /^sk-ant-[A-Za-z0-9]{40,52}$/,
@@ -635,6 +571,14 @@ export const DEFAULT_PROVIDER_RULES: ProviderValidationRules = {
     minLength: 1,
     maxLength: 1000,
     description: 'Custom provider keys can be any format between 1-1000 characters',
+  },
+  // Add explicit OpenRouter rule to avoid false positives with other providers
+  openrouter: {
+    pattern: /^sk-or-[A-Za-z0-9]{20,200}$/,
+    minLength: 6 + 3 + 1 + 20, // 'sk-or-' + at least 20
+    maxLength: 6 + 3 + 1 + 200,
+    requiredPrefix: 'sk-or-',
+    description: 'OpenRouter keys typically start with "sk-or-"',
   },
 };
 
@@ -767,20 +711,6 @@ export function isKeyExpired(metadata: APIKeyMetadata): boolean {
 }
 
 /**
- * Check if an API key needs rotation
- */
-export function needsRotation(metadata: APIKeyMetadata, rotationConfig: RotationConfig): boolean {
-  if (!rotationConfig.enabled || !rotationConfig.intervalDays) {
-    return false;
-  }
-
-  const rotationIntervalMs = rotationConfig.intervalDays * 24 * 60 * 60 * 1000;
-  const timeSinceCreation = Date.now() - metadata.createdAt;
-
-  return timeSinceCreation >= rotationIntervalMs;
-}
-
-/**
  * Get days until key expiration
  */
 export function getDaysUntilExpiration(metadata: APIKeyMetadata): number | null {
@@ -800,17 +730,21 @@ export function getDaysUntilExpiration(metadata: APIKeyMetadata): number | null 
  * Type guard for APIKeyMetadata
  */
 export function isAPIKeyMetadata(value: unknown): value is APIKeyMetadata {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const obj = value as Record<string, unknown>;
+
   return (
-    typeof value === 'object' &&
-    value !== null &&
-    typeof (value as any).id === 'string' &&
-    typeof (value as any).provider === 'string' &&
-    typeof (value as any).keyType === 'string' &&
-    typeof (value as any).status === 'string' &&
-    typeof (value as any).name === 'string' &&
-    typeof (value as any).createdAt === 'number' &&
-    typeof (value as any).lastUsed === 'number' &&
-    typeof (value as any).maskedKey === 'string'
+    typeof obj.id === 'string' &&
+    typeof obj.provider === 'string' &&
+    typeof obj.keyType === 'string' &&
+    typeof obj.status === 'string' &&
+    typeof obj.name === 'string' &&
+    typeof obj.createdAt === 'number' &&
+    typeof obj.lastUsed === 'number' &&
+    typeof obj.maskedKey === 'string'
   );
 }
 
@@ -818,16 +752,20 @@ export function isAPIKeyMetadata(value: unknown): value is APIKeyMetadata {
  * Type guard for EncryptedAPIKey
  */
 export function isEncryptedAPIKey(value: unknown): value is EncryptedAPIKey {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const obj = value as Record<string, unknown>;
+
   return (
-    typeof value === 'object' &&
-    value !== null &&
-    typeof (value as any).id === 'string' &&
-    isAPIKeyMetadata((value as any).metadata) &&
-    typeof (value as any).encryptedData === 'object' &&
-    typeof (value as any).keyHash === 'string' &&
-    typeof (value as any).checksum === 'string' &&
-    typeof (value as any).storageVersion === 'number' &&
-    typeof (value as any).configuration === 'object'
+    typeof obj.id === 'string' &&
+    isAPIKeyMetadata(obj.metadata) &&
+    typeof obj.encryptedData === 'object' &&
+    typeof obj.keyHash === 'string' &&
+    typeof obj.checksum === 'string' &&
+    typeof obj.storageVersion === 'number' &&
+    typeof obj.configuration === 'object'
   );
 }
 
@@ -835,23 +773,27 @@ export function isEncryptedAPIKey(value: unknown): value is EncryptedAPIKey {
  * Type guard for APIKeyStorage
  */
 export function isAPIKeyStorage(value: unknown): value is APIKeyStorage {
-  return (
-    isEncryptedAPIKey(value) &&
-    typeof (value as any).usageStats === 'object' &&
-    typeof (value as any).rotationStatus === 'object'
-  );
+  if (!isEncryptedAPIKey(value)) {
+    return false;
+  }
+
+  const obj = value as EncryptedAPIKey & Record<string, unknown>;
+
+  return typeof obj['usageStats'] === 'object' && typeof obj['rotationStatus'] === 'object';
 }
 
 /**
  * Type guard for ValidationResult
  */
 export function isValidationResult(value: unknown): value is ValidationResult {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const obj = value as Record<string, unknown>;
+
   return (
-    typeof value === 'object' &&
-    value !== null &&
-    typeof (value as any).isValid === 'boolean' &&
-    Array.isArray((value as any).errors) &&
-    Array.isArray((value as any).warnings)
+    typeof obj.isValid === 'boolean' && Array.isArray(obj.errors) && Array.isArray(obj.warnings)
   );
 }
 
@@ -870,7 +812,6 @@ export default {
   validateKeyFormat,
   generateKeyId,
   isKeyExpired,
-  needsRotation,
   getDaysUntilExpiration,
 
   // Type guards

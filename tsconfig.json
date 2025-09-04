@@ -45,15 +45,19 @@
       "@hooks/*": ["src/sidebar/hooks/*"],
       "@contexts/*": ["src/sidebar/contexts/*"],
       "@ui/*": ["src/sidebar/components/ui/*"],
-      "@provider/*": ["src/provider/*"],
+      "@engine/*": ["src/core/engine/*"],
       "@extension/*": ["src/extension/*"],
-      "@tabext/*": ["src/tabext/*"],
+      "@content/*": ["src/content/*"],
       "@data/*": ["src/data/*"],
-      "@storage/*": ["src/data/storage/*"],
       "@services/*": ["src/services/*"],
       "@types/*": ["src/types/*"],
       "@store/*": ["src/data/store/*"],
-      "@security/*": ["src/data/security/*"]
+      "@security/*": ["src/data/security/*"],
+      "@core/*": ["src/core/*"],
+      "@transport/*": ["src/transport/*"],
+      "@platform/*": ["src/platform/*"],
+      "@config/*": ["src/config/*"],
+      "@shared/*": ["src/shared/*"]
     }
   },
   "include": ["src"],

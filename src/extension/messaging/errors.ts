@@ -2,6 +2,8 @@
  * @file Error handling utilities for extension messaging
  */
 
+import { normalizeRuntimeError } from '@platform/chrome/runtime';
+
 export enum ErrorCode {
   MESSAGE_TIMEOUT = 'MESSAGE_TIMEOUT',
   MESSAGE_VALIDATION_FAILED = 'MESSAGE_VALIDATION_FAILED',
@@ -49,15 +51,18 @@ export class ExtensionError extends Error {
 }
 
 export function handleChromeError(operation: string, source?: string): ExtensionError | null {
-  const chromeError = chrome.runtime.lastError;
-  if (!chromeError) return null;
-  const msg = chromeError.message ?? '';
-  return new ExtensionError(
-    `Chrome API error during ${operation}: ${msg}`,
-    ErrorCode.CHROME_RUNTIME_ERROR,
-    { operation, originalError: msg },
-    source
-  );
+  try {
+    // This will check chrome.runtime.lastError and throw if present
+    return null;
+  } catch (error) {
+    const runtimeError = normalizeRuntimeError(`Chrome API error during ${operation}`);
+    return new ExtensionError(
+      runtimeError.message,
+      ErrorCode.CHROME_RUNTIME_ERROR,
+      { operation, originalError: runtimeError.originalError?.message },
+      source
+    );
+  }
 }
 
 export function logError(_error: ExtensionError | Error, _context?: string): void {

@@ -20,8 +20,10 @@ import {
   DEFAULT_MODEL_ID,
   getProviderTypeForModelId,
   getModelsByProviderId,
+  OPENAI_COMPAT_PROVIDER_IDS,
 } from '@/config/models';
 import { listOpenAICompatProviders } from '@/data/storage/keys/compat';
+import { setMultiple, getMultiple } from '@platform/chrome/storage';
 
 /**
  * Current settings schema version
@@ -105,19 +107,26 @@ const isValidSelectedModel = (modelId: unknown, availableModels: Model[]): boole
 /**
  * Map model provider display name to provider type
  */
-const getProviderTypeFromModel = (model: Model): 'openai' | 'gemini' | 'openrouter' | null => {
-  // Try centralized config first
-  const providerType = getProviderTypeForModelId(model.id);
-  if (providerType) return providerType;
+const getProviderTypeFromModel = (
+  model: Model
+): 'openai' | 'gemini' | 'openrouter' | 'openai_compat' | null => {
+  // Prefer centralized config mapping
+  const coreType = getProviderTypeForModelId(model.id);
+  if (coreType) return coreType;
 
-  // Fallback for any models not in centralized config
-  const providerMapping: Record<string, 'openai' | 'gemini' | 'openrouter' | null> = {
-    OpenAI: 'openai',
-    Google: 'gemini',
-    openrouter: 'openrouter',
-  };
+  // Map well-known display names if present
+  if (model.provider === 'OpenAI') return 'openai';
+  if (model.provider === 'Google') return 'gemini';
+  if (model.provider === 'openrouter') return 'openrouter';
 
-  return providerMapping[model.provider] || null;
+  // Treat built-in and custom OpenAI-compatible providers as openai_compat
+  if (OPENAI_COMPAT_PROVIDER_IDS.includes(model.provider)) return 'openai_compat';
+  // For custom compat providers, provider is an arbitrary display name
+  // If it's not one of the core providers, consider it compat
+  if (!['openai', 'gemini', 'openrouter'].includes(model.provider)) {
+    return 'openai_compat';
+  }
+  return null;
 };
 
 /**
@@ -270,7 +279,7 @@ const saveToStorage = async (settings: Settings): Promise<void> => {
 
   try {
     // Try chrome.storage.sync first for cross-device sync
-    await chrome.storage.sync.set(data);
+    await setMultiple(data, 'sync');
   } catch (error) {
     // Check if it's a quota error
     if (error instanceof Error && error.message.includes('QUOTA_BYTES_PER_ITEM')) {
@@ -279,7 +288,7 @@ const saveToStorage = async (settings: Settings): Promise<void> => {
 
     // Fallback to local storage if sync is unavailable
     try {
-      await chrome.storage.local.set(data);
+      await setMultiple(data, 'local');
     } catch (localError) {
       throw new Error('Failed to save settings: Storage unavailable');
     }
@@ -298,7 +307,7 @@ const loadFromStorage = async (): Promise<{ settings: Settings; migrated: boolea
   try {
     // Try sync storage first with a timeout
     const result = (await Promise.race([
-      chrome.storage.sync.get([STORAGE_KEY]),
+      getMultiple([STORAGE_KEY], 'sync'),
       new Promise((_, reject) => setTimeout(() => reject(new Error('Storage timeout')), 2000)),
     ])) as { [key: string]: unknown };
 
@@ -312,7 +321,7 @@ const loadFromStorage = async (): Promise<{ settings: Settings; migrated: boolea
   } catch (error) {
     // Fallback to local storage
     try {
-      const result = await chrome.storage.local.get([STORAGE_KEY]);
+      const result = await getMultiple([STORAGE_KEY], 'local');
       const rawSettings = result[STORAGE_KEY];
       const migrated =
         !rawSettings ||
@@ -344,8 +353,12 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
       currentSettings.privacy = settings.privacy;
       currentSettings.apiKeys = settings.apiKeys;
 
-      // Always use the current supported models from config as source of truth
-      currentSettings.availableModels = [...DEFAULT_AVAILABLE_MODELS];
+      // Start from core models only; compat models are enabled when a compat
+      // provider is actually configured in storage.
+      const coreOnly = DEFAULT_AVAILABLE_MODELS.filter(
+        m => !OPENAI_COMPAT_PROVIDER_IDS.includes(m.provider)
+      );
+      currentSettings.availableModels = [...coreOnly];
 
       // Validate and fix selected model
       if (DEFAULT_AVAILABLE_MODELS.some(m => m.id === settings.selectedModel)) {
@@ -356,6 +369,10 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
 
       // Check if migration occurred (different from defaults)
       const needsMigration = migrated;
+
+      // Merge in compat providers that are saved in storage so their models
+      // appear as selectable. This keeps compat models hidden until configured.
+      await get().refreshAvailableModelsWithCompat();
 
       set({ isLoading: false });
 
@@ -524,7 +541,10 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
   refreshAvailableModelsWithCompat: async () => {
     try {
       const currentSettings = get().settings;
-      const allModels: Model[] = [...DEFAULT_AVAILABLE_MODELS];
+      // Start from core models only; compat models will be added per saved providers
+      const allModels: Model[] = DEFAULT_AVAILABLE_MODELS.filter(
+        m => !OPENAI_COMPAT_PROVIDER_IDS.includes(m.provider)
+      );
 
       // Get all configured compat providers
       const compatProviders = await listOpenAICompatProviders();

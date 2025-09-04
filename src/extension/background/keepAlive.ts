@@ -6,6 +6,10 @@
  * which can interrupt background operations.
  */
 
+import { getPlatformInfo } from '@platform/chrome/runtime';
+import { getStorageQuota } from '@platform/chrome/storage';
+import { getAllAlarms } from '@platform/chrome/alarms';
+
 /**
  * Configuration options for the KeepAlive system
  */
@@ -104,7 +108,7 @@ export class KeepAlive {
       this.pingCount++;
 
       // Use a lightweight Chrome API call to maintain activity
-      await chrome.runtime.getPlatformInfo();
+      await getPlatformInfo();
 
       // Additional lightweight operations to ensure activity
       await this.performAdditionalPings();
@@ -120,14 +124,14 @@ export class KeepAlive {
   private async performAdditionalPings(): Promise<void> {
     try {
       // Check storage quota (lightweight operation)
-      if (chrome.storage && chrome.storage.local) {
-        await chrome.storage.local.getBytesInUse();
+      try {
+        await getStorageQuota();
+      } catch {
+        // Ignore errors for storage operations
       }
 
       // Check if any alarms are set (another lightweight operation)
-      if (chrome.alarms) {
-        await chrome.alarms.getAll();
-      }
+      await getAllAlarms();
     } catch (error) {
       // These are optional operations, so we don't need to handle failures
     }

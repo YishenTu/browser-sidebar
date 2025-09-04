@@ -69,30 +69,6 @@ export interface ContentScript {
 }
 
 /**
- * Web accessible resources configuration
- */
-export interface WebAccessibleResource {
-  /** Resource patterns that should be web accessible */
-  resources: string[];
-  /** URL patterns that can access these resources */
-  matches: string[];
-  /** Extension IDs that can access these resources */
-  extension_ids?: string[];
-  /** Whether to use dynamic URL */
-  use_dynamic_url?: boolean;
-}
-
-/**
- * Content Security Policy configuration
- */
-export interface ContentSecurityPolicy {
-  /** CSP for extension pages */
-  extension_pages?: string;
-  /** CSP for sandboxed pages */
-  sandbox?: string;
-}
-
-/**
  * Host permissions - URL patterns for host access
  */
 export type HostPermission = string;
@@ -169,16 +145,6 @@ export type Permission =
   | 'webRequestBlocking';
 
 /**
- * Optional permissions that can be requested at runtime
- */
-export interface OptionalPermissions {
-  /** Permissions that can be requested */
-  permissions?: Permission[];
-  /** Host permissions that can be requested */
-  host_permissions?: HostPermission[];
-}
-
-/**
  * Chrome Extension Manifest V3 interface
  *
  * This interface defines the complete structure for a Chrome extension
@@ -217,13 +183,24 @@ export interface ChromeManifest {
   icons?: IconConfig;
 
   /** Resources accessible to web pages */
-  web_accessible_resources?: WebAccessibleResource[];
+  web_accessible_resources?: Array<{
+    resources: string[];
+    matches: string[];
+    extension_ids?: string[];
+    use_dynamic_url?: boolean;
+  }>;
 
   /** Content Security Policy */
-  content_security_policy?: ContentSecurityPolicy;
+  content_security_policy?: {
+    extension_pages?: string;
+    sandbox?: string;
+  };
 
   /** Optional permissions */
-  optional_permissions?: OptionalPermissions;
+  optional_permissions?: {
+    permissions?: Permission[];
+    host_permissions?: HostPermission[];
+  };
 
   /** Minimum Chrome version required */
   minimum_chrome_version?: string;
@@ -326,25 +303,21 @@ export function isChromeManifest(obj: unknown): obj is ChromeManifest {
 }
 
 /**
- * Validation result for manifest validation
- */
-export interface ManifestValidationResult {
-  /** Whether the manifest is valid */
-  isValid: boolean;
-  /** Validation errors if any */
-  errors: string[];
-  /** Validation warnings if any */
-  warnings: string[];
-}
-
-/**
  * Validates a Chrome extension manifest object
  *
  * @param manifest - The manifest object to validate
  * @returns Validation result with errors and warnings
  */
-export function validateManifest(manifest: unknown): ManifestValidationResult {
-  const result: ManifestValidationResult = {
+export function validateManifest(manifest: unknown): {
+  isValid: boolean;
+  errors: string[];
+  warnings: string[];
+} {
+  const result: {
+    isValid: boolean;
+    errors: string[];
+    warnings: string[];
+  } = {
     isValid: true,
     errors: [],
     warnings: [],
