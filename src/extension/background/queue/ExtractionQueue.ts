@@ -8,7 +8,7 @@
 interface QueueTask<T> {
   task: () => Promise<T>;
   resolve: (value: T) => void;
-  reject: (error: any) => void;
+  reject: (error: unknown) => void;
 }
 
 export class ExtractionQueue {

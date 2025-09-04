@@ -9,6 +9,15 @@ src/
 ├── config/                 # Configuration and constants
 │   ├── models.ts          # AI model definitions
 │   └── systemPrompt.ts    # System prompts for AI
+├── content/               # Content extraction system
+│   ├── core/              # Core functionality
+│   ├── extraction/        # Content extraction logic
+│   ├── types/             # Content-specific types
+│   └── utils/             # DOM and text utilities
+├── core/                  # Core business logic
+│   ├── ai/                # AI provider integrations
+│   ├── engine/            # Chat engine implementation
+│   └── extraction/        # Extraction orchestration
 ├── data/                  # Data management layer
 │   ├── security/          # Encryption and security
 │   ├── storage/           # Chrome storage abstraction
@@ -16,24 +25,173 @@ src/
 ├── extension/             # Browser extension infrastructure
 │   ├── background/        # Service worker components
 │   └── messaging/         # Message passing system
-├── provider/              # AI provider integrations
-│   ├── gemini/            # Google Gemini implementation
-│   └── openai/            # OpenAI GPT implementation
+├── platform/              # Platform-specific implementations
+│   └── chrome/            # Chrome API abstractions
+├── services/              # Application services
+│   ├── chat/              # Chat service implementation
+│   ├── engine/            # Engine service wrapper
+│   ├── extraction/        # Extraction service
+│   ├── keys/              # API key management service
+│   └── session/           # Session management service
 ├── shared/                # Shared utilities
 │   └── utils/             # Common utility functions
 ├── sidebar/               # React sidebar UI
 │   ├── components/        # React components library
 │   ├── contexts/          # React context providers
 │   ├── hooks/             # Custom React hooks
-│   └── styles/            # CSS architecture
-├── tabext/                # Content extraction system
-│   ├── core/              # Core functionality
-│   ├── extraction/        # Content extraction logic
-│   └── utils/             # Extraction utilities
+│   ├── styles/            # CSS architecture
+│   └── utils/             # UI-specific utilities
+├── transport/             # Communication layer
+│   ├── channels/          # Communication channels
+│   ├── handlers/          # Message handlers
+│   ├── messages/          # Message definitions
+│   └── types.ts           # Transport types
 └── types/                 # TypeScript definitions
 ```
 
 ## Module Overview
+
+### `/config` - Configuration
+
+Application-wide configuration and constants.
+
+- `models.ts` - AI model definitions and capabilities
+- `systemPrompt.ts` - System prompts for AI interactions
+
+### `/content` - Content Extraction System
+
+Content script for extracting and processing web page content.
+
+**Structure:**
+
+- `core/` - Core functionality (documentPatcher, messageHandler, sidebarController)
+- `extraction/` - Extraction logic (analyzers, converters, extractors, orchestrator)
+- `types/` - Content-specific type definitions
+- `utils/` - DOM and text utilities
+
+**Key Components:**
+
+- Page analysis and content extraction
+- HTML to Markdown conversion
+- Multi-tab content aggregation
+- Dynamic content handling
+
+### `/core` - Core Business Logic
+
+Central business logic and domain services.
+
+**AI (`ai/`):**
+
+- Provider abstractions and interfaces
+- OpenAI GPT-5 series implementation
+- Google Gemini 2.5 implementation
+- Streaming and thinking display support
+
+**Engine (`engine/`):**
+
+- Chat engine core implementation
+- Message handling and streaming
+- Session management logic
+
+**Extraction (`extraction/`):**
+
+- High-level extraction orchestration
+- Content processing pipelines
+- Cache management
+
+### `/data` - Data Management Layer
+
+Centralized data management with state, persistence, and security.
+
+**Store (`store/`):**
+
+Hierarchical delegation pattern with specialized stores:
+
+```
+SessionStore (Master - holds all session data in memory)
+    ├── MessageStore (delegates to active session)
+    ├── TabStore (delegates to active session)
+    └── UIStore (delegates to active session)
+```
+
+- Session management with tab-specific contexts
+- Memory-only storage (no persistence)
+- Settings with Chrome storage persistence
+
+**Storage (`storage/`):**
+
+- Chrome Storage API wrapper
+- Key-value storage abstraction
+- Settings persistence
+
+**Security (`security/`):**
+
+- AES-GCM encryption for API keys
+- Data masking for sensitive information
+- Security utilities
+
+### `/extension` - Browser Extension Infrastructure
+
+Core Chrome extension functionality.
+
+**Background (`background/`):**
+
+- Service worker entry point
+- Keep-alive mechanism
+- Message routing and handling
+- Sidebar lifecycle management
+- Tab state management
+- Content caching system
+- Extraction queue management
+
+**Messaging (`messaging/`):**
+
+- Type-safe message passing
+- Cross-context communication
+
+### `/platform` - Platform Abstractions
+
+Platform-specific implementations and abstractions.
+
+**Chrome (`chrome/`):**
+
+- Chrome API wrappers
+- Browser-specific functionality
+- Extension API abstractions
+
+### `/services` - Application Services
+
+High-level service layer providing business operations.
+
+**Chat (`chat/`):**
+
+- Chat service facade
+- Message processing
+- AI provider integration
+
+**Engine (`engine/`):**
+
+- Engine service wrapper
+- Session management
+- Stream handling
+
+**Extraction (`extraction/`):**
+
+- Content extraction service
+- Batch extraction coordination
+- Cache management
+
+**Keys (`keys/`):**
+
+- API key management service
+- Secure storage operations
+- Key validation
+
+**Session (`session/`):**
+
+- Session lifecycle management
+- State persistence
+- Context switching
 
 ### `/sidebar` - User Interface Layer
 
@@ -51,132 +209,51 @@ React-based UI rendered in Shadow DOM for style isolation.
 - Content display (MarkdownRenderer, ContentPreview, TabContentItem)
 - Layout components (Header, Footer, Body, ResizeHandles)
 - UI library (Alert, Collapsible, CopyButton, Dropdown, Icons, Spinner)
+- Settings management
 
 **Hooks (`hooks/`):**
 
-- AI integration (`ai/` - useAIChat, useStreamHandler, useProviderManager)
-- Utility hooks (useContentExtraction, useDragPosition, useResize, useTabMention)
+- AI integration hooks
+- Content extraction hooks
+- UI behavior hooks (drag, resize, etc.)
+- Tab mention and autocomplete
 
 **Styles (`styles/`):**
 
-- Layered CSS architecture (foundation → base → layout → components → features)
+- Layered CSS architecture (0-foundation → 1-base → 2-layout → 3-components → 4-features)
 - Component-specific stylesheets
 - CSS variables for theming
+- Minimal use of !important
 
-### `/tabext` - Content Extraction System
+**Utils (`utils/`):**
 
-Content script for extracting and processing web page content.
-
-**Structure:**
-
-- `index.ts` - Content script entry point
-- `core/` - Core functionality (documentPatcher, messageHandler, sidebarController)
-- `extraction/` - Extraction logic (analyzers, converters, extractors, orchestrator)
-- `utils/` - DOM and text utilities
-
-**Extractors:**
-
-- `raw.ts` - Basic HTML extraction
-- `defuddle.ts` - Specialized extraction for technical docs
-
-### `/provider` - AI Provider Integration
-
-Unified interface for multiple AI providers with BYOK architecture.
-
-**Core:**
-
-- `BaseProvider.ts` - Abstract base class
-- `ProviderFactory.ts` - Factory pattern implementation
-- `ProviderRegistry.ts` - Singleton registry
-
-**OpenAI (`openai/`):**
-
-- GPT-5 series support (nano, mini, standard)
-- Streaming with thinking display
-- Response API implementation
-
-**Gemini (`gemini/`):**
-
-- Gemini 2.5 series (flash-lite, flash, pro)
-- Dynamic thinking budgets
-- Web search grounding support
-
-### `/extension` - Browser Extension Infrastructure
-
-Core Chrome extension functionality.
-
-**Background (`background/`):**
-
-- `index.ts` - Service worker entry
-- `keepAlive.ts` - Service worker persistence
-- `messageHandler.ts` - Message routing
-- `sidebarManager.ts` - Sidebar lifecycle
-- `tabManager.ts` - Tab state management
-- `cache/` - Tab content caching
-- `queue/` - Extraction queue management
-
-**Messaging (`messaging/`):**
-
-- Type-safe message passing
-- Cross-context communication
-
-### `/data` - Data Management Layer
-
-Centralized data management with state, persistence, and security.
-
-**Store (`store/`):**
-
-Hierarchical delegation pattern with specialized stores:
-
-```
-SessionStore (Master - holds all session data in memory)
-    ├── MessageStore (delegates to active session)
-    ├── TabStore (delegates to active session)
-    └── UIStore (delegates to active session)
-```
-
-- `chat.ts` - Exports for all chat-related stores
-- `stores/sessionStore.ts` - Master store for session management
-- `stores/messageStore.ts` - Message CRUD operations (delegated)
-- `stores/tabStore.ts` - Tab content state (delegated)
-- `stores/uiStore.ts` - UI state management (delegated)
-- `settings.ts` - Application settings with persistence
-- `utils/chatHelpers.ts` - Session key generation and helpers
-
-**Session Management:**
-
-- **Session Keys**: `tab_${tabId}:${normalizedUrl}` format
-- **URL Normalization**: Includes query params, excludes hash fragments
-- **Memory-only**: No persistence, sessions lost on restart
-- **Clearing Strategies**:
-  - `clearCurrentSession()` - Resets data but keeps session key
-  - `clearSession(key)` - Removes specific session entirely
-  - `clearTabSessions(tabId)` - Removes all tab sessions (on tab close)
-
-**Storage (`storage/`):**
-
-- `chrome.ts` - Chrome Storage API wrapper
-- `keys.ts` - API key management entry
-- `keys/` - Comprehensive key management system
-
-**Security (`security/`):**
-
-- `crypto.ts` - AES-GCM encryption
-- `masking.ts` - Sensitive data protection
-- `index.ts` - Security exports
-
-### `/config` - Configuration
-
-Application-wide configuration and constants.
-
-- `models.ts` - AI model definitions and capabilities
-- `systemPrompt.ts` - System prompts for AI interactions
+- UI helper functions
+- DOM utilities
+- Style utilities
 
 ### `/shared` - Shared Utilities
 
 Common utilities used across modules.
 
 - `utils/restrictedUrls.ts` - URL restriction checks
+- Common helper functions
+
+### `/transport` - Communication Layer
+
+Abstracted communication layer for inter-module messaging.
+
+**Structure:**
+
+- `channels/` - Communication channel implementations
+- `handlers/` - Message handler implementations
+- `messages/` - Message type definitions
+- `types.ts` - Transport layer types
+
+**Purpose:**
+
+- Decouples modules from direct Chrome API usage
+- Provides type-safe messaging
+- Enables testing and mocking
 
 ### `/types` - Type Definitions
 
@@ -192,6 +269,7 @@ Centralized TypeScript type definitions.
 - `storage.ts` - Storage types
 - `tabs.ts` - Tab-related types
 - `manifest.ts` - Manifest types
+- Additional domain-specific types
 
 ## Architecture Flow
 
@@ -202,13 +280,17 @@ Extension Icon Click
        ↓
 Background Service Worker (extension/background)
        ↓
-Content Script (tabext) ←→ Sidebar UI (sidebar)
+Transport Layer (transport/)
+       ↓
+Content Script (content/) ←→ Sidebar UI (sidebar/)
        ↓                        ↓
-Tab Content Extraction    AI Chat Interface
+Tab Content Extraction    Chat Service (services/chat)
        ↓                        ↓
-Markdown Conversion       Provider Integration
+Core Extraction Logic     Core AI Engine (core/engine)
+       ↓                        ↓
+Markdown Conversion       AI Providers (core/ai)
                                ↓
-                        AI Response Stream
+                        Response Stream
 ```
 
 ## Development Guidelines
@@ -232,12 +314,15 @@ Configured in `vite.config.ts` and `tsconfig.json`:
 - `@hooks/*` → `src/sidebar/hooks/*`
 - `@contexts/*` → `src/sidebar/contexts/*`
 - `@extension/*` → `src/extension/*`
-- `@tabext/*` → `src/tabext/*`
-- `@provider/*` → `src/provider/*`
+- `@content/*` → `src/content/*`
+- `@core/*` → `src/core/*`
 - `@data/*` → `src/data/*`
 - `@store/*` → `src/data/store/*`
 - `@storage/*` → `src/data/storage/*`
 - `@security/*` → `src/data/security/*`
+- `@platform/*` → `src/platform/*`
+- `@services/*` → `src/services/*`
+- `@transport/*` → `src/transport/*`
 - `@types/*` → `src/types/*`
 - `@config/*` → `src/config/*`
 - `@shared/*` → `src/shared/*`
@@ -250,21 +335,24 @@ Configured in `vite.config.ts` and `tsconfig.json`:
 - Full React component suite with Shadow DOM
 - OpenAI and Gemini provider integration
 - Encrypted API key storage
-- Basic content extraction with markdown conversion
+- Advanced content extraction with markdown conversion
 - Streaming chat with thinking display
 - Multi-tab content aggregation
+- Modular architecture refactor
+- Service layer implementation
+- Transport abstraction layer
 
 ### 🚧 In Progress
 
-- Enhanced content extraction algorithms
-- Provider capability expansion
 - Performance optimizations
 - Dark mode theme
+- Enhanced extraction algorithms
+- Additional AI provider integrations
 
 ### 📅 Roadmap
 
-- Q1 2025: Complete extraction system, advanced search
-- Q2 2025: Plugin system, collaboration features
+- Q1 2025: Plugin system, advanced search capabilities
+- Q2 2025: Collaboration features, team sharing
 
 ## Testing
 

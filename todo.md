@@ -15,7 +15,7 @@
 - [x] 13. full html extraction approach
 - [ ] 14. new setting logic
 - [x] 15. openrouter provider
-- [ ] 16. openai compatible provider
+- [x] 16. openai compatible provider
 - [ ] 17. slash command
 - [ ] 19. send to chatwaise?
 
@@ -24,11 +24,11 @@
 # Setting Re-factor
 
 - [x] 1. implement openrouter provider (default model: claude sonnet 4)
-- [ ] 2. openai compatible provider: deepseek, kimi, qwen
-- [ ] 3. new setting UI, build up openai_compatible/ , integrating with new UI
+- [x] 2. openai compatible provider: deepseek, kimi, qwen
+- [x] 3. new setting UI, build up openai_compatible/ , integrating with new UI
 - [ ] 4. turn config/ into defaultConfig/
 - [ ] 5. slash command integration
 
 # Architecture Re-factor
 
-- [ ] refactor
+- [x] refactor

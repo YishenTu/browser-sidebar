@@ -127,25 +127,32 @@ export const DEFAULT_EXTRACTION_OPTIONS = {
 /**
  * Type guard to check if an object is a valid ExtractedContent
  */
-export function isExtractedContent(obj: any): obj is ExtractedContent {
+export function isExtractedContent(obj: unknown): obj is ExtractedContent {
+  if (typeof obj !== 'object' || obj === null) {
+    return false;
+  }
+
+  const content = obj as Record<string, unknown>;
+  const metadata = content['metadata'] as Record<string, unknown> | undefined;
+
   return (
-    typeof obj === 'object' &&
-    obj !== null &&
-    typeof obj.title === 'string' &&
-    typeof obj.url === 'string' &&
-    typeof obj.domain === 'string' &&
-    typeof obj.content === 'string' &&
-    (obj.markdown === undefined || typeof obj.markdown === 'string') &&
-    typeof obj.textContent === 'string' &&
-    (obj.wordCount === undefined || typeof obj.wordCount === 'number') &&
-    (obj.isTruncated === undefined || typeof obj.isTruncated === 'boolean') &&
-    (obj.excerpt === undefined || typeof obj.excerpt === 'string') &&
-    (obj.author === undefined || typeof obj.author === 'string') &&
-    (obj.publishedDate === undefined || typeof obj.publishedDate === 'string') &&
-    typeof obj.extractedAt === 'number' &&
-    ['defuddle', 'selection', 'raw'].includes(obj.extractionMethod) &&
-    (obj.metadata === undefined ||
-      (typeof obj.metadata === 'object' && typeof obj.metadata.hasTables === 'boolean'))
+    typeof content['title'] === 'string' &&
+    typeof content['url'] === 'string' &&
+    typeof content['domain'] === 'string' &&
+    typeof content['content'] === 'string' &&
+    (content['markdown'] === undefined || typeof content['markdown'] === 'string') &&
+    typeof content['textContent'] === 'string' &&
+    (content['wordCount'] === undefined || typeof content['wordCount'] === 'number') &&
+    (content['isTruncated'] === undefined || typeof content['isTruncated'] === 'boolean') &&
+    (content['excerpt'] === undefined || typeof content['excerpt'] === 'string') &&
+    (content['author'] === undefined || typeof content['author'] === 'string') &&
+    (content['publishedDate'] === undefined || typeof content['publishedDate'] === 'string') &&
+    typeof content['extractedAt'] === 'number' &&
+    ['defuddle', 'selection', 'raw'].includes(content['extractionMethod'] as string) &&
+    (metadata === undefined ||
+      (typeof metadata === 'object' &&
+        metadata !== null &&
+        typeof metadata['hasTables'] === 'boolean'))
   );
 }
 

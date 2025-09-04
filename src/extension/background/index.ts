@@ -10,6 +10,15 @@ import { startKeepAlive } from './keepAlive';
 import { getSidebarManager } from './sidebarManager';
 import { createMessage, Message, ToggleSidebarPayload } from '@/types/messages';
 import { handleProxyRequest, ProxyRequest, handleProxyStreamPort } from './proxyHandler';
+import {
+  addInstalledListener,
+  addMessageListener,
+  addConnectListener,
+  addStartupListener,
+  getManifest,
+} from '@platform/chrome/runtime';
+import { setMultiple } from '@platform/chrome/storage';
+import { addClickedListener } from '@platform/chrome/action';
 
 // Initialize subsystems
 const messageHandler = createDefaultMessageHandler();
@@ -50,11 +59,11 @@ function initializeServiceWorker(): void {
 /**
  * Handle extension installation and updates
  */
-chrome.runtime.onInstalled.addListener(async _details => {
+addInstalledListener(async _details => {
   try {
     // Set default extension settings
-    await chrome.storage.local.set({
-      'extension-version': chrome.runtime.getManifest().version,
+    await setMultiple({
+      'extension-version': getManifest().version,
       'install-timestamp': Date.now(),
       'sidebar-settings': {
         defaultWidth: 400,
@@ -70,30 +79,20 @@ chrome.runtime.onInstalled.addListener(async _details => {
 /**
  * Handle extension icon click - toggle sidebar
  */
-chrome.action.onClicked.addListener(async tab => {
-  if (!tab.id) {
-    return;
-  }
-
-  try {
-    // Create a toggle sidebar message
-    const toggleMessage = createMessage<ToggleSidebarPayload>({
-      type: 'TOGGLE_SIDEBAR',
-      source: 'background',
-      target: 'content',
-    });
-
-    // Handle through sidebar manager (which will handle content script injection if needed)
-    await sidebarManager.handleToggleSidebar(toggleMessage, { tab });
-  } catch (error) {
-    // Error handling extension icon click
-  }
+addClickedListener(async tab => {
+  if (!tab.id) return;
+  const toggleMessage = createMessage<ToggleSidebarPayload>({
+    type: 'TOGGLE_SIDEBAR',
+    source: 'background',
+    target: 'content',
+  });
+  await sidebarManager.handleToggleSidebar(toggleMessage, { tab });
 });
 
 /**
  * Handle messages from content script and other components
  */
-chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+addMessageListener((message, sender, sendResponse) => {
   // Handle the message through the message handler registry
   messageHandler.handleMessage(message, sender, sendResponse);
 
@@ -104,7 +103,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 /**
  * Handle long-lived proxy streaming connections
  */
-chrome.runtime.onConnect.addListener(port => {
+addConnectListener(port => {
   if (port.name === 'proxy-stream') {
     handleProxyStreamPort(port);
   }
@@ -113,7 +112,7 @@ chrome.runtime.onConnect.addListener(port => {
 /**
  * Handle service worker startup
  */
-chrome.runtime.onStartup.addListener(() => {
+addStartupListener(() => {
   initializeServiceWorker();
 });
 

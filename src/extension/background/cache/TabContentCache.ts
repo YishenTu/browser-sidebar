@@ -7,6 +7,12 @@
  */
 
 import type { ExtractedContent } from '../../../types/extraction';
+import {
+  get as storageGet,
+  set as storageSet,
+  remove as storageRemove,
+  getAll as storageGetAll,
+} from '@platform/chrome/storage';
 
 /**
  * Storage entry structure for cached content
@@ -56,8 +62,7 @@ export class TabContentCache {
   async get(tabId: number): Promise<ExtractedContent | null> {
     try {
       const key = this.getStorageKey(tabId);
-      const result = await chrome.storage.session.get(key);
-      const entry = result[key] as CacheEntry | undefined;
+      const entry = (await storageGet<CacheEntry>(key, 'session')) || undefined;
 
       if (!entry) {
         return null;
@@ -89,7 +94,7 @@ export class TabContentCache {
       timestamp: Date.now(),
     };
 
-    await chrome.storage.session.set({ [key]: entry });
+    await storageSet(key, entry, 'session');
   }
 
   /**
@@ -101,16 +106,18 @@ export class TabContentCache {
     if (tabId !== undefined) {
       // Clear specific tab
       const key = this.getStorageKey(tabId);
-      await chrome.storage.session.remove(key);
+      await storageRemove(key, 'session');
     } else {
       // Clear all tab content
-      const allItems = await chrome.storage.session.get();
+      const allItems = await storageGetAll<Record<string, unknown>>('session');
       const keysToRemove = Object.keys(allItems).filter(key =>
         key.startsWith(TabContentCache.KEY_PREFIX)
       );
 
       if (keysToRemove.length > 0) {
-        await chrome.storage.session.remove(keysToRemove);
+        for (const k of keysToRemove) {
+          await storageRemove(k, 'session');
+        }
       }
     }
   }
@@ -144,7 +151,7 @@ export class TabContentCache {
    */
   async cleanupExpired(): Promise<void> {
     try {
-      const allItems = await chrome.storage.session.get();
+      const allItems = await storageGetAll<Record<string, unknown>>('session');
       const keysToRemove: string[] = [];
 
       for (const [key, value] of Object.entries(allItems)) {
@@ -156,9 +163,7 @@ export class TabContentCache {
         }
       }
 
-      if (keysToRemove.length > 0) {
-        await chrome.storage.session.remove(keysToRemove);
-      }
+      for (const k of keysToRemove) await storageRemove(k, 'session');
     } catch (error) {
       // Ignore errors when clearing expired entries
     }
@@ -175,7 +180,7 @@ export class TabContentCache {
     validEntries: number;
   }> {
     try {
-      const allItems = await chrome.storage.session.get();
+      const allItems = await storageGetAll<Record<string, CacheEntry>>('session');
       let totalEntries = 0;
       let expiredEntries = 0;
 

@@ -17,6 +17,56 @@ export interface ModelConfig {
   // or reasoningMaxTokens (for Anthropic models) depending on the underlying model type
 }
 
+/**
+ * OpenAI-Compatible provider preset definition
+ * Kept here to centralize all configuration in one file.
+ */
+export interface OpenAICompatPreset {
+  id: string;
+  name: string;
+  baseURL: string;
+}
+
+/**
+ * Built-in presets for popular OpenAI-compatible providers
+ */
+export const OPENAI_COMPAT_PRESETS: OpenAICompatPreset[] = [
+  {
+    id: 'deepseek',
+    name: 'DeepSeek',
+    baseURL: 'https://api.deepseek.com/v1',
+  },
+  {
+    id: 'qwen',
+    name: 'Qwen (Alibaba Cloud)',
+    baseURL: 'https://dashscope.aliyuncs.com/compatible-mode/v1',
+  },
+  {
+    id: 'zhipu',
+    name: 'Zhipu AI',
+    baseURL: 'https://open.bigmodel.cn/api/paas/v4',
+  },
+  {
+    id: 'kimi',
+    name: 'Kimi (Moonshot AI)',
+    baseURL: 'https://api.moonshot.cn/v1',
+  },
+];
+
+/**
+ * Helper: get OpenAI-Compatible preset by id
+ */
+export function getPresetById(id: string): OpenAICompatPreset | undefined {
+  return OPENAI_COMPAT_PRESETS.find(p => p.id === id);
+}
+
+/**
+ * Helper: check if a provider id is one of the built-in OpenAI-Compatible presets
+ */
+export function isBuiltInPreset(id: string): boolean {
+  return OPENAI_COMPAT_PRESETS.some(p => p.id === id);
+}
+
 export const SUPPORTED_MODELS: ModelConfig[] = [
   {
     id: 'gemini-2.5-flash-lite',
@@ -94,6 +144,7 @@ export const SUPPORTED_MODELS: ModelConfig[] = [
 ];
 
 export const DEFAULT_MODEL_ID = 'gpt-5-nano';
+export const DEFAULT_GEMINI_MODEL_ID = 'gemini-2.5-flash';
 export const DEFAULT_OPENROUTER_MODEL_ID = 'anthropic/claude-sonnet-4';
 
 // Default models for OpenAI-compatible providers
@@ -116,7 +167,14 @@ export function getProviderTypeForModelId(
   modelId: string
 ): 'openai' | 'gemini' | 'openrouter' | undefined {
   const model = getModelById(modelId);
-  return model?.provider as 'openai' | 'gemini' | 'openrouter' | undefined;
+  if (!model) return undefined;
+  if (model.provider === 'openai') return 'openai';
+  if (model.provider === 'gemini') return 'gemini';
+  if (model.provider === 'openrouter') return 'openrouter';
+  // For OpenAI‑compatible and any other providers, return undefined here.
+  // Callers that need to distinguish compat providers should map them to
+  // 'openai_compat' explicitly based on model.provider.
+  return undefined;
 }
 
 /**
@@ -154,8 +212,6 @@ export function modelExists(modelId: string): boolean {
 /**
  * Built-in OpenAI-compatible provider IDs
  */
-import { OPENAI_COMPAT_PRESETS } from '@/provider/openai-compat/presets';
-
 // Derive built-in OpenAI-compatible provider IDs from presets to avoid drift
 export const OPENAI_COMPAT_PROVIDER_IDS = OPENAI_COMPAT_PRESETS.map(p => p.id) as readonly string[];
 
@@ -182,6 +238,8 @@ export function getDefaultModelForProvider(providerId: string): string | undefin
   switch (providerId) {
     case 'openai':
       return DEFAULT_MODEL_ID;
+    case 'gemini':
+      return DEFAULT_GEMINI_MODEL_ID;
     case 'openrouter':
       return DEFAULT_OPENROUTER_MODEL_ID;
     case 'deepseek':

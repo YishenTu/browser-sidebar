@@ -31,7 +31,7 @@ export async function exportKeys(
     if (includeSecrets) {
       // Get all encrypted keys
       const encryptedKeys = await chromeStorage.getBatch(
-        allMetadata.map(meta => `${STORAGE_KEYS.API_KEY}${(meta as any).id}`)
+        allMetadata.map(meta => `${STORAGE_KEYS.API_KEY}${(meta as APIKeyMetadata).id}`)
       );
 
       for (const metadata of allMetadata) {

@@ -333,7 +333,7 @@ This document shows a complete example of a Gemini API request with all features
 
 ## Configuration in Code
 
-Location: `src/provider/gemini/requestBuilder.ts`
+Location: `src/core/ai/gemini/requestBuilder.ts`
 
 ```javascript
 export function buildRequest(

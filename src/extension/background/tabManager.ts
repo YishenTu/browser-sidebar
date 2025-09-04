@@ -10,11 +10,21 @@ import type { TabInfo } from '../../types/tabs';
 import type { ExtractedContent, ExtractionOptions } from '../../types/extraction';
 import { ExtractionMode } from '../../types/extraction';
 import type { ExtractTabPayload } from '../../types/messages';
-import { createTabInfoFromChromeTab } from '../../types/tabs';
+// import { createTabInfoFromChromeTab } from '../../types/tabs';
 import { TabContentCache } from './cache/TabContentCache';
 import { createMessage } from '../../types/messages';
 import { isRestrictedUrl } from '../../shared/utils/restrictedUrls';
 import { ExtractionQueue } from './queue/ExtractionQueue';
+import {
+  queryTabs as platformQueryTabs,
+  getTab as platformGetTab,
+  sendMessageToTab,
+} from '@platform/chrome/tabs';
+import { getManifest } from '@platform/chrome/runtime';
+import {
+  insertCSS as scriptingInsertCSS,
+  executeScript as scriptingExecuteScript,
+} from '@platform/chrome/scripting';
 
 /**
  * TabManager - Centralized service for browser tab management and content extraction
@@ -66,15 +76,7 @@ export class TabManager {
    */
   public async getAllTabs(): Promise<TabInfo[]> {
     try {
-      // Query all tabs from all windows
-      const chromeTabs = await chrome.tabs.query({});
-
-      // Filter out restricted URLs and convert to TabInfo
-      const accessibleTabs = chromeTabs
-        .filter(tab => tab.url && !this.isRestrictedUrl(tab.url))
-        .map(tab => createTabInfoFromChromeTab(tab));
-
-      return accessibleTabs;
+      return await platformQueryTabs({});
     } catch (error) {
       throw new Error(
         `Failed to query browser tabs: ${error instanceof Error ? error.message : 'Unknown error'}`
@@ -100,7 +102,8 @@ export class TabManager {
   ): Promise<ExtractedContent | null> {
     try {
       // Check if force refresh is requested
-      const forceRefresh = (options as any)?.forceRefresh === true;
+      const forceRefresh =
+        (options as ExtractionOptions & { forceRefresh?: boolean })?.forceRefresh === true;
 
       // First, check if we have cached content
       // BUT: Skip cache if requesting a different mode or force refresh
@@ -165,24 +168,10 @@ export class TabManager {
         // Send message to the specific tab with timeout enforcement
         const timeoutMs = options?.timeout || 5000; // Default 5 seconds
 
-        const response = await Promise.race([
-          // Wrap chrome.tabs.sendMessage in a Promise to await the async callback
-          new Promise<unknown>(resolve => {
-            try {
-              chrome.tabs.sendMessage(tabId, message, resp => {
-                const lastErr = chrome.runtime.lastError;
-                if (lastErr) {
-                  resolve(null);
-                  return;
-                }
-                resolve(resp as unknown);
-              });
-            } catch (e) {
-              resolve(null);
-            }
-          }),
-          new Promise<null>(resolve => setTimeout(() => resolve(null), timeoutMs)),
-        ]);
+        const result = await sendMessageToTab(tabId, message, {
+          timeout: timeoutMs,
+        });
+        const response = result.success ? result.response : null;
 
         // Parse typed response with payload structure
         if (!response) {
@@ -191,14 +180,22 @@ export class TabManager {
           throw new Error(msg);
         }
 
-        if ((response as any).type === 'CONTENT_EXTRACTED' && (response as any).payload?.content) {
-          const content = (response as any).payload.content as ExtractedContent;
+        interface MessageResponse {
+          type: string;
+          payload?: {
+            content?: ExtractedContent;
+          };
+        }
+
+        const messageResponse = response as MessageResponse;
+        if (messageResponse.type === 'CONTENT_EXTRACTED' && messageResponse.payload?.content) {
+          const content = messageResponse.payload.content;
 
           // Cache the successful extraction
           await this.cache.set(tabId, content);
 
           return content;
-        } else if ((response as any).type === 'ERROR') {
+        } else if (messageResponse.type === 'ERROR') {
           return null;
         } else {
           return null;
@@ -232,13 +229,9 @@ export class TabManager {
    */
   public async getTab(tabId: number): Promise<TabInfo | null> {
     try {
-      const chromeTab = await chrome.tabs.get(tabId);
-
-      if (!chromeTab || !chromeTab.url) {
-        return null;
-      }
-
-      return createTabInfoFromChromeTab(chromeTab);
+      const info = await platformGetTab(tabId);
+      if (!info) return null;
+      return info;
     } catch (error) {
       return null;
     }
@@ -337,8 +330,11 @@ export class TabManager {
         target: 'content',
       });
 
-      const response = await chrome.tabs.sendMessage(tabId, pingMessage);
-      return response && response.type === 'PONG';
+      const result = await sendMessageToTab(tabId, pingMessage, {
+        timeout: 2000,
+      });
+      const response = result.success ? result.response : null;
+      return !!(response && (response as { type?: string }).type === 'PONG');
     } catch (error) {
       return false;
     }
@@ -362,7 +358,7 @@ export class TabManager {
       }
 
       // Get tab info to verify it's accessible
-      const tab = await chrome.tabs.get(tabId);
+      const tab = await platformGetTab(tabId);
       if (!tab || !tab.url) {
         return false;
       }
@@ -373,7 +369,7 @@ export class TabManager {
       }
 
       // Get the content script files from manifest
-      const manifest = chrome.runtime.getManifest();
+      const manifest = getManifest();
       const contentScriptFiles = manifest.content_scripts?.[0]?.js || [];
       const contentScriptCss = manifest.content_scripts?.[0]?.css || [];
 
@@ -384,20 +380,14 @@ export class TabManager {
       // Inject CSS first if available
       if (contentScriptCss.length > 0) {
         try {
-          await chrome.scripting.insertCSS({
-            target: { tabId },
-            files: contentScriptCss,
-          });
-        } catch (cssError) {
+          await scriptingInsertCSS({ target: { tabId }, files: contentScriptCss });
+        } catch {
           // Continue even if CSS injection fails
         }
       }
 
-      // Inject the content script using chrome.scripting API
-      await chrome.scripting.executeScript({
-        target: { tabId },
-        files: contentScriptFiles,
-      });
+      // Inject the content script using wrapper
+      await scriptingExecuteScript({ target: { tabId }, files: contentScriptFiles });
 
       // Give the script a moment to initialize
       await new Promise(resolve => setTimeout(resolve, 100));

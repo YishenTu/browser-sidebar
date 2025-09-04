@@ -140,7 +140,15 @@ export async function auditLog(
 /**
  * Perform data migrations from older versions
  */
-export async function performMigrations(encryptionService: any): Promise<void> {
+interface EncryptionService {
+  encryptData(
+    data: string,
+    type: string
+  ): Promise<{ data: Uint8Array; iv: Uint8Array; algorithm: string; version: number }>;
+  createIntegrityChecksum(data: unknown): Promise<string>;
+}
+
+export async function performMigrations(encryptionService: EncryptionService): Promise<void> {
   try {
     const migrationStatus = await chromeStorage.get(STORAGE_KEYS.MIGRATION_STATUS);
 
@@ -174,14 +182,16 @@ export async function performMigrations(encryptionService: any): Promise<void> {
             };
 
             // Remove the raw key
-            delete (migratedKey as any).key;
+            // eslint-disable-next-line @typescript-eslint/no-unused-vars
+            const { key: _, ...migratedKeyWithoutRawKey } = migratedKey;
+            const finalMigratedKey = migratedKeyWithoutRawKey;
 
             // Update storage
-            await chromeStorage.set(key, migratedKey);
+            await chromeStorage.set(key, finalMigratedKey);
             // Maintain hash → id mapping if id present on legacy entry
-            if (migratedKey.keyHash && (legacyKey as any).id) {
+            if (migratedKey.keyHash && 'id' in legacyKey && typeof legacyKey.id === 'string') {
               await chromeStorage.set(`${STORAGE_KEYS.API_KEY_HASH_PREFIX}${migratedKey.keyHash}`, {
-                id: (legacyKey as any).id,
+                id: legacyKey.id,
               });
             }
           } catch (error) {

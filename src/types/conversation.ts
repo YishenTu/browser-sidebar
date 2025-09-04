@@ -74,26 +74,6 @@ export interface ModelSettings {
 }
 
 /**
- * Conversation metadata with storage and indexing support
- */
-export interface ConversationStorageMetadata {
-  /** Creation timestamp */
-  createdAt: number;
-  /** Last update timestamp */
-  updatedAt: number;
-  /** Total number of messages */
-  messageCount: number;
-  /** Conversation tags (optional) */
-  tags?: string[];
-  /** Whether conversation is archived (optional) */
-  archived?: boolean;
-  /** Whether conversation is pinned (optional) */
-  pinned?: boolean;
-  /** Last activity timestamp (optional) */
-  lastActivity?: number;
-}
-
-/**
  * Complete conversation data structure for IndexedDB storage
  */
 export interface ConversationData {
@@ -104,41 +84,19 @@ export interface ConversationData {
   /** Array of chat messages */
   messages: ChatMessage[];
   /** Conversation metadata */
-  metadata: ConversationStorageMetadata;
+  metadata: {
+    createdAt: number;
+    updatedAt: number;
+    messageCount: number;
+    tags?: string[];
+    archived?: boolean;
+    pinned?: boolean;
+    lastActivity?: number;
+  };
   /** Tab context where conversation originated (optional) */
   tabContext?: TabContext;
   /** Model settings used for this conversation (optional) */
   modelSettings?: ModelSettings;
-}
-
-/**
- * Conversation creation parameters
- */
-export interface ConversationStorageCreate {
-  /** Custom ID (optional, auto-generated if not provided) */
-  id?: string;
-  /** Initial messages (optional) */
-  messages?: ChatMessage[];
-  /** Tab context (optional) */
-  tabContext?: TabContext;
-  /** Model settings (optional) */
-  modelSettings?: ModelSettings;
-  /** Additional metadata (optional) */
-  metadata?: Partial<ConversationStorageMetadata>;
-}
-
-/**
- * Conversation update parameters (partial update)
- */
-export interface ConversationStorageUpdate {
-  /** Updated title (optional) */
-  title?: string;
-  /** Updated tab context (optional) */
-  tabContext?: TabContext;
-  /** Updated model settings (optional) */
-  modelSettings?: ModelSettings;
-  /** Updated metadata (optional) */
-  metadata?: Partial<ConversationStorageMetadata>;
 }
 
 /**
@@ -148,17 +106,17 @@ export interface ConversationSerialized {
   id: string;
   title: string;
   messages: ChatMessage[];
-  metadata: ConversationStorageMetadata;
+  metadata: {
+    createdAt: number;
+    updatedAt: number;
+    messageCount: number;
+    tags?: string[];
+    archived?: boolean;
+    pinned?: boolean;
+    lastActivity?: number;
+  };
   tabContext?: TabContext;
   modelSettings?: ModelSettings;
-}
-
-/**
- * Validation result for storage compatibility
- */
-export interface ConversationValidationResult {
-  isValid: boolean;
-  errors: string[];
 }
 
 // =============================================================================
@@ -225,35 +183,6 @@ export function isModelSettings(value: unknown): value is ModelSettings {
 }
 
 /**
- * Type guard to check if a value is a valid ConversationStorageMetadata
- */
-export function isConversationStorageMetadata(
-  value: unknown
-): value is ConversationStorageMetadata {
-  if (typeof value !== 'object' || value === null) {
-    return false;
-  }
-
-  const obj = value as Record<string, unknown>;
-
-  return (
-    typeof obj['createdAt'] === 'number' &&
-    (obj['createdAt'] as number) > 0 &&
-    typeof obj['updatedAt'] === 'number' &&
-    (obj['updatedAt'] as number) > 0 &&
-    typeof obj['messageCount'] === 'number' &&
-    (obj['messageCount'] as number) >= 0 &&
-    (obj['tags'] === undefined ||
-      (Array.isArray(obj['tags']) &&
-        (obj['tags'] as unknown[]).every(tag => typeof tag === 'string'))) &&
-    (obj['archived'] === undefined || typeof obj['archived'] === 'boolean') &&
-    (obj['pinned'] === undefined || typeof obj['pinned'] === 'boolean') &&
-    (obj['lastActivity'] === undefined ||
-      (typeof obj['lastActivity'] === 'number' && (obj['lastActivity'] as number) > 0))
-  );
-}
-
-/**
  * Type guard to check if a value is a valid ConversationData
  */
 export function isConversationData(value: unknown): value is ConversationData {
@@ -269,7 +198,11 @@ export function isConversationData(value: unknown): value is ConversationData {
     typeof obj['title'] === 'string' &&
     Array.isArray(obj['messages']) &&
     // We'll assume messages are valid ChatMessages (would need to import type guard from chat.ts)
-    isConversationStorageMetadata(obj['metadata']) &&
+    typeof obj['metadata'] === 'object' &&
+    obj['metadata'] !== null &&
+    typeof (obj['metadata'] as Record<string, unknown>).createdAt === 'number' &&
+    typeof (obj['metadata'] as Record<string, unknown>).updatedAt === 'number' &&
+    typeof (obj['metadata'] as Record<string, unknown>).messageCount === 'number' &&
     (obj['tabContext'] === undefined || isTabContext(obj['tabContext'])) &&
     (obj['modelSettings'] === undefined || isModelSettings(obj['modelSettings']))
   );
@@ -327,7 +260,21 @@ export function createModelSettings(
  */
 export function createStorageConversation(
   title: string,
-  options: ConversationStorageCreate = {}
+  options: {
+    id?: string;
+    messages?: ChatMessage[];
+    tabContext?: TabContext;
+    modelSettings?: ModelSettings;
+    metadata?: Partial<{
+      createdAt: number;
+      updatedAt: number;
+      messageCount: number;
+      tags?: string[];
+      archived?: boolean;
+      pinned?: boolean;
+      lastActivity?: number;
+    }>;
+  } = {}
 ): ConversationData {
   const now = Date.now();
   const messages = options.messages || [];
@@ -352,7 +299,20 @@ export function createStorageConversation(
  */
 export function updateStorageConversation(
   conversation: ConversationData,
-  updates: ConversationStorageUpdate
+  updates: {
+    title?: string;
+    tabContext?: TabContext;
+    modelSettings?: ModelSettings;
+    metadata?: Partial<{
+      createdAt: number;
+      updatedAt: number;
+      messageCount: number;
+      tags?: string[];
+      archived?: boolean;
+      pinned?: boolean;
+      lastActivity?: number;
+    }>;
+  }
 ): ConversationData {
   const now = Date.now();
   // Ensure updatedAt is always greater than original
@@ -424,9 +384,10 @@ export function deserializeConversation(serialized: string): ConversationData {
 /**
  * Validate conversation data for IndexedDB storage compatibility
  */
-export function validateConversationForStorage(
-  conversation: unknown
-): ConversationValidationResult {
+export function validateConversationForStorage(conversation: unknown): {
+  isValid: boolean;
+  errors: string[];
+} {
   const errors: string[] = [];
 
   // First check basic structure
@@ -533,7 +494,21 @@ export function validateConversationForStorage(
  */
 export function createTestConversation(
   title: string = 'Test Conversation',
-  overrides: Partial<ConversationStorageCreate> = {}
+  overrides: Partial<{
+    id?: string;
+    messages?: ChatMessage[];
+    tabContext?: TabContext;
+    modelSettings?: ModelSettings;
+    metadata?: Partial<{
+      createdAt: number;
+      updatedAt: number;
+      messageCount: number;
+      tags?: string[];
+      archived?: boolean;
+      pinned?: boolean;
+      lastActivity?: number;
+    }>;
+  }> = {}
 ): ConversationData {
   return createStorageConversation(title, {
     tabContext: createTabContext('https://example.com/test', 'Example Test Page'),

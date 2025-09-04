@@ -4,7 +4,7 @@
  * Routes API requests through the background service worker to bypass CORS restrictions
  */
 
-// No typed message imports required here
+import { shouldProxy } from '@/transport/policy';
 
 export interface ProxyRequest {
   url: string;
@@ -23,20 +23,6 @@ export interface ProxyResponse {
 }
 
 /**
- * List of API endpoints that require proxying due to CORS restrictions
- */
-const CORS_RESTRICTED_APIS = [
-  'https://api.moonshot.cn', // Kimi API
-];
-
-/**
- * Check if a URL requires proxying
- */
-export function requiresProxy(url: string): boolean {
-  return CORS_RESTRICTED_APIS.some(api => url.startsWith(api));
-}
-
-/**
  * Handle proxy request from content script
  */
 export async function handleProxyRequest(
@@ -45,7 +31,7 @@ export async function handleProxyRequest(
 ): Promise<ProxyResponse> {
   try {
     // Validate that the URL is allowed for proxying
-    if (!requiresProxy(request.url)) {
+    if (!shouldProxy(request.url)) {
       return {
         ok: false,
         status: 403,
@@ -117,7 +103,7 @@ export function handleProxyStreamPort(port: chrome.runtime.Port): void {
 
   port.onMessage.addListener(async (request: ProxyRequest) => {
     try {
-      if (!request || !requiresProxy(request.url)) {
+      if (!request || !shouldProxy(request.url)) {
         disconnectWithError('URL not allowed for proxying');
         return;
       }

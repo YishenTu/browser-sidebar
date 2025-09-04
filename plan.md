@@ -20,7 +20,7 @@ Scope: Non-breaking, phased refactor that preserves behavior while modularizing 
 
 ## Guardrails (System must keep working)
 
-- Feature flag: `src/config/featureFlags.ts` → `refactorMode` (default false)
+- Feature flag: removed (new architecture is the default)
 - Re-exports: Temporary barrels in old locations to keep imports stable during moves
 - Each phase: green `npm run typecheck`, `npm run lint`, `npm test`, `npm run build`
 - Tests: >90% coverage on touched modules; add smoke/integration for streaming and extraction
@@ -93,7 +93,7 @@ Each phase lists: **Adds**, **Moves** (src → dst), **Changes** (edits), **Test
 
 **Adds:**
 
-- `src/config/featureFlags.ts`: `export const refactorMode = false;`
+- Remove `src/config/featureFlags.ts` entirely
 - Update `README.md` rollout notes (section only)
 
 **Changes:**

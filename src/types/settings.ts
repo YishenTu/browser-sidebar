@@ -132,7 +132,9 @@ export interface SettingsState {
   /** Get available models (optionally filter by availability) */
   getAvailableModels: (availableOnly?: boolean) => Model[];
   /** Get provider type for a given model ID */
-  getProviderTypeForModel: (modelId: string) => 'openai' | 'gemini' | 'openrouter' | null;
+  getProviderTypeForModel: (
+    modelId: string
+  ) => 'openai' | 'gemini' | 'openrouter' | 'openai_compat' | null;
   /** Refresh available models by merging OpenAI-compatible providers */
   refreshAvailableModelsWithCompat: () => Promise<void>;
 }

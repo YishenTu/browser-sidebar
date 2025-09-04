@@ -8,6 +8,13 @@
 import { useEffect, useRef } from 'react';
 import { useSessionStore } from '@/data/store/chat';
 import { createMessage } from '@/types/messages';
+import type {
+  GetTabInfoMessage,
+  TabClosedMessage,
+  GetTabInfoPayload,
+  Message,
+} from '@/types/messages';
+import { addMessageListener, sendMessage } from '@platform/chrome/runtime';
 
 /**
  * Session information
@@ -32,7 +39,7 @@ export interface SessionInfo {
  * const { currentSession } = useSessionManager();
  *
  * if (currentSession) {
- *   console.log(`Active session: Tab ${currentSession.tabId} at ${currentSession.url}`);
+ *   // Active session: Tab ${currentSession.tabId} at ${currentSession.url}
  * }
  * ```
  */
@@ -48,9 +55,10 @@ export function useSessionManager() {
           type: 'GET_TAB_INFO',
           source: 'sidebar',
           target: 'background',
-        });
+        }) as GetTabInfoMessage;
 
-        const response = await chrome.runtime.sendMessage(message);
+        const result = await sendMessage<GetTabInfoMessage, Message<GetTabInfoPayload>>(message);
+        const response = result.success ? result.data : null;
 
         if (response?.payload?.tabId && response?.payload?.url) {
           const { tabId, url } = response.payload;
@@ -70,23 +78,24 @@ export function useSessionManager() {
 
   // Listen for tab removal events to clean up sessions
   useEffect(() => {
-    const handleMessage = (message: any) => {
-      if (message.type === 'TAB_CLOSED' && message.payload?.tabId) {
+    const remove = addMessageListener(message => {
+      const msg = message as TabClosedMessage | { type?: string; payload?: { tabId?: number } };
+      if (
+        (msg as TabClosedMessage)?.type === 'TAB_CLOSED' &&
+        (msg as TabClosedMessage).payload?.tabId
+      ) {
         // Clear all sessions for the closed tab
-        clearTabSessions(message.payload.tabId);
+        clearTabSessions((msg as TabClosedMessage).payload!.tabId);
 
         // If the closed tab was our current session, clear the ref
-        if (currentSessionRef.current?.tabId === message.payload.tabId) {
+        if (currentSessionRef.current?.tabId === (msg as TabClosedMessage).payload!.tabId) {
           currentSessionRef.current = null;
         }
       }
-    };
-
-    // Add listener for tab close events from background script
-    chrome.runtime.onMessage.addListener(handleMessage);
+    });
 
     // Cleanup listener on unmount
-    return () => chrome.runtime.onMessage.removeListener(handleMessage);
+    return () => remove();
   }, [clearTabSessions]);
 
   return {

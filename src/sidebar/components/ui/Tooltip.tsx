@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 
 export interface TooltipProps {
   /** The content to display in the tooltip */
@@ -51,7 +51,7 @@ export const Tooltip: React.FC<TooltipProps> = ({
   }, []);
 
   // Calculate tooltip position to avoid viewport overflow
-  const calculatePosition = (): { top: number; left: number } => {
+  const calculatePosition = useCallback((): { top: number; left: number } => {
     if (!triggerRef.current || !tooltipRef.current) {
       return { top: 0, left: 0 };
     }
@@ -118,7 +118,7 @@ export const Tooltip: React.FC<TooltipProps> = ({
     setActualPosition(newPosition);
 
     return { top, left };
-  };
+  }, [position]);
 
   const showTooltip = () => {
     if (disabled || !content) return;
@@ -169,16 +169,16 @@ export const Tooltip: React.FC<TooltipProps> = ({
 
   useEffect(() => {
     if (isVisible && tooltipRef.current) {
-      const position = calculatePosition();
+      const calculatedPosition = calculatePosition();
       setTooltipStyle({
         position: 'fixed',
-        top: `${position.top}px`,
-        left: `${position.left}px`,
+        top: `${calculatedPosition.top}px`,
+        left: `${calculatedPosition.left}px`,
         maxWidth: `${maxWidth}px`,
         zIndex: 10000,
       });
     }
-  }, [isVisible, maxWidth]);
+  }, [isVisible, maxWidth, position, calculatePosition]);
 
   return (
     <>

@@ -33,8 +33,6 @@ export interface UseTabMentionOptions {
   stopChars?: string[];
   /** Whether to enable mention detection (default: true) */
   enabled?: boolean;
-  /** Whether to handle backspace to cancel mention (default: true) */
-  handleBackspace?: boolean;
   /** Whether the user is currently in IME composition (default: false) */
   isComposing?: boolean;
 }
@@ -132,7 +130,6 @@ export function useTabMention(options: UseTabMentionOptions = {}): UseTabMention
     debounceDelay = DEFAULT_DEBOUNCE_DELAY,
     stopChars = DEFAULT_STOP_CHARS,
     enabled = true,
-    handleBackspace = true,
     isComposing = false,
   } = options;
 
@@ -222,7 +219,7 @@ export function useTabMention(options: UseTabMentionOptions = {}): UseTabMention
         query: query.trim(),
       };
     },
-    [enabled, stopChars, isComposing, handleBackspace]
+    [enabled, stopChars, isComposing]
   );
 
   /**

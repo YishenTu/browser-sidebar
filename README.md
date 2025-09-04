@@ -135,6 +135,23 @@ npm run test:ui
    - Click the X button or extension icon to close
 4. **Configure AI providers**: Add your API keys in the extension settings
 
+## Architecture Status
+
+The extension now uses the new modular, service-oriented architecture by default. The previous feature flag (`refactorMode`) and its config file have been removed.
+
+Key points:
+
+- Providers prefer the transport layer by default and fall back to SDK/fetch when no transport is available.
+- Hooks use the service layer (EngineManagerService, ChatService) exclusively.
+- The OpenAI-compatible proxy always uses the Background/Direct transport policy.
+
+### Implementation Notes
+
+- New architecture components are gated behind the feature flag
+- Existing code paths remain untouched as fallbacks
+- No user-facing changes during the refactor process
+- All current functionality preserved throughout the transition
+
 ## Multi-Tab Content Injection
 
 The extension supports aggregating content from multiple browser tabs in your conversations with AI. This powerful feature allows you to provide comprehensive context from different sources.
@@ -387,23 +404,23 @@ This section shows how data moves through the extension — where API keys are s
 
 - **Model selection & provider initialization:**
   - UI: `src/sidebar/components/ModelSelector.tsx` groups models by provider; when you choose a model it updates the selected model in the settings store.
-  - Manager: `src/sidebar/hooks/ai/useProviderManager.ts` reads settings, creates providers via `src/provider/ProviderFactory.ts`, registers them in `src/provider/ProviderRegistry.ts`, and sets the active provider that will serve chat.
+  - Manager: `src/sidebar/hooks/ai/useAIChat.ts` delegates to `src/services/engine/EngineManagerService.ts`, which uses `src/core/engine/EngineFactory.ts` + `src/core/engine/EngineRegistry.ts` to initialize and switch engines.
 
 - **Tab content extraction:**
   - Triggered from ChatPanel through `useTabExtraction` and the @‑mention UI.
   - Messages: Sidebar sends `GET_ALL_TABS` / `EXTRACT_TAB_CONTENT` to the background.
-  - Background: `TabManager` coordinates content scripts in `src/tabext/*` to extract and clean DOM → Markdown (Defuddle engine, converters, cleaners).
+  - Background: `TabManager` coordinates content scripts in `src/content/*` to extract and clean DOM → Markdown. Pure extraction utilities live in `src/core/extraction/*`.
   - Result: Extracted content is returned to the sidebar and previewed; the message formatter includes it as context automatically.
 
 - **Chat request build & send:**
   - Prompt capture: `src/sidebar/ChatPanel.tsx` collects the user’s input; `useMessageHandler` formats it with any extracted tab context.
-  - Request build: Each provider converts messages to its API format (e.g., `src/provider/openai-compat/requestBuilder.ts`). For OpenAI‑Compat we currently omit temperature/top_p/max_tokens defaults.
+  - Request build: Each engine converts messages to its API format (e.g., `src/core/ai/openai-compat/requestBuilder.ts`). For OpenAI‑Compat we currently omit temperature/top_p/max_tokens defaults.
   - Transport:
     - Direct: If the endpoint allows CORS, the OpenAI/Gemini/OpenRouter SDKs stream directly from the page.
-    - Background proxy (only when needed): For CORS‑restricted endpoints like Kimi, `src/provider/openai-compat/ProxiedOpenAIClient.ts` routes non‑stream requests via `PROXY_REQUEST` and true SSE via a long‑lived Port (`proxy-stream`) to `src/extension/background/proxyHandler.ts`.
+    - Background proxy (only when needed): For CORS‑restricted endpoints like Kimi, the request streams via `BackgroundProxyTransport` and `src/extension/background/proxyHandler.ts`.
 
 - **Streaming and response handling:**
-  - Stream processing: Provider stream processors normalize SSE chunks into the app’s `StreamChunk` format (OpenAI‑Compat reuses OpenRouter stream mapping in `src/provider/openai-compat/streamProcessor.ts`).
+  - Stream processing: Stream processors normalize SSE chunks into the app’s `StreamChunk` format (e.g., `src/core/ai/openai-compat/streamProcessor.ts`).
   - UI update: The stream is consumed by the chat hooks; partial tokens render in the Body component. Finish reasons/usage are tracked when provided.
 
 - **Chat history & sessions:**
@@ -414,13 +431,138 @@ This section shows how data moves through the extension — where API keys are s
 
 - Sidebar UI: `src/sidebar/ChatPanel.tsx`, components in `src/sidebar/components/*`.
 - Settings & keys: `src/sidebar/components/Settings/Settings.tsx`, storage helpers under `src/data/storage/*`.
-- Providers: `src/provider/*` (OpenAI, Gemini, OpenRouter, OpenAI‑Compat).
+- Engines/providers: `src/core/engine/*` (OpenAI, Gemini, OpenRouter, OpenAI‑Compat). Pure request/stream logic in `src/core/ai/*`.
 - Background services: `src/extension/background/*` (message handler, proxy handler, tab manager, keep‑alive).
-- Content extraction: `src/tabext/*` (Defuddle engine, converters, utilities).
+- Content extraction: glue in `src/content/*`; pure analyzers/markdown in `src/core/extraction/*`.
 
 ### Privacy
 
-- BYOK: Keys are used locally by the extension; requests go directly from the user’s browser to the chosen AI provider. For Kimi/other CORS‑blocked domains, the background service worker fetches cross‑origin and relays the stream — still on the user’s device.
+- BYOK: Keys are used locally by the extension; requests go directly from the user's browser to the chosen AI provider. For Kimi/other CORS‑blocked domains, the background service worker fetches cross‑origin and relays the stream — still on the user's device.
+
+## Transport & Services Architecture
+
+The extension uses a modular architecture with a transport abstraction layer and service‑oriented design. This provides better separation of concerns, improved testability, and flexible HTTP handling across providers.
+
+### Transport Layer
+
+The transport layer abstracts HTTP request handling and provides different strategies for making API calls:
+
+**DirectFetchTransport**:
+
+- Standard HTTP requests using the Fetch API
+- Used for providers that support CORS (OpenAI, Gemini, OpenRouter)
+- Executes directly in the sidebar context
+- Most efficient path for supported providers
+
+**BackgroundProxyTransport**:
+
+- Proxied requests through the background service worker
+- Required for CORS-restricted providers (Kimi, Moonshot, some OpenAI-compatible APIs)
+- Bypasses browser CORS restrictions
+- Supports both standard requests and SSE streaming via Chrome message ports
+
+**Transport Policy**:
+
+```typescript
+import { shouldProxy } from '@transport/policy';
+import { BackgroundProxyTransport, DirectFetchTransport } from '@transport';
+
+// Choose route per request
+const transport = shouldProxy(request.url)
+  ? new BackgroundProxyTransport()
+  : new DirectFetchTransport();
+```
+
+### Services Layer
+
+The services layer provides a clean abstraction over core functionality:
+
+**ChatService (`src/services/chat/ChatService.ts`)**:
+
+- Orchestrates AI chat conversations
+- Handles message formatting and context management
+- Manages streaming responses and error handling
+- Provider-agnostic chat interface
+
+**ExtractionService (`src/services/extraction/ExtractionService.ts`)**:
+
+- Manages web content extraction from tabs
+- Coordinates with background scripts and content scripts
+- Handles content caching and processing
+- Provides clean API for multi-tab content aggregation
+
+**EngineManagerService (`src/services/engine/EngineManagerService.ts`)**:
+
+- Manages AI provider lifecycle and selection
+- Handles provider initialization and configuration
+- Maintains provider registry and active provider state
+- Abstracts provider switching logic
+
+**KeyService (`src/services/keys/KeyService.ts`)**:
+
+- Manages API key storage and validation
+- Handles encryption/decryption of sensitive data
+- Provides unified key management across providers
+- Validates key formats and permissions
+
+**SessionService (`src/services/session/SessionService.ts`)**:
+
+- Manages chat sessions and conversation history
+- Handles tab-based session isolation
+- Provides session lifecycle management
+- Maintains conversation continuity across page navigations
+
+### Proxy Policy
+
+Centralized in `@transport/policy` with an allowlist/denylist. By default, the allowlist includes `api.moonshot.cn` (Kimi) so those requests stream via the background proxy. Use `shouldProxy(url)` when you need to choose a route explicitly (most app code delegates to services).
+
+### Benefits of New Architecture
+
+**Separation of Concerns**:
+
+- Transport logic isolated from business logic
+- Services provide single-responsibility interfaces
+- UI components decoupled from provider implementations
+- Clear abstraction boundaries
+
+**Testability**:
+
+- Services can be unit tested independently
+- Transport layer is mockable for testing
+- Business logic separated from browser APIs
+- Comprehensive test coverage possible
+
+**Maintainability**:
+
+- Modular design makes code easier to understand
+- Clear interfaces reduce coupling between components
+- Service layer provides consistent APIs
+- Easier to add new providers and features
+
+**CORS Handling**:
+
+- Transport abstraction handles CORS complexity
+- Background proxy provides universal API access
+- Provider policies determine optimal request path
+- Seamless fallback between direct and proxied requests
+
+**Extensibility**:
+
+- New transport implementations can be added easily
+- Service interfaces provide extension points
+- Provider-agnostic service layer
+- Platform-agnostic core business logic
+
+### Migration Strategy
+
+The architecture migration follows a gradual rollout approach:
+
+1. **Phase 1-3**: Core modules and transport layer implementation
+2. **Phase 4-6**: Services layer and UI hook integration
+3. **Phase 7-9**: Configuration consolidation and testing
+4. **Phase 10**: Legacy cleanup and feature flag removal
+
+During migration, both architectures coexist, with the feature flag determining which path to use. This ensures stability while allowing thorough testing of the new implementation.
 
 ## Documentation
 

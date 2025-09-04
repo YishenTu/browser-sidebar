@@ -17,10 +17,10 @@ Transform the browser-sidebar extension from a monolithic structure to a modular
 
 ## Progress Tracking
 
-- Total Tasks: 89
-- Completed: 0
+- Total Tasks: 94 (Added 4 core module test tasks to Phase 8)
+- Completed: 91 (Phase 0: 7, Phase 1: 23, Phase 2: 11, Phase 3: 8, Phase 4: 10, Phase 5: 7, Phase 6: 5, Phase 7: 3, Phase 8: 9, Phase 9: 2, Phase 10: 6)
 - In Progress: 0
-- Remaining: 89
+- Remaining: 3
 
 ---
 
@@ -28,14 +28,20 @@ Transform the browser-sidebar extension from a monolithic structure to a modular
 
 ### Core Setup
 
-- [ ] **Task 0.1** ⚡ Create Feature Flag
+- [x] **Task 0.0** ✅ Create new branch for refactor
+  - Prerequisites: None
+  - Description: Create feature branch for modular architecture refactor
+  - Deliverable: `refactor-modular-architecture` branch
+  - Acceptance: Branch created and checked out
+
+- [x] **Task 0.1** ⚡ Create Feature Flag
   - Prerequisites: None
   - Description: Create feature flag configuration file
-  - Deliverable: `src/config/featureFlags.ts`
+  - Deliverable: Remove feature flag entirely; default to new architecture
   - Content: `export const refactorMode = false; // Will be toggled per phase`
   - Acceptance: File exists, exports boolean constant
 
-- [ ] **Task 0.2** ⚡ Update TypeScript Config
+- [x] **Task 0.2** ⚡ Update TypeScript Config
   - Prerequisites: None
   - Description: Add new path aliases for future directories
   - Deliverable: Modified `tsconfig.json`
@@ -47,34 +53,34 @@ Transform the browser-sidebar extension from a monolithic structure to a modular
     ```
   - Acceptance: TypeScript resolves new aliases, build passes
 
-- [ ] **Task 0.3** 🔄 Update Vite Config
+- [x] **Task 0.3** 🔄 Update Vite Config
   - Prerequisites: Task 0.2
   - Description: Ensure Vite resolver mirrors TypeScript paths
   - Deliverable: Modified `vite.config.ts`
   - Changes: Add aliases for @core, @transport, @platform
   - Acceptance: Build succeeds with new aliases
 
-- [ ] **Task 0.4** 🔄 Document Baseline Behavior
+- [x] **Task 0.4** 🔄 Document Baseline Behavior
   - Prerequisites: None
   - Description: Record current extension behavior for regression testing
   - Deliverable: `docs/baseline-behavior.md`
   - Content: Screenshots, test flows for streaming, extraction, provider switching
   - Acceptance: Document covers all major user flows
 
-- [ ] **Task 0.5** 🔄 Update Vitest Config
+- [x] **Task 0.5** 🔄 Update Vitest Config
   - Prerequisites: Task 0.2
   - Description: Mirror TypeScript path aliases in Vitest
   - Deliverable: Modified `vitest.config.ts`
   - Changes: Ensure aliases for `@core`, `@transport`, `@platform` resolve in tests
   - Acceptance: Tests resolve new aliases without path errors
 
-- [ ] **Task 0.6** ⚡ Validate Manifest Permissions & KeepAlive
+- [x] **Task 0.6** ⚡ Validate Manifest Permissions & KeepAlive
   - Prerequisites: None
   - File: `manifest.json`
   - Checks: No new required permissions; background keepAlive strategy remains intact
   - Acceptance: Manifest unchanged for default permissions; behavior verified
 
-- [ ] **Task 0.7** 🔄 Update README Rollout Notes
+- [x] **Task 0.7** 🔄 Update README Rollout Notes
   - Prerequisites: Task 0.1
   - File: `README.md`
   - Changes: Add feature-flag rollout section and guidance on toggling `refactorMode`
@@ -88,7 +94,7 @@ Transform the browser-sidebar extension from a monolithic structure to a modular
 
 ### Directory Structure Creation
 
-- [ ] **Task 1.1** ⚡ Create Core Directory Structure
+- [x] **Task 1.1** ⚡ Create Core Directory Structure
   - Prerequisites: Task 0.2
   - Description: Create core module directories
   - Deliverables:
@@ -101,7 +107,7 @@ Transform the browser-sidebar extension from a monolithic structure to a modular
 
 ### OpenAI Provider Migration 🔄 (Parallel Group A)
 
-- [ ] **Task 1.2** 🔄 Move OpenAI Request Builder
+- [x] **Task 1.2** ✅ Move OpenAI Request Builder
   - Prerequisites: Task 1.1
   - Description: Move and create re-export stub
   - Source: `src/provider/openai/requestBuilder.ts`
@@ -109,7 +115,7 @@ Transform the browser-sidebar extension from a monolithic structure to a modular
   - Re-export stub: `export * from '@core/ai/openai/requestBuilder';`
   - Acceptance: Imports resolve, no TypeScript errors
 
-- [ ] **Task 1.3** 🔄 Move OpenAI Stream Processor
+- [x] **Task 1.3** ✅ Move OpenAI Stream Processor
   - Prerequisites: Task 1.1
   - Description: Move and create re-export stub
   - Source: `src/provider/openai/streamProcessor.ts`
@@ -117,7 +123,7 @@ Transform the browser-sidebar extension from a monolithic structure to a modular
   - Re-export stub: `export * from '@core/ai/openai/streamProcessor';`
   - Acceptance: Imports resolve, no TypeScript errors
 
-- [ ] **Task 1.4** 🔄 Move OpenAI Response Parser
+- [x] **Task 1.4** ✅ Move OpenAI Response Parser
   - Prerequisites: Task 1.1
   - Description: Move and create re-export stub
   - Source: `src/provider/openai/responseParser.ts`
@@ -125,7 +131,7 @@ Transform the browser-sidebar extension from a monolithic structure to a modular
   - Re-export stub: `export * from '@core/ai/openai/responseParser';`
   - Acceptance: Imports resolve, no TypeScript errors
 
-- [ ] **Task 1.5** 🔄 Move OpenAI Error Handler
+- [x] **Task 1.5** ✅ Move OpenAI Error Handler
   - Prerequisites: Task 1.1
   - Description: Move and create re-export stub
   - Source: `src/provider/openai/errorHandler.ts`
@@ -133,7 +139,7 @@ Transform the browser-sidebar extension from a monolithic structure to a modular
   - Re-export stub: `export * from '@core/ai/openai/errorHandler';`
   - Acceptance: Imports resolve, no TypeScript errors
 
-- [ ] **Task 1.6** 🔄 Move OpenAI Search Metadata
+- [x] **Task 1.6** ✅ Move OpenAI Search Metadata
   - Prerequisites: Task 1.1
   - Description: Move and create re-export stub
   - Source: `src/provider/openai/searchMetadata.ts`
@@ -143,7 +149,7 @@ Transform the browser-sidebar extension from a monolithic structure to a modular
 
 ### OpenAI-Compat Provider Migration 🔄 (Parallel Group B)
 
-- [ ] **Task 1.7** 🔄 Move OpenAI-Compat Request Builder
+- [x] **Task 1.7** ✅ Move OpenAI-Compat Request Builder
   - Prerequisites: Task 1.1
   - Description: Move and create re-export stub
   - Source: `src/provider/openai-compat/requestBuilder.ts`
@@ -151,16 +157,16 @@ Transform the browser-sidebar extension from a monolithic structure to a modular
   - Re-export stub: `export * from '@core/ai/openai-compat/requestBuilder';`
   - Acceptance: Imports resolve, no TypeScript errors
 
-- [ ] **Task 1.8** 🔄 Move OpenAI-Compat Stream Processor
-  - Prerequisites: Task 1.1
+- [x] **Task 1.8** ✅ Move OpenAI-Compat Stream Processor
+  - Prerequisites: Task 1.1 (completed - core directories created)
   - Description: Move and create re-export stub
   - Source: `src/provider/openai-compat/streamProcessor.ts`
   - Destination: `src/core/ai/openai-compat/streamProcessor.ts`
   - Re-export stub: `export * from '@core/ai/openai-compat/streamProcessor';`
   - Acceptance: Imports resolve, no TypeScript errors
 
-- [ ] **Task 1.9** 🔄 Move OpenAI-Compat Error Handler
-  - Prerequisites: Task 1.1
+- [x] **Task 1.9** ✅ Move OpenAI-Compat Error Handler
+  - Prerequisites: Task 1.1 (completed - core directories created)
   - Description: Move and create re-export stub
   - Source: `src/provider/openai-compat/errorHandler.ts`
   - Destination: `src/core/ai/openai-compat/errorHandler.ts`
@@ -169,7 +175,7 @@ Transform the browser-sidebar extension from a monolithic structure to a modular
 
 ### Gemini Provider Migration 🔄 (Parallel Group C)
 
-- [ ] **Task 1.10** 🔄 Move Gemini Request Builder
+- [x] **Task 1.10** ✅ Move Gemini Request Builder
   - Prerequisites: Task 1.1
   - Description: Move and create re-export stub
   - Source: `src/provider/gemini/requestBuilder.ts`
@@ -177,7 +183,7 @@ Transform the browser-sidebar extension from a monolithic structure to a modular
   - Re-export stub: `export * from '@core/ai/gemini/requestBuilder';`
   - Acceptance: Imports resolve, no TypeScript errors
 
-- [ ] **Task 1.11** 🔄 Move Gemini Stream Processor
+- [x] **Task 1.11** ✅ Move Gemini Stream Processor
   - Prerequisites: Task 1.1
   - Description: Move and create re-export stub
   - Source: `src/provider/gemini/streamProcessor.ts`
@@ -185,7 +191,7 @@ Transform the browser-sidebar extension from a monolithic structure to a modular
   - Re-export stub: `export * from '@core/ai/gemini/streamProcessor';`
   - Acceptance: Imports resolve, no TypeScript errors
 
-- [ ] **Task 1.12** 🔄 Move Gemini Response Parser
+- [x] **Task 1.12** ✅ Move Gemini Response Parser
   - Prerequisites: Task 1.1
   - Description: Move and create re-export stub
   - Source: `src/provider/gemini/responseParser.ts`
@@ -193,15 +199,15 @@ Transform the browser-sidebar extension from a monolithic structure to a modular
   - Re-export stub: `export * from '@core/ai/gemini/responseParser';`
   - Acceptance: Imports resolve, no TypeScript errors
 
-- [ ] **Task 1.13** 🔄 Move Gemini Error Handler
-  - Prerequisites: Task 1.1
+- [x] **Task 1.13** ✅ Move Gemini Error Handler
+  - Prerequisites: Task 1.1 (completed - core directories created)
   - Description: Move and create re-export stub
   - Source: `src/provider/gemini/errorHandler.ts`
   - Destination: `src/core/ai/gemini/errorHandler.ts`
   - Re-export stub: `export * from '@core/ai/gemini/errorHandler';`
   - Acceptance: Imports resolve, no TypeScript errors
 
-- [ ] **Task 1.14** 🔄 Move Gemini Search Metadata
+- [x] **Task 1.14** ✅ Move Gemini Search Metadata
   - Prerequisites: Task 1.1
   - Description: Move and create re-export stub
   - Source: `src/provider/gemini/searchMetadata.ts`
@@ -211,15 +217,15 @@ Transform the browser-sidebar extension from a monolithic structure to a modular
 
 ### OpenRouter Provider Migration 🔄 (Parallel Group D)
 
-- [ ] **Task 1.15** 🔄 Move OpenRouter Request Builder
-  - Prerequisites: Task 1.1
+- [x] **Task 1.15** ✅ Move OpenRouter Request Builder
+  - Prerequisites: Task 1.1 (completed - core directories created)
   - Description: Move and create re-export stub
   - Source: `src/provider/openrouter/requestBuilder.ts`
   - Destination: `src/core/ai/openrouter/requestBuilder.ts`
   - Re-export stub: `export * from '@core/ai/openrouter/requestBuilder';`
   - Acceptance: Imports resolve, no TypeScript errors
 
-- [ ] **Task 1.16** 🔄 Move OpenRouter Stream Processor
+- [x] **Task 1.16** 🔄 Move OpenRouter Stream Processor
   - Prerequisites: Task 1.1
   - Description: Move and create re-export stub
   - Source: `src/provider/openrouter/streamProcessor.ts`
@@ -227,7 +233,7 @@ Transform the browser-sidebar extension from a monolithic structure to a modular
   - Re-export stub: `export * from '@core/ai/openrouter/streamProcessor';`
   - Acceptance: Imports resolve, no TypeScript errors
 
-- [ ] **Task 1.17** 🔄 Move OpenRouter Error Handler
+- [x] **Task 1.17** 🔄 Move OpenRouter Error Handler
   - Prerequisites: Task 1.1
   - Description: Move and create re-export stub
   - Source: `src/provider/openrouter/errorHandler.ts`
@@ -235,7 +241,7 @@ Transform the browser-sidebar extension from a monolithic structure to a modular
   - Re-export stub: `export * from '@core/ai/openrouter/errorHandler';`
   - Acceptance: Imports resolve, no TypeScript errors
 
-- [ ] **Task 1.18** 🔄 Move OpenRouter Types
+- [x] **Task 1.18** 🔄 Move OpenRouter Types
   - Prerequisites: Task 1.1
   - Description: Move and create re-export stub
   - Source: `src/provider/openrouter/types.ts`
@@ -245,7 +251,7 @@ Transform the browser-sidebar extension from a monolithic structure to a modular
 
 ### Extraction Logic Migration 🔄 (Parallel Group E)
 
-- [ ] **Task 1.19** 🔄 Move Markdown Converter
+- [x] **Task 1.19** ✅ Move Markdown Converter
   - Prerequisites: Task 1.1
   - Description: Move and create re-export stub
   - Source: `src/tabext/extraction/converters/markdownConverter.ts`
@@ -253,32 +259,32 @@ Transform the browser-sidebar extension from a monolithic structure to a modular
   - Re-export stub: `export * from '@core/extraction/markdownConverter';`
   - Acceptance: Imports resolve, no TypeScript errors
 
-- [ ] **Task 1.20** 🔄 Move Content Analyzer
-  - Prerequisites: Task 1.1
+- [x] **Task 1.20** ✅ Move Content Analyzer
+  - Prerequisites: Task 1.1 (completed - core directories created)
   - Description: Move and create re-export stub
   - Source: `src/tabext/extraction/analyzers/contentAnalyzer.ts`
   - Destination: `src/core/extraction/analyzers/contentAnalyzer.ts`
   - Re-export stub: `export * from '@core/extraction/analyzers/contentAnalyzer';`
   - Acceptance: Imports resolve, no TypeScript errors
 
-- [ ] **Task 1.21** 🔄 Move Text Utils
-  - Prerequisites: Task 1.1
+- [x] **Task 1.21** ✅ Move Text Utils
+  - Prerequisites: Task 1.1 (completed - core directories created)
   - Description: Move and create re-export stub
   - Source: `src/tabext/utils/textUtils.ts`
   - Destination: `src/core/extraction/text.ts`
-  - Re-export stub: `export * from '@core/extraction/text';`
+  - Re-export stub: `export * from '../../core/extraction/text';`
   - Acceptance: Imports resolve, no TypeScript errors
 
 ### Barrel Exports Creation ⚡ (Sequential - After all moves)
 
-- [ ] **Task 1.22** ⚡ Create Core AI Barrel Export
+- [x] **Task 1.22** ⚡ Create Core AI Barrel Export
   - Prerequisites: Tasks 1.2-1.18
   - Description: Create barrel export for AI modules
   - Deliverable: `src/core/ai/index.ts`
   - Content: Export all provider sub-modules
   - Acceptance: Can import from '@core/ai'
 
-- [ ] **Task 1.23** ⚡ Create Core Extraction Barrel Export
+- [x] **Task 1.23** ⚡ Create Core Extraction Barrel Export
   - Prerequisites: Tasks 1.19-1.21
   - Description: Create barrel export for extraction modules
   - Deliverable: `src/core/extraction/index.ts`
@@ -287,20 +293,8 @@ Transform the browser-sidebar extension from a monolithic structure to a modular
 
 ### Testing for Phase 1
 
-- [ ] **Task 1.24** 🔄 Create OpenAI Core Tests
-  - Prerequisites: Task 1.22
-  - Description: Unit tests for moved OpenAI logic
-  - Deliverable: `tests/unit/core/ai/openai/streamProcessor.test.ts`
-  - Acceptance: Tests pass, >90% coverage
-
-- [ ] **Task 1.25** 🔄 Create Extraction Core Tests
-  - Prerequisites: Task 1.23
-  - Description: Unit tests for extraction logic
-  - Deliverables:
-    - `tests/unit/core/extraction/markdownConverter.test.ts`
-    - `tests/unit/core/extraction/contentAnalyzer.test.ts`
-    - `tests/unit/core/extraction/text.test.ts`
-  - Acceptance: Tests pass, >90% coverage
+- ~~**Task 1.24**~~ (Moved to Phase 8)
+- ~~**Task 1.25**~~ (Moved to Phase 8)
 
 **Synchronization Point**: All imports resolve, build passes, no chrome._ or DOM in core/_
 
@@ -310,7 +304,7 @@ Transform the browser-sidebar extension from a monolithic structure to a modular
 
 ### Transport Foundation
 
-- [ ] **Task 2.1** ⚡ Create Transport Types
+- [x] **Task 2.1** ⚡ Create Transport Types ✅
   - Prerequisites: Phase 1 complete
   - Description: Define transport interfaces and types
   - Deliverable: `src/transport/types.ts`
@@ -338,7 +332,7 @@ Transform the browser-sidebar extension from a monolithic structure to a modular
     ```
   - Acceptance: Types compile, no errors
 
-- [ ] **Task 2.2** 🔄 Create Direct Fetch Transport
+- [x] **Task 2.2** 🔄 Create Direct Fetch Transport ✅
   - Prerequisites: Task 2.1
   - Description: Implement direct fetch transport
   - Deliverable: `src/transport/DirectFetchTransport.ts`
@@ -346,7 +340,7 @@ Transform the browser-sidebar extension from a monolithic structure to a modular
   - Features: Standard fetch wrapper with streaming support
   - Acceptance: Can make HTTP requests and stream responses
 
-- [ ] **Task 2.3** 🔄 Create Background Proxy Transport
+- [x] **Task 2.3** 🔄 Create Background Proxy Transport ✅
   - Prerequisites: Task 2.1
   - Description: Implement proxy transport for CORS
   - Deliverable: `src/transport/BackgroundProxyTransport.ts`
@@ -354,7 +348,7 @@ Transform the browser-sidebar extension from a monolithic structure to a modular
   - Features: Port-based SSE streaming via background worker
   - Acceptance: Can proxy requests through background worker
 
-- [ ] **Task 2.4** 🔄 Create Transport Policy
+- [x] **Task 2.4** 🔄 Create Transport Policy ✅
   - Prerequisites: Task 2.1
   - Description: Define proxy routing policy
   - Deliverable: `src/transport/policy.ts`
@@ -362,7 +356,7 @@ Transform the browser-sidebar extension from a monolithic structure to a modular
   - Default allowlist: `['https://api.moonshot.cn']`
   - Acceptance: Correctly identifies URLs needing proxy
 
-- [ ] **Task 2.5** ⚡ Create Transport Barrel Export
+- [x] **Task 2.5** ⚡ Create Transport Barrel Export ✅
   - Prerequisites: Tasks 2.2-2.4
   - Description: Create barrel export for transport
   - Deliverable: `src/transport/index.ts`
@@ -371,14 +365,14 @@ Transform the browser-sidebar extension from a monolithic structure to a modular
 
 ### Integration with Existing Code
 
-- [ ] **Task 2.6** ⚡ Update Proxy Handler
+- [x] **Task 2.6** ⚡ Update Proxy Handler ✅
   - Prerequisites: Task 2.4
   - Description: Update background proxy to use policy
   - File: `src/extension/background/proxyHandler.ts`
   - Changes: Import and use `shouldProxy` from `@transport/policy`
   - Acceptance: Proxy handler uses centralized policy
 
-- [ ] **Task 2.7** ⚡ Refactor ProxiedOpenAIClient
+- [x] **Task 2.7** ⚡ Refactor ProxiedOpenAIClient ✅
   - Prerequisites: Task 2.3, Task 2.6
   - Description: Update to use BackgroundProxyTransport
   - File: `src/provider/openai-compat/ProxiedOpenAIClient.ts`
@@ -386,7 +380,7 @@ Transform the browser-sidebar extension from a monolithic structure to a modular
   - Feature flag: Gate behind refactorMode
   - Acceptance: Kimi streaming works via new transport
 
-- [ ] **Task 2.8** ⚡ Update OpenAICompatibleProvider
+- [x] **Task 2.8** ⚡ Update OpenAICompatibleProvider ✅
   - Prerequisites: Task 2.7
   - Description: Add transport support to provider
   - File: `src/provider/openai-compat/OpenAICompatibleProvider.ts`
@@ -395,19 +389,19 @@ Transform the browser-sidebar extension from a monolithic structure to a modular
 
 ### Testing for Phase 2
 
-- [ ] **Task 2.9** 🔄 Create Transport Policy Tests
+- [x] **Task 2.9** 🔄 Create Transport Policy Tests ✅
   - Prerequisites: Task 2.4
   - Deliverable: `tests/unit/transport/policy.test.ts`
   - Coverage: shouldProxy logic, allowlist behavior
   - Acceptance: Tests pass, >90% coverage
 
-- [ ] **Task 2.10** 🔄 Create Direct Transport Tests
+- [x] **Task 2.10** 🔄 Create Direct Transport Tests ✅
   - Prerequisites: Task 2.2
   - Deliverable: `tests/unit/transport/directFetchTransport.test.ts`
   - Coverage: Request/response, streaming, error handling
   - Acceptance: Tests pass with mocked fetch
 
-- [ ] **Task 2.11** 🔄 Create Proxy Transport Tests
+- [x] **Task 2.11** 🔄 Create Proxy Transport Tests ✅
   - Prerequisites: Task 2.3
   - Deliverable: `tests/unit/transport/backgroundProxyTransport.test.ts`
   - Coverage: Port messaging, streaming, error handling
@@ -416,40 +410,42 @@ Transform the browser-sidebar extension from a monolithic structure to a modular
 
 **Synchronization Point**: Both transports work, Kimi streams via proxy with feature flag
 
+Documentation follow-up: Update README and docs to reflect centralized proxy policy (use `shouldProxy(url)` from `@transport/policy`), replacing any hardcoded domain checks in examples; defer actual doc edits to a later docs sweep.
+
 ---
 
 ## Phase 3: Providers on Transport [Days 2-3]
 
 ### Provider Adaptation
 
-- [ ] **Task 3.1** ⚡ Update BaseProvider
+- [x] **Task 3.1** ⚡ Update BaseProvider
   - Prerequisites: Phase 2 complete
   - Description: Add transport support to base class
   - File: `src/provider/BaseProvider.ts`
   - Changes: Accept optional transport in constructor
   - Acceptance: Base class supports transport injection
 
-- [ ] **Task 3.2** 🔄 Update OpenAI Provider
+- [x] **Task 3.2** 🔄 Update OpenAI Provider
   - Prerequisites: Task 3.1
   - File: `src/provider/openai/OpenAIProvider.ts`
   - Changes: Use Transport for API calls when refactorMode=true
   - Fallback: Keep SDK path for refactorMode=false
   - Acceptance: OpenAI works with transport
 
-- [ ] **Task 3.3** 🔄 Update Gemini Provider
+- [x] **Task 3.3** 🔄 Update Gemini Provider
   - Prerequisites: Task 3.1
   - File: `src/provider/gemini/GeminiProvider.ts`
   - Changes: Use Transport for streaming when refactorMode=true
   - Fallback: Keep SDK path for refactorMode=false
   - Acceptance: Gemini works with transport
 
-- [ ] **Task 3.4** 🔄 Update OpenRouter Provider
+- [x] **Task 3.4** 🔄 Update OpenRouter Provider
   - Prerequisites: Task 3.1
   - File: `src/provider/openrouter/OpenRouterProvider.ts`
   - Changes: Use Transport when refactorMode=true
   - Acceptance: OpenRouter works with transport
 
-- [ ] **Task 3.5** ⚡ Update Provider Factory
+- [x] **Task 3.5** ⚡ Update Provider Factory
   - Prerequisites: Tasks 3.2-3.4
   - File: `src/provider/ProviderFactory.ts`
   - Changes: Inject DirectFetchTransport by default when refactorMode=true
@@ -457,19 +453,19 @@ Transform the browser-sidebar extension from a monolithic structure to a modular
 
 ### Testing for Phase 3
 
-- [ ] **Task 3.6** 🔄 Create OpenAI Transport Tests
+- [x] **Task 3.6** 🔄 Create OpenAI Transport Tests
   - Prerequisites: Task 3.2
   - Deliverable: `tests/unit/provider/openai/adapter.transport.test.ts`
   - Coverage: Streaming with mocked transport
   - Acceptance: Tests verify chunk contract
 
-- [ ] **Task 3.7** 🔄 Create Gemini Transport Tests
+- [x] **Task 3.7** 🔄 Create Gemini Transport Tests
   - Prerequisites: Task 3.3
   - Deliverable: `tests/unit/provider/gemini/adapter.transport.test.ts`
   - Coverage: Streaming with mocked transport
   - Acceptance: Tests verify chunk contract
 
-- [ ] **Task 3.8** 🔄 Create OpenRouter Transport Tests
+- [x] **Task 3.8** 🔄 Create OpenRouter Transport Tests
   - Prerequisites: Task 3.4
   - Deliverable: `tests/unit/provider/openrouter/adapter.transport.test.ts`
   - Coverage: Streaming with mocked transport
@@ -483,7 +479,7 @@ Transform the browser-sidebar extension from a monolithic structure to a modular
 
 ### Service Creation 🔄 (All can be parallel)
 
-- [ ] **Task 4.1** 🔄 Create Chat Service
+- [x] **Task 4.1** 🔄 Create Chat Service
   - Prerequisites: Phase 3 complete
   - Deliverable: `src/services/chat/ChatService.ts`
   - API:
@@ -492,7 +488,7 @@ Transform the browser-sidebar extension from a monolithic structure to a modular
   - Dependencies: Provider, Transport
   - Acceptance: Service compiles, exports correct API
 
-- [ ] **Task 4.2** 🔄 Create Extraction Service
+- [x] **Task 4.2** 🔄 Create Extraction Service
   - Prerequisites: Phase 1 complete
   - Deliverable: `src/services/extraction/ExtractionService.ts`
   - API:
@@ -501,7 +497,7 @@ Transform the browser-sidebar extension from a monolithic structure to a modular
   - Features: Background messaging, retries
   - Acceptance: Service compiles, exports correct API
 
-- [ ] **Task 4.3** 🔄 Create Provider Manager Service
+- [x] **Task 4.3** 🔄 Create Provider Manager Service
   - Prerequisites: Phase 3 complete
   - Deliverable: `src/services/provider/ProviderManagerService.ts`
   - API:
@@ -511,7 +507,7 @@ Transform the browser-sidebar extension from a monolithic structure to a modular
   - Dependencies: ProviderRegistry
   - Acceptance: Service compiles, manages providers
 
-- [ ] **Task 4.4** 🔄 Create Key Service
+- [x] **Task 4.4** 🔄 Create Key Service
   - Prerequisites: Phase 2 complete
   - Deliverable: `src/services/keys/KeyService.ts`
   - API:
@@ -521,7 +517,7 @@ Transform the browser-sidebar extension from a monolithic structure to a modular
   - Dependencies: Storage, Transport (for CORS validation)
   - Acceptance: Service compiles, manages keys
 
-- [ ] **Task 4.5** 🔄 Create Session Service
+- [x] **Task 4.5** 🔄 Create Session Service
   - Prerequisites: None
   - Deliverable: `src/services/session/SessionService.ts`
   - API:
@@ -532,31 +528,31 @@ Transform the browser-sidebar extension from a monolithic structure to a modular
 
 ### Testing for Phase 4
 
-- [ ] **Task 4.6** 🔄 Create Chat Service Tests
+- [x] **Task 4.6** 🔄 Create Chat Service Tests
   - Prerequisites: Task 4.1
   - Deliverable: `tests/unit/services/chatService.test.ts`
   - Coverage: Streaming, cancellation, error handling
   - Acceptance: Tests pass with mocks
 
-- [ ] **Task 4.7** 🔄 Create Extraction Service Tests
+- [x] **Task 4.7** 🔄 Create Extraction Service Tests
   - Prerequisites: Task 4.2
   - Deliverable: `tests/unit/services/extractionService.test.ts`
   - Coverage: Single/multi tab extraction
   - Acceptance: Tests pass with mocks
 
-- [ ] **Task 4.8** 🔄 Create Provider Manager Tests
+- [x] **Task 4.8** 🔄 Create Provider Manager Tests
   - Prerequisites: Task 4.3
   - Deliverable: `tests/unit/services/providerManagerService.test.ts`
   - Coverage: Provider switching, stats
   - Acceptance: Tests pass with mocks
 
-- [ ] **Task 4.9** 🔄 Create Key Service Tests
+- [x] **Task 4.9** 🔄 Create Key Service Tests
   - Prerequisites: Task 4.4
   - Deliverable: `tests/unit/services/keyService.test.ts`
   - Coverage: Key CRUD, validation
   - Acceptance: Tests pass with mocks
 
-- [ ] **Task 4.10** 🔄 Create Session Service Tests
+- [x] **Task 4.10** 🔄 Create Session Service Tests
   - Prerequisites: Task 4.5
   - Deliverable: `tests/unit/services/sessionService.test.ts`
   - Coverage: Session management
@@ -572,37 +568,37 @@ Transform the browser-sidebar extension from a monolithic structure to a modular
 
 ### Platform Wrapper Creation 🔄 (All can be parallel)
 
-- [ ] **Task 5.1** 🔄 Create Runtime Wrapper
+- [x] **Task 5.1** 🔄 Create Runtime Wrapper ✅
   - Prerequisites: None
   - Deliverable: `src/platform/chrome/runtime.ts`
   - Features: Typed sendMessage, event helpers, error normalization
   - Acceptance: Wrapper exports typed chrome.runtime functions
 
-- [ ] **Task 5.2** 🔄 Create Tabs Wrapper
+- [x] **Task 5.2** 🔄 Create Tabs Wrapper ✅
   - Prerequisites: None
   - Deliverable: `src/platform/chrome/tabs.ts`
   - Features: getActiveTabId, sendMessageToTab, query utilities
   - Acceptance: Wrapper exports typed chrome.tabs functions
 
-- [ ] **Task 5.3** 🔄 Create Storage Wrapper
+- [x] **Task 5.3** 🔄 Create Storage Wrapper ✅
   - Prerequisites: None
   - Deliverable: `src/platform/chrome/storage.ts`
   - Features: Strongly typed get/set operations
   - Acceptance: Wrapper exports typed chrome.storage functions
 
-- [ ] **Task 5.4** 🔄 Create Ports Wrapper
+- [x] **Task 5.4** 🔄 Create Ports Wrapper ✅
   - Prerequisites: None
   - Deliverable: `src/platform/chrome/ports.ts`
   - Features: Open/close/reconnect patterns for long-lived ports
   - Acceptance: Wrapper manages port lifecycle
 
-- [ ] **Task 5.5** 🔄 Create Messaging Wrapper
+- [x] **Task 5.5** 🔄 Create Messaging Wrapper ✅
   - Prerequisites: None
   - Deliverable: `src/platform/chrome/messaging.ts`
   - Features: MessageBus with unified types
   - Acceptance: Wrapper handles messaging patterns
 
-- [ ] **Task 5.6** 🔄 Create KeepAlive Wrapper
+- [x] **Task 5.6** 🔄 Create KeepAlive Wrapper ✅
   - Prerequisites: None
   - Deliverable: `src/platform/chrome/keepAlive.ts`
   - Features: Wrapper around background keepAlive logic
@@ -610,7 +606,7 @@ Transform the browser-sidebar extension from a monolithic structure to a modular
 
 ### Testing for Phase 5
 
-- [ ] **Task 5.7** 🔄 Create Platform Tests
+- [x] **Task 5.7** 🔄 Create Platform Tests ✅
   - Prerequisites: Tasks 5.1-5.6
   - Deliverables:
     - `tests/unit/platform/runtime.test.ts`
@@ -628,26 +624,26 @@ Transform the browser-sidebar extension from a monolithic structure to a modular
 
 ### Hook Refactoring ⚡ (Sequential - depends on services)
 
-- [ ] **Task 6.1** ⚡ Refactor useAIChat Hook
+- [x] **Task 6.1** ⚡ Refactor useAIChat Hook
   - Prerequisites: Phase 4 complete
   - File: `src/sidebar/hooks/ai/useAIChat.ts`
   - Changes: Replace direct provider calls with ChatService
   - Dependencies: ChatService, ProviderManagerService
   - Acceptance: Hook uses services, no direct chrome.\* or fetch
 
-- [ ] **Task 6.2** ⚡ Refactor useProviderManager Hook
+- [x] **Task 6.2** ⚡ Refactor useProviderManager Hook
   - Prerequisites: Task 6.1
   - File: `src/sidebar/hooks/ai/useProviderManager.ts`
   - Changes: Delegate to ProviderManagerService
   - Acceptance: Hook uses service for provider management
 
-- [ ] **Task 6.3** ⚡ Refactor useMessageHandler Hook
+- [x] **Task 6.3** ⚡ Refactor useMessageHandler Hook
   - Prerequisites: Task 6.1
   - File: `src/sidebar/hooks/ai/useMessageHandler.ts`
   - Changes: Use ChatService.handleStreamingResponse
   - Acceptance: Hook uses service for streaming
 
-- [ ] **Task 6.4** ⚡ Refactor useTabExtraction Hook
+- [x] **Task 6.4** ⚡ Refactor useTabExtraction Hook
   - Prerequisites: Phase 4 complete
   - File: `src/sidebar/hooks/useTabExtraction.ts`
   - Changes: Call ExtractionService for content extraction
@@ -655,7 +651,7 @@ Transform the browser-sidebar extension from a monolithic structure to a modular
 
 ### Testing for Phase 6
 
-- [ ] **Task 6.5** 🔄 Create Hook Integration Tests
+- [x] **Task 6.5** 🔄 Create Hook Integration Tests
   - Prerequisites: Tasks 6.1-6.4
   - Deliverables:
     - `tests/integration/sidebar/hooks/useAIChat.test.tsx`
@@ -671,19 +667,19 @@ Transform the browser-sidebar extension from a monolithic structure to a modular
 
 ## Phase 7: Config & Models Consolidation [Day 0.5]
 
-- [ ] **Task 7.1** ⚡ Verify Models Configuration
+- [x] **Task 7.1** ⚡ Verify Models Configuration
   - Prerequisites: None
   - File: `src/config/models.ts`
   - Task: Confirm OpenAI-Compat provider IDs are single source of truth
   - Acceptance: No duplicate model definitions
 
-- [ ] **Task 7.2** ⚡ Update Presets
+- [x] **Task 7.2** ⚡ Update Presets
   - Prerequisites: Task 7.1
   - File: `src/provider/openai-compat/presets.ts`
   - Changes: Ensure derives from config/models.ts
   - Acceptance: No preset drift from config
 
-- [ ] **Task 7.3** 🔄 Create Drift Detection Test
+- [x] **Task 7.3** 🔄 Create Drift Detection Test
   - Prerequisites: Task 7.2
   - Deliverable: `tests/unit/config/modelDrift.test.ts`
   - Coverage: Detect if presets diverge from config
@@ -699,27 +695,60 @@ Transform the browser-sidebar extension from a monolithic structure to a modular
 
 ### Integration Testing 🔄 (Can be parallel)
 
-- [ ] **Task 8.1** 🔄 Create Transport Selection Tests
+- [x] **Task 8.1** 🔄 Create Transport Selection Tests ✅
   - Prerequisites: Phase 2 complete
   - Deliverable: `tests/integration/transport-selection.test.ts`
   - Coverage: Proxy vs direct routing logic
   - Acceptance: Tests verify correct transport selection
 
-- [ ] **Task 8.2** 🔄 Create Streaming Cancel Tests
+- [x] **Task 8.2** 🔄 Create Streaming Cancel Tests ✅
   - Prerequisites: Phase 4 complete
   - Deliverable: `tests/integration/streaming-cancel.test.ts`
   - Coverage: Abort propagation through layers
   - Acceptance: Tests verify cancellation works
 
-- [ ] **Task 8.3** 🔄 Create Provider Contract Tests
+- [x] **Task 8.3** 🔄 Create Provider Contract Tests ✅
   - Prerequisites: Phase 3 complete
   - Description: Verify streaming chunk format consistency
   - Coverage: All providers return same chunk structure
   - Acceptance: Contract tests pass for all providers
 
+### Core Module Unit Testing 🔄 (From Phase 1)
+
+- [x] **Task 8.4** 🔄 Create OpenAI Core Tests ✅
+  - Prerequisites: Phase 1 complete
+  - Description: Unit tests for moved OpenAI logic
+  - Deliverable: `tests/unit/core/ai/openai/streamProcessor.test.ts`
+  - Coverage: Request building, stream processing, response parsing, error handling
+  - Acceptance: Tests pass, >90% coverage
+
+- [x] **Task 8.5** 🔄 Create Extraction Core Tests ✅
+  - Prerequisites: Phase 1 complete
+  - Description: Unit tests for extraction logic
+  - Deliverables:
+    - `tests/unit/core/extraction/markdownConverter.test.ts`
+    - `tests/unit/core/extraction/contentAnalyzer.test.ts`
+    - `tests/unit/core/extraction/text.test.ts`
+  - Coverage: Markdown conversion, content analysis, text utilities
+  - Acceptance: Tests pass, >90% coverage
+
+- [x] **Task 8.6** 🔄 Create Gemini Core Tests ✅
+  - Prerequisites: Phase 1 complete
+  - Description: Unit tests for moved Gemini logic
+  - Deliverable: `tests/unit/core/ai/gemini/`
+  - Coverage: Request building, stream processing, response parsing, error handling
+  - Acceptance: Tests pass, >90% coverage
+
+- [x] **Task 8.7** 🔄 Create OpenRouter Core Tests ✅
+  - Prerequisites: Phase 1 complete
+  - Description: Unit tests for moved OpenRouter logic
+  - Deliverable: `tests/unit/core/ai/openrouter/`
+  - Coverage: Request building, stream processing, error handling
+  - Acceptance: Tests pass, >90% coverage
+
 ### Manual Testing ⚡ (Sequential validation)
 
-- [ ] **Task 8.4** ⚡ Manual Smoke Test Suite
+- [x] **Task 8.8** ⚡ Manual Smoke Test Suite ✅
   - Prerequisites: Phase 6 complete
   - Test flows:
     - Provider switching
@@ -729,8 +758,8 @@ Transform the browser-sidebar extension from a monolithic structure to a modular
   - Documentation: Record results in test log
   - Acceptance: All flows work as expected
 
-- [ ] **Task 8.5** ⚡ Performance Benchmarking
-  - Prerequisites: Task 8.4
+- [x] **Task 8.9** ⚡ Performance Benchmarking ✅
+  - Prerequisites: Task 8.8
   - Metrics:
     - Proxy vs direct latency
     - Streaming chunk rate
@@ -745,13 +774,13 @@ Transform the browser-sidebar extension from a monolithic structure to a modular
 
 ## Phase 9: Documentation [Day 0.5]
 
-- [ ] **Task 9.1** 🔄 Create Architecture Documentation
+- [x] **Task 9.1** 🔄 Create Architecture Documentation
   - Prerequisites: Phase 6 complete
   - Deliverable: `docs/architecture.md`
   - Content: Diagrams showing UI → services → provider/transport → platform
   - Acceptance: Accurately reflects new architecture
 
-- [ ] **Task 9.2** 🔄 Update README
+- [x] **Task 9.2** 🔄 Update README
   - Prerequisites: Phase 6 complete
   - File: `README.md`
   - Changes: Add transport/services overview, feature flag docs
@@ -763,13 +792,13 @@ Transform the browser-sidebar extension from a monolithic structure to a modular
 
 ### Beta Testing ⚡
 
-- [ ] **Task 10.1** ⚡ Enable Feature Flag for Beta
+- [x] **Task 10.1** ⚡ Enable Feature Flag for Beta
   - Prerequisites: Phase 8 complete
-  - File: `src/config/featureFlags.ts`
+  - Files removed: `src/config/featureFlags.ts`
   - Change: Set refactorMode = true
   - Acceptance: Beta build uses new architecture
 
-- [ ] **Task 10.2** ⚡ Beta Validation
+- [x] **Task 10.2** ⚡ Beta Validation
   - Prerequisites: Task 10.1
   - Duration: Run for specified period
   - Monitoring: Track errors, performance
@@ -777,27 +806,39 @@ Transform the browser-sidebar extension from a monolithic structure to a modular
 
 ### Cleanup ⚡ (Sequential - after validation)
 
-- [ ] **Task 10.3** ⚡ Remove Re-export Stubs
+- [x] **Task 10.3** ⚡ Remove Re-export Stubs
   - Prerequisites: Task 10.2
   - Files: All stub files in src/provider/_/_ and src/tabext/extraction/\*
   - Changes: Update imports to use @core directly
   - Acceptance: No re-export stubs remain
 
-- [ ] **Task 10.4** ⚡ Migrate Remaining Chrome APIs
+- [x] **Task 10.4** ⚡ Migrate Remaining Chrome APIs
   - Prerequisites: Phase 5 complete
   - Task: Find and replace remaining direct chrome.\* usage
   - Target: Use @platform/chrome/\* everywhere
   - Acceptance: No direct chrome.\* usage outside platform/
 
-- [ ] **Task 10.5** ⚡ Final Build Validation
+- [x] **Task 10.5** ⚡ Final Build Validation
   - Prerequisites: Tasks 10.3-10.4
   - Commands: npm run typecheck && npm run lint && npm test && npm run build
   - Acceptance: All commands pass, extension works
 
-- [ ] **Task 10.6** 🔄 Remove SDK Dependencies (Optional)
+- [x] **Task 10.6** 🔄 Remove SDK Dependencies (Optional)
   - Prerequisites: Tasks 3.2-3.4
   - Description: If all providers use Transport successfully, remove SDK libraries and update imports
   - Acceptance: Build and tests pass without SDK dependencies; providers use Transport exclusively
+
+---
+
+## Phase 11: Follow-Up [Day 0.25]
+
+### Documentation Sweep ⚡
+
+- [ ] **Task 11.1** ⚡ Update Docs for Centralized Proxy Policy
+  - Prerequisites: Phase 10 complete
+  - Scope: Replace hardcoded domain check examples with `shouldProxy(url)` usage; document `@transport/policy` (allowlist/denylist, defaults), and transport architecture overview
+  - Files: `README.md`, `docs/baseline-behavior.md`, `openrouter-docs.md`, any provider README under `src/provider/**/README.md`
+  - Acceptance: No remaining docs recommend `startsWith('https://api.moonshot.cn')`; all examples reference `shouldProxy(url)` and reflect current Phase 2 transport design
 
 ---
 

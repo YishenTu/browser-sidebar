@@ -27,7 +27,8 @@ import { useSessionManager } from '@hooks/useSessionManager';
 import { TabContentItem } from '@components/TabContentItem';
 import { ExtractionMode } from '@/types/extraction';
 import { ContentPreview } from '@components/ContentPreview';
-import { createMessage } from '@/types/messages';
+import { createMessage, type CleanupTabCacheMessage } from '@/types/messages';
+import { sendMessage as sendRuntimeMessage } from '@platform/chrome/runtime';
 
 // Layout components
 import { Header } from '@components/layout/Header';
@@ -257,19 +258,8 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
     (async () => {
       if (!currentTabId) return;
       try {
-        const msg = createMessage({
-          type: 'GET_ALL_TABS',
-          source: 'sidebar',
-          target: 'background',
-        });
-        const resp = await chrome.runtime.sendMessage(msg);
-        const tabs = resp?.payload?.tabs as Array<{
-          id: number;
-          favIconUrl?: string;
-          url: string;
-          title: string;
-          domain: string;
-        }>;
+        const { createExtractionService } = await import('@services/extraction/ExtractionService');
+        const tabs = await createExtractionService('sidebar').getAllTabs();
         const ct = Array.isArray(tabs) ? tabs.find(t => t.id === currentTabId) : undefined;
         if (!didCancel && ct) {
           setCurrentTabInfo({
@@ -383,7 +373,6 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
       currentTabContent,
       tabExtractionError,
       tabExtractionLoading,
-      showError,
     ]
   );
 
@@ -496,6 +485,13 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
           if (providerType) {
             await switchProvider(providerType);
           }
+
+          // Guard: If staying on OpenAI but changing models, clear previous_response_id
+          const prevProvider = getProviderTypeForModel(previousModel);
+          if (prevProvider === 'openai' && providerType === 'openai' && modelId !== previousModel) {
+            // Clear stored response id so the next OpenAI call sends full history
+            useUIStore.getState().setLastResponseId(null);
+          }
         } catch (switchError) {
           // Rollback: Restore previous model if provider switch failed
           await updateSelectedModel(previousModel);
@@ -577,7 +573,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
   // Handle close functionality
   const handleClose = useCallback(() => {
     unmountSidebar();
-    chrome.runtime.sendMessage({ type: 'sidebar-closed' });
+    // sendMessage({ type: 'sidebar-closed' }); // TODO: Implement proper sidebar closed message
     onClose();
   }, [onClose]);
 
@@ -626,9 +622,9 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
             payload: { tabIds: loadedTabIds },
             source: 'sidebar',
             target: 'background',
-          });
+          }) as CleanupTabCacheMessage;
 
-          chrome.runtime.sendMessage(cleanupMessage).catch(() => {
+          sendRuntimeMessage(cleanupMessage).catch(() => {
             // Ignore errors during unmount cleanup
           });
         }

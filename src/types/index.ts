@@ -99,6 +99,7 @@ export type {
 
 // Extraction types and interfaces
 export type { ExtractionMethod, ExtractedContent, ExtractionOptions } from './extraction';
+export { ExtractionMode } from './extraction';
 
 export {
   isProviderType,

@@ -341,7 +341,7 @@ export interface AIProvider {
   // Core methods
   initialize(config: ProviderConfig): Promise<void>;
   validateConfig(config: unknown): ProviderValidationResult;
-  testConnection(): Promise<boolean>;
+  hasRequiredConfig(): Promise<boolean>;
 
   // Chat method - streaming only
   streamChat(messages: ProviderChatMessage[], config?: unknown): AsyncIterable<StreamChunk>;
@@ -371,16 +371,18 @@ export function isProviderType(value: unknown): value is ProviderType {
  * Type guard for provider errors
  */
 export function isProviderError(value: unknown): value is ProviderError {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const obj = value as Record<string, unknown>;
+
   return (
-    typeof value === 'object' &&
-    value !== null &&
-    typeof (value as any).type === 'string' &&
-    ['authentication', 'rate_limit', 'network', 'validation', 'unknown'].includes(
-      (value as any).type
-    ) &&
-    typeof (value as any).message === 'string' &&
-    typeof (value as any).code === 'string' &&
-    isProviderType((value as any).provider)
+    typeof obj['type'] === 'string' &&
+    ['authentication', 'rate_limit', 'network', 'validation', 'unknown'].includes(obj['type']) &&
+    typeof obj['message'] === 'string' &&
+    typeof obj['code'] === 'string' &&
+    isProviderType(obj['provider'])
   );
 }
 
@@ -388,22 +390,29 @@ export function isProviderError(value: unknown): value is ProviderError {
  * Type guard for stream chunks
  */
 export function isStreamChunk(value: unknown): value is StreamChunk {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const obj = value as Record<string, unknown>;
+
   return (
-    typeof value === 'object' &&
-    value !== null &&
-    typeof (value as any).id === 'string' &&
-    typeof (value as any).object === 'string' &&
-    typeof (value as any).created === 'number' &&
-    typeof (value as any).model === 'string' &&
-    Array.isArray((value as any).choices) &&
-    (value as any).choices.every(
-      (choice: unknown) =>
-        typeof choice === 'object' &&
-        choice !== null &&
-        typeof (choice as { index?: unknown }).index === 'number' &&
-        typeof (choice as { delta?: unknown }).delta === 'object' &&
-        (choice as { delta?: unknown }).delta !== null
-    )
+    typeof obj['id'] === 'string' &&
+    typeof obj['object'] === 'string' &&
+    typeof obj['created'] === 'number' &&
+    typeof obj['model'] === 'string' &&
+    Array.isArray(obj['choices']) &&
+    obj['choices'].every((choice: unknown) => {
+      if (typeof choice !== 'object' || choice === null) {
+        return false;
+      }
+      const choiceObj = choice as Record<string, unknown>;
+      return (
+        typeof choiceObj['index'] === 'number' &&
+        typeof choiceObj['delta'] === 'object' &&
+        choiceObj['delta'] !== null
+      );
+    })
   );
 }
 
@@ -411,20 +420,26 @@ export function isStreamChunk(value: unknown): value is StreamChunk {
  * Type guard for provider responses
  */
 export function isProviderResponse(value: unknown): value is ProviderResponse {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const obj = value as Record<string, unknown>;
+  const usage = obj['usage'] as Record<string, unknown> | null;
+  const metadata = obj['metadata'] as Record<string, unknown> | null;
+
   return (
-    typeof value === 'object' &&
-    value !== null &&
-    typeof (value as any).id === 'string' &&
-    typeof (value as any).content === 'string' &&
-    typeof (value as any).model === 'string' &&
-    typeof (value as any).usage === 'object' &&
-    (value as any).usage !== null &&
-    typeof (value as any).usage.promptTokens === 'number' &&
-    typeof (value as any).usage.completionTokens === 'number' &&
-    typeof (value as any).usage.totalTokens === 'number' &&
-    typeof (value as any).metadata === 'object' &&
-    (value as any).metadata !== null &&
-    isProviderType((value as any).metadata.provider)
+    typeof obj['id'] === 'string' &&
+    typeof obj['content'] === 'string' &&
+    typeof obj['model'] === 'string' &&
+    typeof usage === 'object' &&
+    usage !== null &&
+    typeof usage['promptTokens'] === 'number' &&
+    typeof usage['completionTokens'] === 'number' &&
+    typeof usage['totalTokens'] === 'number' &&
+    typeof metadata === 'object' &&
+    metadata !== null &&
+    isProviderType(metadata['provider'])
   );
 }
 
@@ -432,15 +447,20 @@ export function isProviderResponse(value: unknown): value is ProviderResponse {
  * Type guard for streaming responses
  */
 export function isStreamingResponse(value: unknown): value is StreamingResponse {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const obj = value as Record<string, unknown>;
+  const metadata = obj['metadata'] as Record<string, unknown> | null;
+
   return (
-    typeof value === 'object' &&
-    value !== null &&
-    typeof (value as any).id === 'string' &&
-    typeof (value as any).model === 'string' &&
-    Array.isArray((value as any).choices) &&
-    typeof (value as any).metadata === 'object' &&
-    (value as any).metadata !== null &&
-    isProviderType((value as any).metadata.provider)
+    typeof obj['id'] === 'string' &&
+    typeof obj['model'] === 'string' &&
+    Array.isArray(obj['choices']) &&
+    typeof metadata === 'object' &&
+    metadata !== null &&
+    isProviderType(metadata['provider'])
   );
 }
 
@@ -451,28 +471,28 @@ export function isStreamingResponse(value: unknown): value is StreamingResponse 
 /**
  * Validate temperature value (0.0 to 2.0)
  */
-export function isValidTemperature(value: any): value is number {
+export function isValidTemperature(value: unknown): value is number {
   return typeof value === 'number' && !isNaN(value) && value >= 0.0 && value <= 2.0;
 }
 
 /**
  * Validate reasoning effort value
  */
-export function isValidReasoningEffort(value: any): value is ReasoningEffort {
+export function isValidReasoningEffort(value: unknown): value is ReasoningEffort {
   return typeof value === 'string' && ['low', 'medium', 'high'].includes(value);
 }
 
 /**
  * Validate thinking budget value
  */
-export function isValidThinkingBudget(value: any): value is ThinkingBudget {
+export function isValidThinkingBudget(value: unknown): value is ThinkingBudget {
   return typeof value === 'string' && ['0', '-1'].includes(value);
 }
 
 /**
  * Validate max thinking tokens (5000 to 100000)
  */
-export function isValidMaxThinkingTokens(value: any): value is number {
+export function isValidMaxThinkingTokens(value: unknown): value is number {
   return typeof value === 'number' && !isNaN(value) && value >= 5000 && value <= 100000;
 }
 
@@ -548,15 +568,15 @@ export function validateGeminiConfig(config: unknown): ProviderValidationResult 
     errors.push('Invalid API key');
   }
 
-  if (!isValidTemperature((config as any).temperature)) {
+  if (!isValidTemperature(cfg['temperature'])) {
     errors.push('Invalid temperature');
   }
 
-  if (!isValidThinkingBudget((config as any).thinkingBudget)) {
+  if (!isValidThinkingBudget(cfg['thinkingBudget'])) {
     errors.push('Invalid thinking budget');
   }
 
-  if (typeof (config as any).showThoughts !== 'boolean') {
+  if (typeof cfg['showThoughts'] !== 'boolean') {
     errors.push('Invalid show thoughts setting');
   }
 
@@ -603,12 +623,12 @@ export function validateOpenRouterConfig(config: unknown): ProviderValidationRes
 
   // Validate reasoning config if present
   if (cfg['reasoning']) {
-    const reasoning = cfg['reasoning'] as any;
-    if (reasoning.effort && !['low', 'medium', 'high'].includes(reasoning.effort)) {
+    const reasoning = cfg['reasoning'] as Record<string, unknown>;
+    if (reasoning['effort'] && !['low', 'medium', 'high'].includes(reasoning['effort'] as string)) {
       errors.push('Invalid reasoning effort');
     }
-    if (reasoning.maxTokens !== undefined) {
-      if (typeof reasoning.maxTokens !== 'number' || reasoning.maxTokens <= 0) {
+    if (reasoning['maxTokens'] !== undefined) {
+      if (typeof reasoning['maxTokens'] !== 'number' || reasoning['maxTokens'] <= 0) {
         errors.push('Invalid reasoning max tokens');
       }
     }

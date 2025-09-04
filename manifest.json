@@ -31,7 +31,7 @@
   "content_scripts": [
     {
       "matches": ["<all_urls>"],
-      "js": ["src/tabext/index.ts"],
+      "js": ["src/content/index.ts"],
       "run_at": "document_idle",
       "all_frames": false
     }
@@ -52,6 +52,6 @@
   ],
 
   "content_security_policy": {
-    "extension_pages": "script-src 'self'; object-src 'self'; connect-src 'self' https://api.openai.com https://generativelanguage.googleapis.com https://openrouter.ai"
+    "extension_pages": "script-src 'self'; object-src 'self'; connect-src 'self' https://api.openai.com https://generativelanguage.googleapis.com https://openrouter.ai https://api.moonshot.cn"
   }
 }
