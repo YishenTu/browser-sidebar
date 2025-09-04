@@ -406,12 +406,13 @@ Earlier versions used a `refactorMode` feature flag for a staged rollout. The fl
 
 The modular architecture provides clear extension points:
 
-### Adding New AI Providers
+### Adding New AI Providers (Engines)
 
-1. Implement provider in `src/core/ai/[provider]/`
-2. Register with ProviderManagerService
-3. Add to transport policy if CORS handling needed
-4. Zero UI changes required
+1. Implement core API logic in `src/core/ai/[provider]/` (request builder, stream processor, error mapper).
+2. Add an engine under `src/core/engine/[Provider]Provider.ts` that adapts the core logic to the common provider interface.
+3. Register in `src/core/engine/EngineFactory.ts` so `EngineManagerService` can instantiate it.
+4. If the endpoint is CORS‑restricted, update `@transport/policy` with an allowlist entry so `shouldProxy(url)` routes via the background proxy.
+5. No UI changes required — hooks call services which select the active engine.
 
 ### Adding New Transport Methods
 

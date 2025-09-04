@@ -81,7 +81,7 @@ npm run typecheck    # Run TypeScript compiler checks
 browser-sidebar/
 ├── src/
 │   ├── backend/         # Service worker: routing, tab state
-│   ├── tabext/          # Content script: sidebar injection + tab content capture
+│   ├── content/         # Content script: sidebar injection + tab content capture
 │   ├── sidebar/         # Main sidebar application (React)
 │   │   ├── components/  # Reusable UI components (MessageList, Markdown, ModelSelector, UI)
 │   │   ├── hooks/       # Custom React hooks

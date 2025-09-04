@@ -62,7 +62,7 @@ Background Service Worker (src/extension/background/)
     ├─ Tracks sidebar state per tab
     └─ Sends message to content script
         ↓
-Content Script (src/tabext/)
+Content Script (src/content/)
     ├─ Injects sidebar on first click
     └─ Dispatches custom events for toggle
         ↓
@@ -155,7 +155,7 @@ src/
 │       ├── 2-layout/       # Layout and structure
 │       ├── 3-components/   # Component styles
 │       └── 4-features/     # Feature-specific styles
-├── tabext/         # Content extraction system
+├── content/        # Content extraction glue (injection/messaging)
 │   ├── index.ts            # Content script entry
 │   ├── core/               # Core functionality
 │   │   ├── documentPatcher.ts # DOM patches
@@ -221,8 +221,8 @@ Content scripts are statically defined in manifest.json and load automatically o
   - `@hooks/*` → `src/sidebar/hooks/*`
   - `@contexts/*` → `src/sidebar/contexts/*`
   - `@extension/*` → `src/extension/*`
-  - `@tabext/*` → `src/tabext/*`
-  - `@provider/*` → `src/provider/*`
+  - `@content/*` → `src/content/*`
+  - `@core/*` → `src/core/*`
   - `@data/*` → `src/data/*`
   - `@store/*` → `src/data/store/*`
   - `@storage/*` → `src/data/storage/*`

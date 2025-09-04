@@ -209,7 +209,8 @@ The styles follow a structured layer approach:
 
 - `useAIChat`: Main chat orchestration
 - `useStreamHandler`: Token streaming and buffering
-- `useProviderManager`: Provider switching and fallbacks
+- `useProviderManager`: Provider switching and fallbacks (backed by
+  `src/services/engine/EngineManagerService.ts` under the hood)
 - `useMessageHandler`: Message processing
 
 ### Utility Hooks

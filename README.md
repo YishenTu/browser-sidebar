@@ -137,7 +137,7 @@ npm run test:ui
 
 ## Architecture Status
 
-The extension now uses the new modular, service-oriented architecture by default. The previous feature flag (`refactorMode`) and its config file have been removed.
+The extension now uses the new modular, service-oriented architecture by default.
 
 Key points:
 
@@ -515,6 +515,21 @@ The services layer provides a clean abstraction over core functionality:
 ### Proxy Policy
 
 Centralized in `@transport/policy` with an allowlist/denylist. By default, the allowlist includes `api.moonshot.cn` (Kimi) so those requests stream via the background proxy. Use `shouldProxy(url)` when you need to choose a route explicitly (most app code delegates to services).
+
+## Engines vs. Core AI
+
+- **Core AI (`src/core/ai/*`)**: Pure provider logic — request builders, stream processors, response/error mapping. No Chrome or DOM APIs.
+- **Engines (`src/core/engine/*`)**: Thin adapters that implement the common provider interface using Core AI and the Transport. Engines are what the app streams through.
+- **EngineManagerService**: Initializes engines based on settings, switches the active engine, and exposes stats. Hooks (e.g., `useAIChat`) call services; services call the active engine.
+
+### Add a New Provider/Engine
+
+1. Core: Add `src/core/ai/newprov/{requestBuilder.ts,streamProcessor.ts,responseParser.ts,errorHandler.ts}`.
+2. Engine: Add `src/core/engine/newprov/NewProvProvider.ts` implementing the common provider interface.
+3. Register: Update `src/core/engine/EngineFactory.ts`.
+4. Policy: If the API is CORS‑restricted, add its domain to `@transport/policy` so `shouldProxy(url)` routes via `BackgroundProxyTransport`.
+5. Tests: Add unit tests for core builder/processor and engine streaming adapter.
+6. Models: If needed, add model entries to `src/config/models.ts`.
 
 ### Benefits of New Architecture
 

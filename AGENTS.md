@@ -3,13 +3,13 @@
 ## Project Structure & Module Organization
 
 - `src/extension/`: Background/service worker and messaging.
-- `src/tabext/`: In‑page content extraction (Defuddle engine, cleaning, markdown).
+- `src/content/`: In‑page content extraction glue (injection, messaging). Pure extraction lives in `src/core/extraction/*`.
 - `src/sidebar/`: React Shadow‑DOM UI (Chat panel, components, hooks).
-- `src/provider/`: AI providers (OpenAI, Gemini) — BYOK keys.
+- `src/core/engine/`: Engines/providers (OpenAI, Gemini, OpenRouter, OpenAI‑Compat) — BYOK keys via services.
 - `src/data/`: Zustand stores, storage, security (AES‑GCM).
 - `src/config/`: Centralized model configuration.
 - `src/types/`: Shared TypeScript types.
-- `tests/`: Unit, integration, and e2e suites (e.g., `tests/unit/tabext/*`).
+- `tests/`: Unit, integration, and e2e suites (e.g., `tests/unit/core/extraction/*`).
 
 ## Build, Test, and Development Commands
 
@@ -29,7 +29,7 @@ Load extension: `npm run build` → Chrome `chrome://extensions` → Load unpack
 - Formatting: 2‑space indent, single quotes, semicolons (Prettier).
 - Linting: ESLint with TypeScript/React plugins.
 - File names: `PascalCase.tsx` (components), `camelCase.ts` (modules/hooks), CSS modules per component.
-- Use path aliases (`@tabext`, `@components`, `@provider`, etc.).
+- Use path aliases (`@content`, `@components`, `@core`, `@transport`, `@platform`, etc.).
 
 ## Testing Guidelines
 
@@ -38,11 +38,11 @@ Load extension: `npm run build` → Chrome `chrome://extensions` → Load unpack
 - Performance budgets (guidance): <50ms render, <100ms interactions.
 - Locations: `tests/unit/*`, `tests/integration/*`, `tests/e2e/*`.
 - Naming: `*.test.ts(x)` colocated under `tests/` mirrors `src/` structure.
-- Examples: `npm test -- tests/unit/tabext/markdownConverter.basic.test.ts`.
+- Examples: `npm test -- tests/unit/core/extraction/markdownConverter.test.ts`.
 
 ## Commit & Pull Request Guidelines
 
-- Conventional Commits: `type(scope): description` (e.g., `feat(tabext): add Defuddle gates`).
+- Conventional Commits: `type(scope): description` (e.g., `feat(content): add Defuddle gates`).
 - PRs must include: clear description, rationale, and screenshots/logs when UX changes.
 - Quality gates: `npm run typecheck`, `npm run lint`, and `npm test` must pass; update docs when behavior changes.
 - Keep PRs small and focused; avoid unrelated refactors.

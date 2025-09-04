@@ -270,8 +270,8 @@ Also supports:
 sequenceDiagram
     User->>Extension Icon: Toggle sidebar
     Extension Icon->>Background: Action clicked
-    Background->>Content Script (tabext): Toggle message
-    Content Script (tabext)->>Sidebar: Mount/Show
+    Background->>Content Script (content): Toggle message
+    Content Script (content)->>Sidebar: Mount/Show
     User->>Sidebar: Enter query
     Sidebar->>Background: Process query
     Background->>AI Provider: API call (planned)

@@ -18,6 +18,8 @@
 - [x] 16. openai compatible provider
 - [ ] 17. slash command
 - [ ] 19. send to chatwaise?
+- [x] 20. architecture refactor
+- [ ] 21. improve raw extraction
 
 ---
 
@@ -29,6 +31,8 @@
 - [ ] 4. turn config/ into defaultConfig/
 - [ ] 5. slash command integration
 
-# Architecture Re-factor
+# Raw extraction improvement
 
-- [x] refactor
+- [ ] 1. remove final markdown concersion
+- [ ] 2. delicate strip?
+- [ ] 3.

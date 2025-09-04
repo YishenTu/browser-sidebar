@@ -210,7 +210,7 @@ src/
 │   ├── ChatPanel.tsx   # Unified chat panel
 │   └── index.tsx       # Shadow DOM mount/unmount
 ├── backend/            # Service worker
-├── tabext/             # Content script
+├── content/            # Content script
 ├── core/               # Messaging helpers
 ├── store/              # Zustand stores
 ├── types/              # Shared types

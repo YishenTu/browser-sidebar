@@ -13,7 +13,7 @@ Thank you for your interest in contributing! This project aims to be clear, priv
 - Branch off `main`.
 - Use Conventional Commits (recommended):
   - `feat(sidebar): add model selector`
-  - `fix(tabext): handle toggle race`
+  - `fix(content): handle toggle race`
   - `docs(architecture): clarify message sources`
 - Run locally:
   - `npm run dev` — dev server
