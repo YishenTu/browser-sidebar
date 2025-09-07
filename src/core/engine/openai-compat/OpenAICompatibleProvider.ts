@@ -14,6 +14,7 @@ import type {
 } from '@/types/providers';
 import { validateOpenAICompatibleConfig } from '@/types/providers';
 import type { ModelConfig } from '@/config/models';
+import type { ChatCompletionChunk } from 'openai/resources/chat/completions';
 
 export class OpenAICompatibleProvider extends BaseEngine {
   private client: OpenAICompatClient | null = null;
@@ -86,7 +87,7 @@ export class OpenAICompatibleProvider extends BaseEngine {
         config?.signal
       );
       for await (const raw of stream) {
-        const processed = processStreamChunk(raw);
+        const processed = processStreamChunk(raw as ChatCompletionChunk);
         if (processed) yield processed;
       }
     } catch (error) {

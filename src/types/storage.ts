@@ -544,9 +544,9 @@ export function deserializeDate(serialized: SerializableValue): Date {
   if (
     typeof serialized === 'object' &&
     serialized !== null &&
-    (serialized as Record<string, unknown>).__type === 'Date'
+    (serialized as Record<string, unknown>)['__type'] === 'Date'
   ) {
-    return new Date((serialized as Record<string, unknown>).value as string);
+    return new Date((serialized as Record<string, unknown>)['value'] as string);
   }
   throw new Error('Invalid serialized Date format');
 }
@@ -568,9 +568,9 @@ export function deserializeMap<K = unknown, V = unknown>(serialized: Serializabl
   if (
     typeof serialized === 'object' &&
     serialized !== null &&
-    (serialized as Record<string, unknown>).__type === 'Map'
+    (serialized as Record<string, unknown>)['__type'] === 'Map'
   ) {
-    const entries = (serialized as Record<string, unknown>).entries as [
+    const entries = (serialized as Record<string, unknown>)['entries'] as [
       SerializableValue,
       SerializableValue,
     ][];
@@ -596,9 +596,9 @@ export function deserializeSet<T = unknown>(serialized: SerializableValue): Set<
   if (
     typeof serialized === 'object' &&
     serialized !== null &&
-    (serialized as Record<string, unknown>).__type === 'Set'
+    (serialized as Record<string, unknown>)['__type'] === 'Set'
   ) {
-    const values = (serialized as Record<string, unknown>).values as SerializableValue[];
+    const values = (serialized as Record<string, unknown>)['values'] as SerializableValue[];
     return new Set(values.map(v => deserializeValue(v) as T));
   }
   throw new Error('Invalid serialized Set format');

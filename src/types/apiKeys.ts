@@ -737,14 +737,14 @@ export function isAPIKeyMetadata(value: unknown): value is APIKeyMetadata {
   const obj = value as Record<string, unknown>;
 
   return (
-    typeof obj.id === 'string' &&
-    typeof obj.provider === 'string' &&
-    typeof obj.keyType === 'string' &&
-    typeof obj.status === 'string' &&
-    typeof obj.name === 'string' &&
-    typeof obj.createdAt === 'number' &&
-    typeof obj.lastUsed === 'number' &&
-    typeof obj.maskedKey === 'string'
+    typeof obj['id'] === 'string' &&
+    typeof obj['provider'] === 'string' &&
+    typeof obj['keyType'] === 'string' &&
+    typeof obj['status'] === 'string' &&
+    typeof obj['name'] === 'string' &&
+    typeof obj['createdAt'] === 'number' &&
+    typeof obj['lastUsed'] === 'number' &&
+    typeof obj['maskedKey'] === 'string'
   );
 }
 
@@ -759,13 +759,13 @@ export function isEncryptedAPIKey(value: unknown): value is EncryptedAPIKey {
   const obj = value as Record<string, unknown>;
 
   return (
-    typeof obj.id === 'string' &&
-    isAPIKeyMetadata(obj.metadata) &&
-    typeof obj.encryptedData === 'object' &&
-    typeof obj.keyHash === 'string' &&
-    typeof obj.checksum === 'string' &&
-    typeof obj.storageVersion === 'number' &&
-    typeof obj.configuration === 'object'
+    typeof obj['id'] === 'string' &&
+    isAPIKeyMetadata(obj['metadata']) &&
+    typeof obj['encryptedData'] === 'object' &&
+    typeof obj['keyHash'] === 'string' &&
+    typeof obj['checksum'] === 'string' &&
+    typeof obj['storageVersion'] === 'number' &&
+    typeof obj['configuration'] === 'object'
   );
 }
 
@@ -793,7 +793,9 @@ export function isValidationResult(value: unknown): value is ValidationResult {
   const obj = value as Record<string, unknown>;
 
   return (
-    typeof obj.isValid === 'boolean' && Array.isArray(obj.errors) && Array.isArray(obj.warnings)
+    typeof obj['isValid'] === 'boolean' &&
+    Array.isArray(obj['errors']) &&
+    Array.isArray(obj['warnings'])
   );
 }
 

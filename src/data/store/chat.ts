@@ -15,9 +15,9 @@ export * from './types';
 
 // Export all stores
 export { useSessionStore } from './stores/sessionStore';
-export { useMessageStore } from './stores/messageStore';
+export { useMessageStore, type MessageState } from './stores/messageStore';
 export { useTabStore } from './stores/tabStore';
-export { useUIStore } from './stores/uiStore';
+export { useUIStore, type UIState } from './stores/uiStore';
 
 // Export helper utilities
 export * from './utils/chatHelpers';

@@ -13,18 +13,13 @@ import {
   TransportAbortError,
 } from './types';
 import { shouldProxy } from '@transport/policy';
-import { createMessage } from '../types/messages';
+import { createMessage, ProxyRequestPayload, TypedMessage } from '../types/messages';
 import { sendMessage, connect } from '@platform/chrome/runtime';
 
 /**
- * ProxyRequest interface (inlined to avoid import issues)
+ * ProxyRequest type alias
  */
-interface ProxyRequest {
-  url: string;
-  method: string;
-  headers: Record<string, string>;
-  body?: string;
-}
+type ProxyRequest = ProxyRequestPayload;
 
 /**
  * Port-based streaming message types (matching proxyHandler.ts)
@@ -134,7 +129,7 @@ export class BackgroundProxyTransport implements Transport {
         }
       };
 
-      sendMessage(message as Record<string, unknown>)
+      sendMessage(message as TypedMessage)
         .then(result => {
           cleanup();
 

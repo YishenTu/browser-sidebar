@@ -178,13 +178,14 @@ export function extractReasoningSummary(payload: unknown): string | undefined {
     if (data?.type === 'reasoning' && data?.summary) {
       if (Array.isArray(data.summary)) {
         const parts = data.summary
-          .map((s: { type?: string; text?: string; content?: string }) => {
+          .map((s: unknown) => {
+            const item = s as { type?: string; text?: string; content?: string };
             // Handle { type: 'summary_text', text: '...' } format
-            if (s?.type === 'summary_text' && s?.text) {
-              return s.text;
+            if (item?.type === 'summary_text' && item?.text) {
+              return item.text;
             }
             // Handle plain text
-            return s?.text || s?.content || '';
+            return item?.text || item?.content || '';
           })
           .filter(Boolean);
         if (parts.length) {
@@ -196,21 +197,23 @@ export function extractReasoningSummary(payload: unknown): string | undefined {
     // Prefer explicit reasoning output item
     const outputs = data?.output || data?.outputs || data?.response?.output;
     if (Array.isArray(outputs)) {
-      const reasoningItem = outputs.find(
-        (o: { type?: string; item_type?: string }) => (o?.type || o?.item_type) === 'reasoning'
-      );
+      const reasoningItem = outputs.find((o: unknown) => {
+        const item = o as { type?: string; item_type?: string };
+        return (item?.type || item?.item_type) === 'reasoning';
+      });
       if (reasoningItem) {
         const summaryArr =
           (reasoningItem as { summary?: unknown[]; data?: { summary?: unknown[] } }).summary ||
           (reasoningItem as { summary?: unknown[]; data?: { summary?: unknown[] } })?.data?.summary;
         if (Array.isArray(summaryArr)) {
           const parts = summaryArr
-            .map((s: { type?: string; text?: string; content?: string }) => {
+            .map((s: unknown) => {
+              const item = s as { type?: string; text?: string; content?: string };
               // Handle { type: 'summary_text', text: '...' } format
-              if (s?.type === 'summary_text' && s?.text) {
-                return s.text;
+              if (item?.type === 'summary_text' && item?.text) {
+                return item.text;
               }
-              return s?.text || s?.content || '';
+              return item?.text || item?.content || '';
             })
             .filter(Boolean);
           if (parts.length) {
@@ -223,7 +226,12 @@ export function extractReasoningSummary(payload: unknown): string | undefined {
     // Some SDKs may surface reasoning directly under payload.reasoning
     const directSummary = data?.reasoning?.summary;
     if (Array.isArray(directSummary)) {
-      const parts = directSummary.map((s: { text?: string }) => s?.text || '').filter(Boolean);
+      const parts = directSummary
+        .map((s: unknown) => {
+          const item = s as { text?: string };
+          return item?.text || '';
+        })
+        .filter(Boolean);
       if (parts.length) return parts.join('\n');
     }
 

@@ -200,9 +200,9 @@ export function isConversationData(value: unknown): value is ConversationData {
     // We'll assume messages are valid ChatMessages (would need to import type guard from chat.ts)
     typeof obj['metadata'] === 'object' &&
     obj['metadata'] !== null &&
-    typeof (obj['metadata'] as Record<string, unknown>).createdAt === 'number' &&
-    typeof (obj['metadata'] as Record<string, unknown>).updatedAt === 'number' &&
-    typeof (obj['metadata'] as Record<string, unknown>).messageCount === 'number' &&
+    typeof (obj['metadata'] as Record<string, unknown>)['createdAt'] === 'number' &&
+    typeof (obj['metadata'] as Record<string, unknown>)['updatedAt'] === 'number' &&
+    typeof (obj['metadata'] as Record<string, unknown>)['messageCount'] === 'number' &&
     (obj['tabContext'] === undefined || isTabContext(obj['tabContext'])) &&
     (obj['modelSettings'] === undefined || isModelSettings(obj['modelSettings']))
   );

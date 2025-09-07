@@ -8,6 +8,7 @@
 
 import {
   Message,
+  TypedMessage,
   createMessage,
   ToggleSidebarPayload,
   ErrorPayload,
@@ -380,7 +381,7 @@ export class SidebarManager {
         target: 'sidebar',
       });
 
-      sendMessage(tabClosedMessage as Message).finally(() => void 0);
+      sendMessage(tabClosedMessage as TypedMessage).finally(() => void 0);
     });
 
     // Optional: Clean up state when tab URL changes significantly

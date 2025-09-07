@@ -10,7 +10,7 @@ import type { TabContent, TabInfo } from '@/types/tabs';
 import type { ExtractedContent, ExtractionOptions } from '@/types/extraction';
 import { ExtractionMode } from '@/types/extraction';
 import type { ExtractTabPayload, ExtractTabContentResponsePayload } from '@/types/messages';
-import { createMessage, MessageSource } from '@/types/messages';
+import { createMessage, MessageSource, TypedMessage } from '@/types/messages';
 import { sendMessageAsync } from '@platform/chrome/runtime';
 import { sendMessageToTab } from '@platform/chrome/tabs';
 
@@ -385,7 +385,9 @@ export class ExtractionService {
         typeof chrome.tabs.sendMessage === 'function';
 
       if (_tabId !== undefined && canUseTabsApi) {
-        const result = await sendMessageToTab(_tabId, message as Message, { timeout: timeoutMs });
+        const result = await sendMessageToTab(_tabId, message as TypedMessage, {
+          timeout: timeoutMs,
+        });
         if (!result.success) {
           throw new Error(result.error || 'Tab messaging failed');
         }
@@ -393,7 +395,7 @@ export class ExtractionService {
       }
 
       // Fallback (and production path): message background and let it forward
-      return await sendMessageAsync(message as Message, { timeout: timeoutMs });
+      return await sendMessageAsync(message as TypedMessage, { timeout: timeoutMs });
     } catch (error) {
       throw error instanceof Error ? error : new Error(String(error));
     }

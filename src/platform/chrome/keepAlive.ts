@@ -86,26 +86,34 @@ export interface KeepAliveStats {
 }
 
 /**
+ * KeepAlive ping message data
+ */
+export type KeepAlivePingData = {
+  timestamp: number;
+  strategy: KeepAliveStrategy;
+  pingId: string;
+};
+
+/**
+ * KeepAlive pong message data
+ */
+export type KeepAlivePongData = {
+  timestamp: number;
+  originalPingId: string;
+  roundTripTime?: number;
+};
+
+/**
  * Port-based keepAlive ping message
  */
-export interface KeepAlivePingMessage
-  extends PortMessage<{
-    timestamp: number;
-    strategy: KeepAliveStrategy;
-    pingId: string;
-  }> {
+export interface KeepAlivePingMessage extends PortMessage<KeepAlivePingData> {
   type: 'keepalive-ping';
 }
 
 /**
  * Port-based keepAlive pong message
  */
-export interface KeepAlivePongMessage
-  extends PortMessage<{
-    timestamp: number;
-    originalPingId: string;
-    roundTripTime?: number;
-  }> {
+export interface KeepAlivePongMessage extends PortMessage<KeepAlivePongData> {
   type: 'keepalive-pong';
 }
 
@@ -115,7 +123,7 @@ export interface KeepAlivePongMessage
 export class EnhancedKeepAlive {
   private baseKeepAlive: BaseKeepAlive;
   private strategy: KeepAliveStrategy;
-  private port: ManagedPort<KeepAlivePingMessage | KeepAlivePongMessage> | null = null;
+  private port: ManagedPort<KeepAlivePingData | KeepAlivePongData> | null = null;
   private portPingTimer: NodeJS.Timeout | null = null;
   private isActive = false;
   private stats: KeepAliveStats;
@@ -295,7 +303,7 @@ export class EnhancedKeepAlive {
     const portName = this.options.portName || 'keepalive-port';
 
     try {
-      this.port = createStreamingPort<KeepAlivePingMessage | KeepAlivePongMessage>(portName, {
+      this.port = createStreamingPort<KeepAlivePingData | KeepAlivePongData>(portName, {
         autoReconnect: this.options.autoReconnect ?? true,
         reconnectDelay: this.options.reconnectDelay || 1000,
         maxReconnectAttempts: this.options.maxReconnectAttempts || 5,
@@ -415,7 +423,7 @@ export class EnhancedKeepAlive {
       throw new Error('Port not connected');
     }
 
-    const pingMessage: KeepAlivePingMessage = {
+    const pingMessage = {
       type: 'keepalive-ping',
       data: {
         timestamp: Date.now(),

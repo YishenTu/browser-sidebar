@@ -16,7 +16,7 @@
 import type { APIProvider } from '../../types/apiKeys';
 import type { Transport } from '../../transport/types';
 import * as Storage from '../../data/storage/chrome';
-import { encryptText, decryptText, deriveKey } from '../../data/security/crypto';
+import { encryptText, decryptText, deriveKey, EncryptedData } from '../../data/security/crypto';
 import { validateKeyFormat, maskAPIKey } from '../../types/apiKeys';
 import { BackgroundProxyTransport } from '../../transport/BackgroundProxyTransport';
 import { DirectFetchTransport } from '../../transport/DirectFetchTransport';
@@ -139,7 +139,7 @@ export class KeyService {
 
     try {
       const storageKey = `${STORAGE_KEY_PREFIX}${provider}`;
-      const encryptedData = await Storage.get<{ iv: string; encryptedData: string }>(storageKey);
+      const encryptedData = await Storage.get<EncryptedData>(storageKey);
 
       if (!encryptedData) {
         throw new Error(`No API key found for provider: ${provider}`);

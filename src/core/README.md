@@ -1,193 +1,122 @@
 # Core Module
 
-Central business logic and domain services for the AI Browser Sidebar Extension.
+Central business logic for the AI Browser Sidebar: provider adapters, engine wrappers, and extraction helpers.
 
 ## Overview
 
-The core module contains the essential business logic, AI provider implementations, chat engine, and extraction orchestration. It serves as the brain of the application, coordinating between different layers while maintaining clean architecture principles.
+The core module separates provider protocol glue from runtime orchestration:
+
+- `ai/` contains stateless, provider‑specific helpers (build requests, parse streams, map errors).
+- `engine/` contains stateful provider classes that implement a common interface, hold config, and wire transports. Engines call into `ai/` to talk to each vendor.
+- `extraction/` contains HTML → Markdown conversion and lightweight analyzers used by content extraction.
+
+This split lets us keep protocol details testable and isolated while giving the app a uniform, class‑based provider surface.
 
 ## Structure
 
 ```
 core/
-├── ai/                 # AI provider integrations
-│   ├── providers/      # Provider implementations
-│   ├── interfaces/     # Provider contracts
-│   └── factory/        # Provider factory pattern
-├── engine/             # Chat engine implementation
-│   ├── ChatEngine.ts   # Main engine class
-│   ├── streaming/      # Stream processing
-│   └── session/        # Session management
-└── extraction/         # Content extraction orchestration
-    ├── orchestrator/   # Extraction coordination
-    ├── pipeline/       # Processing pipeline
-    └── cache/          # Content caching
+├── ai/                      # Provider protocol helpers (stateless)
+│   ├── openai/              # Request builders, stream processors, error mappers
+│   ├── gemini/
+│   ├── openrouter/
+│   └── openai-compat/
+├── engine/                  # Stateful providers + orchestration
+│   ├── BaseEngine.ts        # Shared lifecycle, validation, streaming wrapper
+│   ├── EngineFactory.ts     # Creates providers, injects transport
+│   ├── EngineRegistry.ts    # Register/set active provider
+│   ├── openai/              # OpenAIProvider.ts (uses ai/openai/*)
+│   ├── gemini/              # GeminiProvider.ts (uses ai/gemini/*)
+│   ├── openrouter/          # OpenRouterProvider.ts (uses ai/openrouter/*)
+│   └── openai-compat/       # OpenAICompatibleProvider.ts
+└── extraction/              # HTML→Markdown + analyzers
+    ├── analyzers/
+    ├── markdownConverter.ts
+    └── text.ts
 ```
 
-## Submodules
+Note: Earlier docs referenced a `ChatEngine.ts` and additional extraction orchestration files—those no longer exist. The current entry points are the provider classes under `engine/` and the helpers under `extraction/`.
 
-### AI Module (`ai/`)
+## ai vs engine
 
-**Purpose**: Unified interface for multiple AI providers with streaming support.
+- ai (stateless)
+  - Build HTTP payloads for each vendor (e.g., `ai/openai/requestBuilder.ts`).
+  - Parse vendor streaming events into a normalized delta (`ai/*/streamProcessor.ts`).
+  - Map vendor errors to `ProviderError` (`ai/*/errorHandler.ts`).
+  - No transport, no app state; pure, easily unit‑tested logic.
 
-**Key Components**:
+- engine (stateful)
+  - Provider classes extend `BaseEngine` (config, capability flags, validation, rate limiting hooks).
+  - Inject a `Transport` (default: `DirectFetchTransport`) and call `ai/` helpers to perform requests.
+  - Yield normalized `StreamChunk` objects consumed by the UI.
+  - Factory/Registry manage creation and selection: `EngineFactory.ts`, `EngineRegistry.ts`.
 
-- **Provider Interface**: Abstract base for all AI providers
-- **OpenAI Implementation**: GPT-5 series with thinking display
-- **Gemini Implementation**: Gemini 2.5 with dynamic reasoning
-- **Stream Processing**: Token buffering and smooth display
-- **Error Handling**: Provider-specific error recovery
+Data flow
 
-**Features**:
+```
+ProviderChatMessage[]
+  → engine/<Provider>.streamChat(...)
+    → ai/<provider>/requestBuilder → Transport.stream(fetch ...)
+      → ai/<provider>/streamProcessor → StreamChunk → UI
+```
 
-- Streaming responses with backpressure handling
-- Thinking/reasoning display support
-- Token counting and rate limiting
-- Automatic retry with exponential backoff
-- Provider health monitoring
+## Usage
 
-### Engine Module (`engine/`)
+Create and register a provider
 
-**Purpose**: Core chat engine managing conversations and AI interactions.
+```ts
+import { EngineFactory } from '@core/engine/EngineFactory';
+import { EngineRegistry } from '@core/engine/EngineRegistry';
+import type { ProviderChatMessage } from '@/types/providers';
 
-**Key Components**:
+const factory = new EngineFactory();
+const registry = new EngineRegistry();
 
-- **ChatEngine**: Main orchestrator for chat operations
-- **Message Handler**: Process and route messages
-- **Stream Manager**: Handle streaming responses
-- **Session Context**: Maintain conversation state
-- **Response Builder**: Format AI responses
+// Example: OpenAI
+await factory.createAndRegister(
+  { type: 'openai', config: { apiKey: 'sk-...', model: 'gpt-5-nano' } },
+  registry
+);
 
-**Responsibilities**:
+registry.setActiveProvider('openai');
+const provider = registry.getActiveProvider();
 
-- Session lifecycle management
-- Message queueing and processing
-- Stream coordination with UI
-- Context window management
-- Error recovery and fallbacks
+const messages: ProviderChatMessage[] = [
+  { id: 'u1', role: 'user', content: 'Hello!', timestamp: new Date() },
+];
 
-### Extraction Module (`extraction/`)
-
-**Purpose**: High-level orchestration of content extraction from web pages.
-
-**Key Components**:
-
-- **Orchestrator**: Coordinates extraction pipeline
-- **Pipeline Stages**: Sequential processing steps
-- **Cache Manager**: Content caching with TTL
-- **Format Converters**: HTML to Markdown conversion
-- **Content Analyzers**: Determine optimal extraction strategy
-
-**Features**:
-
-- Multi-strategy extraction (raw, semantic, visual)
-- Incremental extraction for large pages
-- Dynamic content detection
-- Cache invalidation strategies
-- Batch extraction support
-
-## Architecture Patterns
-
-### Provider Pattern
-
-```typescript
-interface AIProvider {
-  initialize(config: ProviderConfig): Promise<void>;
-  chat(messages: Message[], options: ChatOptions): AsyncGenerator<Token>;
-  validateKey(key: string): Promise<boolean>;
-  getCapabilities(): ProviderCapabilities;
+for await (const chunk of provider!.streamChat(messages, { systemPrompt: 'Be concise.' })) {
+  // chunk.choices[0].delta.content / delta.thinking, etc.
 }
 ```
 
-### Engine Pattern
+Direct creation helpers also exist in the factory, e.g. `createOpenAIProvider`, `createGeminiProvider`.
 
-```typescript
-class ChatEngine {
-  constructor(provider: AIProvider);
-  startSession(context: SessionContext): void;
-  sendMessage(content: string): Promise<StreamHandle>;
-  endSession(): void;
-}
-```
+## When to add code
 
-### Extraction Pipeline
+- Add to `core/ai/<provider>/` when:
+  - The vendor’s payload shape, SSE event format, or error mapping changes.
+  - You need request/response utilities that are provider‑specific and stateless.
 
-```
-Input URL → Analyzer → Extractor → Converter → Cache → Output
-              ↓           ↓           ↓         ↓
-          Strategy    Content    Markdown    Store
-```
+- Add to `core/engine/<provider>/` when:
+  - Introducing a new provider class or wiring config/transport/capabilities.
+  - You need to expose a consistent `streamChat` that uses `ai/` helpers.
 
-## Usage Examples
+- Add/adjust models in `src/config/models.ts` when introducing model IDs, defaults, or capability flags.
 
-### AI Provider Usage
+## Transports
 
-```typescript
-import { createProvider } from '@core/ai';
-
-const provider = createProvider('openai', {
-  apiKey: 'key',
-  model: 'gpt-5',
-});
-
-const stream = provider.chat(messages, {
-  temperature: 0.7,
-  stream: true,
-});
-```
-
-### Engine Usage
-
-```typescript
-import { ChatEngine } from '@core/engine';
-
-const engine = new ChatEngine(provider);
-engine.startSession({ tabId, url });
-
-const response = await engine.sendMessage('Hello');
-for await (const token of response) {
-  // Process streaming tokens
-}
-```
-
-### Extraction Usage
-
-```typescript
-import { ExtractionOrchestrator } from '@core/extraction';
-
-const orchestrator = new ExtractionOrchestrator();
-const content = await orchestrator.extract(url, {
-  strategy: 'semantic',
-  includeImages: true,
-});
-```
-
-## Performance Considerations
-
-- **Lazy Loading**: Providers loaded on demand
-- **Stream Buffering**: Smooth token display
-- **Cache Strategy**: 5-minute TTL for extracted content
-- **Memory Management**: Automatic cleanup of old sessions
-- **Concurrency**: Limited parallel extractions
-
-## Error Handling
-
-- **Provider Errors**: Automatic fallback to alternative models
-- **Network Errors**: Exponential backoff with retry
-- **Extraction Errors**: Graceful degradation to simpler strategies
-- **Stream Errors**: Recovery with partial content preservation
+- `DirectFetchTransport` (default) performs fetch with streaming.
+- `BackgroundProxyTransport` can proxy via the extension background if needed.
+  Engines receive a transport (factory injects `DirectFetchTransport` by default).
 
 ## Testing
 
-- Unit tests for each provider implementation
-- Integration tests for engine operations
-- Mock providers for testing
-- Performance benchmarks for streaming
+- Unit tests for protocol helpers live under `tests/unit/core/ai/**` (request builders, stream processors, mappers).
+- Run with `npm test` or `npm run test:watch`.
 
-## Future Enhancements
+## Notes and tips
 
-- Additional AI provider integrations (Anthropic, Cohere)
-- Advanced caching strategies
-- Federated learning capabilities
-- Plugin system for custom providers
-- WebAssembly extraction optimizations
+- OpenAI Responses API: we send `tools: [{ type: 'web_search' }]` by default and stream reasoning/thinking when supported. Search metadata is surfaced via chunk metadata (see `ai/openai/responseParser.ts`).
+- Keep `ai/` functions pure and side‑effect free; engines own state and validation.
+- Use path aliases (`@core`, `@config`, `@transport`, etc.).

@@ -192,6 +192,17 @@ export interface ErrorPayload {
   details?: Record<string, unknown>;
 }
 
+export interface ProxyRequestPayload {
+  /** Request URL */
+  url: string;
+  /** HTTP method */
+  method: string;
+  /** Request headers */
+  headers: Record<string, string>;
+  /** Request body */
+  body?: string;
+}
+
 /**
  * Type-safe message interfaces for specific message types
  */
@@ -259,6 +270,10 @@ export interface CleanupTabCacheMessage extends Message<CleanupTabCachePayload> 
   type: 'CLEANUP_TAB_CACHE';
 }
 
+export interface ProxyRequestMessage extends Message<ProxyRequestPayload> {
+  type: 'PROXY_REQUEST';
+}
+
 export interface PongMessage extends Message<void> {
   type: 'PONG';
 }
@@ -281,6 +296,7 @@ export type TypedMessage =
   | GetAllTabsMessage
   | ExtractTabContentMessage
   | CleanupTabCacheMessage
+  | ProxyRequestMessage
   | ErrorMessage
   | PingMessage
   | PongMessage;

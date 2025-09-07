@@ -400,9 +400,9 @@ export async function batchSet<T extends Record<string, unknown>>(
     for (const [key, value] of Object.entries(items)) {
       try {
         await set(key, value, area);
-        result.success[key] = value;
+        (result.success as Record<string, unknown>)[key] = value;
       } catch (individualError) {
-        result.errors[key] =
+        (result.errors as Record<string, string>)[key] =
           individualError instanceof Error ? individualError.message : 'Unknown error';
       }
     }
@@ -552,7 +552,7 @@ export function addStorageListener<T extends Record<string, unknown>>(
     // Convert Chrome storage changes to our typed format
     const typedChanges: StorageChanges<T> = {};
     for (const [key, change] of Object.entries(changes)) {
-      (typedChanges as StorageChanges<T>)[key] = {
+      (typedChanges as Record<string, { oldValue?: unknown; newValue?: unknown }>)[key] = {
         oldValue: change.oldValue,
         newValue: change.newValue,
       };

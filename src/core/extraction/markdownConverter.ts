@@ -97,9 +97,10 @@ async function configureTurndown(service: TurndownService): Promise<void> {
       const items = (node as Element)?.querySelectorAll?.('li[id^="fn"]') || [];
       if ((items as NodeList).length === 0) return _content;
       let footnotes = '\n\n---\n\n';
-      (items as NodeList).forEach((item: Element) => {
-        const id = item.getAttribute('id')?.replace('fn', '') || '';
-        const text = item.textContent?.trim() || '';
+      Array.from(items as NodeList).forEach(item => {
+        const element = item as Element;
+        const id = element.getAttribute('id')?.replace('fn', '') || '';
+        const text = element.textContent?.trim() || '';
         footnotes += `[^${id}]: ${text}\n\n`;
       });
       return footnotes;

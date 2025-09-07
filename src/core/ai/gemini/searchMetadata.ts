@@ -66,8 +66,8 @@ function extractSources(metadata: unknown): Array<{ url: string; title: string }
   return (chunks as Array<{ web?: { uri?: string; title?: string } }>)
     .filter((chunk): boolean => chunk.web?.uri !== undefined)
     .map(chunk => ({
-      url: chunk.web.uri,
-      title: chunk.web.title || 'Untitled',
+      url: chunk.web!.uri!,
+      title: chunk.web!.title || 'Untitled',
     }));
 }
 
