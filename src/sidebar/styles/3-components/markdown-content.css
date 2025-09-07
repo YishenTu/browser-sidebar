@@ -76,6 +76,7 @@
   padding: 0;
   line-height: 1.6;
   color: inherit;
+  font-size: var(--font-size-base); /* Ensure same size as paragraphs */
 }
 
 /* Lists: reset.css removes default bullets; restore for markdown */
@@ -83,12 +84,14 @@
   list-style: disc outside;
   padding-left: 16px;
   margin: 0.75em 0;
+  font-size: var(--font-size-base); /* Ensure same size as paragraphs */
 }
 
 .markdown-renderer ol {
   list-style: decimal outside;
   padding-left: 16px;
   margin: 0.75em 0;
+  font-size: var(--font-size-base); /* Ensure same size as paragraphs */
 }
 
 /* Links inside markdown */
