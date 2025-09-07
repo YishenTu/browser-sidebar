@@ -256,7 +256,7 @@ export const FullscreenModal: React.FC<FullscreenModalProps> = ({
               )}
             </>
           ) : (
-            children
+            children || (content && <pre className="full-content-pre">{content}</pre>)
           )}
         </div>
       </div>

@@ -69,7 +69,7 @@ export const SLASH_COMMANDS: SlashCommand[] = [
   {
     name: 'fact-check',
     description: 'Validate the information',
-    prompt: `Search the web for credible sources to validate and fact check the provided content`,
+    prompt: `Search the web for credible sources to validate and fact check the provided content.`,
     model: 'gemini-2.5-flash',
   },
 ];
