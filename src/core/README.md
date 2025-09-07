@@ -35,8 +35,6 @@ core/
     └── text.ts
 ```
 
-Note: Earlier docs referenced a `ChatEngine.ts` and additional extraction orchestration files—those no longer exist. The current entry points are the provider classes under `engine/` and the helpers under `extraction/`.
-
 ## ai vs engine
 
 - ai (stateless)

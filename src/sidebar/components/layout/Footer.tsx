@@ -79,7 +79,9 @@ export const Footer: React.FC<FooterProps> = ({
         onCancel={editingMessage ? onClearEdit : onCancel}
         loading={loading}
         placeholder={
-          editingMessage ? 'Edit your message...' : placeholder || '\n@ for tabs, / for commands'
+          editingMessage
+            ? 'Edit your message...'
+            : placeholder || 'Ask about webpage. @ for tabs, / for commands...'
         }
         defaultValue={editingMessage || ''}
         className={editingMessage ? 'editing-mode' : ''}
