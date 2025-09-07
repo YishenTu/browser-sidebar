@@ -67,7 +67,8 @@ export function isBuiltInPreset(id: string): boolean {
   return OPENAI_COMPAT_PRESETS.some(p => p.id === id);
 }
 
-export const SUPPORTED_MODELS: ModelConfig[] = [
+export const DEFAULT_MODELS: ModelConfig[] = [
+  // Gemini models
   {
     id: 'gemini-2.5-flash-lite',
     name: 'Gemini 2.5 Flash Lite',
@@ -86,6 +87,7 @@ export const SUPPORTED_MODELS: ModelConfig[] = [
     provider: 'gemini',
     thinkingBudget: '-1', // 128 to 32768
   },
+  // OpenAI models
   {
     id: 'gpt-5-nano',
     name: 'GPT 5 Nano',
@@ -110,6 +112,24 @@ export const SUPPORTED_MODELS: ModelConfig[] = [
     name: 'Claude Sonnet 4 (OpenRouter)',
     provider: 'openrouter',
     reasoningMaxTokens: 8000, // Anthropic models use max_tokens for reasoning
+  },
+  {
+    id: 'openai/gpt-5-nano',
+    name: 'GPT 5 Nano (OpenRouter)',
+    provider: 'openrouter',
+    reasoningEffort: 'low',
+  },
+  {
+    id: 'openai/gpt-5-mini',
+    name: 'GPT 5 Mini (OpenRouter)',
+    provider: 'openrouter',
+    reasoningEffort: 'low',
+  },
+  {
+    id: 'openai/gpt-5',
+    name: 'GPT 5 (OpenRouter)',
+    provider: 'openrouter',
+    reasoningEffort: 'medium',
   },
   // Add more OpenRouter models as needed - just specify either:
   // - reasoningEffort for OpenAI/DeepSeek/Grok models
@@ -143,21 +163,24 @@ export const SUPPORTED_MODELS: ModelConfig[] = [
   },
 ];
 
-export const DEFAULT_MODEL_ID = 'gpt-5-nano';
-export const DEFAULT_GEMINI_MODEL_ID = 'gemini-2.5-flash';
-export const DEFAULT_OPENROUTER_MODEL_ID = 'anthropic/claude-sonnet-4';
+/**
+ * Get the default model - returns the first available model from the list
+ */
+export function getDefaultModel(): string {
+  return DEFAULT_MODELS[0]!.id;
+}
 
-// Default models for OpenAI-compatible providers
-export const DEFAULT_DEEPSEEK_MODEL_ID = 'deepseek-chat';
-export const DEFAULT_QWEN_MODEL_ID = 'qwen3-235b-a22b-instruct-2507';
-export const DEFAULT_ZHIPU_MODEL_ID = 'glm-4.5-x';
-export const DEFAULT_KIMI_MODEL_ID = 'kimi-k2-turbo-preview';
+/**
+ * @deprecated Use getDefaultModel() instead
+ * Kept temporarily for backward compatibility during migration
+ */
+export const DEFAULT_MODEL_ID = getDefaultModel();
 
 /**
  * Get model configuration by ID
  */
 export function getModelById(id: string): ModelConfig | undefined {
-  return SUPPORTED_MODELS.find(model => model.id === id);
+  return DEFAULT_MODELS.find(model => model.id === id);
 }
 
 /**
@@ -199,14 +222,14 @@ export function supportsThinking(modelId: string): boolean {
 export function getModelsByProvider(
   providerType: 'openai' | 'gemini' | 'openrouter' | string
 ): ModelConfig[] {
-  return SUPPORTED_MODELS.filter(model => model.provider === providerType);
+  return DEFAULT_MODELS.filter(model => model.provider === providerType);
 }
 
 /**
  * Check if a model exists
  */
 export function modelExists(modelId: string): boolean {
-  return SUPPORTED_MODELS.some(model => model.id === modelId);
+  return DEFAULT_MODELS.some(model => model.id === modelId);
 }
 
 /**
@@ -228,32 +251,14 @@ export function isOpenAICompatProvider(providerId: string): boolean {
 export function getModelsByProviderId(providerId: string): ModelConfig[] {
   // For built-in OpenAI-compatible providers, we'll add their models later
   // For now, return models filtered by provider
-  return SUPPORTED_MODELS.filter(model => model.provider === providerId);
+  return DEFAULT_MODELS.filter(model => model.provider === providerId);
 }
 
 /**
  * Get the default model ID for a provider
  */
 export function getDefaultModelForProvider(providerId: string): string | undefined {
-  switch (providerId) {
-    case 'openai':
-      return DEFAULT_MODEL_ID;
-    case 'gemini':
-      return DEFAULT_GEMINI_MODEL_ID;
-    case 'openrouter':
-      return DEFAULT_OPENROUTER_MODEL_ID;
-    case 'deepseek':
-      return DEFAULT_DEEPSEEK_MODEL_ID;
-    case 'qwen':
-      return DEFAULT_QWEN_MODEL_ID;
-    case 'zhipu':
-      return DEFAULT_ZHIPU_MODEL_ID;
-    case 'kimi':
-      return DEFAULT_KIMI_MODEL_ID;
-    default: {
-      // Try to find the first model for this provider
-      const models = getModelsByProviderId(providerId);
-      return models.length > 0 && models[0] ? models[0].id : undefined;
-    }
-  }
+  // Always return the first available model for the given provider
+  const models = getModelsByProviderId(providerId);
+  return models.length > 0 && models[0] ? models[0].id : undefined;
 }

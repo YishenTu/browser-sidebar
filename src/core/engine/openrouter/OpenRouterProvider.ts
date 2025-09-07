@@ -6,7 +6,7 @@ import { buildRequest } from '@/core/ai/openrouter/requestBuilder';
 import { processStreamChunk } from '@/core/ai/openrouter/streamProcessor';
 import { mapErrorToProviderError } from '@/core/ai/openrouter/errorHandler';
 import type { OpenRouterRequestOptions } from '@/core/ai/openrouter/types';
-import { DEFAULT_OPENROUTER_MODEL_ID, getModelsByProvider } from '@/config/models';
+import { getModelsByProvider, getDefaultModelForProvider } from '@/config/models';
 import type {
   ProviderChatMessage,
   StreamChunk,
@@ -171,7 +171,7 @@ export class OpenRouterProvider extends BaseEngine {
     return mapErrorToProviderError(error);
   }
   getDefaultModelId(): string {
-    return DEFAULT_OPENROUTER_MODEL_ID;
+    return getDefaultModelForProvider('openrouter')!;
   }
   async updateConfig(config: OpenRouterConfig): Promise<void> {
     const validation = this.validateConfig(config);

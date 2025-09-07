@@ -208,7 +208,7 @@ export const SlashCommandDropdown: React.FC<SlashCommandDropdownProps> = memo(
     useEffect(() => {
       if (onHighlightChange && isOpen && commands.length > 0) {
         const highlightedCommand = commands[highlightedIndex];
-        onHighlightChange(highlightedCommand?.id || null);
+        onHighlightChange(highlightedCommand?.name || null);
       }
     }, [highlightedIndex, isOpen, commands, onHighlightChange]);
 
@@ -216,9 +216,9 @@ export const SlashCommandDropdown: React.FC<SlashCommandDropdownProps> = memo(
       (command: SlashCommand, index: number, isHighlighted: boolean) => {
         return (
           <li
-            key={command.id}
+            key={command.name}
             ref={el => (optionRefs.current[index] = el)}
-            id={`slash-command-option-${command.id}`}
+            id={`slash-command-option-${command.name}`}
             role="option"
             aria-selected={isHighlighted}
             className={`slash-command-dropdown__option ${
@@ -233,10 +233,8 @@ export const SlashCommandDropdown: React.FC<SlashCommandDropdownProps> = memo(
             onMouseEnter={() => setHighlightedIndex(index)}
           >
             <div className="slash-command-dropdown__option-content">
-              <div className="slash-command-dropdown__text">
-                <div className="slash-command-dropdown__name">/{command.name}</div>
-                <div className="slash-command-dropdown__description">{command.description}</div>
-              </div>
+              <span className="slash-command-dropdown__name">/{command.name}</span>
+              <span className="slash-command-dropdown__description">{command.description}</span>
             </div>
           </li>
         );
@@ -271,7 +269,7 @@ export const SlashCommandDropdown: React.FC<SlashCommandDropdownProps> = memo(
           aria-label="Select slash command"
           aria-activedescendant={
             highlightedIndex >= 0 && visibleCommands[highlightedIndex]
-              ? `slash-command-option-${visibleCommands[highlightedIndex].id}`
+              ? `slash-command-option-${visibleCommands[highlightedIndex].name}`
               : undefined
           }
           className="slash-command-dropdown__menu"

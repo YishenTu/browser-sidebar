@@ -14,14 +14,9 @@
 
 import { describe, it, expect } from 'vitest';
 import {
-  SUPPORTED_MODELS,
+  DEFAULT_MODELS,
   DEFAULT_MODEL_ID,
-  DEFAULT_GEMINI_MODEL_ID,
-  DEFAULT_OPENROUTER_MODEL_ID,
-  DEFAULT_DEEPSEEK_MODEL_ID,
-  DEFAULT_QWEN_MODEL_ID,
-  DEFAULT_ZHIPU_MODEL_ID,
-  DEFAULT_KIMI_MODEL_ID,
+  getDefaultModel,
   OPENAI_COMPAT_PROVIDER_IDS,
   getModelById,
   getDefaultModelForProvider,
@@ -31,106 +26,33 @@ import {
 import { OPENAI_COMPAT_PRESETS } from '../../../src/config/models';
 
 describe('Model Configuration Drift Detection', () => {
-  describe('Default Model Constants Validation', () => {
-    it('should verify all DEFAULT_*_MODEL_ID constants reference existing models', () => {
-      const defaultConstants = [
-        { name: 'DEFAULT_MODEL_ID', value: DEFAULT_MODEL_ID, provider: 'openai' },
-        { name: 'DEFAULT_GEMINI_MODEL_ID', value: DEFAULT_GEMINI_MODEL_ID, provider: 'gemini' },
-        {
-          name: 'DEFAULT_OPENROUTER_MODEL_ID',
-          value: DEFAULT_OPENROUTER_MODEL_ID,
-          provider: 'openrouter',
-        },
-        {
-          name: 'DEFAULT_DEEPSEEK_MODEL_ID',
-          value: DEFAULT_DEEPSEEK_MODEL_ID,
-          provider: 'deepseek',
-        },
-        { name: 'DEFAULT_QWEN_MODEL_ID', value: DEFAULT_QWEN_MODEL_ID, provider: 'qwen' },
-        { name: 'DEFAULT_ZHIPU_MODEL_ID', value: DEFAULT_ZHIPU_MODEL_ID, provider: 'zhipu' },
-        { name: 'DEFAULT_KIMI_MODEL_ID', value: DEFAULT_KIMI_MODEL_ID, provider: 'kimi' },
-      ];
+  describe('Default Model Validation', () => {
+    it('should verify getDefaultModel() returns the first model from DEFAULT_MODELS', () => {
+      const defaultModel = getDefaultModel();
+      const expectedDefault = DEFAULT_MODELS[0]?.id;
 
-      const errors: string[] = [];
+      if (!expectedDefault) {
+        throw new Error('DEFAULT_MODELS is empty - cannot determine default model');
+      }
 
-      defaultConstants.forEach(({ name, value, provider }) => {
-        // Check if model exists
-        if (!modelExists(value)) {
-          errors.push(`${name} references non-existent model: "${value}"`);
-          return;
-        }
-
-        // Check if model has correct provider
-        const model = getModelById(value);
-        if (model?.provider !== provider) {
-          errors.push(
-            `${name} references model "${value}" with provider "${model?.provider}" but expected "${provider}"`
-          );
-        }
-      });
-
-      if (errors.length > 0) {
+      if (defaultModel !== expectedDefault) {
         throw new Error(
-          `Default model constant drift detected:\n${errors.map(e => `  - ${e}`).join('\n')}\n\n` +
-            `Available models:\n${SUPPORTED_MODELS.map(m => `  - ${m.id} (${m.provider})`).join('\n')}`
+          `getDefaultModel() returned "${defaultModel}" but expected first model "${expectedDefault}"`
         );
+      }
+
+      if (!modelExists(defaultModel)) {
+        throw new Error(`Default model "${defaultModel}" does not exist in DEFAULT_MODELS`);
       }
     });
 
-    it('should verify DEFAULT_MODEL_ID is an OpenAI GPT model', () => {
-      const model = getModelById(DEFAULT_MODEL_ID);
+    it('should verify DEFAULT_MODEL_ID compatibility constant equals getDefaultModel()', () => {
+      // DEFAULT_MODEL_ID is kept for backward compatibility
+      const defaultModel = getDefaultModel();
 
-      if (!model) {
-        throw new Error(`DEFAULT_MODEL_ID "${DEFAULT_MODEL_ID}" not found in SUPPORTED_MODELS`);
-      }
-
-      if (model.provider !== 'openai') {
+      if (DEFAULT_MODEL_ID !== defaultModel) {
         throw new Error(
-          `DEFAULT_MODEL_ID "${DEFAULT_MODEL_ID}" should be an OpenAI model but has provider "${model.provider}"`
-        );
-      }
-
-      if (!model.id.startsWith('gpt-')) {
-        throw new Error(
-          `DEFAULT_MODEL_ID "${DEFAULT_MODEL_ID}" should be a GPT model (start with 'gpt-')`
-        );
-      }
-    });
-
-    it('should verify DEFAULT_GEMINI_MODEL_ID is a Gemini model', () => {
-      const model = getModelById(DEFAULT_GEMINI_MODEL_ID);
-
-      if (!model) {
-        throw new Error(
-          `DEFAULT_GEMINI_MODEL_ID "${DEFAULT_GEMINI_MODEL_ID}" not found in SUPPORTED_MODELS`
-        );
-      }
-
-      if (model.provider !== 'gemini') {
-        throw new Error(
-          `DEFAULT_GEMINI_MODEL_ID "${DEFAULT_GEMINI_MODEL_ID}" should be a Gemini model but has provider "${model.provider}"`
-        );
-      }
-
-      if (!model.id.startsWith('gemini-')) {
-        throw new Error(
-          `DEFAULT_GEMINI_MODEL_ID "${DEFAULT_GEMINI_MODEL_ID}" should be a Gemini model (start with 'gemini-')`
-        );
-      }
-    });
-
-    it('should verify DEFAULT_OPENROUTER_MODEL_ID is an OpenRouter model', () => {
-      const model = getModelById(DEFAULT_OPENROUTER_MODEL_ID);
-
-      if (!model) {
-        throw new Error(
-          `DEFAULT_OPENROUTER_MODEL_ID "${DEFAULT_OPENROUTER_MODEL_ID}" not found in SUPPORTED_MODELS`
-        );
-      }
-
-      if (model.provider !== 'openrouter') {
-        throw new Error(
-          `DEFAULT_OPENROUTER_MODEL_ID "${DEFAULT_OPENROUTER_MODEL_ID}" should be an OpenRouter model but has provider "${model.provider}"`
+          `DEFAULT_MODEL_ID constant "${DEFAULT_MODEL_ID}" doesn't match getDefaultModel() "${defaultModel}"`
         );
       }
     });
@@ -171,11 +93,11 @@ describe('Model Configuration Drift Detection', () => {
       const errors: string[] = [];
 
       OPENAI_COMPAT_PRESETS.forEach(preset => {
-        const modelsForProvider = SUPPORTED_MODELS.filter(m => m.provider === preset.id);
+        const modelsForProvider = DEFAULT_MODELS.filter(m => m.provider === preset.id);
 
         if (modelsForProvider.length === 0) {
           errors.push(
-            `Preset "${preset.id}" (${preset.name}) has no corresponding models in SUPPORTED_MODELS`
+            `Preset "${preset.id}" (${preset.name}) has no corresponding models in DEFAULT_MODELS`
           );
         }
       });
@@ -190,7 +112,7 @@ describe('Model Configuration Drift Detection', () => {
 
     it('should verify each OpenAI-Compatible model has a corresponding preset', () => {
       const presetIds = OPENAI_COMPAT_PRESETS.map(p => p.id);
-      const openAICompatModels = SUPPORTED_MODELS.filter(
+      const openAICompatModels = DEFAULT_MODELS.filter(
         m =>
           presetIds.includes(m.provider) &&
           m.provider !== 'openai' &&
@@ -219,19 +141,18 @@ describe('Model Configuration Drift Detection', () => {
 
   describe('getDefaultModelForProvider() Validation', () => {
     it('should return valid models for all known provider types', () => {
-      const knownProviders = [
-        'openai',
-        'gemini',
-        'openrouter',
-        'deepseek',
-        'qwen',
-        'zhipu',
-        'kimi',
-      ];
+      const knownProviders = ['openai', 'gemini', 'openrouter'];
+
+      // Also test OpenAI-compatible providers that have models
+      const openAICompatProviders = OPENAI_COMPAT_PROVIDER_IDS.filter(id =>
+        DEFAULT_MODELS.some(m => m.provider === id)
+      );
+
+      const allProviders = [...knownProviders, ...openAICompatProviders];
 
       const errors: string[] = [];
 
-      knownProviders.forEach(provider => {
+      allProviders.forEach(provider => {
         const defaultModel = getDefaultModelForProvider(provider);
 
         if (!defaultModel) {
@@ -246,12 +167,23 @@ describe('Model Configuration Drift Detection', () => {
           return;
         }
 
-        const model = getModelById(defaultModel);
-        if (model?.provider !== provider) {
-          errors.push(
-            `getDefaultModelForProvider("${provider}") returned model "${defaultModel}" ` +
-              `with provider "${model?.provider}" instead of "${provider}"`
-          );
+        // For OpenAI-compatible providers, the default should be from their models
+        if (openAICompatProviders.includes(provider)) {
+          const model = getModelById(defaultModel);
+          if (model?.provider !== provider) {
+            errors.push(
+              `getDefaultModelForProvider("${provider}") returned model "${defaultModel}" ` +
+                `with provider "${model?.provider}" instead of "${provider}"`
+            );
+          }
+        } else {
+          const model = getModelById(defaultModel);
+          if (model?.provider !== provider) {
+            errors.push(
+              `getDefaultModelForProvider("${provider}") returned model "${defaultModel}" ` +
+                `with provider "${model?.provider}" instead of "${provider}"`
+            );
+          }
         }
       });
 
@@ -281,7 +213,7 @@ describe('Model Configuration Drift Detection', () => {
     it('should verify all models have required properties', () => {
       const errors: string[] = [];
 
-      SUPPORTED_MODELS.forEach((model, index) => {
+      DEFAULT_MODELS.forEach((model, index) => {
         if (!model.id || typeof model.id !== 'string') {
           errors.push(`Model at index ${index} has invalid id: "${model.id}"`);
         }
@@ -323,19 +255,19 @@ describe('Model Configuration Drift Detection', () => {
     });
 
     it('should verify model IDs are unique', () => {
-      const modelIds = SUPPORTED_MODELS.map(m => m.id);
+      const modelIds = DEFAULT_MODELS.map(m => m.id);
       const duplicateIds = modelIds.filter((id, index) => modelIds.indexOf(id) !== index);
 
       if (duplicateIds.length > 0) {
         throw new Error(
           `Duplicate model IDs detected: [${[...new Set(duplicateIds)].join(', ')}]\n\n` +
-            `All model IDs must be unique across SUPPORTED_MODELS.`
+            `All model IDs must be unique across DEFAULT_MODELS.`
         );
       }
     });
 
     it('should verify each provider has at least one model', () => {
-      const providers = [...new Set(SUPPORTED_MODELS.map(m => m.provider))];
+      const providers = [...new Set(DEFAULT_MODELS.map(m => m.provider))];
       const expectedProviders = [
         'openai',
         'gemini',
@@ -350,7 +282,7 @@ describe('Model Configuration Drift Detection', () => {
 
       if (missingProviders.length > 0) {
         throw new Error(
-          `Expected providers missing from SUPPORTED_MODELS: [${missingProviders.join(', ')}]\n\n` +
+          `Expected providers missing from DEFAULT_MODELS: [${missingProviders.join(', ')}]\n\n` +
             `Available providers: [${providers.join(', ')}]`
         );
       }
@@ -358,34 +290,31 @@ describe('Model Configuration Drift Detection', () => {
   });
 
   describe('Cross-File Model Reference Validation', () => {
-    it('should verify EngineFactory uses correct default constants', () => {
-      // This test checks that EngineFactory imports and uses the correct constants
-      // We can't directly test the import without loading the file, but we can verify
-      // the constants themselves are consistent with what the factory would expect
-
-      const factoryExpectedDefaults = [
-        { provider: 'openai', expected: DEFAULT_MODEL_ID },
-        { provider: 'gemini', expected: DEFAULT_GEMINI_MODEL_ID },
-        { provider: 'openrouter', expected: DEFAULT_OPENROUTER_MODEL_ID },
-      ];
-
+    it('should verify getDefaultModelForProvider returns first model for each provider', () => {
+      const coreProviders = ['openai', 'gemini', 'openrouter'];
       const errors: string[] = [];
 
-      factoryExpectedDefaults.forEach(({ provider, expected }) => {
-        const actualDefault = getDefaultModelForProvider(provider);
+      coreProviders.forEach(provider => {
+        const defaultModel = getDefaultModelForProvider(provider);
+        const providerModels = DEFAULT_MODELS.filter(m => m.provider === provider);
+        const expectedDefault = providerModels[0]?.id;
 
-        if (actualDefault !== expected) {
+        if (!expectedDefault) {
+          errors.push(`Provider "${provider}" has no models in DEFAULT_MODELS`);
+          return;
+        }
+
+        if (defaultModel !== expectedDefault) {
           errors.push(
             `Provider "${provider}" default mismatch: ` +
-              `expected "${expected}" but getDefaultModelForProvider() returns "${actualDefault}"`
+              `expected first model "${expectedDefault}" but got "${defaultModel}"`
           );
         }
       });
 
       if (errors.length > 0) {
         throw new Error(
-          `EngineFactory default model consistency check failed:\n${errors.map(e => `  - ${e}`).join('\n')}\n\n` +
-            `This suggests drift between default constants and the getDefaultModelForProvider() function.`
+          `Provider default model validation failed:\n${errors.map(e => `  - ${e}`).join('\n')}`
         );
       }
     });
@@ -425,14 +354,14 @@ describe('Model Configuration Drift Detection', () => {
       if (errors.length > 0) {
         throw new Error(
           `ProviderManagerService fallback model validation failed:\n${errors.map(e => `  - ${e}`).join('\n')}\n\n` +
-            `Update ProviderManagerService fallbacks or add missing models to SUPPORTED_MODELS.`
+            `Update ProviderManagerService fallbacks or add missing models to DEFAULT_MODELS.`
         );
       }
     });
 
     it('should detect if new models are added without updating defaults', () => {
       // This test helps detect when new models are added but defaults aren't updated appropriately
-      const providerModelCounts = SUPPORTED_MODELS.reduce(
+      const providerModelCounts = DEFAULT_MODELS.reduce(
         (acc, model) => {
           acc[model.provider] = (acc[model.provider] || 0) + 1;
           return acc;
@@ -494,7 +423,7 @@ describe('Model Configuration Drift Detection', () => {
 
       const errors: string[] = [];
 
-      SUPPORTED_MODELS.forEach(model => {
+      DEFAULT_MODELS.forEach(model => {
         const pattern = providerPatterns[model.provider as keyof typeof providerPatterns];
 
         if (pattern && !pattern.test(model.id)) {
@@ -528,7 +457,7 @@ describe('Model Configuration Drift Detection', () => {
       const errors: string[] = [];
 
       // Test getModelById with existing models
-      const testModel = SUPPORTED_MODELS[0];
+      const testModel = DEFAULT_MODELS[0];
       if (testModel) {
         const retrieved = getModelById(testModel.id);
         if (!retrieved || retrieved.id !== testModel.id) {
@@ -537,8 +466,8 @@ describe('Model Configuration Drift Detection', () => {
       }
 
       // Test modelExists with existing and non-existing models
-      if (SUPPORTED_MODELS.length > 0) {
-        const existingModel = SUPPORTED_MODELS[0]!.id;
+      if (DEFAULT_MODELS.length > 0) {
+        const existingModel = DEFAULT_MODELS[0]!.id;
         if (!modelExists(existingModel)) {
           errors.push(`modelExists("${existingModel}") returned false for existing model`);
         }

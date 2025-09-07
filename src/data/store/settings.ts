@@ -16,7 +16,7 @@ import type {
   Model,
 } from '@/types/settings';
 import {
-  SUPPORTED_MODELS,
+  DEFAULT_MODELS,
   DEFAULT_MODEL_ID,
   getProviderTypeForModelId,
   getModelsByProviderId,
@@ -38,7 +38,7 @@ const STORAGE_KEY = 'settings';
 /**
  * Available AI models with their metadata - from centralized config
  */
-const DEFAULT_AVAILABLE_MODELS: Model[] = SUPPORTED_MODELS.map(model => ({
+const DEFAULT_AVAILABLE_MODELS: Model[] = DEFAULT_MODELS.map(model => ({
   id: model.id,
   name: model.name,
   provider: model.provider,

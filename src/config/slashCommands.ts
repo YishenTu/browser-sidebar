@@ -9,9 +9,7 @@
  * Interface for a slash command definition
  */
 export interface SlashCommand {
-  /** Unique identifier for the command */
-  id: string;
-  /** Display name of the command (without the slash) */
+  /** Unique name of the command (without the slash) */
   name: string;
   /** Brief description of what the command does */
   description: string;
@@ -24,7 +22,6 @@ export interface SlashCommand {
  */
 export const SLASH_COMMANDS: SlashCommand[] = [
   {
-    id: 'summarize',
     name: 'summarize',
     description: 'Summarize the content concisely',
     prompt: `
@@ -36,7 +33,6 @@ export const SLASH_COMMANDS: SlashCommand[] = [
     `,
   },
   {
-    id: 'explain',
     name: 'explain',
     description: 'Explain in simple terms',
     prompt: `
@@ -50,7 +46,6 @@ export const SLASH_COMMANDS: SlashCommand[] = [
     `,
   },
   {
-    id: 'analyze',
     name: 'analyze',
     description: 'Analyze the content',
     prompt: `
@@ -64,14 +59,12 @@ export const SLASH_COMMANDS: SlashCommand[] = [
       - Provide evidence-based insights
     `,
   },
+  {
+    name: 'comment',
+    description: 'Summarize comments',
+    prompt: `总结网友评论`,
+  },
 ];
-
-/**
- * Get a slash command by its ID
- */
-export function getSlashCommandById(id: string): SlashCommand | undefined {
-  return SLASH_COMMANDS.find(cmd => cmd.id === id);
-}
 
 /**
  * Get a slash command by its name (case-insensitive)

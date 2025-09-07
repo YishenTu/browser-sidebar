@@ -6,12 +6,7 @@ import { GeminiProvider } from './gemini/GeminiProvider';
 import { OpenRouterProvider } from './openrouter/OpenRouterProvider';
 import { OpenAICompatibleProvider } from './openai-compat/OpenAICompatibleProvider';
 import { EngineRegistry } from './EngineRegistry';
-import {
-  getModelById,
-  DEFAULT_MODEL_ID,
-  DEFAULT_GEMINI_MODEL_ID,
-  DEFAULT_OPENROUTER_MODEL_ID,
-} from '@/config/models';
+import { getModelById, getDefaultModelForProvider } from '@/config/models';
 import { DirectFetchTransport } from '@/transport/DirectFetchTransport';
 import type { Transport } from '@/transport/types';
 import type {
@@ -170,26 +165,31 @@ export class EngineFactory {
       throw new Error(`Failed to create and register some providers:\n${errors.join('\n')}`);
     return providers;
   }
-  createDefaultOpenAIConfig(apiKey: string, model: string = DEFAULT_MODEL_ID): OpenAIConfig {
-    const modelConfig = getModelById(model);
+  createDefaultOpenAIConfig(apiKey: string, model?: string): OpenAIConfig {
+    const defaultModel = model || getDefaultModelForProvider('openai')!;
+    const modelConfig = getModelById(defaultModel);
     return {
       apiKey,
-      model,
+      model: defaultModel,
       reasoningEffort: modelConfig?.reasoningEffort || 'low',
     } as OpenAIConfig;
   }
-  createDefaultGeminiConfig(apiKey: string, model: string = DEFAULT_GEMINI_MODEL_ID): GeminiConfig {
-    return { apiKey, model, thinkingBudget: '0', showThoughts: false } as GeminiConfig;
+  createDefaultGeminiConfig(apiKey: string, model?: string): GeminiConfig {
+    const defaultModel = model || getDefaultModelForProvider('gemini')!;
+    return {
+      apiKey,
+      model: defaultModel,
+      thinkingBudget: '0',
+      showThoughts: false,
+    } as GeminiConfig;
   }
   async createOpenRouterProvider(config: OpenRouterConfig): Promise<OpenRouterProvider> {
     const providerConfig: ProviderConfig = { type: 'openrouter', config };
     const provider = await this.createProvider(providerConfig);
     return provider as unknown as OpenRouterProvider;
   }
-  createDefaultOpenRouterConfig(
-    apiKey: string,
-    model: string = DEFAULT_OPENROUTER_MODEL_ID
-  ): OpenRouterConfig {
-    return { apiKey, model, reasoning: { effort: 'medium' } } as OpenRouterConfig;
+  createDefaultOpenRouterConfig(apiKey: string, model?: string): OpenRouterConfig {
+    const defaultModel = model || getDefaultModelForProvider('openrouter')!;
+    return { apiKey, model: defaultModel, reasoning: { effort: 'medium' } } as OpenRouterConfig;
   }
 }
