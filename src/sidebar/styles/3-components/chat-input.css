@@ -47,18 +47,20 @@
   width: 100%;
   border: none;
   border-radius: 0;
-  background: var(--input-bg);
-  background-color: var(--input-bg);
-  padding: var(--input-padding); /* 0.5rem 0.75rem from variables */
-  color: var(--input-text); /* #e5e7eb from variables */
+  background: transparent;
+  padding: 0.5rem 0.75rem;
+  color: var(--input-text);
   box-shadow: none;
   outline: none;
   -webkit-appearance: none;
   appearance: none;
-  resize: none; /* Disable resize handle */
+  resize: none;
   box-sizing: border-box;
-  font-size: var(--input-font-size); /* 14px - consistent across app */
+  font-size: 14px;
   font-family: inherit;
+  line-height: 1.5;
+  min-height: inherit;
+  overflow: hidden;
 }
 
 .ai-sidebar-container .chat-input__textarea-container textarea::placeholder {

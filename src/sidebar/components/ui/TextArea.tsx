@@ -23,10 +23,10 @@ export interface TextAreaProps
   errorMessage?: string;
   /** Success message displayed when success is true */
   successMessage?: string;
-  /** Minimum number of rows (default: 2) */
-  minRows?: number;
-  /** Maximum number of rows (default: 10) */
-  maxRows?: number;
+  /** Minimum number of rows */
+  minRows: number;
+  /** Maximum number of rows */
+  maxRows: number;
   /** Wrap component in ai-sidebar-container for proper styling */
   withContainer?: boolean;
 }
@@ -56,12 +56,6 @@ export interface TextAreaProps
  *   placeholder="Enter message"
  * />
  *
- * // Auto-resizing with row limits
- * <TextArea
- *   minRows={3}
- *   maxRows={8}
- *   placeholder="This will auto-resize..."
- * />
  * ```
  */
 export const TextArea = forwardRef<HTMLTextAreaElement, TextAreaProps>(
@@ -74,8 +68,8 @@ export const TextArea = forwardRef<HTMLTextAreaElement, TextAreaProps>(
       helperText,
       errorMessage,
       successMessage,
-      minRows = 2,
-      maxRows = 10,
+      minRows,
+      maxRows,
       withContainer = false,
       className,
       id: providedId,
@@ -112,35 +106,29 @@ export const TextArea = forwardRef<HTMLTextAreaElement, TextAreaProps>(
       return lineHeights[size];
     }, [size]);
 
-    // Auto-resize functionality
+    // Simple auto-resize functionality
     const adjustHeight = useCallback(() => {
       const textarea = textAreaRef.current;
       if (!textarea) return;
 
-      const lineHeight = getLineHeight();
-      const minHeight = minRows * lineHeight;
-      const maxHeight = maxRows * lineHeight;
+      // Reset to min height to get accurate scrollHeight
+      textarea.style.height = 'inherit';
 
-      // Temporarily set height to auto and hide overflow to get accurate scrollHeight
-      textarea.style.height = 'auto';
-      textarea.style.overflow = 'hidden';
-
-      // Get content height - use scrollHeight but account for padding/border
+      // Get the scroll height
       const scrollHeight = textarea.scrollHeight;
 
-      // Calculate new height within constraints
-      let newHeight = Math.max(scrollHeight, minHeight);
-      let shouldShowScrollbar = false;
+      // Set the height, respecting max
+      const lineHeight = getLineHeight();
+      const maxHeight = maxRows * lineHeight;
 
-      if (newHeight > maxHeight) {
-        newHeight = maxHeight;
-        shouldShowScrollbar = true;
+      if (scrollHeight > maxHeight) {
+        textarea.style.height = `${maxHeight}px`;
+        textarea.style.overflowY = 'auto';
+      } else {
+        textarea.style.height = `${scrollHeight}px`;
+        textarea.style.overflowY = 'hidden';
       }
-
-      // Apply the new height and overflow
-      textarea.style.height = `${newHeight}px`;
-      textarea.style.overflowY = shouldShowScrollbar ? 'auto' : 'hidden';
-    }, [minRows, maxRows, getLineHeight]);
+    }, [maxRows, getLineHeight]);
 
     // Handle value changes
     const handleChange = useCallback(
@@ -196,15 +184,10 @@ export const TextArea = forwardRef<HTMLTextAreaElement, TextAreaProps>(
           defaultValue={defaultValue ?? undefined}
           onChange={handleChange}
           onInput={handleInput}
+          rows={minRows}
           style={{
-            resize: 'none', // Disable manual resize
-            minHeight: `${minRows * getLineHeight()}px`,
-            background: 'transparent',
-            backgroundColor: 'transparent',
-            outline: 'none',
-            boxShadow: 'none',
-            width: '100%',
-            boxSizing: 'border-box',
+            resize: 'none',
+            overflow: 'hidden',
           }}
           {...props}
         />

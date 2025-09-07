@@ -10,7 +10,7 @@ import type { TabInfo, TabContent } from '@/types/tabs';
 
 export interface FooterProps {
   /** Send message handler */
-  onSend: (message: string) => void;
+  onSend: (message: string, metadata?: { expandedPrompt?: string }) => void;
   /** Cancel message handler */
   onCancel?: () => void;
   /** Whether currently loading */
@@ -39,7 +39,7 @@ export const Footer: React.FC<FooterProps> = ({
   onSend,
   onCancel,
   loading,
-  placeholder = 'Ask about this webpage...',
+  placeholder,
   editingMessage,
   onClearEdit,
   availableTabs = [],
@@ -53,8 +53,8 @@ export const Footer: React.FC<FooterProps> = ({
   const chatInputKey = editingMessage ? `edit-${editingMessage}` : 'normal';
 
   // Handle send with edit clearing
-  const handleSend = (message: string) => {
-    onSend(message);
+  const handleSend = (message: string, metadata?: { expandedPrompt?: string }) => {
+    onSend(message, metadata);
     // Clear edit will be handled in ChatPanel after successful send
   };
 
@@ -78,11 +78,14 @@ export const Footer: React.FC<FooterProps> = ({
         onSend={handleSend}
         onCancel={editingMessage ? onClearEdit : onCancel}
         loading={loading}
-        placeholder={placeholder}
+        placeholder={
+          editingMessage ? 'Edit your message...' : placeholder || '\n@ for tabs, / for commands'
+        }
         defaultValue={editingMessage || ''}
         className={editingMessage ? 'editing-mode' : ''}
         availableTabs={availableTabs}
         enableMentions={true}
+        enableSlashCommands={true}
         loadedTabs={loadedTabs}
         onTabRemove={onTabRemove}
         onMentionSelectTab={onMentionSelectTab}

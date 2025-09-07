@@ -52,6 +52,7 @@
 @import './4-features/tab-error-boundary.css' layer(features);
 @import './4-features/tab-loading-indicator.css' layer(features);
 @import './4-features/tab-mention-dropdown.css' layer(features);
+@import './4-features/slash-command-dropdown.css' layer(features);
 
 /* ============================================================================
  * Layer Organization:

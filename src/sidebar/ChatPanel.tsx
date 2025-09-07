@@ -288,7 +288,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
 
   // Handle sending messages
   const handleSendMessage = useCallback(
-    async (userInput: string) => {
+    async (userInput: string, metadata?: { expandedPrompt?: string }) => {
       try {
         let isFirstMessage = false;
         let editedMessageMetadata: Record<string, unknown> = {};
@@ -314,9 +314,16 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
           isFirstMessage = messages.length === 0;
         }
 
-        const messageContent = userInput;
-        const displayContent = userInput;
-        const messageMetadata: Record<string, unknown> = wasEditing ? editedMessageMetadata : {};
+        // Use expanded prompt if available (from slash commands), otherwise use user input
+        const messageContent = metadata?.expandedPrompt || userInput;
+        const displayContent = userInput; // Always show original input in UI
+        const messageMetadata: Record<string, unknown> = wasEditing
+          ? editedMessageMetadata
+          : {
+              ...metadata,
+              // Store that a slash command was used if expanded prompt exists
+              usedSlashCommand: !!metadata?.expandedPrompt,
+            };
 
         // Handle content extraction errors or missing content for first message
         if (isFirstMessage) {
@@ -797,7 +804,6 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
         onSend={handleSendMessage}
         onCancel={cancelMessage}
         loading={isLoading}
-        placeholder={editingMessage ? 'Edit your message...' : 'Ask about this webpage...'}
         editingMessage={editingMessage?.content}
         onClearEdit={handleClearEdit}
         availableTabs={availableTabs}

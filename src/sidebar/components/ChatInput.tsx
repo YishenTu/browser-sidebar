@@ -1,13 +1,21 @@
 import React, { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import { TextArea, TextAreaProps, CloseIcon } from '@ui/index';
 import { useTabMention } from '@hooks/useTabMention';
+import { useSlashCommand } from '@hooks/useSlashCommand';
 import { TabMentionDropdown } from './TabMentionDropdown';
+import { SlashCommandDropdown } from './SlashCommandDropdown';
 import { TabErrorBoundary } from './TabErrorBoundary';
+import { searchSlashCommands, type SlashCommand } from '@/config/slashCommands';
 import type { TabInfo, TabContent } from '@/types/tabs';
 
-export interface ChatInputProps extends Omit<TextAreaProps, 'onKeyDown' | 'value' | 'onChange'> {
+// Single source of truth for ChatInput dimensions
+export const CHAT_INPUT_MIN_ROWS = 2;
+export const CHAT_INPUT_MAX_ROWS = 8;
+
+export interface ChatInputProps
+  extends Omit<TextAreaProps, 'onKeyDown' | 'value' | 'onChange' | 'minRows' | 'maxRows'> {
   /** Callback fired when message is sent */
-  onSend: (message: string) => void;
+  onSend: (message: string, metadata?: { expandedPrompt?: string }) => void;
   /** Callback fired when a tab is selected via @ mention */
   onMentionSelectTab?: (tabId: number) => void;
   /** Current message value (controlled) */
@@ -32,6 +40,8 @@ export interface ChatInputProps extends Omit<TextAreaProps, 'onKeyDown' | 'value
   availableTabs?: TabInfo[];
   /** Whether @ mention functionality is enabled */
   enableMentions?: boolean;
+  /** Whether slash command functionality is enabled */
+  enableSlashCommands?: boolean;
   /** Loaded tabs to display as chips */
   loadedTabs?: Record<number, TabContent>;
   /** Callback fired when a tab chip is removed */
@@ -57,9 +67,10 @@ export const ChatInput = React.forwardRef<HTMLTextAreaElement, ChatInputProps>(
       cancelButtonLabel = 'Cancel',
       ariaLabel = 'Chat message input',
       className,
-      placeholder = 'Type your message here... (use @ to mention tabs)',
+      placeholder,
       availableTabs = [],
       enableMentions = true,
+      enableSlashCommands = true,
       onTabRemove: _onTabRemove,
       onMentionSelectTab,
       ...textAreaProps
@@ -89,9 +100,31 @@ export const ChatInput = React.forwardRef<HTMLTextAreaElement, ChatInputProps>(
     const [filteredTabs, setFilteredTabs] = useState<TabInfo[]>([]);
     const [highlightedTabId, setHighlightedTabId] = useState<number | null>(null);
 
+    // Slash command functionality state
+    const [slashDropdownPosition, setSlashDropdownPosition] = useState<{
+      x: number;
+      y?: number;
+      bottom?: number;
+      width?: number;
+    } | null>(null);
+    const [filteredCommands, setFilteredCommands] = useState<SlashCommand[]>([]);
+    // const [highlightedCommandId, setHighlightedCommandId] = useState<string | null>(null);  // Reserved for future use
+    const [expandedPromptRef, setExpandedPromptRef] = useState<string | null>(null);
+
     // @ Mention hook
     const { mention, showDropdown, detectMention, clearMention } = useTabMention({
       enabled: enableMentions,
+    });
+
+    // Slash command hook
+    const {
+      slashCommand,
+      showDropdown: showSlashDropdown,
+      detectSlashCommand,
+      insertSlashCommand,
+      clearSlashCommand,
+    } = useSlashCommand({
+      enabled: enableSlashCommands,
     });
 
     // Merge refs
@@ -148,41 +181,87 @@ export const ChatInput = React.forwardRef<HTMLTextAreaElement, ChatInputProps>(
       [availableTabs, currentMentionQuery, memoizedFilteredTabs]
     );
 
-    // Handle cursor position change for mention detection
+    // Handle cursor position change for mention and slash command detection
     const handleCursorPositionChange = useCallback(() => {
       const textarea = textAreaRef.current;
-      if (!textarea || !enableMentions) {
-        return;
-      }
+      if (!textarea) return;
 
       const cursorPosition = textarea.selectionStart || 0;
-      // Call detectMention which returns the immediate result
-      const detectedMention = detectMention(currentValue, cursorPosition);
 
-      // Use the immediate detection result, not the hook state
-      if (detectedMention) {
-        // Filter tabs based on query
-        const filtered = filterTabsByQuery(detectedMention.query);
-        setFilteredTabs(filtered);
+      // Check for @ mention
+      if (enableMentions) {
+        const detectedMention = detectMention(currentValue, cursorPosition);
+        if (detectedMention) {
+          // Filter tabs based on query
+          const filtered = filterTabsByQuery(detectedMention.query);
+          setFilteredTabs(filtered);
 
-        // Calculate dropdown position (above input)
-        try {
-          // Align dropdown with the bordered input container rather than the textarea
-          const containerEl = textarea.closest('.chat-input__main') as HTMLElement | null;
-          const rect = (containerEl || textarea).getBoundingClientRect();
-          const x = rect.left;
-          const gap = 6;
-          // Use fixed-position bottom offset so the dropdown bottom aligns above input, independent of its actual height
-          const bottom = Math.max(8, window.innerHeight - rect.top + gap);
-          setDropdownPosition({ x, bottom, width: rect.width });
-        } catch (error) {
+          // Calculate dropdown position (above input)
+          try {
+            const containerEl = textarea.closest('.chat-input__main') as HTMLElement | null;
+            const rect = (containerEl || textarea).getBoundingClientRect();
+            const x = rect.left;
+            const gap = 6;
+            const bottom = Math.max(8, window.innerHeight - rect.top + gap);
+            setDropdownPosition({ x, bottom, width: rect.width });
+          } catch (error) {
+            setDropdownPosition(null);
+          }
+
+          // Clear slash command if @ mention is detected
+          if (enableSlashCommands) {
+            clearSlashCommand();
+            setSlashDropdownPosition(null);
+            setFilteredCommands([]);
+          }
+          return;
+        } else {
+          setFilteredTabs([]);
           setDropdownPosition(null);
         }
-      } else {
-        setFilteredTabs([]);
-        setDropdownPosition(null);
       }
-    }, [currentValue, detectMention, filterTabsByQuery, enableMentions]);
+
+      // Check for slash command
+      if (enableSlashCommands) {
+        const detectedSlash = detectSlashCommand(currentValue, cursorPosition);
+        if (detectedSlash) {
+          // Filter commands based on query
+          const filtered = searchSlashCommands(detectedSlash.query);
+          setFilteredCommands(filtered);
+
+          // Calculate dropdown position (above input)
+          try {
+            const containerEl = textarea.closest('.chat-input__main') as HTMLElement | null;
+            const rect = (containerEl || textarea).getBoundingClientRect();
+            const x = rect.left;
+            const gap = 6;
+            const bottom = Math.max(8, window.innerHeight - rect.top + gap);
+            setSlashDropdownPosition({ x, bottom, width: rect.width });
+          } catch (error) {
+            setSlashDropdownPosition(null);
+          }
+
+          // Clear @ mention if slash command is detected
+          if (enableMentions) {
+            clearMention();
+            setDropdownPosition(null);
+            setFilteredTabs([]);
+          }
+        } else {
+          setFilteredCommands([]);
+          setSlashDropdownPosition(null);
+        }
+      }
+    }, [
+      currentValue,
+      detectMention,
+      filterTabsByQuery,
+      enableMentions,
+      detectSlashCommand,
+      enableSlashCommands,
+      clearMention,
+      clearSlashCommand,
+    ]);
 
     // Handle value changes
     const handleValueChange = useCallback(
@@ -201,20 +280,23 @@ export const ChatInput = React.forwardRef<HTMLTextAreaElement, ChatInputProps>(
         const newValue = event.target.value;
         handleValueChange(newValue);
 
-        // Trigger mention detection immediately with the new value
-        const textarea = textAreaRef.current;
-        if (textarea && enableMentions) {
-          const cursorPosition = textarea.selectionStart || 0;
-          const detectedMention = detectMention(newValue, cursorPosition);
+        // Clear expanded prompt if user manually edits
+        setExpandedPromptRef(null);
 
+        // Trigger detection immediately with the new value
+        const textarea = textAreaRef.current;
+        if (!textarea) return;
+
+        const cursorPosition = textarea.selectionStart || 0;
+
+        // Check for @ mention first
+        if (enableMentions) {
+          const detectedMention = detectMention(newValue, cursorPosition);
           if (detectedMention) {
-            // Filter tabs and set up dropdown immediately
             const filtered = filterTabsByQuery(detectedMention.query);
             setFilteredTabs(filtered);
 
-            // Calculate dropdown position (above input)
             try {
-              // Align dropdown with the bordered input container rather than the textarea
               const containerEl = textarea.closest('.chat-input__main') as HTMLElement | null;
               const rect = (containerEl || textarea).getBoundingClientRect();
               const x = rect.left;
@@ -224,13 +306,60 @@ export const ChatInput = React.forwardRef<HTMLTextAreaElement, ChatInputProps>(
             } catch (error) {
               setDropdownPosition(null);
             }
+
+            // Clear slash command
+            if (enableSlashCommands) {
+              clearSlashCommand();
+              setSlashDropdownPosition(null);
+              setFilteredCommands([]);
+            }
+            return;
           } else {
             setFilteredTabs([]);
             setDropdownPosition(null);
           }
         }
+
+        // Check for slash command
+        if (enableSlashCommands) {
+          const detectedSlash = detectSlashCommand(newValue, cursorPosition);
+          if (detectedSlash) {
+            const filtered = searchSlashCommands(detectedSlash.query);
+            setFilteredCommands(filtered);
+
+            try {
+              const containerEl = textarea.closest('.chat-input__main') as HTMLElement | null;
+              const rect = (containerEl || textarea).getBoundingClientRect();
+              const x = rect.left;
+              const gap = 6;
+              const bottom = Math.max(8, window.innerHeight - rect.top + gap);
+              setSlashDropdownPosition({ x, bottom, width: rect.width });
+            } catch (error) {
+              setSlashDropdownPosition(null);
+            }
+
+            // Clear @ mention
+            if (enableMentions) {
+              clearMention();
+              setDropdownPosition(null);
+              setFilteredTabs([]);
+            }
+          } else {
+            setFilteredCommands([]);
+            setSlashDropdownPosition(null);
+          }
+        }
       },
-      [handleValueChange, detectMention, filterTabsByQuery, enableMentions]
+      [
+        handleValueChange,
+        detectMention,
+        filterTabsByQuery,
+        enableMentions,
+        detectSlashCommand,
+        enableSlashCommands,
+        clearMention,
+        clearSlashCommand,
+      ]
     );
 
     // Send message
@@ -248,11 +377,26 @@ export const ChatInput = React.forwardRef<HTMLTextAreaElement, ChatInputProps>(
           handleValueChange('');
         }
 
-        await onSend(trimmedMessage);
+        // Pass expanded prompt as metadata if available
+        await onSend(
+          trimmedMessage,
+          expandedPromptRef ? { expandedPrompt: expandedPromptRef } : undefined
+        );
+
+        // Clear expanded prompt after sending
+        setExpandedPromptRef(null);
       } finally {
         setIsSending(false);
       }
-    }, [currentValue, onSend, clearOnSend, handleValueChange, isSending, loading]);
+    }, [
+      currentValue,
+      onSend,
+      clearOnSend,
+      handleValueChange,
+      isSending,
+      loading,
+      expandedPromptRef,
+    ]);
 
     // Handle cancel
     const handleCancel = useCallback(() => {
@@ -313,6 +457,54 @@ export const ChatInput = React.forwardRef<HTMLTextAreaElement, ChatInputProps>(
       }, 0);
     }, [clearMention]);
 
+    // Handle slash command selection
+    const handleSlashCommandSelect = useCallback(
+      (command: SlashCommand) => {
+        const textarea = textAreaRef.current;
+        if (!textarea || !slashCommand) return;
+
+        // Insert the slash command and get the expanded prompt
+        const result = insertSlashCommand(currentValue, command, slashCommand);
+
+        // Update the display text (with slash command)
+        handleValueChange(result.newText);
+
+        // Store the expanded prompt for sending
+        setExpandedPromptRef(result.expandedPrompt);
+
+        // Clear slash command state and dropdown
+        clearSlashCommand();
+        setFilteredCommands([]);
+        setSlashDropdownPosition(null);
+
+        // Restore cursor position
+        setTimeout(() => {
+          if (textAreaRef.current) {
+            textAreaRef.current.setSelectionRange(
+              result.newCursorPosition,
+              result.newCursorPosition
+            );
+            textAreaRef.current.focus();
+          }
+        }, 0);
+      },
+      [slashCommand, currentValue, handleValueChange, insertSlashCommand, clearSlashCommand]
+    );
+
+    // Handle slash dropdown close
+    const handleSlashClose = useCallback(() => {
+      clearSlashCommand();
+      setFilteredCommands([]);
+      setSlashDropdownPosition(null);
+
+      // Return focus to textarea
+      setTimeout(() => {
+        if (textAreaRef.current) {
+          textAreaRef.current.focus();
+        }
+      }, 0);
+    }, [clearSlashCommand]);
+
     // Handle keyboard shortcuts
     const handleKeyDown = useCallback(
       (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -328,6 +520,19 @@ export const ChatInput = React.forwardRef<HTMLTextAreaElement, ChatInputProps>(
             // Prevent default to stop cursor movement in textarea
             event.preventDefault();
             // The TabMentionDropdown will handle these keys via its own listener
+            return;
+          }
+        }
+
+        // If slash command dropdown is showing, let it handle certain keys
+        if (showSlashDropdown && slashDropdownPosition && filteredCommands.length > 0) {
+          // Let the dropdown handle navigation keys
+          if (
+            ['ArrowDown', 'ArrowUp', 'Enter', 'Escape', 'Tab', 'Home', 'End'].includes(event.key)
+          ) {
+            // Prevent default to stop cursor movement in textarea
+            event.preventDefault();
+            // The SlashCommandDropdown will handle these keys via its own listener
             return;
           }
         }
@@ -377,6 +582,9 @@ export const ChatInput = React.forwardRef<HTMLTextAreaElement, ChatInputProps>(
         showDropdown,
         dropdownPosition,
         filteredTabs,
+        showSlashDropdown,
+        slashDropdownPosition,
+        filteredCommands,
         handleCursorPositionChange,
       ]
     );
@@ -417,6 +625,7 @@ export const ChatInput = React.forwardRef<HTMLTextAreaElement, ChatInputProps>(
         <div className="chat-input__main">
           <div className="chat-input__textarea-container">
             <TextArea
+              {...textAreaProps}
               ref={textAreaRef}
               value={currentValue}
               onChange={handleTextAreaChange}
@@ -435,10 +644,9 @@ export const ChatInput = React.forwardRef<HTMLTextAreaElement, ChatInputProps>(
                   ? `tab-option-${highlightedTabId}`
                   : undefined
               }
-              minRows={1}
-              maxRows={8}
+              minRows={CHAT_INPUT_MIN_ROWS}
+              maxRows={CHAT_INPUT_MAX_ROWS}
               tabIndex={0}
-              {...textAreaProps}
             />
           </div>
 
@@ -460,6 +668,29 @@ export const ChatInput = React.forwardRef<HTMLTextAreaElement, ChatInputProps>(
                 onClose={handleMentionClose}
                 onHighlightChange={setHighlightedTabId}
                 maxVisibleTabs={10}
+                maxHeight={240}
+              />
+            </TabErrorBoundary>
+          )}
+
+          {/* Slash command dropdown */}
+          {enableSlashCommands && showSlashDropdown && slashDropdownPosition && (
+            <TabErrorBoundary
+              boundaryId="slash-command-dropdown"
+              maxRetries={1}
+              onError={(_error, _errorInfo) => {
+                // Close dropdown on error to prevent UI issues
+                handleSlashClose();
+              }}
+            >
+              <SlashCommandDropdown
+                commands={filteredCommands}
+                onSelect={handleSlashCommandSelect}
+                position={slashDropdownPosition}
+                isOpen={true}
+                onClose={handleSlashClose}
+                // onHighlightChange={setHighlightedCommandId}
+                maxVisibleCommands={10}
                 maxHeight={240}
               />
             </TabErrorBoundary>
