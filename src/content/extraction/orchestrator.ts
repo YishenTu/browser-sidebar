@@ -200,6 +200,8 @@ async function performExtraction(
   let author: string | undefined;
   let extractionMethod: ExtractionMethod = 'defuddle';
   let metadata: ReturnType<typeof getPageMetadata>;
+  // Prefer RAW extractor's table detection when available
+  let hasTablesFromRaw: boolean | null = null;
 
   // Check for user selection first
   const selection = captureSelection();
@@ -266,6 +268,8 @@ async function performExtraction(
         textContent = rawResult.textContent || '';
         author = rawResult.author;
         extractionMethod = 'raw';
+        // Capture RAW's table detection for accurate metadata downstream
+        hasTablesFromRaw = Boolean(rawResult.metadata?.hasTables);
       } else {
         // No content extracted from raw mode
       }
@@ -304,7 +308,8 @@ async function performExtraction(
 
       // Then normalize URLs. In RAW mode, also normalize link hrefs to absolute
       // so table and reference links remain valid outside the page context.
-      const normalizeLinkHrefs = extractionMethod === 'raw' ? true : includeLinks;
+      // Align with includeLinks to avoid mismatches when hrefs were removed upstream.
+      const normalizeLinkHrefs = includeLinks;
       htmlContent = normalizeUrls(htmlContent, window.location.href, normalizeLinkHrefs);
     } catch (error) {
       // HTML cleaning/normalization failed, using original content
@@ -386,7 +391,23 @@ async function performExtraction(
   let hasTables = false;
 
   try {
-    hasTables = detectTables(markdown);
+    if (extractionMethod === 'raw') {
+      // Prefer RAW extractor's computed value when available
+      if (hasTablesFromRaw !== null) {
+        hasTables = hasTablesFromRaw;
+      } else {
+        // Fallback: detect by parsing HTML and checking for <table>
+        try {
+          const parser = new DOMParser();
+          const doc = parser.parseFromString(htmlContent || '', 'text/html');
+          hasTables = Boolean(doc.querySelector('table'));
+        } catch {
+          hasTables = /<table\b/i.test(htmlContent || '');
+        }
+      }
+    } else {
+      hasTables = detectTables(markdown);
+    }
   } catch (error) {
     // Feature detection failed, defaulting to false
   }
@@ -414,10 +435,18 @@ async function performExtraction(
   let excerpt = '';
 
   try {
-    excerpt = generateExcerpt(clampedMarkdown);
+    // For RAW (HTML content), generate excerpt from plain text for better quality
+    if (extractionMethod === 'raw') {
+      const basis = textContent || '';
+      excerpt = generateExcerpt(basis);
+    } else {
+      excerpt = generateExcerpt(clampedMarkdown);
+    }
   } catch (error) {
     // Simple fallback excerpt
-    const cleanText = clampedMarkdown.replace(/[#*_`]/g, '').trim();
+    const cleanText = (extractionMethod === 'raw' ? textContent || '' : clampedMarkdown)
+      .replace(/[#*_`]/g, '')
+      .trim();
     excerpt = cleanText.length > 200 ? cleanText.substring(0, 197) + '...' : cleanText;
   }
 
