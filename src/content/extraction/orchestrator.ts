@@ -240,8 +240,7 @@ async function performExtraction(
         inject_pseudo: false,
 
         // DEBUG TOGGLES - Internal testing phase
-        optimize_tokens: true, // Phase 1: Strip & flatten HTML (40-50% token reduction)
-        convert_to_markdown: false, // Phase 2: Convert to Markdown (20-30% additional reduction)
+        optimize_tokens: true, // Strip & flatten HTML (40-50% token reduction)
 
         // All stripping toggles default to false (don't strip) for testing
         strip_invisible: false,
@@ -329,21 +328,12 @@ async function performExtraction(
     }
   }
 
-  // Step 3: Convert HTML to Markdown with graceful degradation (skip for RAW mode if already converted)
+  // Step 3: Convert HTML to Markdown with graceful degradation
   let markdown = '';
   if (htmlContent && htmlContent.trim()) {
-    // For RAW mode with markdown conversion enabled, content is already in markdown format
-    if (extractionMethod === 'raw' && htmlContent.startsWith('#')) {
-      // Content appears to already be in markdown format from raw extractor
+    if (extractionMethod === 'raw') {
+      // Raw mode - use HTML directly without conversion
       markdown = htmlContent;
-
-      // If we have a selection with raw mode, still prepend it
-      if (selectionMarkdown) {
-        markdown = `## Selected Content\n\n${selectionMarkdown}\n\n---\n\n## Full Page Content\n\n${markdown}`;
-      }
-    } else if (extractionMethod === 'raw') {
-      // Raw mode but still in HTML format (fallback or error case)
-      markdown = htmlContent; // Use raw HTML directly
 
       // If we have a selection with raw mode, still prepend it
       if (selectionMarkdown) {
