@@ -15,6 +15,8 @@ export interface SlashCommand {
   description: string;
   /** The prompt template that replaces the command */
   prompt: string;
+  /** Optional model to use for this command (overrides selected model for one turn) */
+  model?: string;
 }
 
 /**
@@ -63,6 +65,12 @@ export const SLASH_COMMANDS: SlashCommand[] = [
     name: 'comment',
     description: 'Summarize comments',
     prompt: `总结网友评论`,
+  },
+  {
+    name: 'fact-check',
+    description: 'Validate the information',
+    prompt: `Search the web for credible sources to validate and fact check the provided content`,
+    model: 'gemini-2.5-flash',
   },
 ];
 

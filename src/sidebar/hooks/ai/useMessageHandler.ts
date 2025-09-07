@@ -115,8 +115,8 @@ function createChatServiceStreamHandler(
       // Get last response ID for conversation continuity (OpenAI Response API)
       const previousResponseId = uiStore.getLastResponseId();
 
-      // Get the system prompt
-      const systemPrompt = getSystemPrompt();
+      // Get the system prompt with provider type
+      const systemPrompt = getSystemPrompt(provider.type);
 
       // Start streaming using ChatService
       const stream = chatServiceRef.current.stream(messages, {

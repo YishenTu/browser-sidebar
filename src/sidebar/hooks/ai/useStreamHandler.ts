@@ -88,8 +88,8 @@ export function useStreamHandler(): UseStreamHandlerReturn {
         // Get last response ID for conversation continuity (OpenAI Response API)
         const previousResponseId = uiStore.getLastResponseId();
 
-        // Get the system prompt
-        const systemPrompt = getSystemPrompt();
+        // Get the system prompt with provider type
+        const systemPrompt = getSystemPrompt(provider.type);
 
         // Start streaming with response ID if available
         const stream = provider.streamChat(messages, {

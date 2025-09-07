@@ -50,7 +50,7 @@ export interface UseSlashCommandReturn {
     text: string,
     command: SlashCommand,
     detection: SlashCommandDetection
-  ) => { newText: string; newCursorPosition: number; expandedPrompt: string };
+  ) => { newText: string; newCursorPosition: number; expandedPrompt: string; model?: string };
   /** Function to clear current slash command state */
   clearSlashCommand: () => void;
   /** Function to manually set slash command state */
@@ -213,7 +213,7 @@ export function useSlashCommand(options: UseSlashCommandOptions = {}): UseSlashC
       text: string,
       command: SlashCommand,
       detection: SlashCommandDetection
-    ): { newText: string; newCursorPosition: number; expandedPrompt: string } => {
+    ): { newText: string; newCursorPosition: number; expandedPrompt: string; model?: string } => {
       const { startIndex } = detection;
 
       // Find the end of the slash command
@@ -253,6 +253,7 @@ export function useSlashCommand(options: UseSlashCommandOptions = {}): UseSlashC
         newText: displayText,
         newCursorPosition,
         expandedPrompt,
+        model: command.model,
       };
     },
     []

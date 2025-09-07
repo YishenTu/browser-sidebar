@@ -15,7 +15,7 @@ export const CHAT_INPUT_MAX_ROWS = 8;
 export interface ChatInputProps
   extends Omit<TextAreaProps, 'onKeyDown' | 'value' | 'onChange' | 'minRows' | 'maxRows'> {
   /** Callback fired when message is sent */
-  onSend: (message: string, metadata?: { expandedPrompt?: string }) => void;
+  onSend: (message: string, metadata?: { expandedPrompt?: string; modelOverride?: string }) => void;
   /** Callback fired when a tab is selected via @ mention */
   onMentionSelectTab?: (tabId: number) => void;
   /** Current message value (controlled) */
@@ -110,6 +110,7 @@ export const ChatInput = React.forwardRef<HTMLTextAreaElement, ChatInputProps>(
     const [filteredCommands, setFilteredCommands] = useState<SlashCommand[]>([]);
     // const [highlightedCommandId, setHighlightedCommandId] = useState<string | null>(null);  // Reserved for future use
     const [expandedPromptRef, setExpandedPromptRef] = useState<string | null>(null);
+    const [modelOverrideRef, setModelOverrideRef] = useState<string | null>(null);
 
     // @ Mention hook
     const { mention, showDropdown, detectMention, clearMention } = useTabMention({
@@ -280,8 +281,9 @@ export const ChatInput = React.forwardRef<HTMLTextAreaElement, ChatInputProps>(
         const newValue = event.target.value;
         handleValueChange(newValue);
 
-        // Clear expanded prompt if user manually edits
+        // Clear expanded prompt and model override if user manually edits
         setExpandedPromptRef(null);
+        setModelOverrideRef(null);
 
         // Trigger detection immediately with the new value
         const textarea = textAreaRef.current;
@@ -377,14 +379,20 @@ export const ChatInput = React.forwardRef<HTMLTextAreaElement, ChatInputProps>(
           handleValueChange('');
         }
 
-        // Pass expanded prompt as metadata if available
+        // Pass expanded prompt and model override as metadata if available
         await onSend(
           trimmedMessage,
-          expandedPromptRef ? { expandedPrompt: expandedPromptRef } : undefined
+          expandedPromptRef || modelOverrideRef
+            ? {
+                ...(expandedPromptRef ? { expandedPrompt: expandedPromptRef } : {}),
+                ...(modelOverrideRef ? { modelOverride: modelOverrideRef } : {}),
+              }
+            : undefined
         );
 
-        // Clear expanded prompt after sending
+        // Clear expanded prompt and model override after sending
         setExpandedPromptRef(null);
+        setModelOverrideRef(null);
       } finally {
         setIsSending(false);
       }
@@ -396,6 +404,7 @@ export const ChatInput = React.forwardRef<HTMLTextAreaElement, ChatInputProps>(
       isSending,
       loading,
       expandedPromptRef,
+      modelOverrideRef,
     ]);
 
     // Handle cancel
@@ -471,6 +480,11 @@ export const ChatInput = React.forwardRef<HTMLTextAreaElement, ChatInputProps>(
 
         // Store the expanded prompt for sending
         setExpandedPromptRef(result.expandedPrompt);
+
+        // Store the model override if specified
+        if (result.model) {
+          setModelOverrideRef(result.model);
+        }
 
         // Clear slash command state and dropdown
         clearSlashCommand();

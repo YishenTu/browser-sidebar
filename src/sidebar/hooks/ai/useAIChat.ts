@@ -73,8 +73,8 @@ export function useAIChat(options: UseAIChatOptions = {}): UseAIChatReturn {
           // there is no active stream or when provider type differs.
           const existing = chatServiceRef.current.getProvider();
           const streaming = chatServiceRef.current.isStreaming();
-          if (!existing || existing.type !== activeProvider.type) {
-            // Only set if not streaming to prevent unintended cancellation
+          // If the provider instance differs (even if type is the same), update it
+          if (!existing || existing !== activeProvider) {
             if (!streaming) {
               chatServiceRef.current.setProvider(activeProvider);
             }
@@ -224,7 +224,8 @@ export function useAIChat(options: UseAIChatOptions = {}): UseAIChatReturn {
     if (newActiveProvider && chatServiceRef.current) {
       const existing = chatServiceRef.current.getProvider();
       const streaming = chatServiceRef.current.isStreaming();
-      if (!existing || existing.type !== newActiveProvider.type) {
+      // Always replace if the instance changed (regardless of type)
+      if (!existing || existing !== newActiveProvider) {
         if (!streaming) {
           chatServiceRef.current.setProvider(newActiveProvider);
         }
@@ -265,6 +266,11 @@ export function useAIChat(options: UseAIChatOptions = {}): UseAIChatReturn {
       }
 
       const { skipUserMessage = false, displayContent, metadata } = options;
+
+      // Model override variables need to be accessible in finally block
+      let modelOverride: string | undefined;
+      let originalModel: string | undefined;
+      let switchedProvider = false;
 
       try {
         // Clear any previous errors
@@ -349,9 +355,50 @@ export function useAIChat(options: UseAIChatOptions = {}): UseAIChatReturn {
         }
 
         try {
-          // Get the selected model from settings
-          const selectedModel = settingsStore.settings.selectedModel;
-          const modelInfo = getModelById(selectedModel);
+          // Check for model override from slash commands
+          modelOverride = metadata?.['modelOverride'] as string | undefined;
+
+          // If there's a model override, temporarily switch to that model
+          if (modelOverride) {
+            originalModel = settingsStore.settings.selectedModel;
+            const overrideModelInfo = getModelById(modelOverride);
+
+            if (overrideModelInfo) {
+              // Check if we need to switch providers
+              const currentProviderType = activeProvider.type;
+              const targetProviderType = settingsStore.getProviderTypeForModel(modelOverride);
+
+              if (targetProviderType && targetProviderType !== currentProviderType) {
+                // Switch to the target provider (this rebinds ChatService provider)
+                await serviceSwitchProvider(targetProviderType);
+                switchedProvider = true;
+              }
+
+              // Temporarily update the selected model in settings
+              await settingsStore.updateSelectedModel(modelOverride);
+
+              // Ensure providers reflect the new model even if provider type didn't change
+              await serviceInitializeProviders();
+              const updatedProvider = serviceGetActiveProvider();
+              if (updatedProvider && chatServiceRef.current) {
+                // Safe here because we are not streaming yet
+                chatServiceRef.current.setProvider(updatedProvider);
+              }
+
+              // If previous provider was OpenAI and model changed, clear response id
+              const prevType = settingsStore.getProviderTypeForModel(originalModel);
+              if (
+                prevType === 'openai' &&
+                (targetProviderType !== 'openai' || modelOverride !== originalModel)
+              ) {
+                uiStore.setLastResponseId(null);
+              }
+            }
+          }
+
+          // Get the model info (either override or selected)
+          const currentModel = modelOverride || settingsStore.settings.selectedModel;
+          const modelInfo = getModelById(currentModel);
 
           // Create assistant message for streaming with model metadata
           const assistantMessage = messageStore.addMessage({
@@ -418,8 +465,11 @@ export function useAIChat(options: UseAIChatOptions = {}): UseAIChatReturn {
           // Get last response ID for conversation continuity (OpenAI Response API)
           const previousResponseId = uiStore.getLastResponseId();
 
-          // Get the system prompt
-          const systemPrompt = getSystemPrompt();
+          // Get the system prompt with the actual provider that will handle the stream.
+          // If a model override occurred, ChatService's provider may have changed.
+          const providerForPrompt =
+            chatServiceRef.current?.getProvider() || serviceGetActiveProvider() || activeProvider;
+          const systemPrompt = getSystemPrompt(providerForPrompt.type);
 
           // Ensure ChatService has an active provider (in case init just finished)
           if (chatServiceRef.current && !chatServiceRef.current.getProvider() && activeProvider) {
@@ -587,9 +637,43 @@ export function useAIChat(options: UseAIChatOptions = {}): UseAIChatReturn {
         } catch {
           // Ignore cleanup errors
         }
+        // Restore original model if we temporarily switched for a slash command
+        if (modelOverride && originalModel) {
+          try {
+            // Restore the original model
+            await settingsStore.updateSelectedModel(originalModel);
+
+            if (switchedProvider) {
+              // Switch back to the original provider type
+              const originalProviderType = settingsStore.getProviderTypeForModel(originalModel);
+              if (originalProviderType) {
+                await serviceSwitchProvider(originalProviderType);
+              }
+            } else {
+              // Provider type didn't change; reinitialize to apply model
+              await serviceInitializeProviders();
+              const restoredProvider = serviceGetActiveProvider();
+              if (restoredProvider && chatServiceRef.current) {
+                chatServiceRef.current.setProvider(restoredProvider);
+              }
+            }
+          } catch (restoreError) {
+            // Log but don't throw - we don't want to break the chat flow
+            console.error('Failed to restore original model after slash command:', restoreError);
+          }
+        }
       }
     },
-    [enabled, settingsStore, uiStore, serviceGetActiveProvider, messageStore]
+    [
+      enabled,
+      settingsStore,
+      uiStore,
+      serviceGetActiveProvider,
+      messageStore,
+      serviceSwitchProvider,
+      serviceInitializeProviders,
+      chatServiceRef,
+    ]
   );
 
   // Cleanup on unmount only (empty dependency array)

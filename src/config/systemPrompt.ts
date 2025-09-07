@@ -7,8 +7,20 @@
 
 /**
  * Get the system prompt for the AI assistant
+ * @param providerType - The type of AI provider being used (optional)
  */
-export function getSystemPrompt(): string {
+export function getSystemPrompt(
+  providerType?: 'openai' | 'gemini' | 'openrouter' | 'openai_compat'
+): string {
+  // Web search section - only included for OpenAI and Gemini providers
+  const webSearchSection =
+    providerType === 'openai' || providerType === 'gemini'
+      ? `
+## Available Tools
+- **Web Search**: Can search the web for current information beyond provided tab content
+- Use web search to supplement tab analysis when users need additional context or recent information`
+      : '';
+
   return `
 # System Instruction
 You are an AI assistant integrated into a browser sidebar, helping users understand and analyze web content they're actively viewing.
@@ -55,9 +67,5 @@ You receive browser content in a structured XML format:
   - Information found in the provided tab content
   - General knowledge or reasoning you're applying
   - Information from web search (when available)
-- If the user asks about something not in the provided tabs, acknowledge this and offer to search if available
-
-## Available Tools
-- **Web Search**: Can search the web for current information beyond provided tab content
-- Use web search to supplement tab analysis when users need additional context or recent information`;
+- If the user asks about something not in the provided tabs, acknowledge this and offer to search if available${webSearchSection}`;
 }

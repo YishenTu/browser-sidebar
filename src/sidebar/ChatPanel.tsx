@@ -288,7 +288,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
 
   // Handle sending messages
   const handleSendMessage = useCallback(
-    async (userInput: string, metadata?: { expandedPrompt?: string }) => {
+    async (userInput: string, metadata?: { expandedPrompt?: string; modelOverride?: string }) => {
       try {
         let isFirstMessage = false;
         let editedMessageMetadata: Record<string, unknown> = {};
@@ -323,6 +323,8 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
               ...metadata,
               // Store that a slash command was used if expanded prompt exists
               usedSlashCommand: !!metadata?.expandedPrompt,
+              // Pass model override if provided (from slash commands)
+              ...(metadata?.modelOverride ? { modelOverride: metadata.modelOverride } : {}),
             };
 
         // Handle content extraction errors or missing content for first message
