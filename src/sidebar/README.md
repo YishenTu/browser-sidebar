@@ -22,6 +22,7 @@ sidebar/
 │   ├── MessageBubble.tsx     # Individual message rendering
 │   ├── MessageList.tsx       # Virtualized message display
 │   ├── ModelSelector.tsx     # AI model/provider selection
+│   ├── SlashCommandDropdown.tsx # Slash command quick actions
 │   ├── SearchSources.tsx     # Search source display
 │   ├── Settings/             # Settings components
 │   │   └── Settings.tsx      # Main settings interface
@@ -58,6 +59,7 @@ sidebar/
 │   │   ├── useMessageHandler.ts # Message handling
 │   │   ├── useProviderManager.ts # Provider switching
 │   │   └── useStreamHandler.ts # Stream processing
+│   ├── useSlashCommand.ts    # Slash command detection/expansion
 │   ├── useAIChat.ts         # Legacy AI chat hook
 │   ├── useContentExtraction.ts # Content extraction logic
 │   ├── useDragPosition.ts   # Drag positioning hook
@@ -93,6 +95,7 @@ sidebar/
 │   ├── 4-features/          # Feature layer
 │   │   ├── multi-tab-content.css # Multi-tab styles
 │   │   ├── search-sources.css # Search source styles
+│   │   ├── slash-command-dropdown.css # Slash command dropdown styles
 │   │   ├── tab-content-item.css # Tab content styles
 │   │   ├── tab-error-boundary.css # Error boundary styles
 │   │   ├── tab-loading-indicator.css # Loading styles
@@ -139,6 +142,7 @@ The main orchestrator component that:
 #### AI Features
 
 - **ModelSelector**: Provider and model switching with capabilities
+- **Slash Commands**: Type `/` in the input to open a command dropdown
 - **ThinkingWrapper**: Real-time reasoning with elapsed time
 - **TypingIndicator**: Visual feedback during AI processing
 
@@ -212,6 +216,7 @@ The styles follow a structured layer approach:
 - `useProviderManager`: Provider switching and fallbacks (backed by
   `src/services/engine/EngineManagerService.ts` under the hood)
 - `useMessageHandler`: Message processing
+- `useSlashCommand`: Detects `/` commands and expands them to full prompts
 
 ### Utility Hooks
 
@@ -292,3 +297,15 @@ npm test -- tests/sidebar/accessibility # A11y tests
 - Sidebar may not appear on restricted pages (chrome://, file://)
 - Some sites with strict CSP may block Shadow DOM
 - Performance degrades with 10,000+ messages (use pagination)
+
+## Slash Commands
+
+Slash commands speed up common tasks by expanding shorthand like `/summarize` into
+full prompts, with optional per-command model overrides.
+
+- Type `/` in the chat input to open the dropdown
+- Filter by typing, navigate with `↑/↓`, confirm with `Enter`
+- The visible text keeps `/command`; the sent prompt uses the expanded template
+- Some commands select a model for one turn (e.g., `/fact-check` → `gemini-2.5-flash`)
+
+Built-ins: `summarize`, `explain`, `analyze`, `comment`, `fact-check`.

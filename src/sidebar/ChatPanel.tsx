@@ -456,28 +456,13 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
       const previousModel = selectedModel;
 
       try {
-        // Get the provider type for this model
-        const providerType = getProviderTypeForModel(modelId);
-
-        // Check if the API key exists for this provider
+        // Gate by availability list (driven by stored keys + compat providers)
         const state = useSettingsStore.getState();
-        const apiKeys = state.settings.apiKeys;
+        const isAvailable = state.settings.availableModels.some(
+          m => m.id === modelId && m.available
+        );
 
-        let hasApiKey = false;
-        if (providerType === 'openai') {
-          hasApiKey = !!apiKeys?.openai;
-        } else if (providerType === 'gemini') {
-          hasApiKey = !!apiKeys?.google;
-        } else if (providerType === 'openrouter') {
-          hasApiKey = !!apiKeys?.openrouter;
-        } else {
-          // For OpenAI-compatible providers, check if the model exists in available models
-          // If it's there, it means the provider has been configured
-          const availableModels = state.settings.availableModels;
-          hasApiKey = availableModels.some(m => m.id === modelId && m.available);
-        }
-
-        if (!hasApiKey) {
+        if (!isAvailable) {
           // Show settings panel if API key is missing
           setShowSettings(true);
           // User will see the settings panel to add API key
@@ -491,6 +476,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
           await updateSelectedModel(modelId);
 
           // Then switch the provider
+          const providerType = getProviderTypeForModel(modelId);
           if (providerType) {
             await switchProvider(providerType);
           }

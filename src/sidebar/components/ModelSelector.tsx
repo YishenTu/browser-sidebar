@@ -1,12 +1,6 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo } from 'react';
 import { Dropdown, DropdownGroup } from '@ui/Dropdown';
-import {
-  getModelsByProvider,
-  getModelsByProviderId,
-  getDefaultModelForProvider,
-} from '../../config/models';
 import { useSettingsStore } from '@/data/store/settings';
-import { listOpenAICompatProviders } from '@/data/storage/keys/compat';
 
 export interface ModelSelectorProps {
   /** Current selected model ID */
@@ -43,41 +37,7 @@ export function ModelSelector({
   className,
   'aria-label': ariaLabel = 'Select AI model',
 }: ModelSelectorProps) {
-  // Get API keys from settings store
-  const apiKeys = useSettingsStore(state => state.settings.apiKeys);
   const availableModels = useSettingsStore(state => state.settings.availableModels);
-
-  // Load OpenAI-compatible providers that have stored keys
-  const [compatProviders, setCompatProviders] = useState<
-    Array<{ id: string; name: string; baseURL: string; model?: { id: string; name: string } }>
-  >([]);
-
-  // Reload compat providers whenever availableModels or apiKeys change
-  // This ensures we pick up newly saved providers (both standard and compat)
-  useEffect(() => {
-    let cancelled = false;
-
-    const loadCompatProviders = async () => {
-      try {
-        const providers = await listOpenAICompatProviders();
-        if (!cancelled) {
-          setCompatProviders(
-            providers.map(p => ({ id: p.id, name: p.name, baseURL: p.baseURL, model: p.model }))
-          );
-        }
-      } catch (error) {
-        console.error('Failed to load compat providers:', error);
-        if (!cancelled) setCompatProviders([]);
-      }
-    };
-
-    // Always reload compat providers when settings change
-    loadCompatProviders();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [availableModels, apiKeys]); // Watch both for changes
 
   // Check if selected model's provider has an API key
   // Keep legacy helper available if needed for future validation
@@ -85,58 +45,49 @@ export function ModelSelector({
 
   // Group models by provider for the dropdown
   const dropdownGroups = useMemo<DropdownGroup[]>(() => {
-    const groups: DropdownGroup[] = [];
+    if (!availableModels || availableModels.length === 0) return [];
 
-    // Core providers: only include if a key exists
-    if (apiKeys?.openai) {
-      const openaiModels = getModelsByProvider('openai');
-      if (openaiModels.length > 0) {
-        groups.push({
-          label: 'OpenAI',
-          options: openaiModels.map(model => ({ value: model.id, label: model.name })),
-        });
+    // Group by provider id/name
+    const labelFor = (p: string) => {
+      switch (p) {
+        case 'openai':
+          return 'OpenAI';
+        case 'gemini':
+          return 'Google Gemini';
+        case 'openrouter':
+          return 'OpenRouter';
+        case 'deepseek':
+          return 'DeepSeek';
+        case 'qwen':
+          return 'Qwen';
+        case 'zhipu':
+          return 'Zhipu';
+        case 'kimi':
+          return 'Kimi';
+        default:
+          return p;
       }
+    };
+
+    const order = (p: string) => {
+      if (p === 'openai') return 0;
+      if (p === 'gemini') return 1;
+      if (p === 'openrouter') return 2;
+      return 3;
+    };
+
+    const grouped = new Map<string, { value: string; label: string }[]>();
+    for (const m of availableModels) {
+      const key = m.provider;
+      const arr = grouped.get(key) || [];
+      arr.push({ value: m.id, label: m.name });
+      grouped.set(key, arr);
     }
 
-    if (apiKeys?.google) {
-      const geminiModels = getModelsByProvider('gemini');
-      if (geminiModels.length > 0) {
-        groups.push({
-          label: 'Google Gemini',
-          options: geminiModels.map(model => ({ value: model.id, label: model.name })),
-        });
-      }
-    }
-
-    if (apiKeys?.openrouter) {
-      const openrouterModels = getModelsByProvider('openrouter');
-      if (openrouterModels.length > 0) {
-        groups.push({
-          label: 'OpenRouter',
-          options: openrouterModels.map(model => ({ value: model.id, label: model.name })),
-        });
-      }
-    }
-
-    // OpenAI-compatible providers (built-in or custom) loaded from storage
-    for (const p of compatProviders) {
-      // Try built-in model list first (from config)
-      const presetModels = getModelsByProviderId(p.id);
-      let options: { value: string; label: string }[] = [];
-      if (presetModels.length > 0) {
-        options = presetModels.map(m => ({ value: m.id, label: m.name }));
-      } else if (p.model) {
-        // Custom provider with a single model stored
-        options = [{ value: p.model.id, label: p.model.name }];
-      }
-
-      if (options.length > 0) {
-        groups.push({ label: p.name, options });
-      }
-    }
-
-    return groups;
-  }, [apiKeys?.openai, apiKeys?.google, apiKeys?.openrouter, compatProviders]);
+    return Array.from(grouped.entries())
+      .sort((a, b) => order(a[0]) - order(b[0]) || labelFor(a[0]).localeCompare(labelFor(b[0])))
+      .map(([provider, options]) => ({ label: labelFor(provider), options }));
+  }, [availableModels]);
 
   // Determine if the currently selected value belongs to any available option
   const selectedInGroups = useMemo(() => {
@@ -144,11 +95,7 @@ export function ModelSelector({
   }, [dropdownGroups, value]);
 
   // Check if ANY API keys exist (standard or compat)
-  const hasAnyApiKey = useMemo(() => {
-    const hasStandardKey = !!(apiKeys?.openai || apiKeys?.google || apiKeys?.openrouter);
-    const hasCompatKey = compatProviders.length > 0;
-    return hasStandardKey || hasCompatKey;
-  }, [apiKeys, compatProviders]);
+  const hasAnyApiKey = useMemo(() => availableModels.length > 0, [availableModels]);
 
   // Auto-select a sensible default model when keys exist but the current selection
   // is not available (e.g., user just added a compat key while default model is OpenAI).
@@ -157,63 +104,12 @@ export function ModelSelector({
     // is not present among options.
     if (!hasAnyApiKey || selectedInGroups) return;
 
-    // Try standard providers first, in order of likelihood
-    if (apiKeys?.openai) {
-      const id = getDefaultModelForProvider('openai');
-      if (id) {
-        onChange(id);
-        return;
-      }
+    // Pick the first available model as a sane default
+    if (availableModels.length > 0) {
+      onChange(availableModels[0].id);
+      return;
     }
-    if (apiKeys?.google) {
-      const id = getDefaultModelForProvider('gemini');
-      if (id) {
-        onChange(id);
-        return;
-      }
-    }
-    if (apiKeys?.openrouter) {
-      const id = getDefaultModelForProvider('openrouter');
-      if (id) {
-        onChange(id);
-        return;
-      }
-    }
-
-    // Otherwise, pick the first compat provider's default/built-in model
-    // Prefer a built-in preset's default if available
-    const firstCompat = compatProviders[0];
-    if (firstCompat) {
-      // Built-in compat providers have predefined models in config
-      const presetDefault = getDefaultModelForProvider(firstCompat.id);
-      if (presetDefault) {
-        onChange(presetDefault);
-        return;
-      }
-      // Custom provider: use its stored default model if present
-      if (firstCompat.model?.id) {
-        onChange(firstCompat.model.id);
-        return;
-      }
-      // Fallback: first model from config group (if any)
-      const presetModels = getModelsByProviderId(firstCompat.id);
-      if (presetModels.length > 0) {
-        const firstModel = presetModels[0];
-        if (firstModel) {
-          onChange(firstModel.id);
-          return;
-        }
-      }
-    }
-  }, [
-    hasAnyApiKey,
-    selectedInGroups,
-    apiKeys?.openai,
-    apiKeys?.google,
-    apiKeys?.openrouter,
-    compatProviders,
-    onChange,
-  ]);
+  }, [hasAnyApiKey, selectedInGroups, availableModels, onChange]);
 
   // Custom render for trigger to show "Add API KEY" when no key is set
   const renderTrigger = (

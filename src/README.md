@@ -8,6 +8,7 @@ The AI Browser Sidebar Extension source code is organized into distinct modules,
 src/
 ├── config/                 # Configuration and constants
 │   ├── models.ts          # AI model definitions
+│   ├── slashCommands.ts   # Slash command templates (+ optional model override)
 │   └── systemPrompt.ts    # System prompts for AI
 ├── content/               # Content extraction system
 │   ├── core/              # Core functionality
@@ -65,14 +66,14 @@ Content script for extracting and processing web page content.
 **Structure:**
 
 - `core/` - Core functionality (documentPatcher, messageHandler, sidebarController)
-- `extraction/` - Extraction logic (analyzers, converters, extractors, orchestrator)
+- `extraction/` - Extraction logic (analyzers, extractors, orchestrator)
 - `types/` - Content-specific type definitions
 - `utils/` - DOM and text utilities
 
 **Key Components:**
 
 - Page analysis and content extraction
-- HTML to Markdown conversion
+- HTML to Markdown conversion (via `@core/extraction/markdownConverter` in non-RAW modes)
 - Multi-tab content aggregation
 - Dynamic content handling
 

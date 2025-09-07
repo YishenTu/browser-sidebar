@@ -36,13 +36,15 @@ const SETTINGS_VERSION = 1;
 const STORAGE_KEY = 'settings';
 
 /**
- * Available AI models with their metadata - from centralized config
+ * Legacy catalog of all models. We no longer surface this list directly to the
+ * UI; `availableModels` is computed from stored/valid API keys and compat
+ * providers. Kept for mapping when keys are present.
  */
 const DEFAULT_AVAILABLE_MODELS: Model[] = DEFAULT_MODELS.map(model => ({
   id: model.id,
   name: model.name,
   provider: model.provider,
-  available: true, // All models are available by default
+  available: true,
 }));
 
 /**
@@ -72,7 +74,8 @@ const DEFAULT_SETTINGS: Settings = {
     openrouter: null,
   },
   selectedModel: DEFAULT_MODEL_ID,
-  availableModels: [...DEFAULT_AVAILABLE_MODELS],
+  // Empty by default; populated based on saved keys/compat providers
+  availableModels: [],
 };
 
 /**
@@ -251,19 +254,19 @@ const migrateSettings = (rawSettings: unknown): Settings => {
   // If already current version, validate and return
   const rs = rawSettings as Partial<Settings> & Record<string, unknown>;
   if (rs.version === SETTINGS_VERSION) {
-    const availableModels = validateAvailableModels(rs.availableModels);
-    const selectedModel = isValidSelectedModel(rs.selectedModel, availableModels)
-      ? (rs.selectedModel as string)
-      : DEFAULT_SETTINGS.selectedModel;
-
+    // Keep selectedModel as-is; availableModels will be recomputed from keys
+    // after load via refreshAvailableModelsWithCompat(). Validate structure only.
     return {
       version: SETTINGS_VERSION,
       ui: validateUIPreferences(rs.ui),
       ai: validateAISettings(rs.ai),
       privacy: validatePrivacySettings(rs.privacy),
       apiKeys: validateAPIKeyReferences(rs.apiKeys),
-      selectedModel,
-      availableModels,
+      selectedModel:
+        typeof rs.selectedModel === 'string' && rs.selectedModel
+          ? (rs.selectedModel as string)
+          : DEFAULT_SETTINGS.selectedModel,
+      availableModels: validateAvailableModels(rs.availableModels),
     };
   }
 
@@ -347,38 +350,39 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
     try {
       const { settings, migrated } = await loadFromStorage();
       const currentSettings = get().settings;
-      // Mutate in place so existing references (in tests) observe updated values
+      // Mutate in place so existing references observe updated values
       currentSettings.ui = settings.ui;
       currentSettings.ai = settings.ai;
       currentSettings.privacy = settings.privacy;
       currentSettings.apiKeys = settings.apiKeys;
 
-      // Start from core models only; compat models are enabled when a compat
-      // provider is actually configured in storage.
-      const coreOnly = DEFAULT_AVAILABLE_MODELS.filter(
-        m => !OPENAI_COMPAT_PROVIDER_IDS.includes(m.provider)
-      );
-      currentSettings.availableModels = [...coreOnly];
+      // Initially empty; will be computed from keys+compat below
+      currentSettings.availableModels = [];
+      currentSettings.selectedModel = settings.selectedModel;
 
-      // Validate and fix selected model
-      if (DEFAULT_AVAILABLE_MODELS.some(m => m.id === settings.selectedModel)) {
-        currentSettings.selectedModel = settings.selectedModel;
-      } else {
-        currentSettings.selectedModel = DEFAULT_MODEL_ID;
-      }
-
-      // Check if migration occurred (different from defaults)
       const needsMigration = migrated;
 
-      // Merge in compat providers that are saved in storage so their models
-      // appear as selectable. This keeps compat models hidden until configured.
+      // Compute available models from saved keys and compat providers
       await get().refreshAvailableModelsWithCompat();
+
+      // Ensure selectedModel is part of availableModels if any are present
+      const updated = get().settings;
+      const isSelectedAvailable = updated.availableModels.some(m => m.id === updated.selectedModel);
+      if (!isSelectedAvailable) {
+        if (updated.availableModels.length > 0) {
+          // Pick the first available model to keep app usable
+          updated.selectedModel = updated.availableModels[0]!.id;
+        } else {
+          // No available models; keep default selection (may not be usable until a key is added)
+          updated.selectedModel = DEFAULT_MODEL_ID;
+        }
+        await saveToStorage(updated);
+      }
 
       set({ isLoading: false });
 
-      // Save migrated settings back to storage if they were migrated
       if (needsMigration) {
-        await saveToStorage(settings);
+        await saveToStorage(get().settings);
       }
     } catch (_error) {
       const errorMessage = 'Failed to load settings';
@@ -435,7 +439,9 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
       const validatedAPIKeys = validateAPIKeyReferences(apiKeys);
       currentSettings.apiKeys = validatedAPIKeys;
       await saveToStorage(currentSettings);
-      set({ settings: currentSettings, isLoading: false });
+      // Recompute available models after key changes
+      await get().refreshAvailableModelsWithCompat();
+      set({ settings: get().settings, isLoading: false });
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Failed to save settings';
       set({ isLoading: false, error: errorMessage });
@@ -474,14 +480,9 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
     set({ isLoading: true, error: null });
     const currentSettings = get().settings;
 
-    // Always use the current supported models from config as source of truth
-    const availableModels = [...DEFAULT_AVAILABLE_MODELS];
-
-    // Update the settings with the correct available models
-    currentSettings.availableModels = availableModels;
-
-    // Validate upfront; tests expect rejection for invalid model
-    if (!isValidSelectedModel(modelId, availableModels)) {
+    // Validate against currently available models (gated by keys)
+    const availableModelsNow = currentSettings.availableModels;
+    if (!isValidSelectedModel(modelId, availableModelsNow)) {
       const error = new Error(`Invalid model: ${modelId}. Model not found in available models.`);
       set({ isLoading: false, error: error.message });
       return Promise.reject(error);
@@ -536,62 +537,56 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
   },
 
   /**
-   * Refresh available models to include OpenAI-compatible providers
+   * Refresh available models based on stored API keys and OpenAI‑compatible providers.
    */
   refreshAvailableModelsWithCompat: async () => {
     try {
       const currentSettings = get().settings;
-      // Start from core models only; compat models will be added per saved providers
-      const allModels: Model[] = DEFAULT_AVAILABLE_MODELS.filter(
-        m => !OPENAI_COMPAT_PROVIDER_IDS.includes(m.provider)
-      );
+      const next: Model[] = [];
 
-      // Get all configured compat providers
+      // Gate core providers by stored keys
+      if (currentSettings.apiKeys.openai) {
+        for (const m of getModelsByProviderId('openai')) {
+          next.push({ id: m.id, name: m.name, provider: m.provider, available: true });
+        }
+      }
+      if (currentSettings.apiKeys.google) {
+        for (const m of getModelsByProviderId('gemini')) {
+          next.push({ id: m.id, name: m.name, provider: m.provider, available: true });
+        }
+      }
+      if (currentSettings.apiKeys.openrouter) {
+        for (const m of getModelsByProviderId('openrouter')) {
+          next.push({ id: m.id, name: m.name, provider: m.provider, available: true });
+        }
+      }
+
+      // Include OpenAI‑compatible providers saved in storage
       const compatProviders = await listOpenAICompatProviders();
-
       for (const provider of compatProviders) {
-        const knownProviders = ['deepseek', 'qwen', 'zhipu', 'kimi'];
-
-        if (knownProviders.includes(provider.id)) {
-          // For built-in providers, get their predefined models
-          const providerModels = getModelsByProviderId(provider.id);
-
-          // Add models that aren't already in the list
-          for (const model of providerModels) {
-            if (!allModels.some(m => m.id === model.id)) {
-              allModels.push({
-                id: model.id,
-                name: model.name,
-                provider: model.provider,
-                available: true,
-              });
+        const builtIn = getModelsByProviderId(provider.id);
+        if (builtIn.length > 0) {
+          for (const m of builtIn) {
+            if (!next.some(x => x.id === m.id)) {
+              next.push({ id: m.id, name: m.name, provider: m.provider, available: true });
             }
           }
         } else if (provider.model) {
-          // For custom providers with a default model
-          const customModel: Model = {
-            id: provider.model.id,
-            name: provider.model.name,
-            provider: provider.name,
-            available: true,
-          };
-
-          // Add if not already present
-          if (!allModels.some(m => m.id === customModel.id)) {
-            allModels.push(customModel);
+          // Custom provider with a single stored model
+          if (!next.some(x => x.id === provider.model!.id)) {
+            next.push({
+              id: provider.model.id,
+              name: provider.model.name,
+              provider: provider.name,
+              available: true,
+            });
           }
         }
       }
 
-      // Update the available models in settings with a new array to ensure change detection
-      const updatedSettings = {
-        ...currentSettings,
-        availableModels: [...allModels], // Force new array reference
-      };
-
+      // Write new list
+      const updatedSettings = { ...currentSettings, availableModels: next };
       set({ settings: updatedSettings });
-
-      // Save to storage
       await saveToStorage(updatedSettings);
     } catch (error) {
       console.error('Failed to refresh models with compat providers:', error);

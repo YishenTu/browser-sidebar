@@ -358,35 +358,36 @@ export function useAIChat(options: UseAIChatOptions = {}): UseAIChatReturn {
           // Check for model override from slash commands
           modelOverride = metadata?.['modelOverride'] as string | undefined;
 
-          // If there's a model override, temporarily switch to that model
+          // If there's a model override, temporarily switch to that model —
+          // only if it is present in availableModels (gated by stored keys).
           if (modelOverride) {
-            originalModel = settingsStore.settings.selectedModel;
-            const overrideModelInfo = getModelById(modelOverride);
-
-            if (overrideModelInfo) {
-              // Check if we need to switch providers
+            const state = useSettingsStore.getState();
+            const available = state.settings.availableModels.some(
+              m => m.id === modelOverride && m.available
+            );
+            if (!available) {
+              console.warn(
+                `Slash command requested model ${modelOverride} but no API key is configured. Using default model.`
+              );
+              modelOverride = undefined;
+            } else {
+              originalModel = state.settings.selectedModel;
+              const targetProviderType = state.getProviderTypeForModel(modelOverride);
               const currentProviderType = activeProvider.type;
-              const targetProviderType = settingsStore.getProviderTypeForModel(modelOverride);
 
               if (targetProviderType && targetProviderType !== currentProviderType) {
-                // Switch to the target provider (this rebinds ChatService provider)
                 await serviceSwitchProvider(targetProviderType);
                 switchedProvider = true;
               }
 
-              // Temporarily update the selected model in settings
-              await settingsStore.updateSelectedModel(modelOverride);
-
-              // Ensure providers reflect the new model even if provider type didn't change
+              await state.updateSelectedModel(modelOverride);
               await serviceInitializeProviders();
               const updatedProvider = serviceGetActiveProvider();
               if (updatedProvider && chatServiceRef.current) {
-                // Safe here because we are not streaming yet
                 chatServiceRef.current.setProvider(updatedProvider);
               }
 
-              // If previous provider was OpenAI and model changed, clear response id
-              const prevType = settingsStore.getProviderTypeForModel(originalModel);
+              const prevType = state.getProviderTypeForModel(originalModel);
               if (
                 prevType === 'openai' &&
                 (targetProviderType !== 'openai' || modelOverride !== originalModel)

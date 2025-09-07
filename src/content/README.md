@@ -27,10 +27,7 @@ content/
 │   ├── extractors/            # Extraction strategies
 │   │   ├── index.ts          # Extractor exports
 │   │   ├── defuddle.ts       # Defuddle-based extraction
-│   │   └── raw.ts            # Raw HTML preservation mode
-│   ├── converters/            # Format converters
-│   │   ├── index.ts          # Converter exports
-│   │   └── markdownConverter.ts # HTML to Markdown
+│   │   └── raw.ts            # Raw HTML preservation mode (no Markdown conversion)
 │   └── analyzers/             # Content analysis tools
 │       ├── contentAnalyzer.ts   # Text analysis
 │       └── metadataExtractor.ts # Page metadata extraction
@@ -107,7 +104,7 @@ Coordinates the extraction pipeline:
 1. Validate extraction options
 2. Try primary extraction (Defuddle)
 3. Clean and normalize HTML
-4. Convert to Markdown if requested
+4. Convert to Markdown (non-RAW modes only)
 5. Analyze content features
 6. Apply size limits
 7. Return structured content
@@ -225,25 +222,23 @@ const content = await extractContent({
 ### Raw Mode Extraction
 
 ```typescript
-// For table-heavy content
-const content = await extractContent({}, 'raw');
+import { ExtractionMode } from '@content/types/extraction';
+import { extractContent } from '@content/extraction';
 
-// With Markdown conversion
-import { extractWithRaw } from '@content/extraction/extractors/raw';
-const content = await extractWithRaw({
-  convert_to_markdown: true,
-  optimize_tokens: true,
-});
+// For table-heavy or highly structured pages, returns raw HTML + plain text
+const content = await extractContent({ includeLinks: true }, ExtractionMode.RAW);
+// Note: RAW mode no longer converts HTML to Markdown.
 ```
 
 ### HTML to Markdown
 
-```typescript
-import { htmlToMarkdown } from '@content/extraction';
+The Markdown converter lives in `@core/extraction` and is used by the orchestrator
+for non-RAW modes. You can import it directly if needed:
 
-const markdown = await htmlToMarkdown(htmlString, {
-  includeLinks: true,
-});
+```typescript
+import { htmlToMarkdown } from '@core/extraction/markdownConverter';
+
+const markdown = await htmlToMarkdown(htmlString, { includeLinks: true });
 ```
 
 ### Content Analysis
@@ -398,10 +393,9 @@ const DEBUG = true; // Enable verbose logging
 ## Dependencies
 
 - **defuddle** - Intelligent content extraction
-- **turndown** - HTML to Markdown conversion
-- **turndown-plugin-gfm** - GitHub Flavored Markdown
 - **dompurify** - HTML sanitization (via Defuddle)
 - **Chrome APIs** - Extension communication
+- Markdown conversion is provided by `@core/extraction/markdownConverter` (Turndown + GFM)
 
 ## Future Enhancements
 

@@ -13,6 +13,7 @@ A privacy‑focused browser extension for AI‑powered chat with web content usi
 - 🔍 **Web Search**: Automatic web search grounding for enhanced responses
 - 🔄 **Smart Context Management**: OpenAI Response API with intelligent conversation continuity
 - 📑 **Content Extraction**: Smart page content capture with markdown conversion
+- ⚡ **Slash Commands**: Type `/` for quick actions (e.g., /summarize, /fact-check)
 - 🎯 **Multi-Tab Context**: Smart @ mention system to aggregate content from multiple browser tabs with visual management
 - 💾 **Session Management**: Tab+URL based sessions with automatic cleanup on tab close
 
@@ -134,6 +135,13 @@ npm run test:ui
    - Drag the left edge to resize (300-800px width)
    - Click the X button or extension icon to close
 4. **Configure AI providers**: Add your API keys in the extension settings
+
+### Slash Commands
+
+- Type `/` in the chat input to open the command dropdown
+- Arrow keys to navigate, `Enter` to confirm
+- Commands expand to full prompts when sent; some set a model just for that turn
+- Built-ins: `/summarize`, `/explain`, `/analyze`, `/comment`, `/fact-check` (uses `gemini-2.5-flash`)
 
 ## Architecture Status
 
