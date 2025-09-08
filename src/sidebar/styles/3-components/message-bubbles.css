@@ -585,3 +585,29 @@
 .message-bubble--user .message-context-indicator:hover .context-indicator-icon {
   color: rgba(255, 255, 255, 1);
 }
+
+/* ============================================================================
+ * Slash Command Styling
+ * ============================================================================ */
+
+/* Slash command text in message bubbles - matches dropdown style */
+.message-slash-command {
+  font-family: var(--font-family-mono);
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  color: inherit; /* Inherit color from message bubble */
+  display: inline;
+  white-space: nowrap;
+}
+
+/* Ensure slash commands in user messages have proper contrast */
+.message-bubble--user .message-slash-command {
+  color: var(--msg-user-text);
+  opacity: 0.95;
+}
+
+/* Ensure slash commands in assistant messages are visible */
+.message-bubble--assistant .message-slash-command {
+  color: var(--text-primary);
+  opacity: 0.9;
+}

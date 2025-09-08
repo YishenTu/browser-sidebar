@@ -223,6 +223,90 @@ const normalizeDisplayMathSafely = (input: string): string => {
 };
 
 // =============================================================================
+// Custom Remark Plugins
+// =============================================================================
+
+/**
+ * Custom remark plugin to detect and wrap slash commands
+ */
+function remarkSlashCommands() {
+  return (tree: any) => {
+    const visit = (node: any, index: number | null, parent: any): number | null => {
+      if (node.type === 'text' && typeof node.value === 'string') {
+        const regex = /(^|\s)(\/[a-zA-Z]+)(?=\s|$)/g;
+        const matches: any[] = [];
+        let match;
+
+        while ((match = regex.exec(node.value)) !== null) {
+          matches.push({
+            index: match.index,
+            length: match[0].length,
+            prefix: match[1],
+            command: match[2],
+          });
+        }
+
+        if (matches.length > 0 && parent && typeof index === 'number') {
+          const newNodes: any[] = [];
+          let lastIndex = 0;
+
+          for (const m of matches) {
+            // Add text before the match
+            if (m.index > lastIndex) {
+              newNodes.push({
+                type: 'text',
+                value: node.value.slice(lastIndex, m.index),
+              });
+            }
+
+            // Add prefix if any (whitespace)
+            if (m.prefix) {
+              newNodes.push({
+                type: 'text',
+                value: m.prefix,
+              });
+            }
+
+            // Add the slash command as inline code
+            newNodes.push({
+              type: 'inlineCode',
+              value: m.command,
+            });
+
+            lastIndex = m.index + m.length;
+          }
+
+          // Add remaining text
+          if (lastIndex < node.value.length) {
+            newNodes.push({
+              type: 'text',
+              value: node.value.slice(lastIndex),
+            });
+          }
+
+          // Replace the original node with new nodes
+          parent.children.splice(index, 1, ...newNodes);
+          return index + newNodes.length;
+        }
+      }
+
+      if (node.children) {
+        for (let i = 0; i < node.children.length; i++) {
+          const result = visit(node.children[i], i, node);
+          if (typeof result === 'number') {
+            i = result - 1;
+          }
+        }
+      }
+
+      return null;
+    };
+
+    visit(tree, null, null);
+  };
+}
+
+// =============================================================================
 // Custom Renderer Components
 // =============================================================================
 
@@ -321,11 +405,21 @@ const LinkRenderer = ({
 };
 
 /**
- * Custom code renderer (inline)
+ * Custom code renderer (inline) that also detects slash commands
  */
-const InlineCodeRenderer = ({ children, ...props }: React.ComponentProps<'code'>) => (
-  <code {...props}>{children}</code>
-);
+const InlineCodeRenderer = ({ children, ...props }: React.ComponentProps<'code'>) => {
+  const text = String(children);
+  // Check if this looks like a slash command (starts with /)
+  if (text.startsWith('/') && /^\/[a-zA-Z]+$/.test(text)) {
+    return (
+      <span className="message-slash-command" {...props}>
+        {text}
+      </span>
+    );
+  }
+  // Regular inline code
+  return <code {...props}>{children}</code>;
+};
 
 // We will render both inline and block code via the `code` component mapping below.
 
@@ -407,6 +501,7 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({
     const baseOptions: Options = {
       // Keep inline $...$ enabled for now to preserve behavior
       remarkPlugins: [
+        remarkSlashCommands as any,
         remarkGfm,
         [remarkMath, { singleDollarTextMath: true }] as [
           typeof remarkMath,
@@ -484,7 +579,7 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({
         },
 
         // Code renderer for inline code only
-        code: ({ children, ...props }: React.HTMLProps<HTMLElement>) => {
+        code: ({ children, ...props }: React.ComponentProps<'code'>) => {
           // Only handle inline code here, block code is handled by pre
           return <InlineCodeRenderer {...props}>{children}</InlineCodeRenderer>;
         },
