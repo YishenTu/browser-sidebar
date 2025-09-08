@@ -55,7 +55,8 @@
   --background-muted: var(--gray-800);
 
   /* Main sidebar background - darker grey, more opaque */
-  --sidebar-background: rgba(28, 28, 30, 0.95); /* Dark grey, 95% opacity */
+  --sidebar-background: rgba(28, 28, 30, 0.95);
+  /* Dark grey, 95% opacity */
 
   --text-primary: var(--gray-50);
   --text-secondary: var(--gray-300);
@@ -84,34 +85,56 @@
 
   /* Border Radius */
   --radius-none: 0;
-  --radius-sm: 0.125rem; /* 2px */
-  --radius-md: 0.375rem; /* 6px */
-  --radius-lg: 0.5rem; /* 8px */
-  --radius-xl: 0.75rem; /* 12px */
-  --radius-2xl: 1rem; /* 16px */
+  --radius-sm: 0.125rem;
+  /* 2px */
+  --radius-md: 0.375rem;
+  /* 6px */
+  --radius-lg: 0.5rem;
+  /* 8px */
+  --radius-xl: 0.75rem;
+  /* 12px */
+  --radius-2xl: 1rem;
+  /* 16px */
   --radius-full: 9999px;
 
   /* Spacing Scale */
   --spacing-0: 0;
-  --spacing-xs: 0.25rem; /* 4px */
-  --spacing-sm: 0.5rem; /* 8px */
-  --spacing-md: 0.75rem; /* 12px */
-  --spacing-lg: 1rem; /* 16px */
-  --spacing-xl: 1.25rem; /* 20px */
-  --spacing-2xl: 1.5rem; /* 24px */
-  --spacing-3xl: 2rem; /* 32px */
-  --spacing-4xl: 2.5rem; /* 40px */
-  --spacing-5xl: 3rem; /* 48px */
+  --spacing-xs: 0.25rem;
+  /* 4px */
+  --spacing-sm: 0.5rem;
+  /* 8px */
+  --spacing-md: 0.75rem;
+  /* 12px */
+  --spacing-lg: 1rem;
+  /* 16px */
+  --spacing-xl: 1.25rem;
+  /* 20px */
+  --spacing-2xl: 1.5rem;
+  /* 24px */
+  --spacing-3xl: 2rem;
+  /* 32px */
+  --spacing-4xl: 2.5rem;
+  /* 40px */
+  --spacing-5xl: 3rem;
+  /* 48px */
 
   /* Typography Scale */
-  --font-size-xs: 0.75rem; /* 12px */
-  --font-size-sm: 0.8125rem; /* 13px */
-  --font-size-base: 0.875rem; /* 14px */
-  --font-size-md: 1rem; /* 16px */
-  --font-size-lg: 1.125rem; /* 18px */
-  --font-size-xl: 1.25rem; /* 20px */
-  --font-size-2xl: 1.5rem; /* 24px */
-  --font-size-3xl: 1.875rem; /* 30px */
+  --font-size-xs: 0.75rem;
+  /* 12px */
+  --font-size-sm: 0.8125rem;
+  /* 13px */
+  --font-size-base: 0.875rem;
+  /* 14px */
+  --font-size-md: 1rem;
+  /* 16px */
+  --font-size-lg: 1.125rem;
+  /* 18px */
+  --font-size-xl: 1.25rem;
+  /* 20px */
+  --font-size-2xl: 1.5rem;
+  /* 24px */
+  --font-size-3xl: 1.875rem;
+  /* 30px */
 
   /* Font Families */
   --font-family-base:
@@ -128,7 +151,8 @@
   /* Line Heights */
   --line-height-tight: 1.25;
   --line-height-normal: 1.5;
-  --line-height-base: 1.4; /* Tighter line spacing */
+  --line-height-base: 1.4;
+  /* Tighter line spacing */
   --line-height-relaxed: 1.75;
 
   /* Transitions */
@@ -151,7 +175,8 @@
   --sidebar-width-default: 400px;
   --sidebar-width-max: 800px;
   --sidebar-height: 85vh;
-  --header-height: 3rem; /* 48px */
+  --header-height: 3rem;
+  /* 48px */
 
   /* Component-specific Variables with Namespaces */
 
@@ -163,7 +188,7 @@
   --msg-user-radius: 16px;
   --msg-assistant-bg: transparent;
   --msg-assistant-text: #e5e7eb;
-  --msg-assistant-padding: 3px 16px 3px 22px;
+  --msg-assistant-padding: 3px 16px 3px 16px;
   --msg-system-bg: rgba(217, 119, 6, 0.2);
   --msg-system-text: #fde047;
   --msg-font-size: var(--font-size-base);
@@ -179,7 +204,7 @@
   --input-border-focus: 1px solid rgba(255, 255, 255, 0.4);
   --input-font-size: var(--font-size-base);
   --input-cancel-size: 28px;
-  --input-cancel-border: 1px solid rgba(255, 255, 255, 0.5);
+  --input-cancel-border: 2px solid rgba(255, 255, 255, 0.5);
   --input-cancel-color: rgba(255, 255, 255, 0.7);
 
   /* Fullscreen Modal */

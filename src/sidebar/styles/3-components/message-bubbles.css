@@ -296,7 +296,7 @@
   justify-content: space-between;
   margin-left: 0;
   margin-right: 0; /* Use padding-right for consistent internal spacing */
-  padding-left: 22px;
+  padding-left: 16px;
   /* Match bubble left padding */
   padding-right: 20px; /* 16 (container) + 20 = 36 total from right edge */
   /* Match bubble right padding */
@@ -447,7 +447,7 @@
   /* Reduced gap to message content */
   padding: 0;
   margin-left: 0;
-  padding-left: 22px;
+  padding-left: 16px;
   /* Match assistant bubble left padding */
   padding-right: 16px;
   /* Match assistant bubble right padding */
