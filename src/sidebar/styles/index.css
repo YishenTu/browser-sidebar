@@ -39,6 +39,7 @@
 @import './3-components/katex-math.css' layer(components);
 @import './3-components/markdown-content.css' layer(components);
 @import './3-components/message-bubbles.css' layer(components);
+@import './3-components/message-list.css' layer(components);
 @import './3-components/model-selector.css' layer(components);
 @import './3-components/settings.css' layer(components);
 @import './3-components/thinking-wrapper.css' layer(components);

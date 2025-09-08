@@ -92,8 +92,8 @@ const VirtualListItem: React.FC<VirtualListItemProps> = ({ index, style, data })
   if (!message) return null;
 
   return (
-    <div style={style} className="px-4">
-      <div className="mb-4">
+    <div style={style} className="virtual-list-item">
+      <div className="virtual-list-item-content">
         <MessageBubble
           message={message}
           className="message-list-item"
@@ -167,6 +167,21 @@ export const MessageList: React.FC<MessageListProps> = ({
   );
 
   /**
+   * Handle wheel events to prevent scroll propagation at boundaries
+   */
+  const handleWheel = useCallback((event: React.WheelEvent<HTMLDivElement>) => {
+    const container = event.currentTarget;
+    const { scrollTop, scrollHeight, clientHeight } = container;
+    const isAtTop = scrollTop === 0;
+    const isAtBottom = Math.abs(scrollHeight - clientHeight - scrollTop) < 1;
+
+    // Prevent scrolling parent when at boundaries
+    if ((isAtTop && event.deltaY < 0) || (isAtBottom && event.deltaY > 0)) {
+      event.preventDefault();
+    }
+  }, []);
+
+  /**
    * Create data object for virtualized list
    */
   const virtualListData = useMemo(
@@ -182,14 +197,12 @@ export const MessageList: React.FC<MessageListProps> = ({
    * Render empty state
    */
   const renderEmptyState = () => (
-    <div
-      className="flex flex-col items-center justify-center h-full text-gray-500 p-8"
-      data-testid="message-list-empty"
-      aria-label="No messages"
-    >
-      <div className="text-lg font-medium mb-2">{emptyMessage}</div>
+    <div className="message-list-empty" data-testid="message-list-empty" aria-label="No messages">
+      <div className="message-list-empty-title">{emptyMessage}</div>
       {emptyMessage === 'No messages yet' && (
-        <div className="text-sm opacity-75">Start a conversation to see messages here.</div>
+        <div className="message-list-empty-subtitle">
+          Start a conversation to see messages here.
+        </div>
       )}
     </div>
   );
@@ -218,7 +231,7 @@ export const MessageList: React.FC<MessageListProps> = ({
   const renderMessages = useCallback(
     () => (
       <div
-        className="flex flex-col space-y-4 p-4"
+        className="messages-container"
         role="log"
         aria-live="polite"
         aria-label="Chat messages"
@@ -252,7 +265,6 @@ export const MessageList: React.FC<MessageListProps> = ({
         overscanCount={OVERSCAN_COUNT}
         className="virtualized-message-list"
         data-testid="virtualized-list"
-        style={{ height: '100%', width: '100%' }}
       >
         {VirtualListItem}
       </List>
@@ -264,13 +276,13 @@ export const MessageList: React.FC<MessageListProps> = ({
 
   return (
     <div
-      className={`relative${className ? ` ${className}` : ''}`}
+      className={`message-list${className ? ` ${className}` : ''}`}
       data-testid="message-list"
       style={{ height }}
     >
       {/* Virtualized message list */}
       {isVirtualized ? (
-        <div className="h-full" style={{ height }}>
+        <div className="message-list-virtualized-container" onWheel={handleWheel}>
           {/* Virtualized messages */}
           {renderVirtualizedMessages()}
         </div>
@@ -278,9 +290,9 @@ export const MessageList: React.FC<MessageListProps> = ({
         /* Non-virtualized scrollable container */
         <div
           ref={scrollContainerRef}
-          className="h-full overflow-y-auto overscroll-behavior-contain"
-          style={{ height, paddingRight: '0px' }}
+          className="message-list-scroll-container"
           onScroll={handleScroll}
+          onWheel={handleWheel}
           data-testid="message-list-container"
         >
           {/* Empty state */}

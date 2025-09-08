@@ -105,7 +105,7 @@ export function ModelSelector({
     if (!hasAnyApiKey || selectedInGroups) return;
 
     // Pick the first available model as a sane default
-    if (availableModels.length > 0) {
+    if (availableModels.length > 0 && availableModels[0]) {
       onChange(availableModels[0].id);
       return;
     }

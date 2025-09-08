@@ -97,3 +97,21 @@
 .ai-sidebar-container[data-theme='light'] * {
   scrollbar-color: rgba(0, 0, 0, 0.2) transparent;
 }
+
+/* Prevent scroll propagation to parent elements */
+.overscroll-contain {
+  overscroll-behavior: contain;
+  overscroll-behavior-y: contain;
+}
+
+/* Apply to message list containers */
+.message-list-scroll-container {
+  overscroll-behavior: contain;
+  overscroll-behavior-y: contain;
+}
+
+/* Apply to virtualized lists */
+.virtualized-message-list {
+  overscroll-behavior: contain;
+  overscroll-behavior-y: contain;
+}
