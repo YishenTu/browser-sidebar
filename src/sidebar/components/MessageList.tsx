@@ -1,5 +1,5 @@
 import React, { useRef, useEffect, useState, useCallback, useMemo } from 'react';
-import { VariableSizeList as List } from 'react-window';
+import { VariableSizeList as List, ListOnScrollProps } from 'react-window';
 import type { ChatMessage } from '@store/chat';
 import { MessageBubble } from './MessageBubble';
 
@@ -58,31 +58,6 @@ const DEFAULT_ITEM_HEIGHT = 80;
 const OVERSCAN_COUNT = 5;
 
 /**
- * MessageList Component
- *
- * A scrollable container for displaying chat messages with the following features:
- * - Auto-scroll to bottom on new messages
- * - Scroll-to-bottom button when user scrolls up
- * - Loading states for fetching history
- * - Empty state with custom message
- * - Preserve scroll position when loading older messages
- * - Smooth scroll animations
- * - Full accessibility support
- *
- * The component uses flexbox with column-reverse for easier auto-scroll
- * implementation and provides comprehensive keyboard navigation support.
- *
- * @example
- * ```tsx
- * <MessageList
- *   messages={chatMessages}
- *   isLoading={isLoadingHistory}
- *   onScroll={handleScroll}
- *   autoScroll={true}
- * />
- * ```
- */
-/**
  * VirtualListItem Component - Renders individual message items in virtualized list
  */
 const VirtualListItem: React.FC<VirtualListItemProps> = ({ index, style, data }) => {
@@ -108,7 +83,6 @@ const VirtualListItem: React.FC<VirtualListItemProps> = ({ index, style, data })
 export const MessageList: React.FC<MessageListProps> = ({
   messages = [],
   isLoading = false,
-  // loadingMessage = 'Loading messages...', // Not used after removing loading indicator
   emptyMessage = 'No messages yet',
   height = '100%',
   className,
@@ -120,7 +94,14 @@ export const MessageList: React.FC<MessageListProps> = ({
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const virtualListRef = useRef<List>(null);
   const itemHeights = useRef<number[]>([]);
+  const virtualizedContainerRef = useRef<HTMLDivElement>(null);
   const [isVirtualized, setIsVirtualized] = useState(false);
+  const [shouldAutoScroll, setShouldAutoScroll] = useState(true);
+  const lastMessageCountRef = useRef(messages.length);
+  const lastMessageContentRef = useRef<string | undefined>();
+  const lastUserMessageCountRef = useRef<number>(
+    messages.reduce((acc, m) => (m.role === 'user' ? acc + 1 : acc), 0)
+  );
 
   /**
    * Determine if virtualization should be used based on message count
@@ -140,46 +121,138 @@ export const MessageList: React.FC<MessageListProps> = ({
    * Calculate item height for virtualized list
    */
   const getItemHeight = useCallback((index: number): number => {
-    // Use cached height if available, otherwise use default
     return itemHeights.current[index] || DEFAULT_ITEM_HEIGHT;
   }, []);
 
-  // Item height setter - kept for future use when implementing dynamic measurement
-  // const setItemHeight = useCallback((index: number, height: number) => {
-  //   if (itemHeights.current[index] !== height) {
-  //     itemHeights.current[index] = height;
-  //     // Reset cache when heights change
-  //     if (virtualListRef.current) {
-  //       virtualListRef.current.resetAfterIndex(index);
-  //     }
-  //   }
-  // }, []);
+  /**
+   * Check if user is at the bottom of scroll container
+   */
+  const isAtBottom = useCallback((container: HTMLElement) => {
+    const { scrollTop, scrollHeight, clientHeight } = container;
+    return scrollHeight - (scrollTop + clientHeight) <= 1;
+  }, []);
+
+  /**
+   * Scroll to bottom of messages
+   */
+  const scrollToBottom = useCallback(
+    (smooth = true) => {
+      if (isVirtualized && virtualListRef.current) {
+        virtualListRef.current.scrollToItem(messages.length - 1, 'end');
+      } else if (scrollContainerRef.current) {
+        scrollContainerRef.current.scrollTo({
+          top: scrollContainerRef.current.scrollHeight,
+          behavior: smooth ? 'smooth' : 'auto',
+        });
+      }
+    },
+    [isVirtualized, messages.length]
+  );
+
+  /**
+   * Auto-scroll to bottom when new messages arrive or streaming updates
+   */
+  useEffect(() => {
+    const lastMessage = messages[messages.length - 1];
+    const currentContent = lastMessage?.content;
+
+    const messageCountIncreased = messages.length > lastMessageCountRef.current;
+    const lastMessageChanged =
+      messages.length > 0 &&
+      messages.length === lastMessageCountRef.current &&
+      currentContent !== lastMessageContentRef.current;
+
+    // Check if user just sent a new message (re-enable auto-scroll)
+    const currentUserMessageCount = messages.reduce(
+      (acc, m) => (m.role === 'user' ? acc + 1 : acc),
+      0
+    );
+    const userJustSentMessage = currentUserMessageCount > lastUserMessageCountRef.current;
+
+    if (userJustSentMessage) {
+      setShouldAutoScroll(true);
+      requestAnimationFrame(() => {
+        scrollToBottom(true);
+      });
+    } else if (shouldAutoScroll && (messageCountIncreased || lastMessageChanged)) {
+      requestAnimationFrame(() => {
+        scrollToBottom(messageCountIncreased);
+      });
+    }
+
+    lastMessageCountRef.current = messages.length;
+    lastMessageContentRef.current = currentContent;
+    lastUserMessageCountRef.current = currentUserMessageCount;
+  }, [messages, shouldAutoScroll, scrollToBottom]);
 
   /**
    * Handle scroll events
    */
   const handleScroll = useCallback(
     (event: React.UIEvent<HTMLDivElement>) => {
-      // Call external handler
+      const container = event.currentTarget;
+
+      const atBottom = isAtBottom(container);
+      setShouldAutoScroll(atBottom);
       onScroll?.(event);
     },
-    [onScroll]
+    [onScroll, isAtBottom]
+  );
+
+  /**
+   * Handle scroll events for virtualized list
+   */
+  const handleVirtualizedScroll = useCallback(
+    (props: ListOnScrollProps) => {
+      if (!virtualListRef.current) return;
+
+      const list = virtualListRef.current;
+      const scrollOffset = props.scrollOffset;
+
+      let totalHeight = 0;
+      for (let i = 0; i < messages.length; i++) {
+        totalHeight += getItemHeight(i);
+      }
+
+      const visibleHeight = list.props.height as number;
+      const atBottom = totalHeight - (scrollOffset + visibleHeight) <= 1;
+      setShouldAutoScroll(atBottom);
+    },
+    [messages.length, getItemHeight]
   );
 
   /**
    * Handle wheel events to prevent scroll propagation at boundaries
    */
-  const handleWheel = useCallback((event: React.WheelEvent<HTMLDivElement>) => {
-    const container = event.currentTarget;
+  const handleWheel = useCallback((event: WheelEvent) => {
+    const container = event.currentTarget as HTMLDivElement;
+    if (!container) return;
+
     const { scrollTop, scrollHeight, clientHeight } = container;
     const isAtTop = scrollTop === 0;
     const isAtBottom = Math.abs(scrollHeight - clientHeight - scrollTop) < 1;
 
-    // Prevent scrolling parent when at boundaries
     if ((isAtTop && event.deltaY < 0) || (isAtBottom && event.deltaY > 0)) {
       event.preventDefault();
     }
   }, []);
+
+  /**
+   * Add non-passive wheel event listeners for scroll containment
+   */
+  useEffect(() => {
+    const nonVirtualizedContainer = scrollContainerRef.current;
+    const virtualizedContainer = virtualizedContainerRef.current;
+    const activeContainer = isVirtualized ? virtualizedContainer : nonVirtualizedContainer;
+
+    if (!activeContainer) return;
+
+    activeContainer.addEventListener('wheel', handleWheel, { passive: false });
+
+    return () => {
+      activeContainer.removeEventListener('wheel', handleWheel);
+    };
+  }, [isVirtualized, handleWheel]);
 
   /**
    * Create data object for virtualized list
@@ -265,13 +338,13 @@ export const MessageList: React.FC<MessageListProps> = ({
         overscanCount={OVERSCAN_COUNT}
         className="virtualized-message-list"
         data-testid="virtualized-list"
+        onScroll={handleVirtualizedScroll}
       >
         {VirtualListItem}
       </List>
     );
   }, [isVirtualized, messages.length, height, getItemHeight, virtualListData]);
 
-  // Always render with scroll container, even for empty state
   const isEmpty = messages.length === 0 && !isLoading;
 
   return (
@@ -280,25 +353,18 @@ export const MessageList: React.FC<MessageListProps> = ({
       data-testid="message-list"
       style={{ height }}
     >
-      {/* Virtualized message list */}
       {isVirtualized ? (
-        <div className="message-list-virtualized-container" onWheel={handleWheel}>
-          {/* Virtualized messages */}
+        <div ref={virtualizedContainerRef} className="message-list-virtualized-container">
           {renderVirtualizedMessages()}
         </div>
       ) : (
-        /* Non-virtualized scrollable container */
         <div
           ref={scrollContainerRef}
           className="message-list-scroll-container"
           onScroll={handleScroll}
-          onWheel={handleWheel}
           data-testid="message-list-container"
         >
-          {/* Empty state */}
           {isEmpty && renderEmptyState()}
-
-          {/* Messages */}
           {messages.length > 0 && renderMessages()}
         </div>
       )}
@@ -307,6 +373,3 @@ export const MessageList: React.FC<MessageListProps> = ({
 };
 
 export default MessageList;
-
-// Export types for external use
-export type { VirtualListItemProps };
