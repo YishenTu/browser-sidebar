@@ -72,6 +72,11 @@ export const SLASH_COMMANDS: SlashCommand[] = [
     prompt: `Search the web for credible sources to validate and fact check the provided content.`,
     model: 'gemini-2.5-flash',
   },
+  {
+    name: 'rephrase',
+    description: 'Rephrase the content',
+    prompt: `Rephrase this content to flow better, be more clear, and more concise.Resolve any grammar error, awkwardness or clunkiness.Maintain the proper contextual tone and style.`,
+  },
 ];
 
 /**
