@@ -5,7 +5,7 @@
  */
 
 import { useRef, useCallback } from 'react';
-import { useMessageStore, useUIStore } from '@store/chat';
+import { useMessageStore, useUIStore, useTabStore } from '@store/chat';
 import { getSystemPrompt } from '@/config/systemPrompt';
 import type { AIProvider, StreamChunk } from '../../../types/providers';
 import type { ChatMessage } from '@store/chat';
@@ -88,8 +88,12 @@ export function useStreamHandler(): UseStreamHandlerReturn {
         // Get last response ID for conversation continuity (OpenAI Response API)
         const previousResponseId = uiStore.getLastResponseId();
 
-        // Get the system prompt with provider type
-        const systemPrompt = getSystemPrompt(provider.type);
+        // Check if we have tab content loaded
+        const loadedTabs = useTabStore.getState().getLoadedTabs();
+        const hasTabContent = Object.keys(loadedTabs).length > 0;
+
+        // Get the system prompt with provider type and tab content status
+        const systemPrompt = getSystemPrompt(provider.type, hasTabContent);
 
         // Start streaming with response ID if available
         const stream = provider.streamChat(messages, {

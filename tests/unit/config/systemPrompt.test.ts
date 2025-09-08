@@ -17,11 +17,29 @@ describe('getSystemPrompt', () => {
     expect(prompt).not.toContain('Web Search');
   });
 
+  it('should exclude content format section when hasTabContent is false', () => {
+    const prompt = getSystemPrompt(undefined, false);
+    expect(prompt).toContain('# System Instruction');
+    expect(prompt).toContain('## Your Role');
+    expect(prompt).not.toContain('## Content Format');
+    expect(prompt).not.toContain('<browser_context>');
+    expect(prompt).not.toContain('<tab_content>');
+  });
+
+  it('should include content format section when hasTabContent is true', () => {
+    const prompt = getSystemPrompt(undefined, true);
+    expect(prompt).toContain('# System Instruction');
+    expect(prompt).toContain('## Your Role');
+    expect(prompt).toContain('## Content Format');
+    expect(prompt).toContain('<browser_context>');
+    expect(prompt).toContain('<tab_content>');
+  });
+
   it('should include web search section for OpenAI provider', () => {
     const prompt = getSystemPrompt('openai');
     expect(prompt).toContain('# System Instruction');
     expect(prompt).toContain('## Available Tools');
-    expect(prompt).toContain('**Web Search**: Can search the web for current information');
+    expect(prompt).toContain('**Web Search**: Can search the web for up-to-date information');
     expect(prompt).toContain('Use web search to supplement tab analysis');
   });
 
@@ -29,7 +47,7 @@ describe('getSystemPrompt', () => {
     const prompt = getSystemPrompt('gemini');
     expect(prompt).toContain('# System Instruction');
     expect(prompt).toContain('## Available Tools');
-    expect(prompt).toContain('**Web Search**: Can search the web for current information');
+    expect(prompt).toContain('**Web Search**: Can search the web for up-to-date information');
     expect(prompt).toContain('Use web search to supplement tab analysis');
   });
 
@@ -61,7 +79,7 @@ describe('getSystemPrompt', () => {
 
       // Check all standard sections are present
       expect(prompt).toContain('## Your Role');
-      expect(prompt).toContain('## Content Format');
+      expect(prompt).toContain('## Content Format'); // Default hasTabContent=true
       expect(prompt).toContain('## Language');
       expect(prompt).toContain('## Style and Expression');
       expect(prompt).toContain('## Reasoning and Approach');
@@ -69,8 +87,8 @@ describe('getSystemPrompt', () => {
 
       // Check important content
       expect(prompt).toContain('browser-integrated chatbot');
-      expect(prompt).toContain('<browser_context>');
-      expect(prompt).toContain('<tab_content>');
+      expect(prompt).toContain('<browser_context>'); // Default hasTabContent=true
+      expect(prompt).toContain('<tab_content>'); // Default hasTabContent=true
       expect(prompt).toContain('GitHub-Flavored Markdown');
     });
   });

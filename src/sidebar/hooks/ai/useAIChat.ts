@@ -466,11 +466,15 @@ export function useAIChat(options: UseAIChatOptions = {}): UseAIChatReturn {
           // Get last response ID for conversation continuity (OpenAI Response API)
           const previousResponseId = uiStore.getLastResponseId();
 
+          // Check if we have tab content loaded
+          const loadedTabs = useTabStore.getState().getLoadedTabs();
+          const hasTabContent = Object.keys(loadedTabs).length > 0;
+
           // Get the system prompt with the actual provider that will handle the stream.
           // If a model override occurred, ChatService's provider may have changed.
           const providerForPrompt =
             chatServiceRef.current?.getProvider() || serviceGetActiveProvider() || activeProvider;
-          const systemPrompt = getSystemPrompt(providerForPrompt.type);
+          const systemPrompt = getSystemPrompt(providerForPrompt.type, hasTabContent);
 
           // Ensure ChatService has an active provider (in case init just finished)
           if (chatServiceRef.current && !chatServiceRef.current.getProvider() && activeProvider) {
