@@ -603,6 +603,8 @@ export function useAIChat(options: UseAIChatOptions = {}): UseAIChatReturn {
               uiStore.setLastResponseId(responseId);
             }
           } else {
+            // Stream was interrupted with no content - remove the empty assistant message
+            messageStore.deleteMessage(assistantMessage.id);
             // Surface the underlying error if available; otherwise emit generic message
             if (lastStreamError instanceof Error) {
               throw lastStreamError;

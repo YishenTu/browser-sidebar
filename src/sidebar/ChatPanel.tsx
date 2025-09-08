@@ -223,7 +223,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
   const removeMessageAndAfter = messageStore.removeMessageAndAfter;
   const updateMessage = messageStore.updateMessage;
   const updateTabContent = tabStore.updateTabContent;
-  const { sendMessage, switchProvider, cancelMessage } = useAIChat({
+  const { sendMessage, switchProvider, cancelMessage, isStreaming } = useAIChat({
     enabled: true,
     autoInitialize: true, // Auto-initialize providers from settings
   });
@@ -387,7 +387,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
 
   // Handle clear conversation (now clears only current session)
   const handleClearConversation = useCallback(() => {
-    if (hasMessages() && window.confirm('Clear conversation? This cannot be undone.')) {
+    if (hasMessages()) {
       clearCurrentSession();
       setEditingMessage(null); // Clear edit mode when clearing conversation
     }
@@ -575,7 +575,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
   // Cleanup is handled by useAIChat hook internally
   // No need for additional cleanup here
 
-  // Handle Escape key to close sidebar (but not if dropdown is open)
+  // Handle Escape key to cancel streaming or close sidebar
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
@@ -586,13 +586,20 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
         const dropdown = document.querySelector('.tab-mention-dropdown');
         if (dropdown) return;
 
+        // If streaming, cancel the stream instead of closing
+        if (isStreaming()) {
+          cancelMessage();
+          return;
+        }
+
+        // Otherwise close the sidebar
         handleClose();
       }
     };
 
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [handleClose]);
+  }, [handleClose, isStreaming, cancelMessage]);
 
   // Set tabindex for keyboard navigation but don't auto-focus to preserve selection
   useEffect(() => {
