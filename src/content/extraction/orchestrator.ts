@@ -91,7 +91,7 @@ async function getDefuddleExtractor() {
 // Module-level default extraction mode. This is used when callers do not
 // explicitly specify a mode. Exposed via getter/setter for simple runtime
 // toggling from other modules (e.g., settings UI or debug console).
-let defaultExtractionMode: ExtractionMode = ExtractionMode.RAW;
+let defaultExtractionMode: ExtractionMode = ExtractionMode.DEFUDDLE;
 
 export function setDefaultExtractionMode(mode: ExtractionMode): void {
   defaultExtractionMode = mode;

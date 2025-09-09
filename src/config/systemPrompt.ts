@@ -49,6 +49,7 @@ function getContentFormatSection(hasTabContent: boolean): string {
     - **<tab_content>**: Contains one or more <tab> elements, each with:
       - Metadata: title, URL, and domain of the page
       - Content: The extracted text content from that tab
+        - If tab content is in html format, interpret the main containt of it, ignore html tags or any non-content elements(e.g. ads, navigation, footer, etc.)
       - Selection: Optional user-highlighted text from the page
     - **<user_query>**: The user's actual question or request`;
 }
