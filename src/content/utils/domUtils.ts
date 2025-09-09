@@ -287,3 +287,114 @@ export function cleanHtml(html: string, preserveStyles: boolean = false): string
     return html; // Return original HTML if cleaning fails
   }
 }
+
+// =============================================================================
+// Post-Strip (Defuddle-only structural tag removal)
+// =============================================================================
+
+/**
+ * Removes structural HTML containers while preserving inner content.
+ * Intended for use AFTER Defuddle extraction and initial cleaning.
+ *
+ * - Unwraps: span, div, section, article
+ * - Flattens tables by unwrapping table/thead/tbody/tfoot/tr/th/td/colgroup/col
+ *   and adding lightweight spacing/newlines to keep cell text readable.
+ * - Skips elements inside code/pre to avoid mangling code blocks.
+ */
+export function postStripHtmlElements(html: string): string {
+  try {
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(html, 'text/html');
+
+    const isInside = (el: Element, selector: string) => {
+      let node: Element | null = el;
+      while (node && node !== doc.body) {
+        if (node.matches(selector)) return true;
+        node = node.parentElement;
+      }
+      return false;
+    };
+
+    const unwrap = (el: Element) => {
+      const parent = el.parentNode;
+      if (!parent) return;
+      while (el.firstChild) parent.insertBefore(el.firstChild, el);
+      parent.removeChild(el);
+    };
+
+    // Unwrap lightweight containers first (skip code/pre)
+    const containerTags = ['span', 'div', 'section', 'article'];
+    for (const tag of containerTags) {
+      doc.querySelectorAll(tag).forEach(el => {
+        try {
+          if (isInside(el, 'pre, code')) return;
+          unwrap(el);
+        } catch {
+          /* ignore */
+        }
+      });
+    }
+
+    // Table flattening: handle cells first, then rows, then table wrappers
+    const addSpaceBefore = (el: Element, text: string) => {
+      try {
+        const prev = el.previousSibling;
+        if (!(prev && prev.nodeType === Node.TEXT_NODE && /\s$/.test(prev.textContent || ''))) {
+          el.parentNode?.insertBefore(doc.createTextNode(text), el);
+        }
+      } catch {
+        /* ignore */
+      }
+    };
+
+    const addNewlineAfter = (el: Element) => {
+      try {
+        const next = el.nextSibling;
+        if (!(next && next.nodeType === Node.TEXT_NODE && /^\n/.test(next.textContent || ''))) {
+          el.parentNode?.insertBefore(doc.createTextNode('\n'), next || null);
+        }
+      } catch {
+        /* ignore */
+      }
+    };
+
+    // Cells: add space separators, then unwrap
+    doc.querySelectorAll('td, th').forEach(cell => {
+      try {
+        if (isInside(cell, 'pre, code')) return;
+        addSpaceBefore(cell, ' ');
+        unwrap(cell);
+      } catch {
+        /* ignore */
+      }
+    });
+
+    // Rows: add newline after the row, then unwrap
+    doc.querySelectorAll('tr').forEach(row => {
+      try {
+        if (isInside(row, 'pre, code')) return;
+        addNewlineAfter(row);
+        unwrap(row);
+      } catch {
+        /* ignore */
+      }
+    });
+
+    // Table wrappers: unwrap entirely
+    doc.querySelectorAll('table, thead, tbody, tfoot, colgroup, col').forEach(wrapper => {
+      try {
+        if (isInside(wrapper, 'pre, code')) return;
+        unwrap(wrapper);
+      } catch {
+        /* ignore */
+      }
+    });
+
+    // Normalize whitespace a bit after unwrapping
+    let result = doc.body.innerHTML;
+    result = result.replace(/\s+\n/g, '\n').replace(/\n{3,}/g, '\n\n');
+    return result;
+  } catch {
+    return html; // On any failure, return original
+  }
+}

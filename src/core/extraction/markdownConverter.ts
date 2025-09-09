@@ -53,20 +53,8 @@ async function configureTurndown(service: TurndownService): Promise<void> {
     },
   });
 
-  // Custom rule for figures with captions
-  service.addRule('figureWithCaption', {
-    filter: 'figure',
-    replacement: function (content, node) {
-      const figure = node as Element;
-      const img = figure?.querySelector?.('img');
-      const caption = figure?.querySelector?.('figcaption');
-      if (!img) return content;
-      const alt = img.getAttribute('alt') || '';
-      const src = img.getAttribute('src') || '';
-      const captionText = caption ? `\n*${caption.textContent?.trim() || ''}*` : '';
-      return `\n\n![${alt}](${src})${captionText}\n\n`;
-    },
-  });
+  // Intentionally no custom figure rule: preserve all text around images
+  // by letting Turndown process figure contents normally.
 
   // Custom rule for footnotes
   service.addRule('footnote', {
@@ -219,6 +207,8 @@ export async function htmlToMarkdown(
         // Links and media
         'a',
         'img',
+        'figure',
+        'figcaption',
         // Tables
         'table',
         'thead',

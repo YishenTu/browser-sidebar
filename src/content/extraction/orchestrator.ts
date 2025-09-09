@@ -8,7 +8,7 @@
 
 import type { ExtractedContent, ExtractionOptions, ExtractionMethod } from '../../types/extraction';
 import { validateExtractionOptions, ExtractionMode } from '../../types/extraction';
-import { normalizeUrls, cleanHtml } from '../utils/domUtils';
+import { normalizeUrls, cleanHtml, postStripHtmlElements } from '../utils/domUtils';
 import { clampText } from '@core/extraction/text';
 import { getPageMetadata } from './analyzers/metadataExtractor';
 import { detectTables, generateExcerpt } from '@core/extraction/analyzers/contentAnalyzer';
@@ -195,6 +195,13 @@ async function performExtraction(
   mode: ExtractionMode = ExtractionMode.DEFUDDLE
 ): Promise<Omit<ExtractedContent, 'extractionTime'>> {
   const stepStartTime = performance.now();
+  // Capture original full HTML snapshot early to ensure Defuddle processes the unmodified DOM
+  let originalHtmlSnapshot = '';
+  try {
+    originalHtmlSnapshot = document.documentElement?.outerHTML || '';
+  } catch {
+    originalHtmlSnapshot = '';
+  }
   let htmlContent = '';
   let textContent = '';
   let author: string | undefined;
@@ -283,7 +290,7 @@ async function performExtraction(
   if (!htmlContent) {
     try {
       const defuddleExtractor = await getDefuddleExtractor();
-      const defuddleResult = await defuddleExtractor.extractWithDefuddle();
+      const defuddleResult = await defuddleExtractor.extractWithDefuddle(originalHtmlSnapshot);
 
       if (defuddleResult.content && defuddleResult.content.trim()) {
         htmlContent = defuddleResult.content;
@@ -311,6 +318,11 @@ async function performExtraction(
       // Align with includeLinks to avoid mismatches when hrefs were removed upstream.
       const normalizeLinkHrefs = includeLinks;
       htmlContent = normalizeUrls(htmlContent, window.location.href, normalizeLinkHrefs);
+
+      // Defuddle-only: post-strip structural elements to remove remaining span/div/table wrappers
+      if (extractionMethod === 'defuddle') {
+        htmlContent = postStripHtmlElements(htmlContent);
+      }
     } catch (error) {
       // HTML cleaning/normalization failed, using original content
     }

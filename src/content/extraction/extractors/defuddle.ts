@@ -15,7 +15,8 @@ type DefuddleParsed = {
   metaTags?: Array<Record<string, string>>;
 };
 
-export async function extractWithDefuddle(): Promise<ExtractedContent> {
+// Optionally accept a full HTML snapshot to ensure processing on the original, unmodified DOM
+export async function extractWithDefuddle(originalHtml?: string): Promise<ExtractedContent> {
   // Debug logging disabled for production
 
   try {
@@ -23,10 +24,14 @@ export async function extractWithDefuddle(): Promise<ExtractedContent> {
     // Import defuddle library
     const { default: Defuddle } = await import('defuddle');
 
-    const defuddleInstance = new Defuddle(document, {
+    // If provided, parse the original HTML into a fresh Document for Defuddle to process
+    const parser = originalHtml ? new DOMParser() : null;
+    const sourceDoc = originalHtml ? parser!.parseFromString(originalHtml, 'text/html') : document;
+
+    const defuddleInstance = new Defuddle(sourceDoc, {
+      // Important: let Defuddle work on the full original DOM and return HTML.
+      // We do our own HTML→Markdown later to avoid losing inline text/captions.
       url: document.URL,
-      markdown: true, // Request markdown output
-      separateMarkdown: true, // Include both HTML and Markdown
     });
 
     const defuddled = defuddleInstance.parse() as unknown as DefuddleParsed;
