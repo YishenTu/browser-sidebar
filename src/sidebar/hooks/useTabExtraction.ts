@@ -10,6 +10,7 @@ import { useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import type { TabContent, TabInfo } from '@/types/tabs';
 import type { ExtractedContent } from '@/types/extraction';
 import { ExtractionMode } from '@/types/extraction';
+import { getDefaultExtractionMode } from '@content/extraction/orchestrator';
 import type { GetAllTabsResponsePayload, GetAllTabsMessage, Message } from '@/types/messages';
 import { createMessage } from '@/types/messages';
 import { useSessionStore, useTabStore, useUIStore } from '@/data/store/chat';
@@ -163,7 +164,8 @@ export function useTabExtraction(): UseTabExtractionReturn {
       try {
         // New architecture: use ExtractionService
         const serviceOptions: ServiceExtractionOptions = {
-          mode: options?.mode || ExtractionMode.DEFUDDLE,
+          // Use explicit mode if provided; otherwise adopt orchestrator's runtime default
+          mode: options?.mode ?? getDefaultExtractionMode(),
           forceRefresh: true, // Force fresh extraction on mount
           maxRetries: 2,
           timeout: 5000,
@@ -248,7 +250,8 @@ export function useTabExtraction(): UseTabExtractionReturn {
 
         // Use ExtractionService (new architecture)
         const serviceOptions: ServiceExtractionOptions = {
-          mode: options?.mode,
+          // For manual extractions, also honor runtime default when not specified
+          mode: options?.mode ?? getDefaultExtractionMode(),
           forceRefresh: true, // Always force refresh for manual extractions
           maxRetries: 2,
           timeout: 5000,

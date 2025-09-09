@@ -85,6 +85,23 @@ async function getDefuddleExtractor() {
 // Removed unused getContentQualityModule function
 
 // =============================================================================
+// Default Mode Toggle (runtime)
+// =============================================================================
+
+// Module-level default extraction mode. This is used when callers do not
+// explicitly specify a mode. Exposed via getter/setter for simple runtime
+// toggling from other modules (e.g., settings UI or debug console).
+let defaultExtractionMode: ExtractionMode = ExtractionMode.RAW;
+
+export function setDefaultExtractionMode(mode: ExtractionMode): void {
+  defaultExtractionMode = mode;
+}
+
+export function getDefaultExtractionMode(): ExtractionMode {
+  return defaultExtractionMode;
+}
+
+// =============================================================================
 // Main Extraction Function
 // =============================================================================
 
@@ -103,7 +120,7 @@ async function getDefuddleExtractor() {
  */
 export async function extractContent(
   opts?: ExtractionOptions,
-  mode: ExtractionMode = ExtractionMode.DEFUDDLE
+  mode?: ExtractionMode
 ): Promise<ExtractedContent> {
   // Extract content called with specified mode
   let timeoutId: NodeJS.Timeout | null = null;
@@ -126,7 +143,10 @@ export async function extractContent(
     });
 
     // Run extraction with timeout
-    const extractionPromise = performExtraction(includeLinks, maxLength, timeout, mode);
+    // Resolve effective mode: honor explicit request, otherwise use module default
+    const effectiveMode = mode ?? getDefaultExtractionMode();
+
+    const extractionPromise = performExtraction(includeLinks, maxLength, timeout, effectiveMode);
     const result = await Promise.race([extractionPromise, timeoutPromise]);
 
     // Clear timeout if extraction completed successfully

@@ -255,6 +255,8 @@ export class ExtractionService {
       maxRetries = 2,
       retryDelay = 1000,
       forceRefresh = false,
+      // Keep explicit default here to preserve service contract and tests.
+      // UI can override by passing a mode from orchestrator's runtime default.
       mode = ExtractionMode.DEFUDDLE,
       timeout = 5000,
       ...extractionOptions

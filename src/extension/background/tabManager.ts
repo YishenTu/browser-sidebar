@@ -109,11 +109,10 @@ export class TabManager {
       // BUT: Skip cache if requesting a different mode or force refresh
       const cachedContent = await this.cache.get(tabId);
       if (cachedContent && !forceRefresh) {
-        // Check for mode mismatch:
-        // If mode is specified and different from cached, re-extract
-        const requestedMode = mode || 'defuddle'; // Default to defuddle if not specified
-        if (cachedContent.extractionMethod !== requestedMode) {
-          // Clear the cache for this tab to force re-extraction
+        // Only treat as a mode mismatch when the caller explicitly specifies a mode.
+        // If mode is undefined, accept any cached content regardless of its method
+        // so that the orchestrator's runtime default remains transparent to caching.
+        if (typeof mode === 'string' && cachedContent.extractionMethod !== mode) {
           await this.cache.clear(tabId);
         } else {
           return cachedContent;
