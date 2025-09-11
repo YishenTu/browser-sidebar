@@ -1,4 +1,5 @@
 import type { ExtractedContent } from '../../../types/extraction';
+import { htmlToMarkdown } from '@core/extraction/markdownConverter';
 
 // Minimal Defuddle parse response type to avoid importing internal package paths
 type DefuddleParsed = {
@@ -22,16 +23,16 @@ export async function extractWithDefuddle(originalHtml?: string): Promise<Extrac
   try {
     // Dynamically import Defuddle to avoid bundling issues
     // Import defuddle library
-    const { default: Defuddle } = await import('defuddle');
+    const { default: Defuddle } = await import('defuddle/full');
 
     // If provided, parse the original HTML into a fresh Document for Defuddle to process
     const parser = originalHtml ? new DOMParser() : null;
     const sourceDoc = originalHtml ? parser!.parseFromString(originalHtml, 'text/html') : document;
 
     const defuddleInstance = new Defuddle(sourceDoc, {
-      // Important: let Defuddle work on the full original DOM and return HTML.
-      // We do our own HTML→Markdown later to avoid losing inline text/captions.
       url: document.URL,
+      markdown: true, // Convert content to markdown
+      separateMarkdown: false, // Don't keep separate HTML, only return markdown
     });
 
     const defuddled = defuddleInstance.parse() as unknown as DefuddleParsed;
@@ -40,30 +41,42 @@ export async function extractWithDefuddle(originalHtml?: string): Promise<Extrac
     const url = new URL(document.URL);
     const domain = url.hostname.replace(/^www\./, '');
 
-    // Calculate features for content quality
-    const contentElement = document.createElement('div');
-    contentElement.innerHTML = defuddled.content || '';
+    // Check if we have markdown content
+    let markdownContent = '';
 
-    const tables = contentElement.querySelectorAll('table').length;
+    // First check if contentMarkdown field exists (from separateMarkdown option)
+    if (defuddled.contentMarkdown) {
+      markdownContent = defuddled.contentMarkdown;
+    }
+    // Check if content looks like HTML (has HTML tags)
+    else if (
+      defuddled.content &&
+      defuddled.content.includes('<') &&
+      defuddled.content.includes('>')
+    ) {
+      // Convert HTML to markdown manually
+      markdownContent = await htmlToMarkdown(defuddled.content, { includeLinks: false });
+    }
+    // Otherwise assume content is already markdown
+    else {
+      markdownContent = defuddled.content || '';
+    }
 
-    const result = {
+    const hasTables = markdownContent.includes('|') && markdownContent.includes('---|');
+
+    const result: ExtractedContent = {
       title: defuddled.title || document.title || '',
-      author: defuddled.author || '',
-      publishedDate: defuddled.published || '',
       url: document.URL,
       domain,
-      content: defuddled.content || '', // Return HTML for orchestrator to convert
-      textContent: contentElement.textContent || '',
-      excerpt: defuddled.description || contentElement.textContent?.substring(0, 200) + '...' || '',
+      content: markdownContent, // Use markdown content (from contentMarkdown or content field)
+      textContent: markdownContent,
+      excerpt: defuddled.description || markdownContent.substring(0, 200) + '...' || '',
       extractedAt: Date.now(),
       extractionMethod: 'defuddle' as const,
       metadata: {
-        hasTables: tables > 0,
+        hasTables,
         truncated: false,
         timeoutMs: defuddled.parseTime || 0,
-        // Include schema and meta data for internal use
-        schemaOrgData: defuddled.schemaOrgData,
-        metaTags: defuddled.metaTags,
       },
     };
 
@@ -75,8 +88,6 @@ export async function extractWithDefuddle(originalHtml?: string): Promise<Extrac
 
     return {
       title: fallbackTitle,
-      author: '',
-      publishedDate: '',
       url: document.URL,
       domain: new URL(document.URL).hostname.replace(/^www\./, ''),
       content: fallbackContent,
@@ -87,6 +98,7 @@ export async function extractWithDefuddle(originalHtml?: string): Promise<Extrac
       metadata: {
         hasTables: false,
         truncated: false,
+        timeoutMs: 0,
       },
     };
   }

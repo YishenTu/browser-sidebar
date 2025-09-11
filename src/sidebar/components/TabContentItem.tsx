@@ -14,7 +14,7 @@ import { Spinner } from '@ui/Spinner';
 import { Alert } from '@ui/Alert';
 // Badge imported but not used - removed
 import { Collapsible } from '@ui/Collapsible';
-import { RegenerateIcon, ExpandIcon, CloseIcon, TableIcon } from '@ui/Icons';
+import { ExpandIcon, CloseIcon } from '@ui/Icons';
 import { FullscreenModal } from '@ui/FullscreenModal';
 import { useSessionStore } from '@/data/store/chat';
 import { useSessionManager } from '@hooks/useSessionManager';
@@ -75,8 +75,30 @@ export const TabContentItem: React.FC<TabContentItemProps> = ({
     ? getSessionMessageCount(currentSession.tabId, currentSession.url) > 0
     : false;
 
-  // Use full text content, let CSS handle truncation
-  const excerpt = content?.excerpt || content?.textContent || '';
+  // Unified display: Extract plain text from whatever content is available
+  let displayText = '';
+  if (content) {
+    // Priority: textContent > excerpt > extract from content field
+    if (content.textContent && content.textContent.trim()) {
+      displayText = content.textContent;
+    } else if (content.excerpt && content.excerpt.trim()) {
+      displayText = content.excerpt;
+    } else if (content.content) {
+      // Extract plain text from markdown/HTML content field
+      const tempDiv = document.createElement('div');
+      tempDiv.innerHTML = content.content;
+      displayText = tempDiv.textContent || tempDiv.innerText || '';
+    }
+
+    // Clean up excessive whitespace but preserve paragraph breaks
+    displayText = displayText
+      .trim()
+      .replace(/\n\s*\n/g, '\n') // Collapse multiple blank lines to single
+      .replace(/[ \t]+/g, ' '); // Normalize spaces/tabs but keep newlines
+
+    // No character truncation - let CSS handle overflow with fixed height
+  }
+  const excerpt = displayText;
 
   // Create header content for collapsible
   const headerContent = (isCollapsed: boolean) => {
@@ -257,10 +279,10 @@ export const TabContentItem: React.FC<TabContentItemProps> = ({
 
                   {/* Actions row - debug info and buttons on new row */}
                   <div className="content-preview-actions-row">
-                    {/* Debug: Show extraction method */}
-                    {content.extractionMethod && (
+                    {/* Debug: Show content length */}
+                    {content.content && (
                       <div className="content-preview-debug-info">
-                        Method: {content.extractionMethod} | Length: {content.content?.length || 0}
+                        Length: {content.content?.length || 0}
                       </div>
                     )}
 
@@ -272,6 +294,42 @@ export const TabContentItem: React.FC<TabContentItemProps> = ({
                           Raw
                         </span>
                       )}
+                      {content?.extractionMethod === 'readability' && (
+                        <span className="content-preview-badge content-preview-badge--readability">
+                          Readability
+                        </span>
+                      )}
+                      {content?.extractionMethod === 'defuddle' && (
+                        <span className="content-preview-badge content-preview-badge--defuddle">
+                          Defuddle
+                        </span>
+                      )}
+                      {/* Readability Mode button - default clean extraction */}
+                      <button
+                        onClick={e => {
+                          e.stopPropagation();
+                          // Re-extract with Readability mode (default)
+                          onReextract({ mode: ExtractionMode.READABILITY });
+                        }}
+                        className="content-preview-readability-inline content-preview-extraction-button"
+                        title="Extract with Readability (default clean extraction)"
+                        aria-label="Extract with Readability"
+                      >
+                        R
+                      </button>
+                      {/* Defuddle button - alternative extraction */}
+                      <button
+                        onClick={e => {
+                          e.stopPropagation();
+                          // Re-extract with defuddle method
+                          onReextract({ mode: ExtractionMode.DEFUDDLE });
+                        }}
+                        className="content-preview-defuddle-inline content-preview-extraction-button"
+                        title="Extract with Defuddle (alternative method)"
+                        aria-label="Extract with Defuddle"
+                      >
+                        D
+                      </button>
                       {/* Raw Mode button - for table-heavy pages */}
                       <button
                         onClick={e => {
@@ -279,23 +337,11 @@ export const TabContentItem: React.FC<TabContentItemProps> = ({
                           // Just re-extract the current tab with raw mode
                           onReextract({ mode: ExtractionMode.RAW });
                         }}
-                        className="content-preview-raw-inline"
-                        title="Extract with Raw Mode (preserves HTML/tables)"
+                        className="content-preview-raw-inline content-preview-extraction-button"
+                        title="Extract with Raw HTML (preserves tables)"
                         aria-label="Extract in Raw Mode"
                       >
-                        <TableIcon size={14} />
-                      </button>
-                      <button
-                        onClick={e => {
-                          e.stopPropagation();
-                          // Re-extract with default method (defuddle)
-                          onReextract({ mode: ExtractionMode.DEFUDDLE });
-                        }}
-                        className="content-preview-refresh-inline"
-                        title="Re-extract content (default method)"
-                        aria-label="Re-extract content"
-                      >
-                        <RegenerateIcon size={14} />
+                        H
                       </button>
                       <button
                         onClick={e => {

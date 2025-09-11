@@ -202,11 +202,13 @@
   margin: 0; /* Removed margin that was adding space */
   display: flex;
   flex-direction: column;
+  /* Ensure consistent layout */
+  height: 132px; /* Fixed total height: 100px excerpt + 32px actions */
 }
 
 .content-preview-excerpt {
   /* Text container */
-  overflow-y: auto; /* Allow vertical scrolling if text overflows */
+  overflow-y: hidden; /* Hide overflow instead of scroll */
   overflow-x: hidden; /* Prevent horizontal scroll */
   position: relative;
   border: none;
@@ -214,30 +216,16 @@
   padding: 12px; /* Uniform padding */
   padding-bottom: 8px; /* Less padding at bottom since actions row follows */
   margin: 0;
+  height: 100px; /* Fixed height to match parent calculation */
   max-height: 100px; /* Limit text area height */
   box-sizing: border-box;
-  /* Custom scrollbar for better appearance */
-  scrollbar-width: thin;
-  scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
+  flex: 1 0 100px; /* Take up the 100px, don't grow or shrink */
+  /* Add fade-out effect at bottom for visual truncation */
+  -webkit-mask-image: linear-gradient(to bottom, black 70%, transparent 100%);
+  mask-image: linear-gradient(to bottom, black 70%, transparent 100%);
 }
 
-/* Webkit scrollbar styling */
-.content-preview-excerpt::-webkit-scrollbar {
-  width: 6px;
-}
-
-.content-preview-excerpt::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-.content-preview-excerpt::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.2);
-  border-radius: 3px;
-}
-
-.content-preview-excerpt::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.3);
-}
+/* Scrollbar removed - using fade-out truncation instead */
 
 .content-preview-excerpt p {
   /* Text fills available space without truncation */
@@ -246,6 +234,7 @@
   line-height: 1.5;
   color: rgba(255, 255, 255, 0.8);
   word-break: break-word;
+  white-space: pre-wrap; /* Preserve newlines and wrap long lines */
   /* No truncation - text naturally flows and wraps */
 }
 
@@ -256,8 +245,10 @@
   align-items: center;
   padding: 4px 12px;
   border-top: 1px solid rgba(75, 85, 99, 0.2);
-  height: 32px; /* Fixed height instead of min-height */
+  min-height: 32px; /* Minimum height to ensure consistency */
+  height: 32px; /* Fixed height */
   flex-shrink: 0; /* Prevent shrinking */
+  box-sizing: border-box; /* Include padding and border in height */
 }
 
 /* Debug info on the left */
@@ -311,31 +302,89 @@
 
 /* Full content modal styles moved to fullscreen-modal.css */
 
-/* Raw mode styles */
-.ai-sidebar-container .content-preview-raw-inline {
-  padding: 4px;
+/* Extraction mode button styles */
+.ai-sidebar-container .content-preview-extraction-button {
+  width: 20px;
+  height: 20px;
+  padding: 0;
   transition: all 0.2s;
-  background: transparent;
-  border: none;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
   cursor: pointer;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   color: rgba(255, 255, 255, 0.6);
   outline: none;
+  font-size: 11px;
+  font-weight: 600;
+  font-family: var(--font-mono, 'SF Mono', 'Monaco', 'Inconsolata', 'Fira Code', monospace);
+  line-height: 1;
+}
+
+.content-preview-extraction-button:hover {
+  transform: scale(1.1);
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.content-preview-extraction-button:active {
+  transform: scale(0.95);
+}
+
+/* Specific hover colors for each extraction method */
+.content-preview-readability-inline:hover {
+  color: #22c55e;
+  border-color: #22c55e;
+  background: rgba(34, 197, 94, 0.1);
 }
 
 .content-preview-raw-inline:hover {
-  color: var(--color-primary, #3b82f6);
-  transform: scale(1.1);
+  color: #3b82f6;
+  border-color: #3b82f6;
+  background: rgba(59, 130, 246, 0.1);
 }
 
-.content-preview-raw-inline:active {
-  transform: scale(0.95);
+.content-preview-defuddle-inline:hover {
+  color: #a855f7;
+  border-color: #a855f7;
+  background: rgba(168, 85, 247, 0.1);
+}
+
+/* Active state for selected method */
+.content-preview-readability-inline.active {
+  color: #22c55e;
+  background: rgba(34, 197, 94, 0.2);
+  border-color: #22c55e;
+}
+
+.content-preview-raw-inline.active {
+  color: #3b82f6;
+  background: rgba(59, 130, 246, 0.2);
+  border-color: #3b82f6;
+}
+
+.content-preview-defuddle-inline.active {
+  color: #a855f7;
+  background: rgba(168, 85, 247, 0.2);
+  border-color: #a855f7;
 }
 
 /* Raw mode badge */
 .content-preview-badge--raw {
   background: rgba(59, 130, 246, 0.1);
   color: #3b82f6;
+}
+
+/* Readability mode badge */
+.content-preview-badge--readability {
+  background: rgba(34, 197, 94, 0.1);
+  color: #22c55e;
+}
+
+/* Defuddle mode badge */
+.content-preview-badge--defuddle {
+  background: rgba(168, 85, 247, 0.1);
+  color: #a855f7;
 }

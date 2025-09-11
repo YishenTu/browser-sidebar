@@ -112,45 +112,6 @@ function stripAndFlattenHTML(html: string): string {
       }
     });
 
-    // 3.6. Remove images with data URLs (base64 encoded) - they're massive token wasters
-    const dataUrlImages = doc.querySelectorAll('img[src^="data:"]');
-    dataUrlImages.forEach(img => {
-      try {
-        // Option 1: Remove completely
-        img.parentNode?.removeChild(img);
-
-        // Option 2: Replace with placeholder (if you want to preserve structure)
-        // const placeholder = doc.createElement('span');
-        // placeholder.textContent = '[Image]';
-        // img.parentNode?.replaceChild(placeholder, img);
-      } catch (e) {
-        // Skip if can't remove
-      }
-    });
-
-    // 3.7. Remove alphabet/index navigation (divs containing single letters A-Z)
-    // This targets containers that have multiple single-letter divs (likely navigation)
-    const allDivs = doc.querySelectorAll('div');
-    allDivs.forEach(div => {
-      try {
-        const children = Array.from(div.children);
-        // Check if this div has many children that are single letters
-        if (children.length > 10) {
-          const singleLetterDivs = children.filter(child => {
-            const text = child.textContent?.trim() || '';
-            return child.tagName === 'DIV' && text.length <= 2 && /^[A-Z]{1,2}$/.test(text);
-          });
-
-          // If most children are single letter divs, it's likely alphabet navigation
-          if (singleLetterDivs.length > children.length * 0.8) {
-            div.parentNode?.removeChild(div);
-          }
-        }
-      } catch (e) {
-        // Skip if can't process
-      }
-    });
-
     // 4. Flatten deeply nested structures (skip - can cause DOMException)
     // This step is prone to errors, so we'll skip it for now
 
@@ -237,76 +198,17 @@ function stripAndFlattenHTML(html: string): string {
       '[class*="header"], [class*="nav"], [class*="footer"], [class*="sidebar"], ' +
         '[id*="header"], [id*="nav"], [id*="footer"], [id*="sidebar"], ' +
         '.nav-colunm, .nav-item, .breadcrumb, .tab-item, .action-btn, ' +
-        '.menu, .toolbar, .topbar, .bottombar, ' +
-        // Extension/plugin UI patterns
-        '[id*="setting"], [class*="setting"], [id*="config"], [class*="config"], ' +
-        '[id^="hld"], [class^="hld"], [id*="hld"], [class*="hld"], ' + // NGA extension (broader match)
-        '[id*="extension"], [class*="extension"], [id*="plugin"], [class*="plugin"], ' +
-        '[id*="addon"], [class*="addon"], [id*="userscript"], [class*="userscript"], ' +
-        // Forum navigation patterns
-        '#mainmenu, #m_pbtntop, #pagebtop, #pagebbtm, ' +
-        '[id*="postbtop"], [id*="postbbtm"], [class*="postbtop"], [class*="postbbtm"]'
+        '.menu, .toolbar, .topbar, .bottombar'
     );
     commonPatterns.forEach(el => {
       try {
-        // Check if this is actually a header/nav/footer element (not just coincidental class name)
-        const className = el.className?.toLowerCase() || '';
-        const id = el.id?.toLowerCase() || '';
-        const tagName = el.tagName?.toLowerCase() || '';
+        // Don't remove if it contains main content indicators
+        const text = el.textContent || '';
+        const hasImportantContent =
+          el.querySelector('table') || el.querySelector('.copy-value') || text.length > 1000; // Likely main content if very long
 
-        // More aggressive removal for actual navigation elements and extension UI
-        const isNavigationElement =
-          className.includes('header') ||
-          className.includes('nav') ||
-          className.includes('footer') ||
-          className.includes('sidebar') ||
-          className.includes('setting') ||
-          className.includes('config') ||
-          className.includes('extension') ||
-          className.includes('plugin') ||
-          className.includes('addon') ||
-          className.includes('userscript') ||
-          className.includes('hld') || // NGA extension
-          className.includes('postbtop') || // Forum post buttons
-          className.includes('postbbtm') ||
-          id.includes('header') ||
-          id.includes('nav') ||
-          id.includes('footer') ||
-          id.includes('sidebar') ||
-          id.includes('setting') ||
-          id.includes('config') ||
-          id.includes('extension') ||
-          id.includes('plugin') ||
-          id.includes('addon') ||
-          id.includes('userscript') ||
-          id.includes('hld') || // NGA extension
-          id.includes('postbtop') || // Forum post buttons
-          id.includes('postbbtm') ||
-          id === 'mainmenu' || // Specific forum elements
-          id === 'm_pbtntop' ||
-          id === 'pagebtop' ||
-          id === 'pagebbtm' ||
-          tagName === 'header' ||
-          tagName === 'nav' ||
-          tagName === 'footer' ||
-          tagName === 'aside';
-
-        if (isNavigationElement) {
-          // For navigation elements, only preserve if they contain critical content
-          const hasImportantContent = el.querySelector('table') || el.querySelector('.copy-value');
-
-          if (!hasImportantContent) {
-            el.parentNode?.removeChild(el);
-          }
-        } else {
-          // For other elements (menu, toolbar, etc.), use the original logic
-          const text = el.textContent || '';
-          const hasImportantContent =
-            el.querySelector('table') || el.querySelector('.copy-value') || text.length > 1000;
-
-          if (!hasImportantContent) {
-            el.parentNode?.removeChild(el);
-          }
+        if (!hasImportantContent) {
+          el.parentNode?.removeChild(el);
         }
       } catch (e) {
         // Skip if element can't be removed
@@ -426,21 +328,57 @@ interface RawModeOptions {
 }
 
 /**
+ * Default options for raw HTML extraction
+ * These settings control the default behavior when no options are provided
+ */
+export const DEFAULT_RAW_OPTIONS: RawModeOptions = {
+  root_hints: ['.company-detail', '.content', 'main'],
+  strip_class: false, // Keep classes for code language detection
+  keep_id: true,
+  inject_pseudo: false,
+
+  // DEBUG TOGGLES - Internal testing phase
+  optimize_tokens: true, // Strip & flatten HTML (40-50% token reduction)
+
+  // All stripping toggles
+  strip_invisible: false,
+  strip_scripts: true,
+  strip_styles: true,
+  strip_links: true,
+  strip_noscript: true,
+  strip_iframes: true,
+  strip_objects: true,
+  strip_embeds: true,
+  strip_applets: true,
+  strip_svg: true,
+  strip_canvas: true,
+  strip_event_handlers: true,
+  strip_javascript_urls: true,
+  strip_unsafe_attrs: true,
+  find_main_content: false, // False if don't try to find main content, use whole body
+};
+
+/**
  * Extract content in raw mode (preserves HTML structure, especially tables)
  *
- * @param options - Raw mode extraction options
+ * @param options - Raw mode extraction options (will be merged with defaults)
  * @returns Extracted content with preserved HTML structure
  */
 export async function extractWithRaw(options?: RawModeOptions): Promise<ExtractedContent> {
+  // Merge provided options with defaults
+  const mergedOptions = { ...DEFAULT_RAW_OPTIONS, ...options };
+
   // 1. Find the best root element for content (or use body if disabled)
   const root =
-    options?.find_main_content !== false ? pickRoot(document, options?.root_hints) : document.body;
+    mergedOptions.find_main_content !== false
+      ? pickRoot(document, mergedOptions.root_hints)
+      : document.body;
 
   // 2. Create a clean document for processing
   const cleanDoc = document.implementation.createHTMLDocument('raw');
 
   // 3. Deep clone nodes with optional sanitization
-  const clonedRoot = deepCloneVisible(root, cleanDoc, options);
+  const clonedRoot = deepCloneVisible(root, cleanDoc, mergedOptions);
   if (clonedRoot) {
     cleanDoc.body.appendChild(clonedRoot);
   }
@@ -449,7 +387,7 @@ export async function extractWithRaw(options?: RawModeOptions): Promise<Extracte
   let finalContent = cleanDoc.body.innerHTML;
 
   // HTML stripping
-  if (options?.optimize_tokens) {
+  if (mergedOptions.optimize_tokens) {
     try {
       finalContent = stripAndFlattenHTML(finalContent);
       // Update cleanDoc with optimized HTML for metadata calculation

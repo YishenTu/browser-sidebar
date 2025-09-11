@@ -1,61 +1,17 @@
 /**
- * @file Content Extractor Orchestrator
+ * @file Content Extractor Orchestrator (Simplified)
  *
  * Main extraction orchestrator that coordinates the content extraction pipeline
- * with timeout enforcement and fallback logic. Tries Readability first, then
- * falls back to heuristic extraction if needed.
+ * with timeout enforcement. Supports three extraction methods that users can
+ * manually select: Readability (default), Raw HTML, and Defuddle.
+ * Each extraction method handles its own processing internally.
  */
 
-import type { ExtractedContent, ExtractionOptions, ExtractionMethod } from '../../types/extraction';
+import type { ExtractedContent, ExtractionOptions } from '../../types/extraction';
 import { validateExtractionOptions, ExtractionMode } from '../../types/extraction';
-import { normalizeUrls, cleanHtml, postStripHtmlElements } from '../utils/domUtils';
-import { clampText } from '@core/extraction/text';
-import { getPageMetadata } from './analyzers/metadataExtractor';
-import { detectTables, generateExcerpt } from '@core/extraction/analyzers/contentAnalyzer';
-import { htmlToMarkdown } from '@core/extraction/markdownConverter';
 
 // Debug flag - disable in production
-const DEBUG = false; // Disable debug logging for production
-
-// =============================================================================
-// Error Classification
-// =============================================================================
-
-/**
- * Classifies error types for better error handling and logging
- */
-function classifyError(error: unknown): {
-  type: 'timeout' | 'network' | 'dom' | 'memory' | 'parsing' | 'unknown';
-  message: string;
-} {
-  if (!(error instanceof Error)) {
-    return { type: 'unknown', message: String(error) };
-  }
-
-  const message = error.message.toLowerCase();
-
-  if (message.includes('timeout')) {
-    return { type: 'timeout', message: error.message };
-  }
-
-  if (message.includes('network') || message.includes('fetch') || message.includes('loading')) {
-    return { type: 'network', message: error.message };
-  }
-
-  if (message.includes('dom') || message.includes('document') || message.includes('element')) {
-    return { type: 'dom', message: error.message };
-  }
-
-  if (message.includes('memory') || message.includes('heap')) {
-    return { type: 'memory', message: error.message };
-  }
-
-  if (message.includes('parsing') || message.includes('parse') || message.includes('syntax')) {
-    return { type: 'parsing', message: error.message };
-  }
-
-  return { type: 'unknown', message: error.message };
-}
+const DEBUG = false;
 
 // =============================================================================
 // Dynamic Import Caching
@@ -63,6 +19,8 @@ function classifyError(error: unknown): {
 
 // Cache for dynamically imported modules to avoid reloading
 let defuddleExtractorModule: typeof import('./extractors/defuddle') | null = null;
+let readabilityExtractorModule: typeof import('./extractors/readability') | null = null;
+let rawExtractorModule: typeof import('./extractors/raw') | null = null;
 
 /**
  * Loads the Defuddle extractor with caching and error handling
@@ -72,7 +30,6 @@ async function getDefuddleExtractor() {
     try {
       defuddleExtractorModule = await import('./extractors/defuddle');
     } catch (error) {
-      // Re-throw with more specific error information
       if (error instanceof Error) {
         throw new Error(`Loading error for defuddle extractor: ${error.message}`);
       }
@@ -82,16 +39,47 @@ async function getDefuddleExtractor() {
   return defuddleExtractorModule;
 }
 
-// Removed unused getContentQualityModule function
+/**
+ * Loads the Readability extractor with caching and error handling
+ */
+async function getReadabilityExtractor() {
+  if (!readabilityExtractorModule) {
+    try {
+      readabilityExtractorModule = await import('./extractors/readability');
+    } catch (error) {
+      if (error instanceof Error) {
+        throw new Error(`Loading error for readability extractor: ${error.message}`);
+      }
+      throw new Error(`Unknown error loading readability extractor: ${error}`);
+    }
+  }
+  return readabilityExtractorModule;
+}
+
+/**
+ * Loads the Raw extractor with caching and error handling
+ */
+async function getRawExtractor() {
+  if (!rawExtractorModule) {
+    try {
+      rawExtractorModule = await import('./extractors/raw');
+    } catch (error) {
+      if (error instanceof Error) {
+        throw new Error(`Loading error for raw extractor: ${error.message}`);
+      }
+      throw new Error(`Unknown error loading raw extractor: ${error}`);
+    }
+  }
+  return rawExtractorModule;
+}
 
 // =============================================================================
 // Default Mode Toggle (runtime)
 // =============================================================================
 
-// Module-level default extraction mode. This is used when callers do not
-// explicitly specify a mode. Exposed via getter/setter for simple runtime
-// toggling from other modules (e.g., settings UI or debug console).
-let defaultExtractionMode: ExtractionMode = ExtractionMode.DEFUDDLE;
+// Module-level default extraction mode. Users can manually select between
+// three methods: Readability (default), Raw HTML, or Defuddle.
+let defaultExtractionMode: ExtractionMode = ExtractionMode.READABILITY;
 
 export function setDefaultExtractionMode(mode: ExtractionMode): void {
   defaultExtractionMode = mode;
@@ -106,23 +94,21 @@ export function getDefaultExtractionMode(): ExtractionMode {
 // =============================================================================
 
 /**
- * Extracts content from the current page using a tiered approach
+ * Extracts content from the current page using the selected method
  *
- * Extraction Pipeline:
- * 1. Try extraction based on mode (Comprehensive by default)
- * 2. Fall back to heuristic extraction if primary fails
- * 3. Convert HTML content to Markdown
- * 4. Apply character limits and detect content features
+ * Three extraction methods available:
+ * 1. Readability - Clean, reader-friendly extraction (default)
+ * 2. Raw HTML - Preserves HTML structure with configurable stripping
+ * 3. Defuddle - Alternative extraction using the Defuddle library
  *
  * @param opts - Extraction configuration options
- * @param mode - Extraction mode (DEFUDDLE or SELECTION)
+ * @param mode - Extraction mode to use
  * @returns Promise resolving to structured content data
  */
 export async function extractContent(
   opts?: ExtractionOptions,
   mode?: ExtractionMode
 ): Promise<ExtractedContent> {
-  // Extract content called with specified mode
   let timeoutId: NodeJS.Timeout | null = null;
 
   try {
@@ -142,7 +128,6 @@ export async function extractContent(
       }, timeout);
     });
 
-    // Run extraction with timeout
     // Resolve effective mode: honor explicit request, otherwise use module default
     const effectiveMode = mode ?? getDefaultExtractionMode();
 
@@ -162,474 +147,110 @@ export async function extractContent(
       clearTimeout(timeoutId);
     }
 
-    // Classify and handle specific error types
-    const errorInfo = classifyError(error);
-
-    // Error type can be used for specific error handling in the future
-    void errorInfo.type;
-
-    // Always return valid fallback content
-    const timeoutUsed = opts?.timeout ?? 2000;
-    return createFallbackContent(opts?.maxLength || 200000, timeoutUsed);
+    // Re-throw the error - let the caller handle it
+    throw error;
   }
 }
 
 // =============================================================================
-// Core Extraction Logic
+// Core Extraction Logic (Simplified)
 // =============================================================================
-
-/**
- * Captures user-selected text if available
- */
-function captureSelection(): { html: string; text: string } | null {
-  try {
-    const selection = window.getSelection();
-    if (!selection || selection.rangeCount === 0 || selection.isCollapsed) {
-      return null;
-    }
-
-    const range = selection.getRangeAt(0);
-    const container = document.createElement('div');
-    container.appendChild(range.cloneContents());
-
-    const html = container.innerHTML;
-    const text = selection.toString();
-
-    if (!text.trim()) {
-      return null;
-    }
-
-    return { html, text };
-  } catch (error) {
-    return null;
-  }
-}
 
 /**
  * Performs the actual extraction without timeout handling
+ * Each extraction method handles its own processing internally
  */
 async function performExtraction(
   includeLinks: boolean,
-  maxLength: number,
+  _maxLength: number, // Kept for API compatibility but not used
   timeoutMs: number,
-  mode: ExtractionMode = ExtractionMode.DEFUDDLE
-): Promise<Omit<ExtractedContent, 'extractionTime'>> {
-  const stepStartTime = performance.now();
-  // Capture original full HTML snapshot early to ensure Defuddle processes the unmodified DOM
-  let originalHtmlSnapshot = '';
-  try {
-    originalHtmlSnapshot = document.documentElement?.outerHTML || '';
-  } catch {
-    originalHtmlSnapshot = '';
-  }
-  let htmlContent = '';
-  let textContent = '';
-  let author: string | undefined;
-  let extractionMethod: ExtractionMethod = 'defuddle';
-  let metadata: ReturnType<typeof getPageMetadata>;
-  // Prefer RAW extractor's table detection when available
-  let hasTablesFromRaw: boolean | null = null;
+  mode: ExtractionMode = ExtractionMode.READABILITY
+): Promise<ExtractedContent> {
+  let result: ExtractedContent | null = null;
 
-  // Check for user selection first
-  const selection = captureSelection();
-  const hasSelection = selection !== null;
-
-  // Early metadata extraction with error handling
-  try {
-    metadata = getPageMetadata(document);
-  } catch (error) {
-    metadata = {
-      title: document.title || 'Untitled',
-      publishedDate: undefined,
-    };
-  }
-
-  // Step 0: If we have a selection, prioritize it
-  if (hasSelection && selection) {
-    // For selection mode, only use the selected content
-    if (mode === ExtractionMode.SELECTION) {
-      htmlContent = selection.html;
-      textContent = selection.text;
-      extractionMethod = 'selection';
-    } else {
-      // For defuddle mode, we'll extract full content but mark the selection
-      // This will be enhanced after full extraction
-    }
-  }
-
-  // Step 1: Try RAW mode first if requested (before defuddle)
-  if (mode === ExtractionMode.RAW && !htmlContent) {
-    // Starting RAW extraction
-    try {
-      const rawExtractor = await import('./extractors/raw');
-      const rawResult = await rawExtractor.extractWithRaw({
-        root_hints: ['.company-detail', '.content', 'main'],
-        strip_class: false, // Keep classes for code language detection
-        keep_id: true,
-        inject_pseudo: false,
-
-        // DEBUG TOGGLES - Internal testing phase
-        optimize_tokens: true, // Strip & flatten HTML (40-50% token reduction)
-
-        // All stripping toggles default to false (don't strip) for testing
-        strip_invisible: false,
-        strip_scripts: true,
-        strip_styles: true,
-        strip_links: true,
-        strip_noscript: true,
-        strip_iframes: true,
-        strip_objects: true,
-        strip_embeds: true,
-        strip_applets: true,
-        strip_svg: true,
-        strip_canvas: true,
-        strip_event_handlers: true,
-        strip_javascript_urls: true,
-        strip_unsafe_attrs: true,
-        find_main_content: false, // False if don't try to find main content, use whole body
-      });
-
-      if (rawResult.content && rawResult.content.trim()) {
-        // RAW extraction successful
-        htmlContent = rawResult.content;
-        textContent = rawResult.textContent || '';
-        author = rawResult.author;
-        extractionMethod = 'raw';
-        // Capture RAW's table detection for accurate metadata downstream
-        hasTablesFromRaw = Boolean(rawResult.metadata?.hasTables);
-      } else {
-        // No content extracted from raw mode
-      }
-    } catch (error) {
-      console.error('[RAW MODE] Extraction failed:', error);
-      // Raw extraction failed, fall through to defuddle
-    }
-  }
-
-  // Step 2: Use Defuddle for all extraction (unless we already have selection-only content)
-  if (!htmlContent) {
-    try {
-      const defuddleExtractor = await getDefuddleExtractor();
-      const defuddleResult = await defuddleExtractor.extractWithDefuddle(originalHtmlSnapshot);
-
-      if (defuddleResult.content && defuddleResult.content.trim()) {
-        htmlContent = defuddleResult.content;
-        textContent = defuddleResult.textContent || '';
-        author = defuddleResult.author || undefined;
-        extractionMethod = 'defuddle';
-      } else {
-        // No raw content extracted
-      }
-    } catch (error) {
-      // Defuddle extraction failed, will use fallback
-    }
-  }
-
-  // Step 3: Clean and normalize URLs in HTML content
-  if (htmlContent && htmlContent.trim()) {
-    try {
-      // First clean the HTML following Obsidian's proven order
-      // CRITICAL: For raw mode, preserve classes for code detection
-      const preserveClasses = extractionMethod === 'raw';
-      htmlContent = cleanHtml(htmlContent, preserveClasses);
-
-      // Then normalize URLs. In RAW mode, also normalize link hrefs to absolute
-      // so table and reference links remain valid outside the page context.
-      // Align with includeLinks to avoid mismatches when hrefs were removed upstream.
-      const normalizeLinkHrefs = includeLinks;
-      htmlContent = normalizeUrls(htmlContent, window.location.href, normalizeLinkHrefs);
-
-      // Defuddle-only: post-strip structural elements to remove remaining span/div/table wrappers
-      if (extractionMethod === 'defuddle') {
-        htmlContent = postStripHtmlElements(htmlContent);
-      }
-    } catch (error) {
-      // HTML cleaning/normalization failed, using original content
-    }
-  }
-
-  // Step 2.5: If we have a selection and full content, add selection marker
-  let selectionMarkdown = '';
-  if (hasSelection && selection && htmlContent && mode !== ExtractionMode.SELECTION) {
-    try {
-      // Convert selection to markdown
-      const cleanedSelection = cleanHtml(selection.html, false);
-      const normalizedSelection = normalizeUrls(
-        cleanedSelection,
-        window.location.href,
-        includeLinks
-      );
-      selectionMarkdown = await htmlToMarkdown(normalizedSelection, { includeLinks });
-    } catch (error) {
-      // Failed to process selection
-    }
-  }
-
-  // Step 3: Convert HTML to Markdown with graceful degradation
-  let markdown = '';
-  if (htmlContent && htmlContent.trim()) {
-    if (extractionMethod === 'raw') {
-      // Raw mode - use HTML directly without conversion
-      markdown = htmlContent;
-
-      // If we have a selection with raw mode, still prepend it
-      if (selectionMarkdown) {
-        markdown = `<!-- Selected Content -->\n${selectionMarkdown}\n\n<hr>\n\n<!-- Full Page Content -->\n${markdown}`;
-      }
-    } else {
-      // For other modes, convert to markdown
+  // Execute the selected extraction method
+  // Each method handles its own processing internally
+  switch (mode) {
+    case ExtractionMode.READABILITY:
       try {
-        markdown = await htmlToMarkdown(htmlContent, { includeLinks });
-
-        // If we have a selection, prepend it with a marker
-        if (selectionMarkdown) {
-          markdown = `## Selected Content\n\n${selectionMarkdown}\n\n---\n\n## Full Page Content\n\n${markdown}`;
-        }
+        const readabilityExtractor = await getReadabilityExtractor();
+        result = await readabilityExtractor.extractWithReadability({
+          includeLinks,
+          debug: DEBUG,
+        });
       } catch (error) {
-        // HTML to Markdown conversion failed, falling back to text extraction
-
-        // Graceful fallback to basic text extraction
-        try {
-          const parser = new DOMParser();
-          const doc = parser.parseFromString(htmlContent, 'text/html');
-          markdown = doc.body?.textContent || doc.body?.innerText || '';
-        } catch (parseError) {
-          markdown = '';
+        if (DEBUG) {
+          console.error('[READABILITY] Extraction failed:', error);
         }
+        throw error;
       }
-    }
-  }
+      break;
 
-  // Step 4: Final fallback if no content extracted
-  if (!markdown || !markdown.trim()) {
-    try {
-      markdown = document.body?.textContent || document.body?.innerText || 'No content available';
-      textContent = markdown; // Use the same content for text
-    } catch (domError) {
-      markdown = 'Content extraction failed - unable to access page content';
-      textContent = markdown;
-    }
-  }
+    case ExtractionMode.RAW:
+      try {
+        const rawExtractor = await getRawExtractor();
+        // Raw extractor uses its own default settings
+        result = await rawExtractor.extractWithRaw();
+      } catch (error) {
+        if (DEBUG) {
+          console.error('[RAW] Extraction failed:', error);
+        }
+        throw error;
+      }
+      break;
 
-  // Ensure textContent is set if not already
-  if (!textContent) {
-    textContent = markdown
-      .replace(/[#*_`[\]()]/g, '')
-      .replace(/\n+/g, ' ')
-      .trim();
-  }
+    case ExtractionMode.DEFUDDLE:
+      try {
+        const defuddleExtractor = await getDefuddleExtractor();
+        // Pass the full HTML snapshot for Defuddle to process
+        const originalHtmlSnapshot = document.documentElement?.outerHTML || '';
+        result = await defuddleExtractor.extractWithDefuddle(originalHtmlSnapshot);
+      } catch (error) {
+        if (DEBUG) {
+          console.error('[DEFUDDLE] Extraction failed:', error);
+        }
+        throw error;
+      }
+      break;
 
-  // Step 5: Analyze content features on original markdown (before clamping) with error handling
-  let hasTables = false;
+    case ExtractionMode.SELECTION: {
+      // Special case: extract only selected text
+      const selection = window.getSelection();
+      if (selection && selection.rangeCount > 0 && !selection.isCollapsed) {
+        const range = selection.getRangeAt(0);
+        const container = document.createElement('div');
+        container.appendChild(range.cloneContents());
 
-  try {
-    if (extractionMethod === 'raw') {
-      // Prefer RAW extractor's computed value when available
-      if (hasTablesFromRaw !== null) {
-        hasTables = hasTablesFromRaw;
+        result = {
+          title: document.title || 'Selection',
+          url: window.location.href,
+          domain: window.location.hostname,
+          content: selection.toString(),
+          textContent: selection.toString(),
+          excerpt: selection.toString().substring(0, 200),
+          extractedAt: Date.now(),
+          extractionMethod: 'selection',
+          metadata: {
+            hasTables: false,
+            truncated: false,
+            timeoutMs,
+          },
+        };
       } else {
-        // Fallback: detect by parsing HTML and checking for <table>
-        try {
-          const parser = new DOMParser();
-          const doc = parser.parseFromString(htmlContent || '', 'text/html');
-          hasTables = Boolean(doc.querySelector('table'));
-        } catch {
-          hasTables = /<table\b/i.test(htmlContent || '');
-        }
+        throw new Error('No text selected');
       }
-    } else {
-      hasTables = detectTables(markdown);
+      break;
     }
-  } catch (error) {
-    // Feature detection failed, defaulting to false
+
+    default:
+      throw new Error(`Unknown extraction mode: ${mode}`);
   }
 
-  // Step 6: Apply character limits with error handling (skip for RAW mode)
-  let clampedMarkdown = markdown;
-  let isTruncated = false;
-
-  // Skip clamping for RAW mode to preserve full HTML content
-  if (extractionMethod !== 'raw') {
-    try {
-      const clampResult = clampText(markdown, maxLength);
-      clampedMarkdown = clampResult.text;
-      isTruncated = clampResult.isTruncated;
-    } catch (error) {
-      // If clamping fails, manually truncate as a last resort
-      if (markdown.length > maxLength) {
-        clampedMarkdown = markdown.substring(0, maxLength) + '...';
-        isTruncated = true;
-      }
-    }
+  if (!result) {
+    throw new Error('Extraction failed - no content returned');
   }
 
-  // Step 7: Calculate features on final content with error handling
-  let excerpt = '';
+  // No text clamping - return full content
 
-  try {
-    // For RAW (HTML content), generate excerpt from plain text for better quality
-    if (extractionMethod === 'raw') {
-      const basis = textContent || '';
-      excerpt = generateExcerpt(basis);
-    } else {
-      excerpt = generateExcerpt(clampedMarkdown);
-    }
-  } catch (error) {
-    // Simple fallback excerpt
-    const cleanText = (extractionMethod === 'raw' ? textContent || '' : clampedMarkdown)
-      .replace(/[#*_`]/g, '')
-      .trim();
-    excerpt = cleanText.length > 200 ? cleanText.substring(0, 197) + '...' : cleanText;
-  }
-
-  // Step 8: Build final result with safe property access (using new schema)
-  const finalResult = {
-    title: metadata?.title || document.title || 'Untitled',
-    url: (() => {
-      try {
-        return window.location.href;
-      } catch {
-        return 'about:blank';
-      }
-    })(),
-    domain: (() => {
-      try {
-        return window.location.hostname || 'unknown';
-      } catch {
-        return 'unknown';
-      }
-    })(),
-    content: clampedMarkdown, // Main content (markdown or raw HTML)
-    textContent:
-      extractionMethod === 'raw'
-        ? textContent // Don't clamp raw mode text content
-        : textContent.length > maxLength
-          ? textContent.substring(0, maxLength - 3) + '...'
-          : textContent, // Plain text version (clamped for non-raw modes)
-    excerpt,
-    author: author || metadata?.author, // Prefer Readability byline, then page metadata
-    publishedDate: metadata?.publishedDate,
-    extractedAt: Date.now(),
-    extractionMethod,
-    metadata: {
-      hasTables,
-      truncated: isTruncated,
-      timeoutMs,
-    },
-  };
-
-  // Returning extracted content
-
-  const totalTime = performance.now() - stepStartTime;
-  if (DEBUG) {
-    // Log total time in debug mode
-    void totalTime;
-  } else {
-    void totalTime; // Reference to avoid unused warning in production
-  }
-
-  return finalResult;
-}
-
-// =============================================================================
-// Content Analysis Utilities
-// =============================================================================
-
-// Content analysis functions are now imported from analyzers/contentAnalyzer.ts
-
-// =============================================================================
-// Fallback Content Creation
-// =============================================================================
-
-/**
- * Creates minimal fallback content when extraction fails
- */
-function createFallbackContent(maxLength: number, timeoutMs: number = 2000): ExtractedContent {
-  // Safe metadata extraction
-  let metadata: ReturnType<typeof getPageMetadata>;
-  try {
-    metadata = getPageMetadata(document);
-  } catch (error) {
-    metadata = {
-      title: 'Untitled',
-      publishedDate: undefined,
-    };
-  }
-
-  // Safe content extraction
-  let fallbackText = 'No content available';
-  try {
-    fallbackText = document.body?.textContent || document.body?.innerText || 'No content available';
-    if (!fallbackText.trim()) {
-      fallbackText = document.documentElement?.textContent || 'No content available';
-    }
-  } catch (error) {
-    try {
-      // Try title as absolute last resort
-      fallbackText = document.title || 'Page content unavailable';
-    } catch (titleError) {
-      fallbackText = 'Content extraction completely failed';
-    }
-  }
-
-  // Safe text clamping
-  let clampedText = fallbackText;
-  let isTruncated = false;
-  try {
-    const clampResult = clampText(fallbackText, maxLength);
-    clampedText = clampResult.text;
-    isTruncated = clampResult.isTruncated;
-  } catch (error) {
-    if (fallbackText.length > maxLength) {
-      clampedText = fallbackText.substring(0, maxLength - 3) + '...';
-      isTruncated = true;
-    }
-  }
-
-  // Safe URL extraction
-  let url: string;
-  let domain: string;
-  try {
-    url = window.location.href;
-    domain = window.location.hostname || 'unknown';
-  } catch (error) {
-    url = 'about:blank';
-    domain = 'unknown';
-  }
-
-  // Safe title extraction
-  let title: string;
-  try {
-    title = metadata?.title || document.title || 'Untitled';
-  } catch (error) {
-    title = 'Untitled';
-  }
-
-  // Safe excerpt generation
-  let excerpt: string;
-  try {
-    excerpt = generateExcerpt(clampedText);
-  } catch (error) {
-    // Simple fallback excerpt
-    const cleanText = clampedText.replace(/[#*_`]/g, '').trim();
-    excerpt = cleanText.length > 200 ? cleanText.substring(0, 197) + '...' : cleanText;
-  }
-
-  return {
-    title,
-    url,
-    domain,
-    content: clampedText, // Main content
-    textContent: clampedText, // Plain text version (same as content for fallback)
-    excerpt,
-    author: metadata?.author,
-    publishedDate: metadata?.publishedDate,
-    extractedAt: Date.now(),
-    extractionMethod: 'defuddle' as const, // Default to defuddle even on failure
-    metadata: {
-      hasTables: false,
-      truncated: isTruncated,
-      timeoutMs,
-    },
-  };
+  return result;
 }
