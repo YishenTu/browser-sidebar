@@ -6,7 +6,7 @@
 
 import type { KeyRotationResult, APIKeyMetadata, APIKeyStorage } from '@/types/apiKeys';
 
-import { validateKeyFormat, maskAPIKey, generateKeyId } from '@/types/apiKeys';
+import { maskAPIKey, generateKeyId } from '@/types/apiKeys';
 import * as chromeStorage from '@/data/storage/chrome';
 import { STORAGE_KEYS, DB_STORES } from './constants';
 import { getDatabase } from './database';
@@ -28,22 +28,7 @@ export async function rotateAPIKey(
   const enc = state.encryptionService!;
   const dbInstance = getDatabase();
 
-  // Validate new key format before try/catch so tests see thrown error
-  // Fetch provider first to validate against correct rules
-  // If key not found, we will throw inside try as before
-  let providerForValidation = null;
-  try {
-    const existingForProvider = await getAPIKey(state, id);
-    providerForValidation = existingForProvider?.metadata.provider ?? null;
-  } catch {
-    // ignore; will be handled in main try
-  }
-  if (providerForValidation) {
-    const validationPre = validateKeyFormat(newKey, providerForValidation);
-    if (!validationPre.isValid) {
-      throw new Error(`Invalid API key format: ${validationPre.errors.join(', ')}`);
-    }
-  }
+  // Validation now happens via real API calls upstream (UI/services).
 
   try {
     // Get existing key

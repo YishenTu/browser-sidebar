@@ -149,6 +149,11 @@ export const DEFAULT_MODELS: ModelConfig[] = [
     name: 'Qwen3 235B A22B Instruct',
     provider: 'qwen',
   },
+  {
+    id: 'qwen3-next-80b-a3b-instruct',
+    name: 'Qwen3 Next Instruct',
+    provider: 'qwen',
+  },
   // Zhipu AI
   {
     id: 'glm-4.5-x',

@@ -57,8 +57,6 @@ export class OpenAIProvider extends BaseEngine {
       config['apiKey'].trim() === ''
     ) {
       errors.push('Invalid API key');
-    } else if (!config['apiKey'].startsWith('sk-')) {
-      errors.push('API key must start with "sk-"');
     }
     if (!config['model'] || typeof config['model'] !== 'string') {
       errors.push('Invalid model');

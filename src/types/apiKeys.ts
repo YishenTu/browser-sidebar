@@ -271,34 +271,6 @@ export interface APIKeyStorage extends EncryptedAPIKey {
 // =============================================================================
 
 /**
- * Validation rules for a specific provider
- */
-export interface ProviderValidationRule {
-  /** Regular expression pattern for key format */
-  pattern: RegExp;
-  /** Minimum key length */
-  minLength: number;
-  /** Maximum key length */
-  maxLength: number;
-  /** Required prefix for the key */
-  requiredPrefix?: string;
-  /** Human-readable description */
-  description: string;
-}
-
-/**
- * Validation rules for all providers
- */
-export interface ProviderValidationRules {
-  openai: ProviderValidationRule;
-  anthropic: ProviderValidationRule;
-  google: ProviderValidationRule;
-  openrouter: ProviderValidationRule;
-  gemini?: ProviderValidationRule;
-  custom: ProviderValidationRule;
-}
-
-/**
  * Result of API key validation
  */
 export interface ValidationResult {
@@ -324,8 +296,6 @@ export interface APIKeyValidationSchema {
   validateKey: (key: string, provider: APIProvider) => ValidationResult;
   /** Validate API key configuration */
   validateConfiguration: (config: APIKeyConfiguration) => ValidationResult;
-  /** Get validation rules for a provider */
-  getProviderRules: (provider: APIProvider) => ProviderValidationRule;
   /** Create masked version of key */
   maskKey: (key: string) => string;
 }
@@ -534,84 +504,10 @@ export interface APIKeyManager {
   getHealthStatus: () => Promise<HealthCheckResult>;
 }
 
-// =============================================================================
-// Default Validation Rules
-// =============================================================================
-
-/**
- * Default validation rules for all supported providers
- */
-export const DEFAULT_PROVIDER_RULES: ProviderValidationRules = {
-  openai: {
-    // OpenAI keys can vary (project/org scoped). Be permissive but require sk- prefix.
-    pattern: /^sk-[A-Za-z0-9_-]{20,200}$/,
-    minLength: 23,
-    maxLength: 204,
-    requiredPrefix: 'sk-',
-    description: 'OpenAI API keys start with "sk-" (length varies by key type)',
-  },
-  anthropic: {
-    pattern: /^sk-ant-[A-Za-z0-9]{40,52}$/,
-    minLength: 47,
-    maxLength: 59,
-    requiredPrefix: 'sk-ant-',
-    description:
-      'Anthropic API keys start with "sk-ant-" followed by 40-52 alphanumeric characters',
-  },
-  google: {
-    pattern: /^AIza[A-Za-z0-9_-]{35}$/,
-    minLength: 39,
-    maxLength: 39,
-    requiredPrefix: 'AIza',
-    description:
-      'Google API keys start with "AIza" followed by 35 alphanumeric, underscore, or dash characters',
-  },
-  custom: {
-    pattern: /^.{1,1000}$/,
-    minLength: 1,
-    maxLength: 1000,
-    description: 'Custom provider keys can be any format between 1-1000 characters',
-  },
-  // Add explicit OpenRouter rule to avoid false positives with other providers
-  openrouter: {
-    pattern: /^sk-or-[A-Za-z0-9]{20,200}$/,
-    minLength: 6 + 3 + 1 + 20, // 'sk-or-' + at least 20
-    maxLength: 6 + 3 + 1 + 200,
-    requiredPrefix: 'sk-or-',
-    description: 'OpenRouter keys typically start with "sk-or-"',
-  },
-};
-
 /**
  * Default key type mapping based on key format
  */
-export const DEFAULT_KEY_TYPE_DETECTION: Partial<Record<APIProvider, (key: string) => APIKeyType>> =
-  {
-    openai: (_key: string) => {
-      // OpenAI doesn't have different formats for different tiers
-      return 'standard';
-    },
-    anthropic: (_key: string) => {
-      // Anthropic uses consistent format for all tiers
-      return 'standard';
-    },
-    google: (_key: string) => {
-      // Google API keys don't indicate tier in the key format
-      return 'standard';
-    },
-    custom: (_key: string) => {
-      return 'standard';
-    },
-    gemini: (_key: string) => {
-      return 'standard';
-    },
-    openrouter: (_key: string) => {
-      return 'standard';
-    },
-    openai_compat: (_key: string) => {
-      return 'standard';
-    },
-  };
+// Key type detection via format is deprecated; default to 'standard' at call sites.
 
 // =============================================================================
 // Utility Functions
@@ -632,63 +528,15 @@ export function maskAPIKey(key: string, visibleChars: number = 4): string {
 
 /**
  * Detect provider from API key format
+ * Since all providers now accept any format, this always returns null
  */
-export function detectProvider(key: string): APIProvider | null {
-  for (const [provider, rule] of Object.entries(DEFAULT_PROVIDER_RULES)) {
-    if (rule.pattern.test(key)) {
-      return provider as APIProvider;
-    }
-  }
-  return null;
-}
+// Provider detection via format has been removed (real API validation only).
 
 /**
  * Validate API key format for a specific provider
+ * Since all providers accept any format, this only checks basic length constraints
  */
-export function validateKeyFormat(key: string, provider: APIProvider): ValidationResult {
-  // For compat providers and those without rules, use custom validation
-  const rule =
-    DEFAULT_PROVIDER_RULES[provider as keyof ProviderValidationRules] ||
-    DEFAULT_PROVIDER_RULES.custom;
-  const errors: string[] = [];
-  const warnings: string[] = [];
-
-  // Check length
-  if (key.length < rule.minLength) {
-    errors.push(`Key too short. Expected at least ${rule.minLength} characters, got ${key.length}`);
-  }
-  if (key.length > rule.maxLength) {
-    errors.push(`Key too long. Expected at most ${rule.maxLength} characters, got ${key.length}`);
-  }
-
-  // Check prefix
-  if (rule.requiredPrefix && !key.startsWith(rule.requiredPrefix)) {
-    errors.push(`Key must start with "${rule.requiredPrefix}"`);
-  }
-
-  // Check pattern
-  if (!rule.pattern.test(key)) {
-    errors.push(`Key format invalid. ${rule.description}`);
-  }
-
-  // Detect actual provider
-  const detectedProvider = detectProvider(key);
-  if (detectedProvider && detectedProvider !== provider) {
-    warnings.push(`Key appears to be for ${detectedProvider}, not ${provider}`);
-  }
-
-  const keyTypeDetector = DEFAULT_KEY_TYPE_DETECTION[provider];
-  const keyType = keyTypeDetector ? keyTypeDetector(key) : 'standard';
-
-  return {
-    isValid: errors.length === 0,
-    errors,
-    warnings,
-    provider: detectedProvider || provider,
-    keyType,
-    estimatedTier: keyType,
-  };
-}
+// Key format validation is removed; use real API validation exclusively.
 
 /**
  * Generate a unique ID for an API key
@@ -804,14 +652,10 @@ export function isValidationResult(value: unknown): value is ValidationResult {
 // =============================================================================
 
 export default {
-  // Validation rules
-  DEFAULT_PROVIDER_RULES,
-  DEFAULT_KEY_TYPE_DETECTION,
+  // Key type detection
 
   // Utility functions
   maskAPIKey,
-  detectProvider,
-  validateKeyFormat,
   generateKeyId,
   isKeyExpired,
   getDaysUntilExpiration,

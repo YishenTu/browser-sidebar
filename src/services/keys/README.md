@@ -5,7 +5,7 @@ The Key Service provides a unified API for managing API keys across different AI
 ## Features
 
 - **Encrypted Storage**: Keys are encrypted using AES-256-GCM before storage
-- **Provider Validation**: Format validation and live API testing for different providers
+- **Provider Validation**: Live API testing for different providers (no format checks)
 - **CORS Handling**: Automatic transport selection for API validation requests
 - **Chrome Storage**: Integration with Chrome's storage API for persistence
 - **Type Safety**: Full TypeScript support with proper typing
@@ -52,15 +52,8 @@ console.log(metadata.maskedKey); // "sk-...here"
 ### Validation
 
 ```typescript
-// Validate key format and test with provider API
+// Validate by making a real API call
 const isValid = await keyService.validate('openai', 'sk-test-key');
-
-// Format validation happens automatically during set()
-try {
-  await keyService.set('openai', 'invalid-key-format');
-} catch (error) {
-  console.error('Invalid key format:', error.message);
-}
 ```
 
 ### Management Operations
@@ -82,14 +75,21 @@ keyService.shutdown();
 
 ## Supported Providers
 
-| Provider     | Format                 | Validation Endpoint |
-| ------------ | ---------------------- | ------------------- |
-| `openai`     | `sk-[48 chars]`        | `/v1/models`        |
-| `anthropic`  | `sk-ant-[40-52 chars]` | `/v1/messages`      |
-| `google`     | `AIza[35 chars]`       | `/v1beta/models`    |
-| `gemini`     | `AIza[35 chars]`       | `/v1beta/models`    |
-| `openrouter` | Various formats        | `/api/v1/models`    |
-| `custom`     | Any format             | No validation       |
+| Provider                    | Format                 | Validation Endpoint         |
+| --------------------------- | ---------------------- | --------------------------- |
+| `openai`                    | `sk-[48 chars]`        | `/v1/models`                |
+| `anthropic`                 | `sk-ant-[40-52 chars]` | `/v1/messages`              |
+| `google`                    | `AIza[35 chars]`       | `/v1beta/models`            |
+| `gemini`                    | `AIza[35 chars]`       | `/v1beta/models`            |
+| `openrouter`                | Various formats        | `/api/v1/models`            |
+| `openai`-compatible presets | Any format             | `/models` on custom baseURL |
+
+For OpenAI-compatible providers (e.g., DeepSeek, Qwen, Zhipu, Kimi), use the compat validator:
+
+```ts
+import { validateCompatProvider } from '@services/engine';
+const ok = await validateCompatProvider('https://your-base-url', 'your-api-key');
+```
 
 ## Security Features
 
@@ -125,12 +125,6 @@ try {
 }
 
 try {
-  await keyService.set('openai', 'invalid-format');
-} catch (error) {
-  // "Invalid API key format: Key must start with 'sk-'"
-}
-
-try {
   await keyService.validate('openai', 'sk-invalid-key');
 } catch (error) {
   // Returns false instead of throwing
@@ -150,6 +144,6 @@ The KeyService integrates seamlessly with:
 
 - Service must be initialized with `initialize()` before use
 - All operations are async and return Promises
-- Keys are validated both for format and API connectivity
+- Keys are validated by real API connectivity only (no format checks)
 - Memory is automatically cleaned up on `shutdown()`
 - TypeScript strict mode compatible

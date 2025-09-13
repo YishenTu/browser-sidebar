@@ -17,7 +17,7 @@ import type { APIProvider } from '../../types/apiKeys';
 import type { Transport } from '../../transport/types';
 import * as Storage from '../../data/storage/chrome';
 import { encryptText, decryptText, deriveKey, EncryptedData } from '../../data/security/crypto';
-import { validateKeyFormat, maskAPIKey } from '../../types/apiKeys';
+import { maskAPIKey } from '../../types/apiKeys';
 import { BackgroundProxyTransport } from '../../transport/BackgroundProxyTransport';
 import { DirectFetchTransport } from '../../transport/DirectFetchTransport';
 import { shouldProxy } from '../../transport/policy';
@@ -168,12 +168,6 @@ export class KeyService {
       throw new Error('API key cannot be empty');
     }
 
-    // Validate key format
-    const validation = validateKeyFormat(key, provider);
-    if (!validation.isValid) {
-      throw new Error(`Invalid API key format: ${validation.errors.join(', ')}`);
-    }
-
     try {
       // Encrypt the key
       const encryptedData = await encryptText(key, this.masterKey!);
@@ -289,15 +283,10 @@ export class KeyService {
       return false;
     }
 
-    // First validate the format
-    const formatValidation = validateKeyFormat(key, provider);
-    if (!formatValidation.isValid) {
+    // Only real API validation is allowed for all providers
+    if (!VALIDATION_ENDPOINTS[provider]) {
+      // Unknown providers must be validated via dedicated compat validation path
       return false;
-    }
-
-    // For custom and unknown providers, format validation is sufficient
-    if (provider === 'custom' || !VALIDATION_ENDPOINTS[provider]) {
-      return true;
     }
 
     // For known providers, test the key with their API
@@ -310,13 +299,14 @@ export class KeyService {
   private async testKeyWithAPI(provider: APIProvider, key: string): Promise<boolean> {
     const endpoint = VALIDATION_ENDPOINTS[provider];
     if (!endpoint) {
-      // No validation endpoint configured, assume valid if format is correct
-      return true;
+      // No validation endpoint configured
+      return false;
     }
 
     try {
       // Prepare headers with the API key
       const headers = { ...endpoint.headers };
+      let url = endpoint.url;
 
       // Add authentication header based on provider
       switch (provider) {
@@ -330,7 +320,7 @@ export class KeyService {
         case 'google':
         case 'gemini':
           // Google APIs use key as query parameter
-          endpoint.url = endpoint.url.includes('?')
+          url = endpoint.url.includes('?')
             ? `${endpoint.url}&key=${key}`
             : `${endpoint.url}?key=${key}`;
           break;
@@ -339,11 +329,11 @@ export class KeyService {
       }
 
       // Choose appropriate transport based on URL
-      const transport = shouldProxy(endpoint.url) ? this.transport : new DirectFetchTransport();
+      const transport = shouldProxy(url) ? this.transport : new DirectFetchTransport();
 
       // Make the validation request
       const response = await transport.request({
-        url: endpoint.url,
+        url,
         method: endpoint.method,
         headers,
         body: endpoint.method === 'POST' ? '{}' : undefined, // Empty JSON body for POST requests

@@ -18,7 +18,7 @@ import type { Transport, TransportRequest, TransportResponse } from '@transport/
 import type { EncryptedData } from '@data/security/crypto';
 import * as Storage from '@data/storage/chrome';
 import * as Crypto from '@data/security/crypto';
-import { validateKeyFormat, maskAPIKey } from '@types/apiKeys';
+import { maskAPIKey } from '@types/apiKeys';
 import * as TransportPolicy from '@transport/policy';
 
 // Mock dependencies
@@ -29,7 +29,6 @@ vi.mock('@types/apiKeys', async () => {
   const actual = await vi.importActual('@types/apiKeys');
   return {
     ...actual,
-    validateKeyFormat: vi.fn(),
     maskAPIKey: vi.fn(),
   };
 });
@@ -135,15 +134,7 @@ describe('KeyService', () => {
     // Setup transport policy mocks - make everything use our mock transport
     vi.mocked(TransportPolicy.shouldProxy).mockReturnValue(true);
 
-    // Setup validation mocks
-    vi.mocked(validateKeyFormat).mockReturnValue({
-      isValid: true,
-      errors: [],
-      warnings: [],
-      provider: 'openai',
-      keyType: 'standard',
-      estimatedTier: 'standard',
-    });
+    // No format validation anymore
     vi.mocked(maskAPIKey).mockImplementation(key => key.slice(0, 8) + '...' + key.slice(-4));
 
     // Reset mock implementations
@@ -257,20 +248,7 @@ describe('KeyService', () => {
         );
       });
 
-      it('should validate key format before storing', async () => {
-        const provider: APIProvider = 'openai';
-        const apiKey = 'invalid-key';
-
-        vi.mocked(validateKeyFormat).mockReturnValue({
-          isValid: false,
-          errors: ['Invalid key format'],
-          warnings: [],
-        });
-
-        await expect(keyService.set(provider, apiKey)).rejects.toThrow('Invalid API key format');
-        expect(mockCrypto.encryptText).not.toHaveBeenCalled();
-        expect(mockStorage.set).not.toHaveBeenCalled();
-      });
+      // Format-based pre-validation removed; only empty checks remain
 
       it('should throw error for empty key', async () => {
         await expect(keyService.set('openai', '')).rejects.toThrow('API key cannot be empty');
@@ -434,32 +412,7 @@ describe('KeyService', () => {
       await keyService.initialize('test-password');
     });
 
-    it('should validate key format only for custom provider', async () => {
-      const customKey = 'custom-api-key-12345';
-
-      vi.mocked(validateKeyFormat).mockReturnValue({
-        isValid: true,
-        errors: [],
-        warnings: [],
-      });
-
-      const result = await keyService.validate('custom', customKey);
-
-      expect(result).toBe(true);
-      expect(validateKeyFormat).toHaveBeenCalledWith(customKey, 'custom');
-      expect(mockTransport.requestCalls).toHaveLength(0); // No API call for custom
-    });
-
-    it('should return false for invalid key format', async () => {
-      vi.mocked(validateKeyFormat).mockReturnValue({
-        isValid: false,
-        errors: ['Invalid format'],
-        warnings: [],
-      });
-
-      const result = await keyService.validate('openai', 'invalid-key');
-      expect(result).toBe(false);
-    });
+    // Custom/unknown providers are not validated here (use compat validator)
 
     it('should return false for empty key', async () => {
       const result1 = await keyService.validate('openai', '');
@@ -472,12 +425,6 @@ describe('KeyService', () => {
     describe('API validation', () => {
       it('should validate OpenAI key with API call', async () => {
         const openaiKey = 'sk-test1234567890abcdefghijklmnopqrstuvwxyz123456';
-
-        vi.mocked(validateKeyFormat).mockReturnValue({
-          isValid: true,
-          errors: [],
-          warnings: [],
-        });
 
         mockTransport.setMockResponse({
           status: 200,
@@ -498,12 +445,6 @@ describe('KeyService', () => {
 
       it('should validate Anthropic key with API call', async () => {
         const anthropicKey = 'sk-ant-api03-1234567890abcdefghijklmnopqrstuvwxyz';
-
-        vi.mocked(validateKeyFormat).mockReturnValue({
-          isValid: true,
-          errors: [],
-          warnings: [],
-        });
 
         mockTransport.setMockResponse({
           status: 400, // Anthropic expects 400 for validation
@@ -526,12 +467,6 @@ describe('KeyService', () => {
       it('should validate Google key with query parameter', async () => {
         const googleKey = 'AIzaSyD1234567890abcdefghijklmnopqrstuv';
 
-        vi.mocked(validateKeyFormat).mockReturnValue({
-          isValid: true,
-          errors: [],
-          warnings: [],
-        });
-
         mockTransport.setMockResponse({
           status: 200,
           statusText: 'OK',
@@ -552,12 +487,6 @@ describe('KeyService', () => {
       it('should validate OpenRouter key with Bearer auth', async () => {
         const openrouterKey = 'sk-or-1234567890abcdefghijklmnopqrstuvwxyz123456';
 
-        vi.mocked(validateKeyFormat).mockReturnValue({
-          isValid: true,
-          errors: [],
-          warnings: [],
-        });
-
         mockTransport.setMockResponse({
           status: 200,
           statusText: 'OK',
@@ -577,12 +506,6 @@ describe('KeyService', () => {
       it('should handle API validation failure', async () => {
         const openaiKey = 'sk-test1234567890abcdefghijklmnopqrstuvwxyz123456';
 
-        vi.mocked(validateKeyFormat).mockReturnValue({
-          isValid: true,
-          errors: [],
-          warnings: [],
-        });
-
         mockTransport.setMockResponse({
           status: 401,
           statusText: 'Unauthorized',
@@ -596,30 +519,16 @@ describe('KeyService', () => {
       it('should handle API validation error gracefully', async () => {
         const openaiKey = 'sk-test1234567890abcdefghijklmnopqrstuvwxyz123456';
 
-        vi.mocked(validateKeyFormat).mockReturnValue({
-          isValid: true,
-          errors: [],
-          warnings: [],
-        });
-
         mockTransport.setMockError(new Error('Network error'));
 
         const result = await keyService.validate('openai', openaiKey);
         expect(result).toBe(false);
       });
 
-      it('should return true for unknown providers with valid format', async () => {
-        const customKey = 'custom-key-format';
-
-        vi.mocked(validateKeyFormat).mockReturnValue({
-          isValid: true,
-          errors: [],
-          warnings: [],
-        });
-
+      it('should return false for unknown providers', async () => {
         // @ts-expect-error - Testing unknown provider
-        const result = await keyService.validate('unknown_provider', customKey);
-        expect(result).toBe(true);
+        const result = await keyService.validate('unknown_provider', 'some-key');
+        expect(result).toBe(false);
         expect(mockTransport.requestCalls).toHaveLength(0); // No API call for unknown provider
       });
     });
@@ -816,12 +725,6 @@ describe('KeyService', () => {
     it('should use transport for CORS-restricted endpoints', async () => {
       const anthropicKey = 'sk-ant-api03-1234567890abcdefghijklmnopqrstuvwxyz';
 
-      vi.mocked(validateKeyFormat).mockReturnValue({
-        isValid: true,
-        errors: [],
-        warnings: [],
-      });
-
       mockTransport.setMockResponse({
         status: 400, // Anthropic validation expects 400
         statusText: 'Bad Request',
@@ -837,12 +740,6 @@ describe('KeyService', () => {
 
     it('should handle transport timeout during validation', async () => {
       const openaiKey = 'sk-test1234567890abcdefghijklmnopqrstuvwxyz123456';
-
-      vi.mocked(validateKeyFormat).mockReturnValue({
-        isValid: true,
-        errors: [],
-        warnings: [],
-      });
 
       mockTransport.setMockError(new Error('Request timeout'));
 

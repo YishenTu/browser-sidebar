@@ -13,7 +13,7 @@ import type {
   APIKeyStorage,
 } from '@/types/apiKeys';
 
-import { validateKeyFormat, detectProvider, maskAPIKey, generateKeyId } from '@/types/apiKeys';
+import { maskAPIKey, generateKeyId } from '@/types/apiKeys';
 import * as chromeStorage from '@/data/storage/chrome';
 import { STORAGE_KEYS, DB_STORES } from './constants';
 import { getDatabase } from './database';
@@ -41,15 +41,10 @@ export async function addAPIKey(
   const dbInstance = getDatabase();
 
   try {
-    // Validate API key format
-    const provider = input.provider || detectProvider(input.key);
+    // Provider is required; validation is performed via real API calls elsewhere
+    const provider = input.provider;
     if (!provider) {
-      throw new Error('Invalid API key format - could not detect provider');
-    }
-
-    const validation = validateKeyFormat(input.key, provider);
-    if (!validation.isValid) {
-      throw new Error(`Invalid API key format: ${validation.errors.join(', ')}`);
+      throw new Error('Provider is required');
     }
 
     // Check for duplicates using multiple strategies
@@ -74,7 +69,7 @@ export async function addAPIKey(
     const metadata: APIKeyMetadata = {
       id: keyId,
       provider,
-      keyType: validation.keyType || 'standard',
+      keyType: 'standard',
       status: 'active',
       name: input.name,
       description: input.description,
@@ -159,9 +154,6 @@ export async function addAPIKey(
     });
 
     if (error instanceof Error) {
-      if (error.message.includes('Invalid API key format')) {
-        throw error;
-      }
       if (error.message.includes('already exists')) {
         throw error;
       }
