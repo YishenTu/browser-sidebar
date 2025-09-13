@@ -1,6 +1,6 @@
 # To do list
 
-- [ ] 1. auto scroll
+- [x] 1. auto scroll
 - [x] 2. copy button for both user msg and ai response
 - [x] 3. regeneration button for ai response
 - [x] 4. edit button for user msg
@@ -9,30 +9,15 @@
 - [x] 7. web search
 - [x] 8. openai use response id to maintain chat history
 - [x] 9. system prompt
-- [ ] 10. proper encryption for api keys
+- [ ] 10. better encryption for api keys
 - [x] 11. multi tab extraction
 - [x] 12. handle selection
 - [x] 13. full html extraction approach
 - [ ] 14. new setting logic
 - [x] 15. openrouter provider
 - [x] 16. openai compatible provider
-- [ ] 17. slash command
-- [ ] 19. send to chatwaise?
-- [x] 20. architecture refactor
-- [ ] 21. improve raw extraction
-
----
-
-# Setting Re-factor
-
-- [x] 1. implement openrouter provider (default model: claude sonnet 4)
-- [x] 2. openai compatible provider: deepseek, kimi, qwen
-- [x] 3. new setting UI, build up openai_compatible/ , integrating with new UI
-- [ ] 4. turn config/ into defaultConfig/
-- [ ] 5. slash command integration
-
-# Raw extraction improvement
-
-- [ ] 1. remove final markdown concersion
-- [ ] 2. delicate strip?
-- [ ] 3.
+- [x] 17. slash command
+- [x] 18. architecture refactor
+- [ ] 19. optimize raw extraction
+- [x] 20. add readability extraction
+- [ ] 21. assign extraction method for different domain
