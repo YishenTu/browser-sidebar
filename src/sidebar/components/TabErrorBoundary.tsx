@@ -7,7 +7,7 @@
  * crashing the entire sidebar.
  */
 
-import React, { Component, ErrorInfo, ReactNode } from 'react';
+import { Component, ErrorInfo, ReactNode } from 'react';
 import { Alert } from '@ui/Alert';
 import '../styles/4-features/tab-error-boundary.css';
 
@@ -289,27 +289,6 @@ export class TabErrorBoundary extends Component<TabErrorBoundaryProps, TabErrorB
 
     return children;
   }
-}
-
-/**
- * Higher-order component to wrap components with TabErrorBoundary
- */
-export function withTabErrorBoundary<P extends object>(
-  Component: React.ComponentType<P>,
-  boundaryProps?: Partial<TabErrorBoundaryProps>
-) {
-  const WrappedComponent = React.forwardRef<unknown, P>((props, ref) => {
-    const componentProps = { ...props } as P;
-    return (
-      <TabErrorBoundary {...boundaryProps}>
-        <Component {...componentProps} ref={ref} />
-      </TabErrorBoundary>
-    );
-  });
-
-  WrappedComponent.displayName = `withTabErrorBoundary(${Component.displayName || Component.name})`;
-
-  return WrappedComponent;
 }
 
 export default TabErrorBoundary;

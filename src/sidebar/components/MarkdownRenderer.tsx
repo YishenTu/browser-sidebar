@@ -23,6 +23,7 @@ import remarkMath from 'remark-math';
 import rehypeSanitize, { defaultSchema } from 'rehype-sanitize';
 import rehypeKatex from 'rehype-katex';
 import { CodeBlock } from './CodeBlock';
+import type { Root, Content } from 'mdast';
 
 // =============================================================================
 // Types and Interfaces
@@ -230,11 +231,16 @@ const normalizeDisplayMathSafely = (input: string): string => {
  * Custom remark plugin to detect and wrap slash commands
  */
 function remarkSlashCommands() {
-  return (tree: any) => {
-    const visit = (node: any, index: number | null, parent: any): number | null => {
+  return (tree: Root) => {
+    const visit = (node: Content, index: number | null, parent: Root | Content): number | null => {
       if (node.type === 'text' && typeof node.value === 'string') {
         const regex = /(^|\s)(\/[a-zA-Z]+)(?=\s|$)/g;
-        const matches: any[] = [];
+        const matches: Array<{
+          index: number;
+          length: number;
+          prefix: string;
+          command: string;
+        }> = [];
         let match;
 
         while ((match = regex.exec(node.value)) !== null) {
@@ -247,7 +253,7 @@ function remarkSlashCommands() {
         }
 
         if (matches.length > 0 && parent && typeof index === 'number') {
-          const newNodes: any[] = [];
+          const newNodes: Content[] = [];
           let lastIndex = 0;
 
           for (const m of matches) {
@@ -501,7 +507,7 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({
     const baseOptions: Options = {
       // Keep inline $...$ enabled for now to preserve behavior
       remarkPlugins: [
-        remarkSlashCommands as any,
+        remarkSlashCommands,
         remarkGfm,
         [remarkMath, { singleDollarTextMath: true }] as [
           typeof remarkMath,

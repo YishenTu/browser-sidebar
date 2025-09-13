@@ -14,7 +14,7 @@ interface QueueTask<T> {
 export class ExtractionQueue {
   private readonly maxConcurrent: number;
   private running: number;
-  private queue: QueueTask<any>[];
+  private queue: QueueTask<unknown>[];
 
   constructor(maxConcurrent: number = 3) {
     this.maxConcurrent = maxConcurrent;

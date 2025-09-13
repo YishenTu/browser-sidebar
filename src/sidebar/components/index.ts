@@ -14,8 +14,5 @@ export type {
 } from './TabLoadingIndicator';
 export { TabMentionDropdown, type TabMentionDropdownProps } from './TabMentionDropdown';
 export { ContentPreview, type ContentPreviewProps } from './ContentPreview';
-export {
-  TabErrorBoundary,
-  withTabErrorBoundary,
-  type TabErrorBoundaryProps,
-} from './TabErrorBoundary';
+export { TabErrorBoundary, type TabErrorBoundaryProps } from './TabErrorBoundary';
+export { withTabErrorBoundary } from './withTabErrorBoundary';

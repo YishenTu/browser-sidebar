@@ -343,7 +343,14 @@ export const MessageList: React.FC<MessageListProps> = ({
         {VirtualListItem}
       </List>
     );
-  }, [isVirtualized, messages.length, height, getItemHeight, virtualListData]);
+  }, [
+    isVirtualized,
+    messages.length,
+    height,
+    getItemHeight,
+    virtualListData,
+    handleVirtualizedScroll,
+  ]);
 
   const isEmpty = messages.length === 0 && !isLoading;
 
