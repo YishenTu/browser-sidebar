@@ -1,332 +1,69 @@
 # Services Module
 
-High-level application services providing business operations and orchestration.
-
-## Overview
-
-The services module contains the application's service layer, providing high-level abstractions over core functionality. These services act as facades, simplifying complex operations and coordinating between multiple modules while maintaining clean interfaces for the UI layer.
+High‑level facades that coordinate core modules and platform wrappers.
 
 ## Structure
 
 ```
 services/
-├── chat/               # Chat service implementation
-│   ├── ChatService.ts  # Main chat service
-│   ├── messageQueue.ts # Message queueing
-│   └── context.ts      # Context management
-├── engine/             # Engine service wrapper
-│   ├── EngineService.ts # Engine facade
-│   └── streamHandler.ts # Stream processing
-├── extraction/         # Content extraction service
-│   ├── ExtractionService.ts # Main extraction service
-│   ├── batchProcessor.ts # Batch extraction
-│   └── README.md       # Extraction documentation
-├── keys/               # API key management
-│   ├── KeyService.ts   # Key management service
-│   ├── validation.ts   # Key validation
-│   └── README.md       # Key service documentation
-└── session/            # Session management
-    ├── SessionService.ts # Session service
-    ├── lifecycle.ts    # Session lifecycle
-    └── README.md       # Session documentation
+├─ chat/        # Provider‑agnostic streaming
+│  └─ ChatService.ts
+├─ engine/      # Provider creation/selection
+│  ├─ EngineManagerService.ts
+│  └─ ValidationService.ts
+├─ extraction/  # Background‑mediated extraction with retries
+│  └─ ExtractionService.ts
+├─ keys/        # Encrypted BYOK storage + validation
+│  └─ KeyService.ts
+└─ session/     # Session keying + URL normalization helpers
+   └─ SessionService.ts
 ```
 
-## Service Modules
+## Chat Service (`chat/ChatService.ts`)
 
-### Chat Service (`chat/`)
+- Streams responses from the active provider
+- Supports cancellation via `AbortController`
+- Normalizes error formatting from providers
 
-**Purpose**: High-level chat operations and message management.
+Usage:
 
-**Responsibilities**:
+```ts
+import { createChatService } from '@services/chat';
 
-- Message sending and receiving
-- Conversation history management
-- Context preparation
-- Response formatting
-- Error recovery
+const chat = createChatService();
+chat.setProvider(myProvider);
 
-**Key Features**:
-
-- Message queueing with priority
-- Automatic retry on failure
-- Context window optimization
-- Response caching
-- Multi-turn conversation support
-
-### Engine Service (`engine/`)
-
-**Purpose**: Wrapper around the core chat engine with additional features.
-
-**Responsibilities**:
-
-- Engine lifecycle management
-- Provider selection and switching
-- Stream coordination
-- Performance monitoring
-- Resource management
-
-**Key Features**:
-
-- Automatic provider failover
-- Stream buffering and smoothing
-- Token usage tracking
-- Latency monitoring
-- Memory optimization
-
-### Extraction Service (`extraction/`)
-
-**Purpose**: Manages content extraction from web pages.
-
-**Responsibilities**:
-
-- Single and batch extraction
-- Cache management
-- Extraction strategy selection
-- Format conversion
-- Error handling
-
-**Key Features**:
-
-- Multi-tab extraction
-- Incremental extraction for large pages
-- Smart caching with TTL
-- Format detection and conversion
-- Performance optimization
-
-### Key Service (`keys/`)
-
-**Purpose**: Secure API key management and validation.
-
-**Responsibilities**:
-
-- Key storage and retrieval
-- Encryption/decryption
-- Key validation
-- Provider association
-- Access control
-
-**Key Features**:
-
-- AES-GCM encryption
-- Secure key storage
-- Provider-specific validation
-- Key rotation support
-- Audit logging
-
-### Session Service (`session/`)
-
-**Purpose**: Manages user sessions and conversation contexts.
-
-**Responsibilities**:
-
-- Session creation and termination
-- State persistence
-- Context switching
-- Session recovery
-- Memory management
-
-**Key Features**:
-
-- Tab-specific sessions
-- URL-based context
-- Session restoration
-- Automatic cleanup
-- State synchronization
-
-## Service Patterns
-
-### Service Interface Pattern
-
-```typescript
-interface Service<T> {
-  initialize(): Promise<void>;
-  execute(params: T): Promise<Result>;
-  cleanup(): Promise<void>;
+for await (const chunk of chat.stream(messages, { systemPrompt: 'Be concise.' })) {
+  // consume StreamChunk
 }
 ```
 
-### Facade Pattern
+## Engine Manager (`engine/EngineManagerService.ts`)
 
-```typescript
-class ChatService {
-  constructor(
-    private engine: ChatEngine,
-    private extraction: ExtractionService,
-    private session: SessionService
-  ) {}
+- Creates and initializes providers (OpenAI, Gemini, OpenRouter, OpenAI‑Compat)
+- Switches active provider/model; wires transports
+- Validation helpers live in `ValidationService.ts`
 
-  async sendMessage(content: string): Promise<Response> {
-    // Coordinates between multiple services
-    const context = await this.extraction.getCurrentContext();
-    const session = await this.session.getActive();
-    return this.engine.chat(content, { context, session });
-  }
-}
-```
+## Extraction Service (`extraction/ExtractionService.ts`)
 
-### Queue Pattern
+- Asks background to extract the current tab or multiple tabs
+- Retries with exponential backoff and classifies common error cases
+- Returns structured `TabContent` consistent with UI hooks
 
-```typescript
-class MessageQueue {
-  private queue: PriorityQueue<Message>;
+## Key Service (`keys/KeyService.ts`)
 
-  async enqueue(message: Message, priority: Priority): Promise<void>;
-  async process(): Promise<void>;
-  async retry(message: Message): Promise<void>;
-}
-```
+- Encrypts keys with AES‑GCM via `data/security/crypto`
+- Stores encrypted data in Chrome storage; masks values for display
+- Validates keys against provider endpoints using the transport layer (direct vs background‑proxied based on CORS policy)
 
-## Usage Examples
+## Session Service (`session/SessionService.ts`)
 
-### Chat Service
+- Deterministic session keys from `tabId + normalizedUrl`
+- URL normalization (includes query, excludes hash)
+- Helpers used by the Zustand session store and hooks
 
-```typescript
-import { chatService } from '@services/chat';
+## Error Handling & Performance
 
-// Send a message
-const response = await chatService.sendMessage('Hello', {
-  includeContext: true,
-  stream: true,
-});
-
-// Get conversation history
-const history = await chatService.getHistory(sessionId);
-```
-
-### Extraction Service
-
-```typescript
-import { extractionService } from '@services/extraction';
-
-// Extract single tab
-const content = await extractionService.extractTab(tabId);
-
-// Batch extraction
-const contents = await extractionService.extractMultiple(tabIds);
-```
-
-### Key Service
-
-```typescript
-import { keyService } from '@services/keys';
-
-// Save API key
-await keyService.saveKey('openai', apiKey);
-
-// Validate key
-const isValid = await keyService.validateKey('openai', apiKey);
-
-// Get decrypted key
-const key = await keyService.getKey('openai');
-```
-
-### Session Service
-
-```typescript
-import { sessionService } from '@services/session';
-
-// Start new session
-const session = await sessionService.startSession({
-  tabId,
-  url,
-  context,
-});
-
-// Switch sessions
-await sessionService.switchTo(sessionId);
-
-// Clean up old sessions
-await sessionService.cleanup({
-  olderThan: '24h',
-});
-```
-
-## Service Coordination
-
-Services often work together:
-
-```
-User Input → Chat Service
-                ↓
-         Session Service (get context)
-                ↓
-         Extraction Service (get page content)
-                ↓
-         Engine Service (process with AI)
-                ↓
-         Response to User
-```
-
-## Error Handling
-
-### Service-Level Errors
-
-- **Initialization Errors**: Service not ready
-- **Validation Errors**: Invalid input parameters
-- **Resource Errors**: Quota exceeded, rate limits
-- **Network Errors**: Connection failures
-- **State Errors**: Invalid state transitions
-
-### Error Recovery
-
-```typescript
-class ServiceWithRetry {
-  async executeWithRetry<T>(operation: () => Promise<T>, maxRetries = 3): Promise<T> {
-    for (let i = 0; i < maxRetries; i++) {
-      try {
-        return await operation();
-      } catch (error) {
-        if (i === maxRetries - 1) throw error;
-        await this.delay(Math.pow(2, i) * 1000);
-      }
-    }
-  }
-}
-```
-
-## Performance Optimization
-
-- **Lazy Initialization**: Services initialize on first use
-- **Connection Pooling**: Reuse connections
-- **Request Batching**: Combine multiple requests
-- **Caching**: Smart caching strategies
-- **Resource Limits**: Memory and CPU constraints
-
-## Testing
-
-### Unit Testing
-
-```typescript
-describe('ChatService', () => {
-  it('should send message with context', async () => {
-    const mockEngine = createMockEngine();
-    const service = new ChatService(mockEngine);
-
-    const response = await service.sendMessage('test');
-    expect(response).toBeDefined();
-  });
-});
-```
-
-### Integration Testing
-
-- Service interaction tests
-- End-to-end workflows
-- Performance benchmarks
-- Load testing
-
-## Best Practices
-
-1. **Single Responsibility**: Each service has one clear purpose
-2. **Dependency Injection**: Services receive dependencies
-3. **Interface Segregation**: Small, focused interfaces
-4. **Error Boundaries**: Contain errors within services
-5. **Observability**: Logging and monitoring built-in
-
-## Future Enhancements
-
-- Service discovery mechanism
-- Circuit breaker pattern
-- Service mesh for inter-service communication
-- Distributed tracing
-- Service versioning
+- Services catch and classify errors close to their boundary
+- Lazy initialize dependencies; avoid holding long‑lived references
+- Use the background proxy only when CORS requires it

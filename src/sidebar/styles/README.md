@@ -209,12 +209,11 @@ When refactoring styles with `!important`:
 4. **Use layers** - Let cascade order handle priority
 5. **Test thoroughly** - Ensure visual appearance unchanged
 
-## Current Statistics
+## Current Status
 
-- **Total CSS files**: 27
-- **`!important` usage**: ~64 (75% reduction from original 259)
-- **CSS Layers**: 7 defined layers
-- **Component namespaces**: 10+ variable groups
+- Layered architecture in place across foundation/base/layout/components/features
+- `!important` is restricted to the `utilities` layer only
+- Component‑scoped variables live in `0-foundation/variables.css`
 
 ## Testing CSS Changes
 
@@ -249,11 +248,11 @@ After modifying CSS:
 - ✅ typography.css - Moved to layers (utilities preserved)
 - ✅ tab-content-item.css - 15 → 0 `!important`
 
-### Pending Refactoring
+### Ongoing Cleanup
 
-- tab-mention-dropdown.css (12 `!important`)
-- model-selector.css (12 `!important`)
-- Other minor components
+- Continue migrating any residual `!important` declarations into utilities
+- Consolidate repeated colors into variables
+- Keep specificity shallow (prefer parent scoping to `!important`)
 
 ## Common Patterns
 

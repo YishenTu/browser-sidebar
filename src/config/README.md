@@ -1,116 +1,74 @@
 # Configuration Module
 
-Central configuration and constants for the AI Browser Sidebar Extension.
+Central configuration and constants for the AI Browser Sidebar.
 
 ## Overview
 
-The config module provides application-wide configuration, model definitions, and system prompts. It serves as the single source of truth for AI model capabilities, system behaviors, and application constants.
+This module defines the model catalog and helpers, the system prompt, and built‑in slash commands. It is the single source of truth for what models are available and how commands map to prompts.
 
 ## Structure
 
 ```
 config/
-├── models.ts           # AI model definitions and capabilities
-├── slashCommands.ts    # Slash command templates (+ optional per-command model)
-└── systemPrompt.ts     # System prompts for AI interactions
+├─ models.ts         # Model list + helpers (incl. OpenAI‑Compat presets)
+├─ slashCommands.ts  # Built-in slash commands (optional per‑command model)
+└─ systemPrompt.ts   # System prompt helpers
 ```
 
-## Files
+## models.ts
 
-### `models.ts`
+Key exports and helpers:
 
-Defines available AI models and their capabilities:
+- `DEFAULT_MODELS` — Array of `ModelConfig` entries (OpenAI, Gemini, OpenRouter, compat)
+- `getDefaultModel()` — First model id from the catalog
+- `getDefaultModelForProvider(providerId)` — First model id for a provider
+- `getModelsByProvider(providerType)` — Filter by core provider type
+- `getModelsByProviderId(providerId)` — Filter by specific provider id (incl. compat)
+- `getModelById(id)` / `modelExists(id)` — Lookup helpers
+- `isOpenAICompatProvider(providerId)` — Test for compat providers
+- `OPENAI_COMPAT_PRESETS` — Built‑in OpenAI‑Compat endpoints (deepseek, qwen, zhipu, kimi, base url for these providers are Chinese version, change to global if needed)
 
-- **Model Definitions**: Configuration for OpenAI GPT-5 and Google Gemini 2.5 series
-- **Capability Mapping**: Streaming support, thinking display, context windows
-- **Cost Tiers**: Model pricing and performance characteristics
-- **Default Selection**: Simplified default model selection helpers
+Models currently include the GPT‑5 and Gemini 2.5 series used by this app, plus OpenRouter entries and placeholders for common OpenAI‑compat providers.
 
-### `systemPrompt.ts`
+## systemPrompt.ts
 
-Contains system prompts for AI interactions:
+Exports helpers to assemble the system prompt used by providers. The prompt is designed for web‑context assistance and can be extended as needed.
 
-- **Base Prompts**: Core instructions for AI behavior
-- **Context Templates**: Templates for including web content
-- **Role Definitions**: AI assistant personality and guidelines
-- **Safety Instructions**: Content filtering and safety boundaries
+## slashCommands.ts
 
-### `slashCommands.ts`
-
-Defines built-in slash commands used in the chat input. Each command includes a
-name, description, prompt template, and an optional model override used for that
-single turn.
-
-- **Command Shape**:
+Defines command objects with an optional one‑turn model override. Examples include `summarize`, `explain`, `analyze`, `comment`, `fact-check` (uses `gemini-2.5-flash`), and `rephrase`.
 
 ```ts
 export interface SlashCommand {
-  name: string; // command id without the leading '/'
-  description: string; // brief help text
-  prompt: string; // prompt template inserted when used
-  model?: string; // optional: override selected model for this turn
+  name: string;
+  description: string;
+  prompt: string;
+  model?: string; // optional one‑turn override
 }
 ```
 
-- **Examples**: `summarize`, `explain`, `analyze`, `comment`, `fact-check` (uses
-  `gemini-2.5-flash` by default via the `model` field).
-
-## Usage
-
-```typescript
-import { AVAILABLE_MODELS, DEFAULT_MODEL } from '@config/models';
-import { getSystemPrompt } from '@config/systemPrompt';
-import { SLASH_COMMANDS, getSlashCommandByName } from '@config/slashCommands';
-
-// Get available models for a provider
-const openaiModels = AVAILABLE_MODELS.openai;
-
-// Get system prompt with context
-const prompt = getSystemPrompt({ includeContext: true });
-
-// Get a slash command
-const summarize = getSlashCommandByName('summarize');
-```
-
-## Default Model Selection
-
-Model defaults were simplified. Prefer the helpers instead of hardcoding IDs:
+## Typical Usage
 
 ```ts
-import { getDefaultModel, getDefaultModelForProvider } from '@config/models';
+import {
+  DEFAULT_MODELS,
+  getDefaultModel,
+  getDefaultModelForProvider,
+  getModelsByProvider,
+  getModelsByProviderId,
+} from '@config/models';
+import { getSlashCommandByName, SLASH_COMMANDS } from '@config/slashCommands';
+import { getSystemPrompt } from '@config/systemPrompt';
 
-// Global default (first available in the list)
-const modelId = getDefaultModel();
-
-// Provider-specific default
+const openai = getModelsByProvider('openai');
+const first = getDefaultModel();
 const geminiDefault = getDefaultModelForProvider('gemini');
+
+const summarize = getSlashCommandByName('summarize');
+const sysPrompt = getSystemPrompt({ includeContext: true });
 ```
 
-## Model Configuration
-
-### OpenAI GPT-5 Series
-
-- `gpt-5-nano`: Fast responses, minimal reasoning
-- `gpt-5-mini`: Balanced performance
-- `gpt-5`: Advanced reasoning capabilities
-
-### Google Gemini 2.5 Series
-
-- `gemini-2.5-flash-lite`: Cost-effective, no thinking
-- `gemini-2.5-flash`: Balanced with dynamic thinking
-- `gemini-2.5-pro`: Advanced with automatic reasoning
-
-## System Prompt Strategy
-
-1. **Contextual Awareness**: Adapts based on page content
-2. **Safety First**: Built-in content filtering
-3. **User Focus**: Prioritizes helpful, accurate responses
-4. **Web Integration**: Optimized for web content interaction
-
-## OpenAI-Compatible Presets
-
-Built-in presets are exposed for common OpenAI-compatible providers and helpers to
-work with them:
+## OpenAI‑Compatible Providers
 
 ```ts
 import {
@@ -123,39 +81,12 @@ const isCompat = isOpenAICompatProvider('kimi'); // true
 const kimiModels = getModelsByProviderId('kimi');
 ```
 
-## Adding New Models
+## Adding Models or Commands
 
-To add a new AI model:
+1. Add a `ModelConfig` entry in `models.ts` (and optionally an OpenAI‑Compat preset).
+2. Add or edit command entries in `slashCommands.ts`.
 
-1. Update model definitions in `models.ts`
-2. Add provider-specific configuration
-3. Update capability mappings
-4. Test with existing prompts
+## Notes
 
-## Adding or Customizing Slash Commands
-
-1. Edit `slashCommands.ts` and add a new item to `SLASH_COMMANDS`.
-2. Optionally set `model` to force a one-off model for that command.
-3. Keep commands concise; the hook expands them to full prompts at send time.
-
-## Configuration Best Practices
-
-- Keep configuration centralized
-- Use TypeScript const assertions for type safety
-- Document all configuration options
-- Validate model capabilities at runtime
-- Maintain backwards compatibility
-
-## Environment Variables
-
-The module supports environment-specific configuration:
-
-- Development: Enhanced logging, debug models
-- Production: Optimized defaults, stable models
-- Testing: Mock configurations
-
-## Dependencies
-
-- No external dependencies
-- Pure TypeScript configuration
-- Type-safe exports
+- Model availability surfaced in the UI is gated by saved API keys and compat providers at runtime (see `data/store/settings.ts`).
+- All files are pure TypeScript with no external runtime deps.

@@ -1,43 +1,35 @@
 # Content Module
 
-The content module is the content script portion of the browser extension that runs in web page contexts. It handles sidebar injection, content extraction, and serves as the communication bridge between web pages and the extension.
+The content script runs in page context. It injects the React sidebar, coordinates extraction, and routes messages to/from the background.
 
 ## Overview
 
-This module runs directly in the web page context, providing:
-
 - Sidebar injection and lifecycle management
-- Content extraction from web pages
-- Message routing between page and extension
+- Robust page content extraction
+- Typed message routing with timeouts
 - DOM patching for asset loading
 
 ## Structure
 
 ```
 content/
-├── index.ts                    # Entry point & initialization
-├── core/                       # Core functionality
-│   ├── index.ts               # Core exports
-│   ├── documentPatcher.ts     # Document API patches for assets
-│   ├── messageHandler.ts      # Message routing & handling
-│   └── sidebarController.ts   # Sidebar lifecycle management
-├── extraction/                 # Content extraction pipeline
-│   ├── index.ts               # Extraction API exports
-│   ├── orchestrator.ts        # Main extraction coordinator
-│   ├── extractors/            # Extraction strategies
-│   │   ├── index.ts          # Extractor exports
-│   │   ├── defuddle.ts       # Defuddle-based extraction
-│   │   └── raw.ts            # Raw HTML preservation mode (no Markdown conversion)
-│   └── analyzers/             # Content analysis tools
-│       ├── contentAnalyzer.ts   # Text analysis
-│       └── metadataExtractor.ts # Page metadata extraction
-├── types/                      # Content-specific types
-│   └── index.ts               # Type definitions
-└── utils/                      # Utility functions
-    ├── index.ts               # Utility exports
-    ├── domUtils.ts            # DOM manipulation
-    ├── textUtils.ts           # Text processing
-    └── tabUtils.ts            # Tab-related utilities
+├─ index.ts                   # Entry & initialization
+├─ core/
+│  ├─ documentPatcher.ts     # Resolve asset URLs safely
+│  ├─ messageHandler.ts      # Route incoming messages
+│  └─ sidebarController.ts   # Mount/unmount Shadow‑DOM UI
+├─ extraction/
+│  ├─ orchestrator.ts        # Selects mode, enforces timeout
+│  ├─ extractors/
+│  │  ├─ readability.ts      # Default: Mozilla Readability → Markdown
+│  │  ├─ raw.ts              # Preserve HTML structure (good for tables)
+│  │  └─ defuddle.ts         # Defuddle‑based extraction
+│  └─ analyzers/
+│     ├─ contentAnalyzer.ts  # Code/table detection, excerpt
+│     └─ metadataExtractor.ts# Title/OG/Twitter meta
+└─ utils/
+   ├─ domUtils.ts            # DOM helpers
+   └─ tabUtils.ts            # Tab helpers
 ```
 
 ## Architecture Overview
@@ -99,24 +91,15 @@ Manages sidebar lifecycle:
 
 #### Orchestrator
 
-Coordinates the extraction pipeline:
-
-1. Validate extraction options
-2. Try primary extraction (Defuddle)
-3. Clean and normalize HTML
-4. Convert to Markdown (non-RAW modes only)
-5. Analyze content features
-6. Apply size limits
-7. Return structured content
+Selects a mode, validates options, enforces a timeout, and returns structured content. Default mode is Readability; callers may request Raw, Defuddle, or Selection.
 
 #### Extractors
 
-**Defuddle Extractor** (`defuddle.ts`)
+**Readability** (`readability.ts`)
 
-- Intelligent content detection
-- Removes ads, navigation, footers
-- Best for articles and blog posts
-- Uses Readability-like algorithms
+- Reader‑friendly extraction via Mozilla Readability
+- Converts HTML → Markdown (via `@core/extraction/markdownConverter`)
+- Detects tables and generates excerpts
 
 **Raw Extractor** (`raw.ts`)
 
@@ -124,6 +107,11 @@ Coordinates the extraction pipeline:
 - Table-aware extraction
 - Token optimization (40-70% reduction)
 - Best for structured data sites
+
+**Defuddle** (`defuddle.ts`)
+
+- Alternative extraction using the `defuddle` library
+- Useful fallback on some article pages
 
 #### Converters
 
@@ -152,20 +140,8 @@ Coordinates the extraction pipeline:
 
 ### Utilities (`utils/`)
 
-#### DOM Utilities
-
-- `isVisible()` - Check element visibility
-- `normalizeUrls()` - Convert to absolute URLs
-- `cleanHtml()` - Remove scripts and noise
-
-#### Text Utilities
-
-- `clampText()` - Safe text truncation with boundaries
-
-#### Tab Utilities
-
-- `getCurrentTabId()` - Get current tab ID
-- `getCurrentTabIdSafe()` - Safe version with error handling
+- DOM helpers for safe operations in page context
+- Tab helpers for metadata and messaging
 
 ## Extraction Pipeline
 
@@ -192,13 +168,13 @@ Orchestrator
 
 ### Extraction Options
 
-```typescript
+```ts
 interface ExtractionOptions {
+  includeLinks?: boolean; // Default: false
+  maxLength?: number; // Default: 200_000
   timeout?: number; // Default: 2000ms
-  includeLinks?: boolean; // Default: true
-  maxLength?: number; // Default: 200,000
-  mode?: 'defuddle' | 'raw'; // Default: 'defuddle'
 }
+// Mode is selected separately via ExtractionMode (readability | raw | defuddle | selection)
 ```
 
 ## API Usage
@@ -221,13 +197,12 @@ const content = await extractContent({
 
 ### Raw Mode Extraction
 
-```typescript
-import { ExtractionMode } from '@content/types/extraction';
-import { extractContent } from '@content/extraction';
+```ts
+import { ExtractionMode } from '@types/extraction';
+import { extractContent } from '@content/extraction/orchestrator';
 
-// For table-heavy or highly structured pages, returns raw HTML + plain text
+// Table‑heavy pages: returns HTML + text (no Markdown conversion)
 const content = await extractContent({ includeLinks: true }, ExtractionMode.RAW);
-// Note: RAW mode no longer converts HTML to Markdown.
 ```
 
 ### HTML to Markdown
@@ -243,29 +218,13 @@ const markdown = await htmlToMarkdown(htmlString, { includeLinks: true });
 
 ### Content Analysis
 
-```typescript
-import { detectCodeBlocks, countWords, generateExcerpt } from '@content/extraction';
-
-const hasCode = detectCodeBlocks(markdown);
-const wordCount = countWords(text);
-const excerpt = generateExcerpt(content);
-```
+The analyzer utilities live under `@core/extraction/analyzers` and are used by extractors to populate metadata (tables, excerpts, etc.).
 
 ## Message Communication
 
 ### Receiving Messages
 
-```typescript
-chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-  switch (message.type) {
-    case 'EXTRACT_CONTENT':
-      extractContent(message.options)
-        .then(content => sendResponse({ success: true, content }))
-        .catch(error => sendResponse({ success: false, error }));
-      return true; // Async response
-  }
-});
-```
+Content script primarily responds to `EXTRACT_TAB_CONTENT` via the background message orchestrated in `extension/background/messageHandler.ts`.
 
 ### Sending Messages
 
@@ -296,12 +255,9 @@ chrome.runtime.sendMessage({
 
 ## Security
 
-### Content Sanitization
-
-- DOMPurify for HTML sanitization
-- Script and dangerous element removal
-- URL validation before normalization
-- Isolated content script sandbox
+- Readability sanitizer + Markdown conversion minimize unsafe HTML in default mode
+- No script execution; avoid direct `innerHTML` without sanitization
+- Operates in an isolated content‑script world
 
 ### Best Practices
 
@@ -313,20 +269,11 @@ chrome.runtime.sendMessage({
 
 ## Performance
 
-### Optimization Strategies
+Optimization highlights:
 
-- **Lazy Loading**: On-demand module loading
-- **Module Caching**: Cache dynamic imports
-- **Timeout Enforcement**: Prevent hanging
-- **Memory Management**: Content truncation
-- **Token Optimization**: 40-70% reduction in raw mode
-
-### Performance Metrics
-
-- Extraction time: <2s average
-- Memory usage: <10MB per extraction
-- Token reduction: 40-70% with optimization
-- Cache hit rate: >80% for repeated extractions
+- Dynamic import caching per extractor
+- Timeout enforcement in orchestrator
+- Raw mode avoids Markdown conversion for speed and token savings
 
 ## Testing
 
@@ -399,22 +346,9 @@ const DEBUG = true; // Enable verbose logging
 
 ## Future Enhancements
 
-### Planned Features
-
-- Readability.js integration
-- Mozilla reader view algorithm
-- Content caching layer
-- PDF/DOCX export formats
-- Academic paper extraction
-- Content quality scoring
-- Incremental extraction for large pages
-- Visual content extraction (images, charts)
-
-### Experimental Features
-
-- Machine learning for content detection
-- Custom extraction rules per domain
-- Multi-language content support
+- Domain heuristics for extractor selection
+- Incremental extraction for long pages
+- PDF/Doc export
 
 ## Contributing
 

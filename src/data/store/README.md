@@ -1,295 +1,48 @@
-# Zustand Store Setup
+# Zustand Stores
 
-This module provides the main application state management using Zustand.
+Chat/session state lives in a set of small, focused stores. Only the session store holds data; the others delegate to the active session.
+
+## Stores
+
+```
+useSessionStore  # sessions map + activeSessionKey + create/switch/clear
+useMessageStore  # add/update/delete messages in the active session
+useTabStore      # manage extracted tab content for the active session
+useUIStore       # loading/error/activeMessageId for the active session
+useSettingsStore # persistent user settings and API key refs
+```
+
+## Session keying
+
+`createSessionKey(tabId, url)` → `tab_{id}:{normalizedUrl}` (query kept, hash dropped). See `@shared/utils/urlNormalizer`.
 
 ## Usage
 
-### Basic Usage with Full Store Access
-
-```tsx
-import { useAppStore } from '@/store';
-
-function MyComponent() {
-  const { isLoading, error, setLoading, setError } = useAppStore();
-
-  const handleAction = async () => {
-    setLoading(true);
-    try {
-      // Some async operation
-      await doSomething();
-    } catch (err) {
-      setError('Something went wrong');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  return (
-    <div>
-      {isLoading && <p>Loading...</p>}
-      {error && <p>Error: {error}</p>}
-      <button onClick={handleAction}>Do Something</button>
-    </div>
-  );
-}
-```
-
-### Using Selectors for Performance
-
-```tsx
-import { useAppStore } from '@/store';
-
-function MyComponent() {
-  // Only re-renders when isLoading changes
-  const isLoading = useAppStore(state => state.isLoading);
-
-  // Only re-renders when error changes
-  const error = useAppStore(state => state.error);
-
-  return (
-    <div>
-      {isLoading && <p>Loading...</p>}
-      {error && <p>Error: {error}</p>}
-    </div>
-  );
-}
-```
-
-### Using Helper Hooks
-
-```tsx
-import { useStoreActions, useStoreState } from '@/store';
-
-function MyComponent() {
-  const { isLoading, error } = useStoreState();
-  const { setLoading, setError, clearError } = useStoreActions();
-
-  const handleAction = async () => {
-    setLoading(true);
-    clearError();
-
-    try {
-      await doSomething();
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  return (
-    <div>
-      {isLoading && <p>Loading...</p>}
-      {error && <p>Error: {error}</p>}
-      <button onClick={handleAction}>Do Something</button>
-    </div>
-  );
-}
-```
-
-### Creating Isolated Stores for Testing
-
-```tsx
-import { createAppStore } from '@/store';
-import { renderHook, act } from '@testing-library/react';
-
-test('store test with isolated instance', () => {
-  const store = createAppStore();
-
-  const { result } = renderHook(() => store());
-
-  act(() => {
-    result.current.setLoading(true);
-  });
-
-  expect(result.current.isLoading).toBe(true);
-});
-```
-
-## API Reference
-
-### State Interface
-
-```typescript
-interface AppState {
-  isLoading: boolean;
-  error: string | null;
-}
-```
-
-### Actions Interface
-
-```typescript
-interface AppActions {
-  setLoading: (loading: boolean) => void;
-  setError: (error: string | null) => void;
-  clearError: () => void;
-  reset: () => void;
-}
-```
-
-### Exports
-
-- `useAppStore`: Main hook for accessing the store
-- `useStoreActions`: Hook for accessing only actions
-- `useStoreState`: Hook for accessing only state
-- `createAppStore`: Factory function for creating new store instances
-- `appStore`: Default store instance
-- `storeUtils`: Utility functions for direct store access
-
-### Settings Store
-
 ```ts
-// src/data/store/settings.ts
-interface SettingsState {
-  selectedModel: string;
-  updateSelectedModel: (modelId: string) => void;
-  apiKeys: Record<string, string>;
-  updateApiKey: (provider: string, key: string) => void;
-}
+import { useSessionStore, useMessageStore, useTabStore, useUIStore } from '@data/store/chat';
+
+// Switch to the session for the current tab+URL
+const sessionStore = useSessionStore.getState();
+sessionStore.switchSession(tabId, url);
+
+// Add a user message
+const messageStore = useMessageStore.getState();
+const msg = messageStore.addMessage({ role: 'user', content: 'Hello!' });
+
+// Update UI while streaming
+const uiStore = useUIStore.getState();
+uiStore.setLoading(true);
+
+// Save extracted content for the active session
+const tabStore = useTabStore.getState();
+tabStore.addLoadedTab(tabId, extractedContent);
 ```
 
-Used by `@components/ModelSelector` in the ChatPanel header. Manages:
+## Settings
 
-- Model selection across providers
-- API key storage (encrypted via storage layer)
-- Provider-specific settings
+`useSettingsStore` persists to Chrome storage and gates available models by saved API keys and OpenAI‑Compat providers. See `data/store/settings.ts` for details.
 
-### Chat Store - Modular Architecture
+## Notes
 
-The chat functionality has been refactored into a **hierarchical delegation pattern** with specialized stores:
-
-```
-SessionStore (Master - holds all session data)
-    ├── MessageStore (delegates operations to active session)
-    ├── TabStore (delegates operations to active session)
-    └── UIStore (delegates operations to active session)
-```
-
-#### Session Store (`stores/sessionStore.ts`)
-
-**Master store** that holds all session data in memory:
-
-```ts
-interface SessionState {
-  sessions: Record<string, SessionData>;
-  activeSessionKey: string | null;
-
-  // Session management
-  createSessionKey: (tabId: number, url: string) => string;
-  getOrCreateSession: (tabId: number, url: string) => SessionData;
-  switchSession: (tabId: number, url: string) => SessionData;
-  updateActiveSession: (updates: Partial<SessionData>) => void;
-
-  // Clearing strategies
-  clearSession: (sessionKey: string) => void; // Remove specific session
-  clearTabSessions: (tabId: number) => void; // Remove all sessions for tab
-  clearCurrentSession: () => void; // Reset current session data
-}
-```
-
-**Session Key Format**: `tab_${tabId}:${normalizedUrl}`
-
-- URL normalization includes query params, excludes hash fragments
-- Example: `tab_123:https://example.com/page?id=456`
-
-#### Message Store (`stores/messageStore.ts`)
-
-**Delegated store** that operates on the active session:
-
-```ts
-interface MessageState {
-  // All operations delegate to SessionStore's active session
-  addMessage: (options: CreateMessageOptions) => ChatMessage;
-  updateMessage: (id: string, updates: UpdateMessageOptions) => void;
-  appendToMessage: (id: string, content: string) => void;
-  deleteMessage: (id: string) => void;
-  editMessage: (id: string) => ChatMessage | undefined;
-
-  // Selectors retrieve from active session
-  getMessages: () => ChatMessage[];
-  getUserMessages: () => ChatMessage[];
-  getAssistantMessages: () => ChatMessage[];
-}
-```
-
-#### Tab Store (`stores/tabStore.ts`)
-
-**Delegated store** for tab content management:
-
-```ts
-interface TabState {
-  // All operations delegate to SessionStore's active session
-  setLoadedTabs: (tabs: Record<number, TabContent>) => void;
-  addLoadedTab: (tabId: number, tabContent: TabContent) => void;
-  updateTabContent: (tabId: number, editedContent: string) => void;
-  removeLoadedTab: (tabId: number) => void;
-
-  // Selectors retrieve from active session
-  getLoadedTabs: () => Record<number, TabContent>;
-  getTabContent: (tabId: number) => TabContent | undefined;
-  getCurrentTabContent: () => TabContent | undefined;
-}
-```
-
-#### UI Store (`stores/uiStore.ts`)
-
-**Delegated store** for UI state:
-
-```ts
-interface UIState {
-  // All operations delegate to SessionStore's active session
-  setLoading: (loading: boolean) => void;
-  setError: (error: string | null) => void;
-  setActiveMessageId: (id: string | null) => void;
-  setLastResponseId: (id: string | null) => void;
-
-  // Selectors retrieve from active session
-  isLoading: () => boolean;
-  getError: () => string | null;
-  getActiveMessageId: () => string | null;
-}
-```
-
-### Session Lifecycle
-
-**When Sessions Continue:**
-
-- Same tab + same normalized URL (page refresh, hash changes)
-- Sidebar hidden/shown (React stays mounted)
-- Return to previously visited URL in same tab
-
-**When Sessions are Created:**
-
-- New tab opened
-- Navigate to different URL (different query params = new session)
-- First visit to a URL in a tab
-
-**When Sessions are Cleared:**
-
-- Tab closed → all sessions for that tab removed
-- User clicks "Clear conversation" → current session reset
-- Browser/extension restart → all sessions lost (memory-only)
-
-**Sidebar Mount/Unmount:**
-
-- **Mount**: Icon click → inject → mount React → retrieve/create session
-- **Hide**: Icon click → CSS hide (React mounted, session preserved)
-- **Show**: Icon click → CSS show (no re-mount, session continues)
-- **Navigate**: Full unmount → must reopen → session retrieved if exists
-- **Tab close**: Full unmount → `TAB_CLOSED` → sessions cleared
-
-## Chrome Extension Integration
-
-The store works seamlessly within the Chrome extension environment. Future versions will include:
-
-- Chrome storage persistence
-- Cross-tab state synchronization
-- Extension-specific error handling
-
-## Development Features
-
-- Redux DevTools integration (development only)
-- TypeScript strict mode support
-- Comprehensive test coverage
-- Performance optimizations with selectors
+- Stores are plain Zustand without persistence (except settings). Keep operations minimal and synchronous where possible.
+- Prefer selectors when subscribing in React components to avoid unnecessary re‑renders.

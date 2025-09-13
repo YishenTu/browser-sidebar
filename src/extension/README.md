@@ -6,22 +6,18 @@ The extension module provides the core Chrome Extension infrastructure including
 
 ```
 extension/
-├── background/              # Service worker components
-│   ├── index.ts            # Service worker entry point
-│   ├── keepAlive.ts        # Keep-alive mechanism
-│   ├── messageHandler.ts   # Central message routing
-│   ├── sidebarManager.ts   # Tab-specific state management
-│   ├── tabManager.ts       # Tab lifecycle management
-│   ├── cache/              # Content caching system
-│   │   └── TabContentCache.ts # Tab content cache manager
-│   └── queue/              # Extraction queue system
-│       ├── ExtractionQueue.ts # Queue implementation
-│       ├── ExtractionQueue.test.ts # Queue tests
-│       └── index.ts        # Queue exports
-└── messaging/              # Message passing utilities
-    ├── index.ts            # MessageBus and convenience functions
-    ├── errors.ts           # Error types and handling utilities
-    └── responses.ts        # Response types and factories
+├─ background/              # Service worker components
+│  ├─ index.ts             # Entry point
+│  ├─ keepAlive.ts         # Keep‑alive mechanism
+│  ├─ messageHandler.ts    # Typed message registry/dispatch
+│  ├─ sidebarManager.ts    # Per‑tab sidebar lifecycle
+│  ├─ tabManager.ts        # Tab lifecycle + extraction orchestration
+│  ├─ cache/TabContentCache.ts # Session‑storage TTL cache (5 minutes)
+│  └─ queue/ExtractionQueue.ts # Concurrency‑limited extraction queue
+└─ messaging/               # Message helpers
+   ├─ index.ts
+   ├─ errors.ts
+   └─ responses.ts
 ```
 
 ## Architecture Overview
@@ -72,14 +68,14 @@ Prevents service worker termination during:
 
 Central hub for all extension communication:
 
-**Message Types:**
+**Selected Message Types:**
 
-- `TOGGLE_SIDEBAR` - Show/hide sidebar
-- `CLOSE_SIDEBAR` - Force close
-- `EXTRACT_CONTENT` - Request page content
-- `CONTENT_READY` - Content extraction complete
-- `TAB_UPDATE` - Tab state changed
-- `ERROR` - Error reporting
+- `TOGGLE_SIDEBAR`, `CLOSE_SIDEBAR`
+- `GET_TAB_ID`, `GET_TAB_INFO`, `GET_ALL_TABS`
+- `EXTRACT_TAB_CONTENT` (response: `CONTENT_EXTRACTED`)
+- `CLEANUP_TAB_CACHE`
+- `PROXY_REQUEST`
+- `PING`/`PONG`, `ERROR`
 
 **Features:**
 
@@ -110,26 +106,7 @@ Handles tab-specific operations:
 
 #### `TabContentCache.ts`
 
-Intelligent caching system for extracted content:
-
-**Features:**
-
-- LRU (Least Recently Used) eviction
-- 5-minute TTL (Time To Live)
-- Content hash validation
-- Memory limit enforcement (10MB)
-- Automatic cleanup
-
-**Cache Entry Structure:**
-
-```typescript
-{
-  content: ExtractedContent,
-  timestamp: number,
-  hash: string,
-  size: number
-}
-```
+Stores extracted content in `chrome.storage.session` with a 5‑minute TTL. Expired entries are cleared on access and via periodic cleanup. Session storage limits apply.
 
 ### Extraction Queue (`queue/`)
 
@@ -413,13 +390,7 @@ it('toggles sidebar on icon click', async () => {
 
 ## Browser Compatibility
 
-| Browser | Version | Support Level |
-| ------- | ------- | ------------- |
-| Chrome  | 88+     | Full          |
-| Edge    | 88+     | Full          |
-| Arc     | Latest  | Full          |
-| Brave   | Latest  | Full          |
-| Opera   | 74+     | Full          |
+Chromium‑based browsers (Chrome, Edge, Arc, Brave, Opera). Some system pages are restricted by design.
 
 ## Future Enhancements
 
