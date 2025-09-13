@@ -176,10 +176,11 @@ export class EngineFactory {
   }
   createDefaultGeminiConfig(apiKey: string, model?: string): GeminiConfig {
     const defaultModel = model || getDefaultModelForProvider('gemini')!;
+    const modelCfg = getModelById(defaultModel);
     return {
       apiKey,
       model: defaultModel,
-      thinkingBudget: '0',
+      thinkingBudget: (modelCfg?.thinkingBudget as number | undefined) ?? -1,
       showThoughts: false,
     } as GeminiConfig;
   }

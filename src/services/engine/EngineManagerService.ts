@@ -23,6 +23,7 @@ import {
   getDefaultModelForProvider,
   OPENAI_COMPAT_PROVIDER_IDS,
   getModelsByProviderId,
+  getModelById,
 } from '@config/models';
 import { listOpenAICompatProviders, getCompatProviderById } from '@/data/storage/keys/compat';
 import type {
@@ -491,7 +492,13 @@ export class EngineManagerService {
           model: selectedModel.startsWith('gemini-')
             ? selectedModel
             : getDefaultModelForProvider('gemini') || 'gemini-2.5-flash-lite',
-          thinkingBudget: '0',
+          // Use model preset's default thinking budget when available
+          thinkingBudget:
+            (getModelById(
+              selectedModel.startsWith('gemini-')
+                ? selectedModel
+                : getDefaultModelForProvider('gemini') || 'gemini-2.5-flash-lite'
+            )?.thinkingBudget as number | undefined) ?? -1,
           showThoughts: false,
         },
       };

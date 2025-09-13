@@ -7,7 +7,7 @@
  *
  * Supports all provider-specific configuration options:
  * - OpenAI: reasoning_effort (low/medium/high)
- * - Gemini: thinking_budget ('0'=off, '-1'=dynamic), thought visibility
+ * - Gemini: thinking_budget (0=off, -1=dynamic, N=explicit), thought visibility
  */
 
 // Import and re-export ModelConfig from centralized location
@@ -51,7 +51,11 @@ export interface OpenRouterReasoningConfig {
  * Thinking budget for Gemini models
  * '0' = off, '-1' = dynamic
  */
-export type ThinkingBudget = '0' | '-1';
+// Gemini thinking budget tokens
+//  - 0  = off (where supported)
+//  - -1 = dynamic (model‑decides)
+//  - N  = explicit token budget
+export type ThinkingBudget = 0 | -1 | number;
 
 /**
  * Finish reasons for completion responses
@@ -486,7 +490,10 @@ export function isValidReasoningEffort(value: unknown): value is ReasoningEffort
  * Validate thinking budget value
  */
 export function isValidThinkingBudget(value: unknown): value is ThinkingBudget {
-  return typeof value === 'string' && ['0', '-1'].includes(value);
+  if (typeof value !== 'number' || isNaN(value)) return false;
+  // Accept any integer number; specific model constraints are enforced at runtime
+  // (e.g., Pro: >=128 or -1; Flash: >=0; Lite: >=512 or 0)
+  return Number.isInteger(value);
 }
 
 /**
@@ -568,15 +575,11 @@ export function validateGeminiConfig(config: unknown): ProviderValidationResult 
     errors.push('Invalid API key');
   }
 
-  if (!isValidTemperature(cfg['temperature'])) {
-    errors.push('Invalid temperature');
-  }
-
-  if (!isValidThinkingBudget(cfg['thinkingBudget'])) {
+  if (cfg['thinkingBudget'] !== undefined && !isValidThinkingBudget(cfg['thinkingBudget'])) {
     errors.push('Invalid thinking budget');
   }
 
-  if (typeof cfg['showThoughts'] !== 'boolean') {
+  if (cfg['showThoughts'] !== undefined && typeof cfg['showThoughts'] !== 'boolean') {
     errors.push('Invalid show thoughts setting');
   }
 
@@ -584,16 +587,22 @@ export function validateGeminiConfig(config: unknown): ProviderValidationResult 
     errors.push('Invalid model');
   }
 
-  if (typeof cfg['maxTokens'] !== 'number' || cfg['maxTokens'] <= 0) {
-    errors.push('Invalid max tokens');
+  // Optional numeric fields are validated only if present
+  if (cfg['maxTokens'] !== undefined) {
+    if (typeof cfg['maxTokens'] !== 'number' || (cfg['maxTokens'] as number) <= 0) {
+      errors.push('Invalid max tokens');
+    }
   }
-
-  if (typeof cfg['topP'] !== 'number' || cfg['topP'] <= 0 || cfg['topP'] > 1) {
-    errors.push('Invalid top P');
+  if (cfg['topP'] !== undefined) {
+    const v = cfg['topP'] as number;
+    if (typeof v !== 'number' || isNaN(v) || v < 0 || v > 1) {
+      errors.push('Invalid top P');
+    }
   }
-
-  if (typeof cfg['topK'] !== 'number' || cfg['topK'] <= 0) {
-    errors.push('Invalid top K');
+  if (cfg['topK'] !== undefined) {
+    if (typeof cfg['topK'] !== 'number' || (cfg['topK'] as number) <= 0) {
+      errors.push('Invalid top K');
+    }
   }
 
   return {
@@ -726,14 +735,15 @@ export const REASONING_EFFORTS: ReasoningEffort[] = ['low', 'medium', 'high'];
 /**
  * Gemini thinking budget options
  */
-export const THINKING_BUDGETS: ThinkingBudget[] = ['0', '-1'];
+export const THINKING_BUDGETS: ThinkingBudget[] = [0, -1];
 
 /**
  * Max thinking tokens range for future use
  */
 export const MAX_THINKING_TOKENS_RANGE = {
-  min: 5000,
-  max: 100000,
-  default: 25000,
-  step: 5000,
+  // Based on public guidance for Gemini 2.5 series
+  min: 128,
+  max: 32768,
+  default: 4096,
+  step: 128,
 } as const;

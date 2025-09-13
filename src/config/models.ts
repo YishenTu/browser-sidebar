@@ -7,8 +7,11 @@ export interface ModelConfig {
   id: string;
   name: string;
   provider: 'openai' | 'gemini' | 'openrouter' | 'openai_compat' | string;
-  // Gemini specific - '0' for off, '-1' for dynamic
-  thinkingBudget?: '0' | '-1';
+  // Gemini specific thinking budget (tokens)
+  //  - 0  = off (where supported, e.g. Flash/Lite)
+  //  - -1 = dynamic (model‑decides)
+  //  - N  = explicit token budget
+  thinkingBudget?: 0 | -1 | number;
   // OpenAI specific
   reasoningEffort?: 'minimal' | 'low' | 'medium' | 'high';
   // OpenRouter specific - max tokens for Anthropic models
@@ -73,19 +76,19 @@ export const DEFAULT_MODELS: ModelConfig[] = [
     id: 'gemini-2.5-flash-lite',
     name: 'Gemini 2.5 Flash Lite',
     provider: 'gemini',
-    thinkingBudget: '0', // 512 to 24576
+    thinkingBudget: 0, // 512 to 24576 supported; default off
   },
   {
     id: 'gemini-2.5-flash',
     name: 'Gemini 2.5 Flash',
     provider: 'gemini',
-    thinkingBudget: '-1', // 0 to 24576
+    thinkingBudget: -1, // 0 to 24576; dynamic by default
   },
   {
     id: 'gemini-2.5-pro',
     name: 'Gemini 2.5 Pro',
     provider: 'gemini',
-    thinkingBudget: '-1', // 128 to 32768
+    thinkingBudget: -1, // 128 to 32768; cannot be 0
   },
   // OpenAI models
   {

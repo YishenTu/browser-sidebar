@@ -148,16 +148,23 @@ export function buildGenerationConfig(
   const thinkingBudget = chatConfig?.thinkingBudget ?? geminiConfig.thinkingBudget;
 
   if (supportsThinking(geminiConfig.model)) {
-    // Convert string budget to number for the API
-    const budgetNum = parseInt(thinkingBudget || '0', 10);
+    let budget = thinkingBudget;
+    // Safety: Gemini 2.5 Pro cannot disable thinking (0 is invalid)
+    if (typeof budget === 'number' && budget === 0 && /gemini-2\.5-pro/i.test(geminiConfig.model)) {
+      budget = -1; // fall back to dynamic per API guidance
+    }
 
-    if (!isNaN(budgetNum)) {
+    if (typeof budget === 'number' && Number.isInteger(budget)) {
       config.thinkingConfig = {
-        thinkingBudget: budgetNum,
-        includeThoughts: true, // Enable thinking summaries
+        thinkingBudget: budget,
+        // Only include thought summaries when requested
+        includeThoughts: geminiConfig.showThoughts === true || chatConfig?.showThoughts === true,
       };
     }
-    config.responseModalities = ['TEXT'];
+
+    // Ask for text by default; include THOUGHT modality when showing thoughts
+    const wantThoughts = geminiConfig.showThoughts === true || chatConfig?.showThoughts === true;
+    config.responseModalities = wantThoughts ? ['TEXT', 'THOUGHT'] : ['TEXT'];
   }
 
   return config;
