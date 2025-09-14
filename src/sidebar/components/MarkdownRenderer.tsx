@@ -25,6 +25,15 @@ import rehypeKatex from 'rehype-katex';
 import { CodeBlock } from './CodeBlock';
 import type { Root, Content } from 'mdast';
 
+// Narrowing helper to work with mdast Parent-like nodes
+const hasChildren = (
+  node: Root | Content | null | undefined
+): node is (Root & { children: Content[] }) | (Content & { children: Content[] }) => {
+  if (!node || typeof node !== 'object') return false;
+  const maybe = node as { children?: unknown };
+  return Array.isArray(maybe.children);
+};
+
 // =============================================================================
 // Types and Interfaces
 // =============================================================================
@@ -232,7 +241,11 @@ const normalizeDisplayMathSafely = (input: string): string => {
  */
 function remarkSlashCommands() {
   return (tree: Root) => {
-    const visit = (node: Content, index: number | null, parent: Root | Content): number | null => {
+    const visit = (
+      node: Root | Content,
+      index: number | null,
+      parent: Root | Content | null
+    ): number | null => {
       if (node.type === 'text' && typeof node.value === 'string') {
         const regex = /(^|\s)(\/[a-zA-Z]+)(?=\s|$)/g;
         const matches: Array<{
@@ -247,12 +260,12 @@ function remarkSlashCommands() {
           matches.push({
             index: match.index,
             length: match[0].length,
-            prefix: match[1],
-            command: match[2],
+            prefix: match[1] ?? '',
+            command: match[2] ?? '',
           });
         }
 
-        if (matches.length > 0 && parent && typeof index === 'number') {
+        if (matches.length > 0 && parent && typeof index === 'number' && hasChildren(parent)) {
           const newNodes: Content[] = [];
           let lastIndex = 0;
 
@@ -296,9 +309,11 @@ function remarkSlashCommands() {
         }
       }
 
-      if (node.children) {
+      if (hasChildren(node)) {
         for (let i = 0; i < node.children.length; i++) {
-          const result = visit(node.children[i], i, node);
+          const child = node.children[i];
+          if (!child) continue;
+          const result = visit(child, i, node);
           if (typeof result === 'number') {
             i = result - 1;
           }

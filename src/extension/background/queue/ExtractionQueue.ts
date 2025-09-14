@@ -5,16 +5,17 @@
  * Implements FIFO queueing with proper error handling and Promise resolution.
  */
 
-interface QueueTask<T> {
-  task: () => Promise<T>;
-  resolve: (value: T) => void;
+// Internal non-generic representation to allow heterogenous tasks in a single queue
+interface AnyQueueTask {
+  task: () => Promise<unknown>;
+  resolve: (value: unknown) => void;
   reject: (error: unknown) => void;
 }
 
 export class ExtractionQueue {
   private readonly maxConcurrent: number;
   private running: number;
-  private queue: QueueTask<unknown>[];
+  private queue: AnyQueueTask[];
 
   constructor(maxConcurrent: number = 3) {
     this.maxConcurrent = maxConcurrent;
@@ -29,9 +30,10 @@ export class ExtractionQueue {
    */
   async enqueue<T>(task: () => Promise<T>): Promise<T> {
     return new Promise<T>((resolve, reject) => {
-      const queueTask: QueueTask<T> = {
-        task,
-        resolve,
+      // Wrap the generic task into an "any" task for storage
+      const queueTask: AnyQueueTask = {
+        task: async () => await task(),
+        resolve: value => resolve(value as T),
         reject,
       };
 
@@ -65,7 +67,7 @@ export class ExtractionQueue {
   /**
    * Execute a queued task with proper error handling and cleanup
    */
-  private async executeTask<T>(queueTask: QueueTask<T>): Promise<void> {
+  private async executeTask(queueTask: AnyQueueTask): Promise<void> {
     try {
       // Execute the task
       const result = await queueTask.task();
