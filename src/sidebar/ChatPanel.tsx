@@ -347,8 +347,10 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
           // For the first message, don't update content here - let useMessageHandler handle it
           // This ensures tab content injection happens properly
           if (isFirstMessage) {
-            // Only update status, not content - let sendMessage handle tab injection
+            // Update status and displayContent immediately for UI feedback
+            // Let sendMessage handle content with tab injection
             updateMessage(editingMessage.id, {
+              displayContent: displayContent,
               status: 'sending',
             });
           } else {
