@@ -360,7 +360,13 @@ export function useMessageHandler({
 
         // Check if this is the first message in the conversation
         const existingMessages = messageStore.getMessages();
-        const isFirstMessage = existingMessages.filter(m => m.role === 'user').length === 0;
+        const userMessages = existingMessages.filter(m => m.role === 'user');
+
+        // For editing (skipUserMessage=true), check if we're editing the first user message
+        // For new messages, check if there are no user messages yet
+        const isFirstMessage = skipUserMessage
+          ? userMessages.length === 1 // Editing scenario: exactly one user message means we're editing the first
+          : userMessages.length === 0; // New message scenario: no user messages yet
 
         // Check if we have loaded tabs to include
         const loadedTabs = useTabStore.getState().getLoadedTabs();
@@ -396,24 +402,27 @@ export function useMessageHandler({
             },
           });
         } else {
-          // For regeneration, get the last user message
+          // For editing/regeneration, get the last user message
           const lastUserMessage = messageStore.getUserMessages().slice(-1)[0];
           if (!lastUserMessage) {
             throw new Error('No user message found for regeneration');
           }
           userMessage = lastUserMessage;
 
-          // Update the user message with new content if tab context changed
-          if (hasTabContext && userMessage.content !== finalContent) {
-            messageStore.updateMessage(userMessage.id, {
-              content: finalContent,
-              metadata: {
-                ...userMessage.metadata,
-                hasTabContext,
-                originalUserContent: trimmedContent,
-              },
-            });
-          }
+          // Update the user message with new content
+          // This is important for both:
+          // 1. Tab context injection when editing first message
+          // 2. Regular edits to update the content
+          messageStore.updateMessage(userMessage.id, {
+            content: finalContent,
+            displayContent: finalDisplayContent,
+            metadata: {
+              ...userMessage.metadata,
+              ...metadata,
+              hasTabContext,
+              originalUserContent: hasTabContext ? trimmedContent : undefined,
+            },
+          });
         }
 
         try {

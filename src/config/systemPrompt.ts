@@ -128,6 +128,7 @@ export function getSystemPrompt(
 
     ## Response Guidelines
     - DO NOT offer follow up actions or questions
+    - If the webpage is forum, ignore users' metadata like "level", "register date", "currency", "reputation", etc., focus on the content only
 
     ## Reasoning and Approach
     - Think from first principles; be comprehensive, impartial, and analytically rigorous

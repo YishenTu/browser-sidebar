@@ -301,8 +301,10 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
           if (originalMessage) {
             // Preserve the original metadata structure
             editedMessageMetadata = originalMessage.metadata || {};
-            // Determine if this was the first message by checking if it has tab context
-            isFirstMessage = !!originalMessage.metadata?.hasTabContext;
+            // Check if this is the first user message in the conversation
+            // If it is, we need to re-inject tab content
+            const userMessages = messages.filter(m => m.role === 'user');
+            isFirstMessage = userMessages.length > 0 && userMessages[0]?.id === editingMessage.id;
           }
 
           // Remove all messages after the edited one
@@ -342,17 +344,29 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
 
         // Issue 2 Fix: Handle editing vs new message properly
         if (wasEditing && editingMessage) {
-          // Update the existing message instead of creating a new one
-          updateMessage(editingMessage.id, {
-            content: messageContent,
-            displayContent: displayContent,
-            status: 'sending',
-            metadata: Object.keys(messageMetadata).length > 0 ? messageMetadata : undefined,
-          });
+          // For the first message, don't update content here - let useMessageHandler handle it
+          // This ensures tab content injection happens properly
+          if (isFirstMessage) {
+            // Only update status, not content - let sendMessage handle tab injection
+            updateMessage(editingMessage.id, {
+              status: 'sending',
+            });
+          } else {
+            // For non-first messages, update normally
+            updateMessage(editingMessage.id, {
+              content: messageContent,
+              displayContent: displayContent,
+              status: 'sending',
+              metadata: Object.keys(messageMetadata).length > 0 ? messageMetadata : undefined,
+            });
+          }
 
           // Send message without creating a duplicate user message
-          await sendMessage(messageContent, {
+          // For first message, pass the raw user input so it can be formatted with tabs
+          await sendMessage(isFirstMessage ? userInput : messageContent, {
             skipUserMessage: true, // Prevent duplicate user message
+            displayContent: displayContent,
+            metadata: Object.keys(messageMetadata).length > 0 ? messageMetadata : undefined,
           });
         } else {
           // Send message with content injection for first message or normal content for subsequent messages
@@ -396,10 +410,22 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
   // Handle edit message
   const handleEditMessage = useCallback((message: ChatMessage) => {
     if (message.role === 'user') {
-      // Use original user content for editing, not injected content
-      // Priority: metadata.originalUserContent || displayContent || content
-      const editContent =
-        message.metadata?.originalUserContent || message.displayContent || message.content;
+      // For slash commands, always use the displayContent (which shows the slash command)
+      // For regular messages with tab context, use originalUserContent
+      // Otherwise use displayContent or content
+      let editContent: string;
+
+      if (message.metadata?.['usedSlashCommand'] && message.displayContent) {
+        // If a slash command was used, show the slash command text
+        editContent = message.displayContent;
+      } else if (message.metadata?.originalUserContent) {
+        // For messages with tab context, use the original user input
+        editContent = message.metadata.originalUserContent;
+      } else {
+        // Default to displayContent or content
+        editContent = message.displayContent || message.content;
+      }
+
       setEditingMessage({ id: message.id, content: editContent });
     }
   }, []);
