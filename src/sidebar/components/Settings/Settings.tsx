@@ -1,5 +1,6 @@
 import { useState, useCallback, useEffect } from 'react';
 import { useSettingsStore } from '@store/settings';
+import type { DomainExtractionRuleSetting } from '@/types/settings';
 import {
   addOrUpdateOpenAICompatProvider,
   getCompatProviderById,
@@ -37,6 +38,11 @@ export function Settings() {
   const [compatMasked, setCompatMasked] = useState(true);
   const [savedCompatProviders, setSavedCompatProviders] = useState<string[]>([]);
 
+  // Extraction rules state (domain → default mode)
+  const [domainRules, setDomainRules] = useState<DomainExtractionRuleSetting[]>([]);
+  const updateExtractionPreferences = useSettingsStore(state => state.updateExtractionPreferences);
+  const [rulesLoaded, setRulesLoaded] = useState(false);
+
   // Load existing API keys on mount
   useEffect(() => {
     const settings = useSettingsStore.getState();
@@ -59,6 +65,11 @@ export function Settings() {
 
     // Load saved compat providers
     loadCompatProviders();
+
+    // Load extraction rules
+    const rules = settings.settings.extraction?.domainRules || [];
+    setDomainRules(rules);
+    setRulesLoaded(true);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const loadCompatProviders = async () => {
@@ -149,6 +160,41 @@ export function Settings() {
       setOpenrouterVerifying(false);
     }
   }, [openrouterKey]);
+
+  // Extraction rules handlers
+  const handleAddRule = () => {
+    setDomainRules(prev => [...prev, { domain: '', mode: 'readability' }]);
+  };
+
+  const handleRuleChange = (index: number, field: 'domain' | 'mode', value: string) => {
+    setDomainRules(prev =>
+      prev.map((r, i) =>
+        i === index
+          ? {
+              ...r,
+              [field]: field === 'mode' ? (value as DomainExtractionRuleSetting['mode']) : value,
+            }
+          : r
+      )
+    );
+  };
+
+  const handleRemoveRule = (index: number) => {
+    setDomainRules(prev => prev.filter((_, i) => i !== index));
+  };
+
+  // Auto-save rules on change (debounced) after initial load
+  useEffect(() => {
+    if (!rulesLoaded) return;
+    const allowed = ['defuddle', 'readability', 'raw'] as const;
+    const t = setTimeout(() => {
+      const cleaned: DomainExtractionRuleSetting[] = domainRules
+        .map(r => ({ domain: r.domain.trim().toLowerCase(), mode: r.mode }))
+        .filter(r => r.domain && (allowed as readonly string[]).includes(r.mode));
+      updateExtractionPreferences({ domainRules: cleaned });
+    }, 300);
+    return () => clearTimeout(t);
+  }, [domainRules, rulesLoaded, updateExtractionPreferences]);
 
   // Handle compat provider selection change
   const handleCompatProviderChange = useCallback(async (providerId: string) => {
@@ -433,10 +479,53 @@ export function Settings() {
       </div>
 
       {/* Reset Button */}
-      <div className="settings-actions">
-        <button onClick={handleResetAll} className="settings-button">
+      <div className="settings-actions settings-wide-wrap">
+        <button onClick={handleResetAll} className="settings-button settings-button--wide">
           Reset All Keys
         </button>
+      </div>
+
+      {/* Extraction Defaults */}
+      <div className="settings-section settings-section--extraction">
+        <h2 className="settings-title">Extraction Defaults by Domain</h2>
+        <div className="settings-domain-rules">
+          {domainRules.map((rule, idx) => (
+            <div key={idx} className="settings-domain-rule-row">
+              <input
+                type="text"
+                value={rule.domain}
+                onChange={e => handleRuleChange(idx, 'domain', e.target.value)}
+                placeholder="example.com"
+                className="settings-input settings-domain-input"
+              />
+              <select
+                value={rule.mode}
+                onChange={e => handleRuleChange(idx, 'mode', e.target.value)}
+                className="settings-input settings-domain-mode-select"
+              >
+                <option value="readability">Readability</option>
+                <option value="defuddle">Defuddle</option>
+                <option value="raw">Raw</option>
+              </select>
+              <button
+                onClick={() => handleRemoveRule(idx)}
+                className="settings-button settings-domain-remove-button"
+                aria-label="Remove rule"
+                title="Remove"
+              >
+                ×
+              </button>
+            </div>
+          ))}
+          <div className="settings-domain-actions settings-wide-wrap">
+            <button onClick={handleAddRule} className="settings-button settings-button--wide">
+              Add Rule
+            </button>
+          </div>
+          <p className="settings-hint">
+            Rules match the base domain and all subdomains. First match wins.
+          </p>
+        </div>
       </div>
     </div>
   );

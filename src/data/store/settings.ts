@@ -14,6 +14,7 @@ import type {
   PrivacySettings,
   APIKeyReferences,
   Model,
+  ExtractionPreferences,
 } from '@/types/settings';
 import {
   DEFAULT_MODELS,
@@ -72,6 +73,13 @@ const DEFAULT_SETTINGS: Settings = {
     openai: null,
     google: null,
     openrouter: null,
+  },
+  extraction: {
+    // Built-in defaults; user can modify in Settings UI
+    domainRules: [
+      { domain: 'x.com', mode: 'defuddle' },
+      { domain: 'reddit.com', mode: 'defuddle' },
+    ],
   },
   selectedModel: DEFAULT_MODEL_ID,
   // Empty by default; populated based on saved keys/compat providers
@@ -262,6 +270,7 @@ const migrateSettings = (rawSettings: unknown): Settings => {
       ai: validateAISettings(rs.ai),
       privacy: validatePrivacySettings(rs.privacy),
       apiKeys: validateAPIKeyReferences(rs.apiKeys),
+      extraction: validateExtractionPreferences(rs.extraction),
       selectedModel:
         typeof rs.selectedModel === 'string' && rs.selectedModel
           ? (rs.selectedModel as string)
@@ -272,6 +281,32 @@ const migrateSettings = (rawSettings: unknown): Settings => {
 
   // Fallback to defaults for unknown versions
   return { ...DEFAULT_SETTINGS };
+};
+
+/**
+ * Validate extraction preferences (domain rules)
+ */
+const validateExtractionPreferences = (prefs: unknown): ExtractionPreferences => {
+  const p = (prefs && typeof prefs === 'object' ? prefs : {}) as Partial<ExtractionPreferences> &
+    Record<string, unknown>;
+
+  const rawRules = Array.isArray(p.domainRules) ? p.domainRules : [];
+  const validModes = new Set(['defuddle', 'readability', 'raw', 'selection']);
+
+  const domainRules = rawRules
+    .map(r => {
+      const rr = r as unknown as Record<string, unknown>;
+      const domain = typeof rr['domain'] === 'string' ? rr['domain'].trim().toLowerCase() : '';
+      const mode = typeof rr['mode'] === 'string' ? (rr['mode'] as string) : '';
+      if (!domain || !validModes.has(mode)) return null;
+      return { domain, mode: mode as ExtractionPreferences['domainRules'][number]['mode'] };
+    })
+    .filter(Boolean) as ExtractionPreferences['domainRules'];
+
+  return {
+    domainRules:
+      domainRules.length > 0 ? domainRules : [...DEFAULT_SETTINGS.extraction.domainRules],
+  };
 };
 
 /**
@@ -359,6 +394,7 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
       // Initially empty; will be computed from keys+compat below
       currentSettings.availableModels = [];
       currentSettings.selectedModel = settings.selectedModel;
+      currentSettings.extraction = validateExtractionPreferences(settings.extraction);
 
       const needsMigration = migrated;
 
@@ -474,6 +510,21 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
 
   clearError: () => {
     set({ error: null });
+  },
+
+  updateExtractionPreferences: async (prefs: ExtractionPreferences) => {
+    set({ isLoading: true, error: null });
+    try {
+      const currentSettings = get().settings;
+      const validated = validateExtractionPreferences(prefs);
+      const updated = { ...currentSettings, extraction: validated };
+      set({ settings: updated });
+      await saveToStorage(updated);
+      set({ isLoading: false });
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to save settings';
+      set({ isLoading: false, error: errorMessage });
+    }
   },
 
   updateSelectedModel: async (modelId: string) => {

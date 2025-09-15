@@ -10,9 +10,9 @@ This module defines the model catalog and helpers, the system prompt, and built�
 
 ```
 config/
-├─ models.ts         # Model list + helpers (incl. OpenAI‑Compat presets)
-├─ slashCommands.ts  # Built-in slash commands (optional per‑command model)
-└─ systemPrompt.ts   # System prompt helpers
+├─ models.ts             # Model list + helpers (incl. OpenAI‑Compat presets)
+├─ slashCommands.ts      # Built-in slash commands (optional per‑command model)
+└─ systemPrompt.ts       # System prompt helpers
 ```
 
 ## models.ts
@@ -67,6 +67,10 @@ const geminiDefault = getDefaultModelForProvider('gemini');
 const summarize = getSlashCommandByName('summarize');
 const sysPrompt = getSystemPrompt({ includeContext: true });
 ```
+
+Extraction defaults are now user-configurable in Settings
+("Extraction Defaults by Domain"). The content orchestrator reads the saved
+rules from chrome.storage; no additional config file is needed.
 
 ## OpenAI‑Compatible Providers
 

@@ -3,6 +3,8 @@
 .settings-container {
   padding: 20px;
   max-width: 100%;
+  overflow: auto; /* allow internal scroll */
+  overscroll-behavior: contain; /* prevent scroll chaining to page */
 }
 
 .settings-title {
@@ -101,6 +103,66 @@
   display: flex;
   gap: 12px;
   justify-content: flex-start;
+  margin-bottom: 20px; /* unify spacing with sections */
+}
+
+/* Consistent button width for primary actions */
+.settings-wide-wrap {
+  /* Shared width for wide buttons. Customize via CSS variable if needed. */
+  width: var(--settings-wide-button-width, 140px);
+}
+
+.settings-button--wide {
+  width: inherit; /* inherit width from the wrapper */
+}
+
+/* Domain rules section */
+.settings-section--extraction {
+  margin-top: 12px; /* ensure clear separation from actions */
+}
+
+.settings-domain-rules {
+  display: block;
+}
+
+.settings-domain-rule-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.settings-domain-input {
+  --_domain-width: var(--settings-domain-input-width, 140px);
+  flex: 0 0 var(--_domain-width);
+  width: var(--_domain-width);
+}
+
+.settings-domain-mode-select {
+  flex: 1 1 auto;
+  width: 100%;
+}
+
+.settings-domain-remove-button {
+  flex: 0 0 auto;
+  width: 36px;
+  min-width: 36px;
+  padding: 0;
+  font-size: 18px;
+  line-height: 32px;
+  text-align: center;
+}
+
+.settings-domain-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.settings-hint {
+  margin-top: 8px;
+  font-size: 13px;
+  color: #9ca3af;
 }
 
 .settings-reset-button {

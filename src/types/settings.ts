@@ -80,6 +80,24 @@ export interface APIKeyReferences {
 }
 
 /**
+ * Domain rule for default extraction mode.
+ */
+export interface DomainExtractionRuleSetting {
+  /** Base domain, e.g., "example.com" (applies to subdomains). */
+  domain: string;
+  /** Default extraction mode for this domain. */
+  mode: 'defuddle' | 'readability' | 'raw' | 'selection';
+}
+
+/**
+ * Extraction preferences stored in settings.
+ */
+export interface ExtractionPreferences {
+  /** Ordered list of domain → mode defaults (first match wins). */
+  domainRules: DomainExtractionRuleSetting[];
+}
+
+/**
  * Complete settings configuration
  */
 export interface Settings {
@@ -93,6 +111,8 @@ export interface Settings {
   privacy: PrivacySettings;
   /** API key references */
   apiKeys: APIKeyReferences;
+  /** Extraction defaults and preferences */
+  extraction: ExtractionPreferences;
   /** Currently selected AI model */
   selectedModel: string;
   /** Available AI models list */
@@ -137,4 +157,7 @@ export interface SettingsState {
   ) => 'openai' | 'gemini' | 'openrouter' | 'openai_compat' | null;
   /** Refresh available models by merging OpenAI-compatible providers */
   refreshAvailableModelsWithCompat: () => Promise<void>;
+
+  /** Update extraction preferences (domain rules). */
+  updateExtractionPreferences: (prefs: ExtractionPreferences) => Promise<void>;
 }

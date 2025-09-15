@@ -255,9 +255,9 @@ export class ExtractionService {
       maxRetries = 2,
       retryDelay = 1000,
       forceRefresh = false,
-      // Keep explicit default here to preserve service contract and tests.
-      // UI can override by passing a mode from orchestrator's runtime default.
-      mode = ExtractionMode.DEFUDDLE,
+      // Do not force a default mode here. Let the content-side orchestrator
+      // resolve user settings or fall back to Readability when undefined.
+      mode,
       timeout = 5000,
       ...extractionOptions
     } = options;
@@ -276,7 +276,7 @@ export class ExtractionService {
             // Additional extraction options for retry attempts
             ...(attempt > 0 || forceRefresh ? { forceRefresh: true } : {}),
           } as ExtractionOptions & { forceRefresh?: boolean },
-          mode,
+          ...(typeof mode === 'string' ? { mode } : {}),
         };
 
         // Send extraction message

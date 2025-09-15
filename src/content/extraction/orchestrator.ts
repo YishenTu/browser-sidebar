@@ -9,6 +9,7 @@
 
 import type { ExtractedContent, ExtractionOptions } from '../../types/extraction';
 import { validateExtractionOptions, ExtractionMode } from '../../types/extraction';
+import { getMultiple } from '@platform/chrome/storage';
 
 // Debug flag - disable in production
 const DEBUG = false;
@@ -86,7 +87,70 @@ export function setDefaultExtractionMode(mode: ExtractionMode): void {
 }
 
 export function getDefaultExtractionMode(): ExtractionMode {
+  // Synchronous accessor for module-level default.
+  // Domain-aware logic (including user settings) is applied in extractContent.
   return defaultExtractionMode;
+}
+
+/**
+ * Resolve default extraction mode using user settings (domain rules) from storage.
+ * Returns undefined when no rule matches or settings are unavailable.
+ */
+async function resolveDefaultExtractionModeFromSettings(
+  input?: string | URL
+): Promise<ExtractionMode | undefined> {
+  try {
+    const url = input
+      ? typeof input === 'string'
+        ? new URL(input)
+        : input
+      : typeof window !== 'undefined'
+        ? new URL(window.location.href)
+        : undefined;
+
+    const host = url?.hostname ?? '';
+    if (!host || typeof chrome === 'undefined' || !chrome.storage) return undefined;
+
+    const fetchSettings = async () => {
+      try {
+        const res = await getMultiple<{ settings: unknown }>(['settings'], 'sync');
+        return (res['settings'] as Record<string, unknown> | undefined) ?? null;
+      } catch {
+        try {
+          const res = await getMultiple<{ settings: unknown }>(['settings'], 'local');
+          return (res['settings'] as Record<string, unknown> | undefined) ?? null;
+        } catch {
+          return null;
+        }
+      }
+    };
+
+    const settings = await fetchSettings();
+    const extraction = (settings?.['extraction'] as Record<string, unknown> | undefined) ?? null;
+    const rules = (extraction?.['domainRules'] as Array<Record<string, unknown>> | undefined) ?? [];
+
+    for (const r of rules) {
+      const domain = typeof r['domain'] === 'string' ? (r['domain'] as string) : '';
+      const mode = typeof r['mode'] === 'string' ? (r['mode'] as string) : '';
+      if (!domain || !mode) continue;
+      const h = host.toLowerCase();
+      const d = domain.toLowerCase();
+      if (h === d || h.endsWith(`.${d}`)) {
+        switch (mode) {
+          case 'defuddle':
+            return ExtractionMode.DEFUDDLE;
+          case 'readability':
+            return ExtractionMode.READABILITY;
+          case 'raw':
+            return ExtractionMode.RAW;
+        }
+      }
+    }
+
+    return undefined;
+  } catch {
+    return undefined;
+  }
 }
 
 // =============================================================================
@@ -128,8 +192,12 @@ export async function extractContent(
       }, timeout);
     });
 
-    // Resolve effective mode: honor explicit request, otherwise use module default
-    const effectiveMode = mode ?? getDefaultExtractionMode();
+    // Resolve effective mode with precedence:
+    // 1) explicit mode param
+    // 2) user settings domain rule
+    // 3) module default (Readability)
+    const userDomainDefault = await resolveDefaultExtractionModeFromSettings();
+    const effectiveMode = mode ?? userDomainDefault ?? getDefaultExtractionMode();
 
     const extractionPromise = performExtraction(includeLinks, maxLength, timeout, effectiveMode);
     const result = await Promise.race([extractionPromise, timeoutPromise]);
