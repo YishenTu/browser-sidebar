@@ -29,6 +29,8 @@ export default defineConfig({
       '@platform': resolve(__dirname, './src/platform'),
       '@config': resolve(__dirname, './src/config'),
       '@shared': resolve(__dirname, './src/shared'),
+      // Local (gitignored) site plugins directory
+      '@site': resolve(__dirname, './site-plugins'),
     },
   },
   build: {

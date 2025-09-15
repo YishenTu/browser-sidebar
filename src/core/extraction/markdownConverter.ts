@@ -4,10 +4,10 @@ import type TurndownService from 'turndown';
 let turndownInstance: TurndownService | null = null;
 
 async function configureTurndown(service: TurndownService): Promise<void> {
-  // Dynamic plugin import
-  const { gfm } = (await import('turndown-plugin-gfm')) as { gfm: (service: unknown) => void };
-
-  // Use GitHub Flavored Markdown plugin each time (idempotent for our rules)
+  // Use the official GFM plugin, which includes table handling
+  const { gfm } = (await import('turndown-plugin-gfm')) as {
+    gfm: (s: TurndownService) => void;
+  };
   service.use(gfm as unknown as (s: TurndownService) => void);
 
   // Custom rule for fenced code blocks with language detection
@@ -211,6 +211,9 @@ export async function htmlToMarkdown(
         'figcaption',
         // Tables
         'table',
+        'caption',
+        'colgroup',
+        'col',
         'thead',
         'tbody',
         'tfoot',

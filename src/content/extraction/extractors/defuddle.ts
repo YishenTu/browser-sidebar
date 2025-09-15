@@ -1,5 +1,6 @@
 import type { ExtractedContent } from '../../../types/extraction';
 import { htmlToMarkdown } from '@core/extraction/markdownConverter';
+import { detectTables } from '@core/extraction/analyzers/contentAnalyzer';
 
 // Minimal Defuddle parse response type to avoid importing internal package paths
 type DefuddleParsed = {
@@ -44,31 +45,28 @@ export async function extractWithDefuddle(originalHtml?: string): Promise<Extrac
     // Check if we have markdown content
     let markdownContent = '';
 
-    // First check if contentMarkdown field exists (from separateMarkdown option)
+    // Prefer Defuddle-provided markdown when available
     if (defuddled.contentMarkdown) {
       markdownContent = defuddled.contentMarkdown;
-    }
-    // Check if content looks like HTML (has HTML tags)
-    else if (
+    } else if (
       defuddled.content &&
       defuddled.content.includes('<') &&
       defuddled.content.includes('>')
     ) {
-      // Convert HTML to markdown manually
+      // Defuddle returned HTML — convert with our GFM-aware path
       markdownContent = await htmlToMarkdown(defuddled.content, { includeLinks: false });
-    }
-    // Otherwise assume content is already markdown
-    else {
+    } else {
+      // Already markdown (best effort)
       markdownContent = defuddled.content || '';
     }
 
-    const hasTables = markdownContent.includes('|') && markdownContent.includes('---|');
+    const hasTables = detectTables(markdownContent);
 
     const result: ExtractedContent = {
       title: defuddled.title || document.title || '',
       url: document.URL,
       domain,
-      content: markdownContent, // Use markdown content (from contentMarkdown or content field)
+      content: markdownContent, // final markdown after corrective fallback if needed
       textContent: markdownContent,
       excerpt: defuddled.description || markdownContent.substring(0, 200) + '...' || '',
       extractedAt: Date.now(),

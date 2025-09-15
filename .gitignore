@@ -48,6 +48,9 @@ web-ext-artifacts/
 logs/
 *.log
 
+# Local site plugins (gitignored)
+site-plugins/
+
 # Temporary files
 *.tmp
 *.temp

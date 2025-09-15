@@ -51,6 +51,7 @@
       "@data/*": ["src/data/*"],
       "@services/*": ["src/services/*"],
       "@types/*": ["src/types/*"],
+      "@site/*": ["site-plugins/*"],
       "@store/*": ["src/data/store/*"],
       "@security/*": ["src/data/security/*"],
       "@core/*": ["src/core/*"],
@@ -60,7 +61,7 @@
       "@shared/*": ["src/shared/*"]
     }
   },
-  "include": ["src"],
+  "include": ["src", "site-plugins"],
   "exclude": ["node_modules", "dist", "build"],
   "references": [{ "path": "./tsconfig.node.json" }]
 }

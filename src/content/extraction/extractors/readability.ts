@@ -10,6 +10,8 @@ import type { ExtractedContent } from '@/types/extraction';
 import { getPageMetadata } from '../analyzers/metadataExtractor';
 import { detectTables, generateExcerpt } from '@core/extraction/analyzers/contentAnalyzer';
 import { htmlToMarkdown } from '@core/extraction/markdownConverter';
+import { extractCommentsMarkdown } from '../analyzers/discussionExtractor';
+import { trySitePlugins } from '../sites';
 
 /**
  * Configuration options for Readability extraction
@@ -36,6 +38,10 @@ export async function extractWithReadability(
   const { includeLinks = false, debug = false } = options;
 
   try {
+    // Site-specific plugins: attempt registered extractors first
+    const siteResult = await trySitePlugins(document, { includeLinks });
+    if (siteResult) return siteResult;
+
     // Clone the document to avoid modifying the original DOM
     const documentClone = document.cloneNode(true) as Document;
 
@@ -65,11 +71,17 @@ export async function extractWithReadability(
       includeLinks,
     });
 
-    // Detect tables in the content
-    const hasTables = detectTables(article.content);
+    // We detect tables on the final markdown, not the HTML
 
-    // No clamping - return full content
-    const fullMarkdown = markdown;
+    // Optionally append discussion/comments if present
+    const discussion = await extractCommentsMarkdown(document, includeLinks);
+    const hasDiscussion = discussion.count > 0 && discussion.markdown.trim().length > 0;
+    const discussionSection = hasDiscussion
+      ? `\n\n---\n\n## Comments (${discussion.count})\n\n${discussion.markdown}`
+      : '';
+
+    // Return full content with optional comments section
+    const fullMarkdown = markdown + discussionSection;
 
     // Extract text content - if Readability doesn't provide it, extract from HTML
     let fullText = article.textContent || '';
@@ -80,8 +92,15 @@ export async function extractWithReadability(
       fullText = tempDiv.textContent || tempDiv.innerText || '';
     }
 
+    // If we added comments, append their text to the plain text for excerpting/context
+    if (hasDiscussion && discussion.textContent) {
+      fullText = (fullText + '\n' + discussion.textContent).trim();
+    }
+
     // Generate excerpt if not provided
     const excerpt = article.excerpt || generateExcerpt(fullText);
+
+    const hasTables = detectTables(fullMarkdown);
 
     return {
       title: article.title || metadata.title || document.title || 'Untitled',

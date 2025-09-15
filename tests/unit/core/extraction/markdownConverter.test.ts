@@ -146,6 +146,30 @@ describe('MarkdownConverter', () => {
 
       expect(result).toBe(expectedMarkdown.withTable);
     });
+
+    it('allows table-related tags in sanitizer', async () => {
+      mockTurndownService.turndown.mockReturnValue(expectedMarkdown.withTable);
+      await htmlToMarkdown(sampleHtml.withTable);
+
+      // Check sanitizer allowed tags include table primitives
+      const call = mockDOMPurify.sanitize.mock.calls[0]?.[1];
+      expect(call).toBeTruthy();
+      const tags = call.ALLOWED_TAGS as string[];
+      for (const tag of [
+        'table',
+        'thead',
+        'tbody',
+        'tfoot',
+        'tr',
+        'th',
+        'td',
+        'caption',
+        'col',
+        'colgroup',
+      ]) {
+        expect(tags).toContain(tag);
+      }
+    });
   });
 
   // ============================================================================
