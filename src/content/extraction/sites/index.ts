@@ -7,8 +7,8 @@ const modules = import.meta.glob('./**/*.plugin.ts', { eager: true }) as Record<
   string,
   { default?: SiteExtractorPlugin }
 >;
-// User-managed plugins outside the repo (gitignored). Load from absolute path.
-const userModules = import.meta.glob('/site-plugins/**/*.plugin.ts', { eager: true }) as Record<
+// User-managed plugins outside the repo (gitignored). Load all .ts files from site-plugins/
+const userModules = import.meta.glob('/site-plugins/**/*.ts', { eager: true }) as Record<
   string,
   { default?: SiteExtractorPlugin }
 >;

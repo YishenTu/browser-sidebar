@@ -83,3 +83,4 @@ docs/.vitepress/dist/
 
 .claude/
 tests.backup/
+dev-tools/

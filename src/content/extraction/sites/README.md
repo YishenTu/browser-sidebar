@@ -34,7 +34,7 @@ export default plugin;
 User (local) Plugins (gitignored)
 
 - Keep private plugins in `site-plugins/` (repo root). This directory is gitignored.
-- The registry auto-loads `site-plugins/**/*.plugin.ts` via the `@site` alias.
+- The registry auto-loads `site-plugins/**/*.ts` via the `@site` alias.
 - You can place any site-specific tests under `site-plugins/` as well (they will be ignored by git). If you want to run them locally, point Vitest to that path explicitly.
 
 Notes
