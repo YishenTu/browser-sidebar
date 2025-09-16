@@ -11,11 +11,6 @@ describe('Readability extractor - tables', () => {
   beforeEach(() => {
     vi.resetModules();
     document.title = 'Table Test';
-    // Provide a location object for metadata
-    Object.defineProperty(document, 'location', {
-      value: new URL('https://example.com/article'),
-      configurable: true,
-    });
   });
 
   it('sets hasTables based on final markdown and preserves table as markdown', async () => {

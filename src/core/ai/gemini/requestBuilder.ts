@@ -145,18 +145,34 @@ export function buildGenerationConfig(
   }
 
   // Configure thinking budget if model supports it
-  const thinkingBudget = chatConfig?.thinkingBudget ?? geminiConfig.thinkingBudget;
+  const rawThinkingBudget = (chatConfig?.thinkingBudget ?? geminiConfig.thinkingBudget) as unknown;
+  let normalizedBudget: number | undefined;
+
+  if (typeof rawThinkingBudget === 'number' && Number.isInteger(rawThinkingBudget)) {
+    normalizedBudget = rawThinkingBudget;
+  } else if (typeof rawThinkingBudget === 'string') {
+    const trimmed = rawThinkingBudget.trim();
+    if (trimmed !== '') {
+      const parsed = Number(trimmed);
+      if (Number.isInteger(parsed)) {
+        normalizedBudget = parsed;
+      }
+    }
+  }
 
   if (supportsThinking(geminiConfig.model)) {
-    let budget = thinkingBudget;
     // Safety: Gemini 2.5 Pro cannot disable thinking (0 is invalid)
-    if (typeof budget === 'number' && budget === 0 && /gemini-2\.5-pro/i.test(geminiConfig.model)) {
-      budget = -1; // fall back to dynamic per API guidance
+    if (
+      typeof normalizedBudget === 'number' &&
+      normalizedBudget === 0 &&
+      /gemini-2\.5-pro/i.test(geminiConfig.model)
+    ) {
+      normalizedBudget = -1; // fall back to dynamic per API guidance
     }
 
-    if (typeof budget === 'number' && Number.isInteger(budget)) {
+    if (typeof normalizedBudget === 'number' && Number.isInteger(normalizedBudget)) {
       config.thinkingConfig = {
-        thinkingBudget: budget,
+        thinkingBudget: normalizedBudget,
         // Only include thought summaries when requested
         includeThoughts: geminiConfig.showThoughts === true || chatConfig?.showThoughts === true,
       };

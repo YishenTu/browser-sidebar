@@ -318,7 +318,15 @@ async function performExtraction(
     throw new Error('Extraction failed - no content returned');
   }
 
-  // No text clamping - return full content
+  // Ensure excerpt is populated even if extractor omitted it
+  if ((!result.excerpt || result.excerpt.trim().length === 0) && result.textContent) {
+    const trimmed = result.textContent.trim();
+    if (trimmed.length > 0) {
+      const normalized = trimmed.replace(/\s+/g, ' ');
+      const excerpt = normalized.length > 200 ? `${normalized.substring(0, 200)}...` : normalized;
+      result = { ...result, excerpt };
+    }
+  }
 
   return result;
 }

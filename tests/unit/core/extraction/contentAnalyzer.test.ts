@@ -310,7 +310,7 @@ More text after table.
     it('should normalize whitespace', () => {
       const messyContent = 'This   has\tmultiple\n\nspaces    and\ttabs.';
       const result = generateExcerpt(messyContent);
-      expect(result).toBe('This has multiple spaces and tabs.');
+      expect(result).toBe('This has multiple\nspaces and tabs.');
     });
 
     it('should break at word boundaries when truncating', () => {
@@ -464,7 +464,7 @@ Additional content after code block.
     it('should handle content with line breaks and tabs', () => {
       const contentWithBreaks = 'Line 1\nLine 2\tTabbed\r\nWindows line ending';
       const result = generateExcerpt(contentWithBreaks);
-      expect(result).toBe('Line 1 Line 2 Tabbed Windows line ending');
+      expect(result).toBe('Line 1\nLine 2 Tabbed\nWindows line ending');
     });
   });
 

@@ -37,6 +37,7 @@ export function generateExcerpt(markdown: string): string {
     .replace(/`[^`]+`/g, '[code]') // Replace inline code
     .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1') // Convert links to text
     .replace(/[#*_~]/g, '') // Remove formatting
+    .replace(/\r\n?|\u2028|\u2029/g, '\n') // Normalize line endings
     .replace(/\n\s*\n/g, '\n') // Collapse multiple blank lines to single
     .replace(/[ \t]+/g, ' ') // Normalize spaces and tabs (but not newlines)
     .trim();

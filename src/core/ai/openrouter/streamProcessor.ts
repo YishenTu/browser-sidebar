@@ -170,9 +170,17 @@ export function processSSELine(line: string): StreamChunk | null {
     return null;
   }
 
-  // Remove "data: " prefix
-  if (line.startsWith('data: ')) {
-    line = line.slice(6);
+  // Remove "data:" prefix while tolerating extra whitespace
+  if (line.startsWith('data:')) {
+    line = line.slice(5);
+    // Trim only leading whitespace after the prefix so we keep
+    // intentional trailing whitespace that would invalidate JSON.
+    line = line.replace(/^\s+/, '');
+  }
+
+  // Skip lines that don't contain any payload after trimming the prefix
+  if (!line || line.trim().length === 0) {
+    return null;
   }
 
   // Check for [DONE] marker

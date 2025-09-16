@@ -34,7 +34,7 @@ export async function trySitePlugins(
       if (result) return result;
     } catch (e) {
       // Fail-soft: continue to next plugin
-      if (typeof console !== 'undefined' && (import.meta as any)?.env?.DEV) {
+      if (typeof console !== 'undefined' && import.meta.env.DEV) {
         console.warn('[SitePlugin]', plugin.id, 'failed:', e);
       }
     }

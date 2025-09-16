@@ -218,11 +218,15 @@ describe('ExtractionService', () => {
           payload: expect.objectContaining({
             tabId: 123,
             options: expect.any(Object),
-            mode: ExtractionMode.DEFUDDLE,
           }),
         }),
         expect.any(Function)
       );
+
+      const sentMessage = mockTabsSendMessage.mock.calls[0][1] as Message<ExtractTabPayload>;
+      expect(sentMessage.payload.mode).toBeUndefined();
+      expect(sentMessage.source).toBe('sidebar');
+      expect(sentMessage.target).toBe('background');
     });
 
     it('should throw ExtractionError when unable to get current tab ID', async () => {

@@ -227,14 +227,13 @@ describe('Model Configuration Drift Detection', () => {
         }
 
         // Validate provider-specific properties
-        if (
-          model.provider === 'gemini' &&
-          model.thinkingBudget &&
-          !['0', '-1'].includes(model.thinkingBudget)
-        ) {
-          errors.push(
-            `Gemini model "${model.id}" has invalid thinkingBudget: "${model.thinkingBudget}" (should be '0' or '-1')`
-          );
+        if (model.provider === 'gemini' && model.thinkingBudget !== undefined) {
+          const validBudgets = new Set<unknown>([0, -1, '0', '-1']);
+          if (!validBudgets.has(model.thinkingBudget)) {
+            errors.push(
+              `Gemini model "${model.id}" has invalid thinkingBudget: "${model.thinkingBudget}" (should be 0 or -1)`
+            );
+          }
         }
 
         if (model.provider === 'openai' && model.reasoningEffort) {

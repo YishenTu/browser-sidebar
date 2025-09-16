@@ -210,15 +210,18 @@ export function findCommentItems(root: ParentNode): Element[] {
   }
 
   // Deduplicate while preserving DOM order
-  const result: Element[] = [];
+  const deduped: Element[] = [];
   const seen = new Set<Element>();
   for (const el of hits) {
     if (!seen.has(el)) {
       seen.add(el);
-      result.push(el);
+      deduped.push(el);
     }
   }
-  return result;
+
+  // Filter out nested matches so only the outermost comment container is kept
+  const filtered = deduped.filter(el => !deduped.some(other => other !== el && other.contains(el)));
+  return filtered;
 }
 
 /**

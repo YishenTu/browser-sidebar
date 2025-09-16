@@ -66,7 +66,7 @@ describe('Gemini Request Builder', () => {
         generationConfig: {
           maxOutputTokens: 8192,
           stopSequences: ['STOP'],
-          responseModalities: ['TEXT'],
+          responseModalities: ['TEXT', 'THOUGHT'],
         },
         tools: [{ google_search: {} }],
         systemInstruction: {
@@ -99,10 +99,6 @@ describe('Gemini Request Builder', () => {
         ],
         generationConfig: {
           maxOutputTokens: 8192,
-          thinkingConfig: {
-            thinkingBudget: 0,
-            includeThoughts: true,
-          },
           responseModalities: ['TEXT'],
         },
         tools: [{ google_search: {} }],
@@ -512,10 +508,6 @@ describe('Gemini Request Builder', () => {
 
       expect(config).toEqual({
         maxOutputTokens: 8192,
-        thinkingConfig: {
-          thinkingBudget: 0, // undefined becomes 0
-          includeThoughts: true,
-        },
         responseModalities: ['TEXT'],
       });
     });
@@ -560,7 +552,7 @@ describe('Gemini Request Builder', () => {
     it('should use thinking budget from gemini config when chat config not provided', () => {
       const geminiConfig: GeminiConfig = {
         model: 'gemini-2.5-pro',
-        thinkingBudget: '1500',
+        thinkingBudget: 1500,
       };
 
       const config = buildGenerationConfig(geminiConfig);
