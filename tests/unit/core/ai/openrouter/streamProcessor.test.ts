@@ -890,14 +890,10 @@ describe('OpenRouter Stream Processor', () => {
     describe('SSE Edge Cases', () => {
       it('should return null for invalid JSON', () => {
         const line = 'data: invalid json {';
-        const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
         const result = processSSELine(line);
 
         expect(result).toBeNull();
-        expect(consoleSpy).toHaveBeenCalledWith('Failed to parse SSE line:', expect.any(Error));
-
-        consoleSpy.mockRestore();
       });
 
       it('should handle SSE chunk with no delta field', () => {

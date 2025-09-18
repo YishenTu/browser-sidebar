@@ -771,7 +771,7 @@ export function Settings() {
           <p className="settings-hint">
             {recordingHotkey
               ? 'Press any key combination (ESC to cancel)'
-              : 'Click the field above to record a new hotkey combination'}
+              : 'Click the field above to record a new hotkey combination.'}
           </p>
         )}
       </div>

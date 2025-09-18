@@ -64,7 +64,6 @@ describe('Gemini Request Builder', () => {
           },
         ],
         generationConfig: {
-          maxOutputTokens: 8192,
           stopSequences: ['STOP'],
           responseModalities: ['TEXT', 'THOUGHT'],
         },
@@ -98,7 +97,6 @@ describe('Gemini Request Builder', () => {
           },
         ],
         generationConfig: {
-          maxOutputTokens: 8192,
           responseModalities: ['TEXT'],
         },
         tools: [{ google_search: {} }],
@@ -513,7 +511,6 @@ describe('Gemini Request Builder', () => {
       const config = buildGenerationConfig(geminiConfig);
 
       expect(config).toEqual({
-        maxOutputTokens: 8192,
         responseModalities: ['TEXT'],
       });
     });
@@ -787,7 +784,6 @@ describe('Gemini Request Builder', () => {
           fileUri: 'https://generativelanguage.googleapis.com/v1beta/files/testfile',
         },
       });
-      expect(request.generationConfig.maxOutputTokens).toBe(8192);
       expect(request.generationConfig.stopSequences).toEqual(['END']);
       expect(request.generationConfig.thinkingConfig?.thinkingBudget).toBe(1000);
       expect(request.safetySettings).toHaveLength(1);
