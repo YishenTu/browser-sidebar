@@ -17,6 +17,10 @@ import { ChatService } from '../../../services/chat/ChatService';
 import { getModelById } from '../../../config/models';
 import { getSystemPrompt } from '../../../config/systemPrompt';
 import { formatTabContent } from '../../../services/chat/contentFormatter';
+import {
+  syncImagesToProvider,
+  updateMessagesWithSyncedImages,
+} from '../../../core/services/imageSyncService';
 import type { UseAIChatOptions, UseAIChatReturn, SendMessageOptions } from './types';
 import type { TabContent } from '../../../types/tabs';
 import type { AIProvider, ProviderType } from '../../../types/providers';
@@ -210,28 +214,99 @@ export function useAIChat(options: UseAIChatOptions = {}): UseAIChatReturn {
     }
   }, []);
 
-  const serviceSwitchProvider = useCallback(async (providerType: ProviderType): Promise<void> => {
-    if (!providerManagerServiceRef.current)
-      throw new Error('Provider manager service not initialized');
+  const serviceSwitchProvider = useCallback(
+    async (providerType: ProviderType): Promise<void> => {
+      if (!providerManagerServiceRef.current)
+        throw new Error('Provider manager service not initialized');
 
-    // Ensure providers are (re)initialized so the target provider is registered
-    await providerManagerServiceRef.current.initializeFromSettings();
+      // Get current provider to check if we're actually switching
+      const currentProvider = providerManagerServiceRef.current.getActive();
+      const currentProviderType = currentProvider?.type;
 
-    await providerManagerServiceRef.current.switch(providerType);
+      // If we're switching to the same provider type, no image sync needed
+      if (currentProviderType === providerType) {
+        return;
+      }
 
-    // Update chat service with new active provider without interrupting streams unnecessarily
-    const newActiveProvider = providerManagerServiceRef.current.getActive();
-    if (newActiveProvider && chatServiceRef.current) {
-      const existing = chatServiceRef.current.getProvider();
-      const streaming = chatServiceRef.current.isStreaming();
-      // Always replace if the instance changed (regardless of type)
-      if (!existing || existing !== newActiveProvider) {
-        if (!streaming) {
-          chatServiceRef.current.setProvider(newActiveProvider);
+      // Ensure providers are (re)initialized so the target provider is registered
+      await providerManagerServiceRef.current.initializeFromSettings();
+
+      await providerManagerServiceRef.current.switch(providerType);
+
+      // Sync images to the new provider if we have chat history
+      const messages = messageStore.getMessages();
+      if (messages.length > 0) {
+        try {
+          // Get API key for the target provider
+          const settings = settingsStore.settings;
+          let apiKey: string;
+          let model: string;
+
+          if (providerType === 'gemini') {
+            apiKey = settings.apiKeys?.google || '';
+            model = settings.selectedModel; // Use current selected model
+          } else if (providerType === 'openai') {
+            apiKey = settings.apiKeys?.openai || '';
+            model = settings.selectedModel; // Use current selected model
+          } else {
+            // For other providers, skip image sync for now
+            console.warn(`Image synchronization not implemented for provider: ${providerType}`);
+            return;
+          }
+
+          if (!apiKey) {
+            console.warn(
+              `No API key available for ${providerType}, skipping image synchronization`
+            );
+            return;
+          }
+
+          // Sync images to the target provider
+          const syncResults = await syncImagesToProvider(messages, providerType, apiKey, model);
+
+          if (syncResults.size > 0) {
+            // Update messages with synced image references
+            const updatedMessages = updateMessagesWithSyncedImages(messages, syncResults);
+
+            // Update the message store with the synced images
+            updatedMessages.forEach(updatedMessage => {
+              const existingMessage = messageStore.getMessageById(updatedMessage.id);
+              if (
+                existingMessage &&
+                existingMessage.metadata?.['attachments'] !==
+                  updatedMessage.metadata?.['attachments']
+              ) {
+                messageStore.updateMessage(updatedMessage.id, {
+                  metadata: updatedMessage.metadata,
+                });
+              }
+            });
+
+            console.log(
+              `Successfully synchronized ${syncResults.size} images to ${providerType} provider`
+            );
+          }
+        } catch (error) {
+          console.error('Failed to synchronize images during provider switch:', error);
+          // Don't throw - provider switch should still succeed even if image sync fails
         }
       }
-    }
-  }, []);
+
+      // Update chat service with new active provider without interrupting streams unnecessarily
+      const newActiveProvider = providerManagerServiceRef.current.getActive();
+      if (newActiveProvider && chatServiceRef.current) {
+        const existing = chatServiceRef.current.getProvider();
+        const streaming = chatServiceRef.current.isStreaming();
+        // Always replace if the instance changed (regardless of type)
+        if (!existing || existing !== newActiveProvider) {
+          if (!streaming) {
+            chatServiceRef.current.setProvider(newActiveProvider);
+          }
+        }
+      }
+    },
+    [messageStore, settingsStore]
+  );
 
   const serviceGetStats = useCallback(() => {
     if (!providerManagerServiceRef.current) {

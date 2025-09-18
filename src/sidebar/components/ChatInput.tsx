@@ -433,7 +433,7 @@ export const ChatInput = React.forwardRef<HTMLTextAreaElement, ChatInputProps>(
         }
 
         // Pass metadata if it has any properties
-        await onSend(
+        onSend(
           trimmedMessage || '[Image]',
           Object.keys(metadata).length > 0 ? metadata : undefined
         );
@@ -441,12 +441,7 @@ export const ChatInput = React.forwardRef<HTMLTextAreaElement, ChatInputProps>(
         // Clear expanded prompt, model override, and pasted images after sending
         setExpandedPromptRef(null);
         setModelOverrideRef(null);
-        // Clean up preview URLs before clearing images
-        pastedImages.forEach(img => {
-          if (img.previewUrl) {
-            URL.revokeObjectURL(img.previewUrl);
-          }
-        });
+        // No need to clean up data URLs as they are embedded
         setPastedImages([]);
       } finally {
         setIsSending(false);
@@ -664,10 +659,6 @@ export const ChatInput = React.forwardRef<HTMLTextAreaElement, ChatInputProps>(
       event.stopPropagation();
     }, []);
 
-    const handleKeyPress = useCallback((event: React.KeyboardEvent<HTMLTextAreaElement>) => {
-      event.stopPropagation();
-    }, []);
-
     // Handle textarea clicks to update cursor position for mention detection
     const handleTextAreaClick = useCallback(() => {
       // Delay to ensure cursor position is updated
@@ -694,49 +685,51 @@ export const ChatInput = React.forwardRef<HTMLTextAreaElement, ChatInputProps>(
             const file = item.getAsFile();
             if (file) {
               // Create a unique ID for this image
-              const imageId = `img_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+              const imageId = `img_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
 
-              // Create a preview URL for the image
-              const previewUrl = URL.createObjectURL(file);
+              // Convert file to base64 data URL for permanent storage
+              const reader = new FileReader();
+              reader.onload = async () => {
+                const dataUrl = reader.result as string;
 
-              // Add image immediately with loading state
-              setPastedImages(prev => [
-                ...prev,
-                {
-                  id: imageId,
-                  mimeType: file.type,
-                  previewUrl,
-                  isLoading: true,
-                },
-              ]);
+                // Add image immediately with loading state
+                setPastedImages(prev => [
+                  ...prev,
+                  {
+                    id: imageId,
+                    mimeType: file.type,
+                    previewUrl: dataUrl,
+                    isLoading: true,
+                  },
+                ]);
 
-              try {
-                const result = await onImagePaste(file);
-                if (result) {
-                  // Update the image with the file URI or ID
-                  setPastedImages(prev =>
-                    prev.map(img =>
-                      img.id === imageId
-                        ? {
-                            ...img,
-                            fileUri: result.fileUri,
-                            fileId: result.fileId,
-                            isLoading: false,
-                          }
-                        : img
-                    )
-                  );
-                } else {
-                  // Remove the image if upload failed
+                try {
+                  const result = await onImagePaste(file);
+                  if (result) {
+                    // Update the image with the file URI or ID
+                    setPastedImages(prev =>
+                      prev.map(img =>
+                        img.id === imageId
+                          ? {
+                              ...img,
+                              fileUri: result.fileUri,
+                              fileId: result.fileId,
+                              isLoading: false,
+                            }
+                          : img
+                      )
+                    );
+                  } else {
+                    // Remove the image if upload failed
+                    setPastedImages(prev => prev.filter(img => img.id !== imageId));
+                  }
+                } catch (error) {
+                  console.error('Failed to upload image:', error);
+                  // Remove the image on error
                   setPastedImages(prev => prev.filter(img => img.id !== imageId));
-                  URL.revokeObjectURL(previewUrl);
                 }
-              } catch (error) {
-                console.error('Failed to upload image:', error);
-                // Remove the image on error
-                setPastedImages(prev => prev.filter(img => img.id !== imageId));
-                URL.revokeObjectURL(previewUrl);
-              }
+              };
+              reader.readAsDataURL(file);
             }
           }
         }
@@ -788,8 +781,7 @@ export const ChatInput = React.forwardRef<HTMLTextAreaElement, ChatInputProps>(
                     type="button"
                     className="chat-input__image-remove"
                     onClick={() => {
-                      // Clean up the preview URL
-                      URL.revokeObjectURL(img.previewUrl);
+                      // Remove the image from state
                       setPastedImages(prev => prev.filter(i => i.id !== img.id));
                     }}
                     aria-label="Remove image"
@@ -812,7 +804,6 @@ export const ChatInput = React.forwardRef<HTMLTextAreaElement, ChatInputProps>(
               onChange={handleTextAreaChange}
               onKeyDown={handleKeyDown}
               onKeyUp={handleKeyUp}
-              onKeyPress={handleKeyPress}
               onClick={handleTextAreaClick}
               onSelect={handleTextAreaSelect}
               onPaste={handlePaste}

@@ -127,24 +127,58 @@ export function convertMessages(messages: ProviderChatMessage[]): GeminiContent[
  * Process image attachment into Gemini format
  */
 function processImageAttachment(attachment: unknown): GeminiPart | null {
-  const att = attachment as { fileUri?: string; mimeType?: string };
+  const att = attachment as {
+    fileUri?: string;
+    fileId?: string;
+    mimeType?: string;
+    data?: string;
+    type?: string;
+  };
 
-  // Only process if we have a file URI
-  if (!att.fileUri || !att.mimeType) {
+  // Skip non-image attachments
+  if (att.type !== 'image') {
     return null;
   }
 
-  // Validate supported image types
-  if (!isSupportedImageType(att.mimeType)) {
-    throw new Error(`Unsupported image type: ${att.mimeType}`);
+  // Validate MIME type - return null for invalid types instead of throwing
+  if (!att.mimeType || !isSupportedImageType(att.mimeType)) {
+    console.warn(`Unsupported or missing image type: ${att.mimeType}`);
+    return null;
   }
 
-  return {
-    fileData: {
-      mimeType: att.mimeType,
-      fileUri: att.fileUri,
-    },
-  };
+  // Prefer fileUri for Gemini, but handle cross-provider case
+  if (att.fileUri) {
+    return {
+      fileData: {
+        mimeType: att.mimeType,
+        fileUri: att.fileUri,
+      },
+    };
+  }
+
+  // If we only have OpenAI fileId, this indicates a cross-provider image
+  // that hasn't been synced yet. This should not happen if provider switching
+  // triggers image sync, but we'll handle it gracefully.
+  if (att.fileId && !att.fileUri) {
+    console.warn(
+      `Cross-provider image detected with OpenAI fileId: ${att.fileId}. This image may not display properly in Gemini. Consider switching providers to trigger image synchronization.`
+    );
+    return null; // Skip this image instead of throwing
+  }
+
+  // If we have base64 data but no fileUri, we could potentially upload it
+  // but that should be handled by the image sync service, not here
+  if (!att.fileUri && att.data) {
+    console.warn(
+      'Image attachment has base64 data but no fileUri for Gemini provider. Image sync may be needed.',
+      att
+    );
+    return null;
+  }
+
+  // No valid image reference found
+  console.warn('Image attachment has no valid fileUri for Gemini provider:', att);
+  return null;
 }
 
 /**

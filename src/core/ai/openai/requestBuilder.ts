@@ -168,18 +168,30 @@ function buildContentParts(
 
   if (role === 'user') {
     for (const attachment of attachments) {
-      // OpenAI uses fileId, not fileUri
-      const fileId = attachment.fileId;
-      if (!fileId) {
-        continue;
+      // Prefer OpenAI fileId, but handle cross-provider case
+      if (attachment.fileId) {
+        const detail = normalizeImageDetail(attachment.detail) ?? 'auto';
+        parts.push({
+          type: 'input_image',
+          file_id: attachment.fileId,
+          detail,
+        });
+      } else if (attachment.fileUri && !attachment.fileId) {
+        // Cross-provider image detected - handle gracefully
+        console.warn(
+          `Cross-provider image detected with Gemini fileUri: ${attachment.fileUri}. This image may not display properly in OpenAI. Consider switching providers to trigger image synchronization.`
+        );
+        // Skip this image instead of throwing
+      } else if (attachment.data && !attachment.fileId && !attachment.fileUri) {
+        // Image has base64 data but no provider-specific reference
+        console.warn(
+          'Image attachment has base64 data but no fileId for OpenAI provider. Image sync may be needed.',
+          attachment
+        );
+      } else {
+        // No valid image reference found
+        console.warn('Image attachment has no valid fileId for OpenAI provider:', attachment);
       }
-
-      const detail = normalizeImageDetail(attachment.detail) ?? 'auto';
-      parts.push({
-        type: 'input_image',
-        file_id: fileId,
-        detail,
-      });
     }
   }
 
@@ -188,7 +200,11 @@ function buildContentParts(
 
 function extractImageAttachments(message: ProviderChatMessage): Array<{
   fileId?: string;
+  fileUri?: string;
   detail?: unknown;
+  mimeType?: string;
+  data?: string;
+  type?: string;
 }> {
   if (!message.metadata || !('attachments' in message.metadata)) {
     return [];
@@ -203,7 +219,11 @@ function extractImageAttachments(message: ProviderChatMessage): Array<{
     att => att && typeof att === 'object' && (att as { type?: string }).type === 'image'
   ) as Array<{
     fileId?: string;
+    fileUri?: string;
     detail?: unknown;
+    mimeType?: string;
+    data?: string;
+    type?: string;
   }>;
 }
 
