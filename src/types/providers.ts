@@ -98,10 +98,6 @@ export interface GeminiConfig {
   model: string;
   thinkingBudget?: ThinkingBudget;
   showThoughts?: boolean;
-  safetySettings?: Array<{
-    category: string;
-    threshold: string;
-  }>;
   stopSequences?: string[];
   endpoint?: string; // Optional custom endpoint for testing
   [key: string]: unknown; // Index signature for compatibility with Record<string, unknown>

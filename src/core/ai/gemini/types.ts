@@ -39,7 +39,6 @@ export interface GeminiSystemInstruction {
 export interface GeminiRequest {
   contents: GeminiContent[];
   generationConfig: GeminiGenerationConfig;
-  safetySettings?: GeminiSafetySetting[];
   tools?: GeminiTool[];
   systemInstruction?: GeminiSystemInstruction;
 }

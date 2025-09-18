@@ -220,8 +220,14 @@ export function useAIChat(options: UseAIChatOptions = {}): UseAIChatReturn {
         throw new Error('Provider manager service not initialized');
 
       // Get current provider to check if we're actually switching
-      const currentProvider = providerManagerServiceRef.current.getActive();
-      const currentProviderType = currentProvider?.type;
+      let currentProviderType: ProviderType | undefined;
+      try {
+        const currentProvider = providerManagerServiceRef.current.getActive();
+        currentProviderType = currentProvider?.type;
+      } catch {
+        // No active provider yet, that's fine - we'll initialize one
+        currentProviderType = undefined;
+      }
 
       // If we're switching to the same provider type, no image sync needed
       if (currentProviderType === providerType) {

@@ -13,7 +13,6 @@ import type {
   GeminiPart,
   GeminiGenerationConfig,
   GeminiChatConfig,
-  GeminiSafetySetting,
   SupportedImageType,
 } from './types';
 import { SUPPORTED_IMAGE_TYPES } from './types';
@@ -35,24 +34,20 @@ export function buildRequest(
   }
 
   // Build request with contents at the end for better token caching
-  const request: GeminiRequest = {
-    generationConfig: buildGenerationConfig(geminiConfig, chatConfig),
-    // Always enable Google Search grounding for better accuracy
-    tools: [{ google_search: {} }],
-    contents: [], // Initialize with empty array, will be replaced below
-  };
+  const request: GeminiRequest = {} as GeminiRequest;
 
-  // Add system instruction if provided
+  // Add system instruction first if provided
   if (chatConfig?.systemPrompt) {
     request.systemInstruction = {
       parts: [{ text: chatConfig.systemPrompt }],
     };
   }
 
-  // Add safety settings if configured
-  if (geminiConfig.safetySettings) {
-    request.safetySettings = geminiConfig.safetySettings as GeminiSafetySetting[];
-  }
+  // Add generation config
+  request.generationConfig = buildGenerationConfig(geminiConfig, chatConfig);
+
+  // Always enable Google Search grounding for better accuracy
+  request.tools = [{ google_search: {} }];
 
   // Add contents at the end for better token caching in multi-turn conversations
   request.contents = contents;
