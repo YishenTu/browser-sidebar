@@ -141,7 +141,8 @@ function processImageAttachment(attachment: unknown): GeminiPart | null {
     return null;
   }
 
-  // Prefer fileUri for Gemini, but handle cross-provider case
+  // Prefer fileUri for Gemini (works even if both fileId and fileUri exist after sync)
+  // After successful cross-provider sync, attachments will have both references
   if (att.fileUri) {
     return {
       fileData: {
@@ -151,18 +152,15 @@ function processImageAttachment(attachment: unknown): GeminiPart | null {
     };
   }
 
-  // If we only have OpenAI fileId, this indicates a cross-provider image
-  // that hasn't been synced yet. This should not happen if provider switching
-  // triggers image sync, but we'll handle it gracefully.
+  // If we only have OpenAI fileId (no fileUri), this image needs to be synced to Gemini
   if (att.fileId && !att.fileUri) {
     console.warn(
-      `Cross-provider image detected with OpenAI fileId: ${att.fileId}. This image may not display properly in Gemini. Consider switching providers to trigger image synchronization.`
+      `Image with OpenAI fileId but no Gemini fileUri: ${att.fileId}. Image sync to Gemini may be needed.`
     );
-    return null; // Skip this image instead of throwing
+    return null;
   }
 
-  // If we have base64 data but no fileUri, we could potentially upload it
-  // but that should be handled by the image sync service, not here
+  // If we have base64 data but no fileUri, image upload may be needed
   if (!att.fileUri && att.data) {
     console.warn(
       'Image attachment has base64 data but no fileUri for Gemini provider. Image sync may be needed.',

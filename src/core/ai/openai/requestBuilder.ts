@@ -168,7 +168,8 @@ function buildContentParts(
 
   if (role === 'user') {
     for (const attachment of attachments) {
-      // Prefer OpenAI fileId, but handle cross-provider case
+      // Prefer OpenAI fileId (works even if both fileId and fileUri exist after sync)
+      // After successful cross-provider sync, attachments will have both references
       if (attachment.fileId) {
         const detail = normalizeImageDetail(attachment.detail) ?? 'auto';
         parts.push({
@@ -177,13 +178,12 @@ function buildContentParts(
           detail,
         });
       } else if (attachment.fileUri && !attachment.fileId) {
-        // Cross-provider image detected - handle gracefully
+        // If we only have Gemini fileUri (no fileId), this image needs to be synced to OpenAI
         console.warn(
-          `Cross-provider image detected with Gemini fileUri: ${attachment.fileUri}. This image may not display properly in OpenAI. Consider switching providers to trigger image synchronization.`
+          `Image with Gemini fileUri but no OpenAI fileId: ${attachment.fileUri}. Image sync to OpenAI may be needed.`
         );
-        // Skip this image instead of throwing
       } else if (attachment.data && !attachment.fileId && !attachment.fileUri) {
-        // Image has base64 data but no provider-specific reference
+        // Image has base64 data but no provider-specific reference, upload may be needed
         console.warn(
           'Image attachment has base64 data but no fileId for OpenAI provider. Image sync may be needed.',
           attachment
