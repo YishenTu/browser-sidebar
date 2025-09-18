@@ -1,67 +1,54 @@
-# Transport Module
+# Transport layer
 
-HTTP transport abstraction for provider API calls. Provides a unified, typed interface for direct fetch and background‑proxied streaming with CORS handling.
+Abstractions in `src/transport/` provide a uniform interface for HTTP requests
+made by providers and validation services.  They encapsulate fetch/streaming
+behaviour and decide when to route calls through the background proxy.
 
-## Structure
+## Files
 
-```
-transport/
-├── types.ts                    # TransportRequest/Response, Transport interface
-├── DirectFetchTransport.ts     # Direct fetch implementation
-├── BackgroundProxyTransport.ts # Background Port-based SSE proxy
-├── policy.ts                   # shouldProxy(url) allowlist/denylist
-└── index.ts                    # Barrel exports
-```
+| File | Purpose |
+| ---- | ------- |
+| `types.ts` | `Transport` interface, request/response types, and error classes |
+| `DirectFetchTransport.ts` | Straightforward `fetch` implementation that supports streaming |
+| `BackgroundProxyTransport.ts` | Uses the background service worker to perform proxied requests and SSE-style streaming |
+| `policy.ts` | `shouldProxy(url)` allow/deny list |
+| `index.ts` | Barrel exports |
 
-## Interfaces
+## Interface
 
 ```ts
-export interface TransportRequest {
-  url: string;
-  method: 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH' | 'HEAD' | 'OPTIONS';
-  headers: Record<string, string>;
-  body?: string | ArrayBuffer | FormData;
-  stream?: boolean;
-  signal?: AbortSignal;
-}
-
-export interface TransportResponse {
-  status: number;
-  statusText: string;
-  headers: Headers;
-  body?: ReadableStream<Uint8Array> | ArrayBuffer | string;
-}
-
 export interface Transport {
   request(req: TransportRequest): Promise<TransportResponse>;
   stream(req: TransportRequest): AsyncIterable<Uint8Array>;
 }
 ```
 
-## Usage
+Both transports support `stream()`—`DirectFetchTransport` wraps `ReadableStream`
+chunks, while `BackgroundProxyTransport` talks to the background worker using the
+`proxy-stream` port defined in `extension/background/proxyHandler.ts`.
 
-```ts
-import { shouldProxy } from '@transport/policy';
-import { DirectFetchTransport, BackgroundProxyTransport } from '@transport';
-
-const req = { url, method: 'POST', headers, body, stream: true } as const;
-const transport = shouldProxy(req.url)
-  ? new BackgroundProxyTransport()
-  : new DirectFetchTransport();
-
-// Non-streaming
-const res = await transport.request({ ...req, stream: false });
-
-// Streaming
-for await (const chunk of transport.stream(req)) {
-  // process SSE/text chunks
-}
-```
+`types.ts` also exports `TransportNetworkError`, `TransportTimeoutError`, and
+`TransportAbortError` so callers can distinguish failure modes.
 
 ## Policy
 
-`shouldProxy(url)` consults a small allowlist/denylist and returns true for CORS‑restricted endpoints (e.g., `api.moonshot.cn`). Update `policy.ts` to adjust routing.
+`shouldProxy(url)` centralises the list of hosts that must be called from the
+background worker (e.g. `api.moonshot.cn`).  Use it before instantiating a
+transport:
 
-## Error Handling
+```ts
+import { shouldProxy, BackgroundProxyTransport, DirectFetchTransport } from '@transport';
 
-Typed error classes are provided for network/timeout/abort cases. Providers/engines map these to user‑facing errors.
+const transport = shouldProxy(url)
+  ? new BackgroundProxyTransport()
+  : new DirectFetchTransport();
+```
+
+## Usage tips
+
+* Always forward the `AbortSignal` when streaming so cancellation propagates to
+  the transport.
+* The proxy transport rejects requests for URLs that are not allowed by the
+  policy, making it safe to expose to user configuration.
+* When adding a new host to the proxy policy, ensure the background handler has
+  the right permissions declared in `manifest.json`.

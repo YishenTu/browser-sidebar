@@ -1,87 +1,68 @@
-# Sidebar Module
+# Sidebar UI
 
-React Shadow‑DOM chat UI: model selector, streaming, extraction preview, settings, and utilities.
+React components that render the in-tab chat experience live under
+`src/sidebar/`.  The UI is mounted inside a Shadow DOM root (see
+`ChatPanel.tsx`) so it stays isolated from host-page styles.
 
-## Directory Structure
+## Directory overview
 
 ```
 sidebar/
-├─ ChatPanel.tsx            # Main UI entry
-├─ index.tsx                # Mount/unmount into Shadow DOM
-├─ components/
-│  ├─ layout/               # Header/Footer/Body/ResizeHandles
-│  ├─ ChatInput.tsx         # Multiline input (+ cancel when streaming)
-│  ├─ CodeBlock.tsx         # Syntax‑highlighted code
-│  ├─ ContentPreview.tsx    # Extracted page content preview
-│  ├─ ErrorBanner.tsx
-│  ├─ MarkdownRenderer.tsx  # GFM + KaTeX
-│  ├─ MessageBubble.tsx
-│  ├─ MessageList.tsx       # Virtualized list
-│  ├─ ModelSelector.tsx
-│  ├─ SearchSources.tsx
-│  ├─ Settings/Settings.tsx
-│  ├─ SlashCommandDropdown.tsx
-│  ├─ StreamingText.tsx
-│  ├─ TabContentItem.tsx
-│  ├─ TabErrorBoundary.tsx
-│  ├─ TabLoadingIndicator.tsx
-│  ├─ TabMentionDropdown.tsx
-│  ├─ ThinkingWrapper.tsx
-│  └─ ui/ (Alert, Collapsible, CopyButton, Dropdown, FullscreenModal, Icons, Spinner, TextArea, Tooltip)
-├─ contexts/ (ErrorContext.tsx, useError, etc.)
-├─ hooks/
-│  ├─ ai/ (useAIChat, useMessageHandler, useProviderManager, useStreamHandler)
-│  ├─ useSlashCommand.ts
-│  ├─ useDragPosition.ts
-│  ├─ useResize.ts
-│  └─ useTabMention.ts
-└─ styles/ (layered CSS; see styles/README.md)
+├─ ChatPanel.tsx      # Top-level component rendered by the content script
+├─ index.tsx          # Mount/unmount helpers used by sidebarController
+├─ components/        # Presentational and composite UI pieces
+├─ contexts/          # React contexts (error boundary, layout)
+├─ hooks/             # Sidebar-specific hooks (providers, streaming, layout)
+├─ styles/            # Layered CSS (see styles/README.md)
+├─ utils/             # Client-side helpers (clipboard, keyboard, formatting)
+└─ constants.ts       # Shared constants (layer names, CSS selectors, IDs)
 ```
 
-### Layout & Components
+### Components
 
-- Header (draggable), Footer (input/actions), Body (scrollable), Resize handles
-- MessageList (virtualized), MessageBubble, StreamingText
-- ModelSelector with capability hints
-- ContentPreview + TabContentItem for extracted page data
-- SlashCommandDropdown; ThinkingWrapper when provider supports reasoning
+`components/index.ts` re-exports the most common pieces.  Highlights include:
 
-### State Management
+* Conversation surface: `MessageList`, `MessageBubble`, `StreamingText`,
+  `ThinkingWrapper`, `SearchSources`, and `ScreenshotPreview`.
+* Input + controls: `ChatInput`, `SlashCommandDropdown`, `ModelSelector`,
+  `ContentPreview`, `TabMentionDropdown`.
+* Layout and plumbing: `components/layout/*`, `TabErrorBoundary`,
+  `TabLoadingIndicator`, and `withTabErrorBoundary`.
+* Shared UI primitives live under `components/ui/` (buttons, dropdowns, tooltips,
+  modal, icons, etc.).
 
-- In‑memory chat/session stores under `@data/store`: `useSessionStore`, `useMessageStore`, `useTabStore`, `useUIStore`
-- Persistent settings/API keys via `useSettingsStore` (Chrome storage)
-- ErrorContext for cross‑component error reporting
+### Hooks
 
-## Messaging
+* `hooks/ai/` contains providers for chat streaming (`useAIChat`), provider
+  management, and stream event handling.
+* Other notable hooks: `useSlashCommand`, `useTabMention`, `useResize`,
+  `useDragPosition`, and `useFocusTrap`.
 
-The UI communicates with the background using the typed protocol in `@types/messages.ts`:
+Hooks generally wrap Zustand selectors and service calls so components stay thin.
 
-- Sidebar toggle/close
-- Tab metadata (`GET_TAB_INFO`, `GET_ALL_TABS`)
-- Content extraction (`EXTRACT_TAB_CONTENT`) with stream‑safe timeouts
+### Contexts
 
-## Styling
+* `contexts/ErrorContext.tsx` exposes error-reporting helpers shared across the
+  tree.
+* Additional contexts provide access to layout state and tab metadata.
 
-Layered CSS in `styles/` with Shadow‑DOM isolation. See `styles/README.md` for guidance and conventions.
+### Styles
 
-## Performance
+Layered CSS lives in `styles/` and is imported once from `styles/index.css`.
+Follow the guidance in `styles/README.md` when adding new rules to maintain the
+`@layer` cascade order.
 
-- Virtualized lists for long chats
-- Memoization and selective re‑renders
-- Stream buffering to keep smooth output
+### Messaging
 
-## Accessibility
+UI-level messaging helpers (e.g. `utils/sendMessage`) funnel through the services
+layer so components do not directly depend on Chrome APIs.  Any new messaging
+capability should be added to a service first and then consumed by hooks.
 
-- Keyboard navigation; accessible labels/roles
-- Escape closes modal and header close button (Esc) tooltips
-- Cancel button appears while streaming; supports keyboard focus
+## Development tips
 
-## Browser Compatibility
-
-Chromium‑based browsers (Chrome, Edge, Arc, Brave, Opera). Some pages (e.g., `chrome://`) are restricted by design.
-
-## Slash Commands
-
-Type `/` to open the dropdown; filter by typing (`↑/↓` to navigate, `Enter` to select). The command expands into a template; some commands choose a one‑turn model (e.g., `/fact-check` → `gemini-2.5-flash`).
-
-Built‑ins: `summarize`, `explain`, `analyze`, `comment`, `fact-check`, `rephrase`.
+* Use the path aliases (`@sidebar/components`, `@sidebar/hooks`, etc.) to avoid
+  brittle relative imports.
+* Prefer selectors (`useStore(state => ...)`) when reading from Zustand stores to
+  minimise re-renders.
+* Keep `ChatPanel.tsx` minimal—heavy logic belongs in hooks so it can be reused
+  by Storybook stories or tests.

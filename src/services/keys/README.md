@@ -1,149 +1,76 @@
-# Key Service
+# KeyService
 
-The Key Service provides a unified API for managing API keys across different AI providers in the browser sidebar extension. It handles encryption, storage, validation, and CORS-compliant API key testing.
-
-## Features
-
-- **Encrypted Storage**: Keys are encrypted using AES-256-GCM before storage
-- **Provider Validation**: Live API testing for different providers (no format checks)
-- **CORS Handling**: Automatic transport selection for API validation requests
-- **Chrome Storage**: Integration with Chrome's storage API for persistence
-- **Type Safety**: Full TypeScript support with proper typing
+`KeyService` manages Bring Your Own Key (BYOK) credentials inside the browser.
+It encrypts secrets before writing them to Chrome storage, exposes masked
+metadata for display, and validates keys by probing the respective provider
+APIs.
 
 ## Usage
 
-### Basic Setup
+```ts
+import KeyService from '@services/keys';
 
-```typescript
-import { KeyService } from '@services/keys';
+const keys = new KeyService();
+await keys.initialize('passphrase');
 
-// Initialize the service
-const keyService = new KeyService();
-await keyService.initialize('your-master-password');
+await keys.set('openai', 'sk-your-key');
+const masked = await keys.getMetadata('openai');
+const ok = await keys.validate('openai', 'sk-your-key');
 ```
 
-### Storing API Keys
+### Lifecycle
 
-```typescript
-// Set an API key for OpenAI
-await keyService.set('openai', 'sk-your-openai-key-here');
-
-// Set an API key for Anthropic
-await keyService.set('anthropic', 'sk-ant-your-anthropic-key-here');
-
-// Set an API key for Google/Gemini
-await keyService.set('gemini', 'AIza-your-google-key-here');
-```
-
-### Retrieving API Keys
-
-```typescript
-// Get an API key
-const openaiKey = await keyService.get('openai');
-
-// Check if a key exists
-const hasAnthropicKey = await keyService.has('anthropic');
-
-// Get metadata (without exposing the actual key)
-const metadata = await keyService.getMetadata('openai');
-console.log(metadata.maskedKey); // "sk-...here"
-```
+1. **Initialise** with `initialize(password)` so the service can derive an AES-GCM
+   key (salt stored in Chrome storage).
+2. Call `set(provider, key)` / `get(provider)` / `remove(provider)` to manage the
+   encrypted secrets.  Stored values live under
+   `chrome.storage.local/sync` (handled via `data/storage/chrome`).
+3. Use `listProviders()` to enumerate which providers have stored keys and
+   `getMetadata(provider)` to retrieve masked values for display.
+4. Call `shutdown()` to wipe the derived key from memory when the user signs out.
 
 ### Validation
 
-```typescript
-// Validate by making a real API call
-const isValid = await keyService.validate('openai', 'sk-test-key');
-```
+`validate(provider, key)` performs a lightweight live request:
 
-### Management Operations
+| Provider | Endpoint | Notes |
+| -------- | -------- | ----- |
+| `openai` | `GET https://api.openai.com/v1/models` | Requires `Authorization: Bearer` |
+| `anthropic` | `POST https://api.anthropic.com/v1/messages` | Expects a 400 due to empty body |
+| `gemini` / `google` | `GET https://generativelanguage.googleapis.com/v1beta/models` | API key passed as `?key=` |
+| `openrouter` | `GET https://openrouter.ai/api/v1/models` | Uses bearer token |
 
-```typescript
-// List all providers with stored keys
-const providers = await keyService.listProviders();
-console.log(providers); // ['openai', 'anthropic', 'gemini']
+The service chooses between `BackgroundProxyTransport` and
+`DirectFetchTransport` based on `@transport/policy.shouldProxy` so CORS
+restrictions are respected.  Unknown providers return `false`; OpenAI-compatible
+endpoints should be validated with `validateCompatProvider` from
+`@services/engine/ValidationService`.
 
-// Remove a specific key
-await keyService.remove('openai');
+### Metadata
 
-// Clear all keys (useful for reset/logout)
-await keyService.clearAll();
-
-// Shutdown the service (clears memory)
-keyService.shutdown();
-```
-
-## Supported Providers
-
-| Provider                    | Format                 | Validation Endpoint         |
-| --------------------------- | ---------------------- | --------------------------- |
-| `openai`                    | `sk-[48 chars]`        | `/v1/models`                |
-| `anthropic`                 | `sk-ant-[40-52 chars]` | `/v1/messages`              |
-| `google`                    | `AIza[35 chars]`       | `/v1beta/models`            |
-| `gemini`                    | `AIza[35 chars]`       | `/v1beta/models`            |
-| `openrouter`                | Various formats        | `/api/v1/models`            |
-| `openai`-compatible presets | Any format             | `/models` on custom baseURL |
-
-For OpenAI-compatible providers (e.g., DeepSeek, Qwen, Zhipu, Kimi), use the compat validator:
+Whenever a key is stored the service keeps a small metadata object containing:
 
 ```ts
-import { validateCompatProvider } from '@services/engine';
-const ok = await validateCompatProvider('https://your-base-url', 'your-api-key');
-```
-
-## Security Features
-
-- **Master Password**: All keys are encrypted with a password-derived key
-- **AES-256-GCM**: Industry-standard encryption for stored keys
-- **No Plain Text**: Keys are never stored in plain text
-- **Memory Safety**: Sensitive data is cleared on shutdown
-- **Secure Validation**: API tests use proper authentication headers
-
-## Transport Layer
-
-The service automatically selects the appropriate transport layer:
-
-- **BackgroundProxyTransport**: For CORS-restricted endpoints (used by default)
-- **DirectFetchTransport**: For direct requests when CORS proxy isn't needed
-- **Custom Transport**: Can be injected for testing or special requirements
-
-```typescript
-// Using custom transport
-import { DirectFetchTransport } from '@transport/DirectFetchTransport';
-const keyService = new KeyService(new DirectFetchTransport());
-```
-
-## Error Handling
-
-The service provides detailed error messages for common scenarios:
-
-```typescript
-try {
-  await keyService.get('nonexistent');
-} catch (error) {
-  // "No API key found for provider: nonexistent"
-}
-
-try {
-  await keyService.validate('openai', 'sk-invalid-key');
-} catch (error) {
-  // Returns false instead of throwing
+{
+  provider: APIProvider;
+  maskedKey: string;   // e.g. "sk-...abcd"
+  createdAt: number;
+  lastUpdated: number;
 }
 ```
 
-## Integration with Existing Systems
+This metadata is retrievable via `getMetadata(provider)` without exposing the
+plaintext key.
 
-The KeyService integrates seamlessly with:
+### Testing
 
-- **Chrome Storage API**: Via `@storage/chrome` module
-- **Security Module**: Via `@security/crypto` for encryption
-- **Transport Layer**: Via `@transport/*` modules for API validation
-- **Provider Types**: Via `@/types/apiKeys` for type safety
+Inject a custom transport via the constructor or `setTransport()` when you need
+predictable responses:
 
-## Development Notes
+```ts
+const keys = new KeyService(new DirectFetchTransport());
+await keys.initialize('test');
+```
 
-- Service must be initialized with `initialize()` before use
-- All operations are async and return Promises
-- Keys are validated by real API connectivity only (no format checks)
-- Memory is automatically cleaned up on `shutdown()`
-- TypeScript strict mode compatible
+`clearAll()` removes every stored key and the derived master key—handy for
+resetting between integration tests.

@@ -1,73 +1,58 @@
-# Data Module
+# Data layer
 
-State, persistence, and security for the AI Browser Sidebar.
+State, persistence, and security primitives for the sidebar live under
+`src/data/`.  React components interact with these modules through the higher
+level services, but the actual storage logic—Zustand stores, Chrome storage
+wrappers, encryption, and API-key management—resides here.
 
-## Structure
+## Layout
 
 ```
 data/
-├─ store/                    # Zustand stores
-│  ├─ stores/
-│  │  ├─ sessionStore.ts    # Session master store (per tab+URL)
-│  │  ├─ messageStore.ts    # Delegates to active session
-│  │  ├─ tabStore.ts        # Delegates to active session
-│  │  └─ uiStore.ts         # Delegates to active session
-│  ├─ types/                # Store types
-│  ├─ utils/chatHelpers.ts  # Session key helpers and creation
-│  ├─ chat.ts               # Barrel for chat‑related stores
-│  ├─ settings.ts           # Persistent settings store (Chrome storage)
-│  └─ index.ts              # Exports
-├─ storage/
-│  ├─ chrome.ts             # Typed Chrome storage wrapper (local/sync/session)
-│  ├─ keys/                 # Key storage subsystem (helpers + metadata)
-│  └─ index.ts              # Exports
-├─ security/
-│  ├─ crypto.ts             # AES‑GCM encrypt/decrypt + key derivation
-│  └─ masking.ts            # Display masking utilities
+├─ store/        # Zustand stores and helpers
+├─ storage/      # Chrome storage adapters + modular API-key vault
+├─ security/     # AES-GCM encryption + masking utilities
 └─ README.md
 ```
 
-## Stores
+### `store/`
 
-### Chat/session stores (in‑memory)
+`store/chat.ts`, `store/settings.ts`, and the `stores/` subdirectory define the
+per-session chat/message/tab/UI stores used by the sidebar.  They follow a
+hierarchical pattern: `useSessionStore` owns the authoritative data while the
+other stores delegate to the currently active session key.  Types for each
+store live under `store/types/`.
 
-Specialized stores follow a hierarchical delegation pattern. Only the session store owns data; others operate on the active session.
+`store/index.ts` also exports a generic `createAppStore` factory leveraged by
+tests and future shared state needs.
 
-```
-SessionStore (master)
-  ├─ MessageStore (delegates to active session)
-  ├─ TabStore (delegates to active session)
-  └─ UIStore (delegates to active session)
-```
+### `storage/`
 
-- Deterministic session keys: `tab_{id}:{normalizedUrl}` (see `@shared/utils/urlNormalizer`)
-- No persistence; session data resets with extension/browser restarts
-- `useSessionManager` hook in the UI selects/switches sessions based on current tab
+* `storage/chrome.ts` wraps the Chrome Storage APIs with typed helpers,
+  batch operations, quota inspection, and migration utilities.  It supports
+  `local`, `sync`, and `session` areas.
+* `storage/keys/` is a modular API-key vault.  It exposes functions for creating
+  encrypted keys, listing metadata, rotating or importing/exporting keys, and
+  tracking usage statistics.  The module maintains its own in-memory cache plus
+  a background cleanup loop.  It also includes a simple store for
+  OpenAI-compatible provider definitions (`compat.ts`) that do not require
+  encryption.
 
-### Settings store (persistent)
+### `security/`
 
-`useSettingsStore` is persisted to Chrome storage with a light migration layer:
+* `crypto.ts` wraps AES-GCM encryption/decryption and PBKDF2 key derivation.
+* `masking.ts` exposes helpers (e.g. `maskValue`, `maskAPIKey`) so secrets can be
+  displayed without leaking full values.
 
-- Loads from `sync` with a timeout; falls back to `local`
-- Writes to `sync`; falls back to `local` on quota/unavailable
-- Gates the list of available models based on saved API keys and OpenAI‑Compat providers
+These primitives are composed by `KeyService` and by the key-storage module
+above.
 
-Key actions: `loadSettings`, `updateSelectedModel`, `refreshAvailableModelsWithCompat`, plus simple setters/getters for UI and privacy preferences.
+## Usage tips
 
-## Storage wrapper
-
-`data/storage/chrome.ts` exposes small typed helpers over `@platform/chrome/storage`:
-
-- `get/set/remove/clear` and batch variants
-- `onChanged` with automatic de‑serialization
-- `migrate` with versioned schema support (used by settings)
-- `getStorageInfo` for quota stats
-
-## Security
-
-`data/security/crypto.ts` provides AES‑GCM encryption/decryption and PBKDF2 key derivation. The KeyService composes these utilities to encrypt BYOK secrets stored via the storage wrapper.
-
-## Notes
-
-- Chat/session stores are memory‑only by design; only settings and API‑key metadata are persisted.
-- Avoid storing large blobs; prefer the background cache for extracted content (`extension/background/cache/TabContentCache.ts`).
+* Always derive deterministic session keys with `@shared/utils/urlNormalizer` and
+  persist them through `useSessionStore`—never write directly to Chrome storage
+  from the UI.
+* When adding new persisted settings, define the schema shape in
+  `store/settings.ts` and let the storage wrapper handle migrations.
+* API-key operations should go through `@/services/keys` unless you are writing
+  integration tests for the storage module itself.

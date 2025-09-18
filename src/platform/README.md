@@ -1,35 +1,43 @@
-# Platform Module
+# Platform wrappers
 
-Typed wrappers for Chrome/Chromium extension APIs used across the app.
+Utilities under `src/platform/` provide promise-friendly wrappers around
+Chromium extension APIs.  They isolate MV3 quirks from the rest of the codebase
+and make the APIs easier to mock in tests.
 
 ## Structure
 
 ```
 platform/
 └─ chrome/
-   ├─ runtime.ts    # install/update/startup, message listeners, sendMessage
-   ├─ storage.ts    # get/set/remove/batch, listeners, quota info
-   ├─ tabs.ts       # query/get/update, events
-   ├─ messaging.ts  # helper send/broadcast with types
-   ├─ ports.ts      # managed Port with streaming helpers
-   ├─ keepAlive.ts  # keepAlive (timer/port/hybrid) utilities
-   ├─ alarms.ts     # alarms wrapper
-   ├─ action.ts     # browser action helpers
-   ├─ scripting.ts  # programmatic injection helpers
-   └─ index.ts      # barrel exports
+   ├─ action.ts      # chrome.action helpers (click listener, badge, title)
+   ├─ alarms.ts      # Promise-based alarm scheduling
+   ├─ index.ts       # Barrel re-export for the chrome namespace
+   ├─ keepAlive.ts   # Strategies for keeping the service worker alive
+   ├─ messaging.ts   # Runtime messaging helpers with timeout handling
+   ├─ ports.ts       # Managed Port wrapper for streaming (used by proxy)
+   ├─ runtime.ts     # Installed/startup listeners, manifest helpers, sendMessage
+   ├─ scripting.ts   # executeScript / insertCSS wrappers
+   ├─ storage.ts     # Typed get/set/remove + change listeners for storage areas
+   └─ tabs.ts        # query/get/update helpers + tab event bindings
 ```
 
-## Purpose
+Each module exports plain functions (no singletons) so the background script and
+content-side services can import only what they need.  For example:
 
-- Promise‑based, typed surface over `chrome.*`
-- Centralized error handling and safe fallbacks
-- Reusable building blocks for background, content and UI code
+```ts
+import { addMessageListener, sendMessage } from '@platform/chrome/runtime';
+import { queryTabs, sendMessageToTab } from '@platform/chrome/tabs';
+```
+
+## Testing
+
+Because the modules return Promises and expose explicit typing, they can be
+mocked with simple stubs.  Vitest suites replace the exported functions with
+`vi.fn()` implementations so no direct `chrome.*` references leak into tests.
 
 ## Notes
 
-- `keepAlive.ts` complements `extension/background/keepAlive.ts` with higher‑level strategies (timer/port/hybrid) built on the same primitives.
-- Storage helpers support single and batch ops across `local`, `sync`, and `session` with simple migration hooks.
-
-## Compatibility
-
-Chromium‑based browsers (Chrome, Edge, Arc, Brave, Opera). Feature detection is used where APIs differ; no Firefox/Safari shims are included yet.
+* `keepAlive.ts` complements `extension/background/keepAlive.ts`; the background
+  entry point chooses whichever strategy suits the environment.
+* `storage.ts` supports all three storage areas (`local`, `sync`, `session`) and
+  is the foundation for the settings store and API-key vault.

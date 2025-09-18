@@ -1,96 +1,51 @@
-# Configuration Module
+# Configuration module
 
-Central configuration and constants for the AI Browser Sidebar.
+Everything under `src/config/` is pure TypeScript that describes the extension's
+built-in models, slash commands, and system prompts.  The data here is consumed
+by the settings store, engine manager, and chat UI so it acts as the single
+source of truth for capabilities that ship with the extension.
 
-## Overview
+## Files
 
-This module defines the model catalog and helpers, the system prompt, and built‑in slash commands. It is the single source of truth for what models are available and how commands map to prompts.
+| File | Purpose |
+| ---- | ------- |
+| `models.ts` | `DEFAULT_MODELS`, helpers for filtering by provider, and presets for OpenAI-compatible endpoints |
+| `slashCommands.ts` | Built-in slash commands (`/summarize`, `/fact-check`, …) with optional one-turn model overrides |
+| `systemPrompt.ts` | `getSystemPrompt()` builder that adjusts instructions based on provider type and whether tab content is attached |
 
-## Structure
+## Models catalogue
 
-```
-config/
-├─ models.ts             # Model list + helpers (incl. OpenAI‑Compat presets)
-├─ slashCommands.ts      # Built-in slash commands (optional per‑command model)
-└─ systemPrompt.ts       # System prompt helpers
-```
+`models.ts` exports `ModelConfig` definitions for Gemini 2.5, GPT‑5 (first-party
+and OpenRouter), and the OpenAI-compatible presets (`deepseek`, `qwen`, `zhipu`,
+`kimi`).  Helper utilities include:
 
-## models.ts
+* `getDefaultModel()` / `getDefaultModelForProvider()` – pick the default choice
+  surfaced in the settings panel.
+* `getModelsByProvider(providerId)` and `getModelsByProviderId(providerId)` –
+  used by `EngineManagerService` and the settings store to populate drop-downs.
+* `OPENAI_COMPAT_PRESETS`, `isBuiltInPreset()`, and `getPresetById()` – keep the
+  compat-provider UI and storage layer in sync.
 
-Key exports and helpers:
+These values are filtered at runtime by `useSettingsStore` based on which API
+keys are present (see `@/data/store/settings.ts`).
 
-- `DEFAULT_MODELS` — Array of `ModelConfig` entries (OpenAI, Gemini, OpenRouter, compat)
-- `getDefaultModel()` — First model id from the catalog
-- `getDefaultModelForProvider(providerId)` — First model id for a provider
-- `getModelsByProvider(providerType)` — Filter by core provider type
-- `getModelsByProviderId(providerId)` — Filter by specific provider id (incl. compat)
-- `getModelById(id)` / `modelExists(id)` — Lookup helpers
-- `isOpenAICompatProvider(providerId)` — Test for compat providers
-- `OPENAI_COMPAT_PRESETS` — Built‑in OpenAI‑Compat endpoints (deepseek, qwen, zhipu, kimi, base url for these providers are Chinese version, change to global if needed)
+## Slash commands
 
-Models currently include the GPT‑5 and Gemini 2.5 series used by this app, plus OpenRouter entries and placeholders for common OpenAI‑compat providers.
+`slashCommands.ts` defines a small, localised set of commands.  Each entry
+includes `name`, `description`, a Markdown prompt template, and an optional
+`model` override (e.g. `/fact-check` uses `gemini-2.5-flash`).  Helpers such as
+`getSlashCommandByName()` and `searchSlashCommands()` keep lookups cheap in the
+sidebar UI.
 
-## systemPrompt.ts
+Additions here should be paired with translations/UX copy where appropriate.
 
-Exports helpers to assemble the system prompt used by providers. The prompt is designed for web‑context assistance and can be extended as needed.
+## System prompt
 
-## slashCommands.ts
+`systemPrompt.ts` exports a single `getSystemPrompt(providerType?, hasTabContent?)`
+function.  It stitches together reusable sections (role description, tab-content
+format, citation guidance, web-search instructions) so providers that expose web
+search or thinking budgets receive the correct hints.  The UI passes
+`hasTabContent` based on whether extracted tabs are attached to the request.
 
-Defines command objects with an optional one‑turn model override. Examples include `summarize`, `explain`, `analyze`, `comment`, `fact-check` (uses `gemini-2.5-flash`), and `rephrase`.
-
-```ts
-export interface SlashCommand {
-  name: string;
-  description: string;
-  prompt: string;
-  model?: string; // optional one‑turn override
-}
-```
-
-## Typical Usage
-
-```ts
-import {
-  DEFAULT_MODELS,
-  getDefaultModel,
-  getDefaultModelForProvider,
-  getModelsByProvider,
-  getModelsByProviderId,
-} from '@config/models';
-import { getSlashCommandByName, SLASH_COMMANDS } from '@config/slashCommands';
-import { getSystemPrompt } from '@config/systemPrompt';
-
-const openai = getModelsByProvider('openai');
-const first = getDefaultModel();
-const geminiDefault = getDefaultModelForProvider('gemini');
-
-const summarize = getSlashCommandByName('summarize');
-const sysPrompt = getSystemPrompt({ includeContext: true });
-```
-
-Extraction defaults are now user-configurable in Settings
-("Extraction Defaults by Domain"). The content orchestrator reads the saved
-rules from chrome.storage; no additional config file is needed.
-
-## OpenAI‑Compatible Providers
-
-```ts
-import {
-  OPENAI_COMPAT_PRESETS,
-  isOpenAICompatProvider,
-  getModelsByProviderId,
-} from '@config/models';
-
-const isCompat = isOpenAICompatProvider('kimi'); // true
-const kimiModels = getModelsByProviderId('kimi');
-```
-
-## Adding Models or Commands
-
-1. Add a `ModelConfig` entry in `models.ts` (and optionally an OpenAI‑Compat preset).
-2. Add or edit command entries in `slashCommands.ts`.
-
-## Notes
-
-- Model availability surfaced in the UI is gated by saved API keys and compat providers at runtime (see `data/store/settings.ts`).
-- All files are pure TypeScript with no external runtime deps.
+Because this file is pure data + string assembly, it is safe to import from both
+background and UI contexts.

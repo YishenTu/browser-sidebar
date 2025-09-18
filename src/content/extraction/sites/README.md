@@ -1,44 +1,54 @@
-# Site-Specific Extraction Plugins
+# Site-specific extractors
 
-This folder hosts site extractor plugins that run before Readability/Raw/Defuddle.
-Plugins are small modules that recognize a domain and return an `ExtractedContent` result.
+The orchestrator can hand control to specialised plugins before falling back to
+Readability/Raw/Defuddle.  Any module in this directory that default-exports a
+`SiteExtractorPlugin` is loaded eagerly via `import.meta.glob` and evaluated in
+the order it is discovered.
 
-How It Works
+## How it works
 
-- The registry auto-loads all `*.plugin.ts` files under this folder.
-- At runtime, Readability calls `trySitePlugins(document, options)`; the first matching plugin wins.
-- If no plugin handles the page, normal Readability (or the chosen mode) continues.
+1. `index.ts` gathers every `./**/*.plugin.ts` file under this folder and any
+   developer overrides placed in the gitignored `/site-plugins/` directory at the
+   repository root.
+2. When extraction runs, `trySitePlugins()` calls `plugin.matches(document)` for
+   each plugin.  The first plugin that returns `true` and resolves a non-null
+   `ExtractedContent` short-circuits the normal extraction flow.
+3. Plugins should fail softly—return `null` on errors so the default extractor
+   can continue.
 
-Add/Remove a Plugin (repo-managed)
-
-1. Create `your-site.plugin.ts` in this folder.
-2. Default-export a `SiteExtractorPlugin`:
+## Plugin contract
 
 ```ts
-import type { SiteExtractorPlugin } from './types';
-import type { ExtractedContent } from '@/types/extraction';
-
-const plugin: SiteExtractorPlugin = {
-  id: 'example',
-  matches: (doc: Document) => doc.location.hostname.endsWith('example.com'),
-  extract: async (doc, options): Promise<ExtractedContent | null> => {
-    // return null to defer to normal extraction
-    // or return an ExtractedContent with markdown/textContent/etc.
-    return null;
-  },
-};
-
-export default plugin;
+export interface SiteExtractorPlugin {
+  id: string;
+  matches(doc: Document): boolean;
+  extract(
+    doc: Document,
+    options: { includeLinks?: boolean }
+  ): Promise<ExtractedContent | null> | ExtractedContent | null;
+}
 ```
 
-User (local) Plugins (gitignored)
+* `matches` runs synchronously, so keep it lightweight and avoid DOM mutation.
+* `extract` may return either plain text, Markdown, or any other
+  `ExtractedContent` shape.  Reuse helpers from `@core/extraction` where
+  possible.
 
-- Keep private plugins in `site-plugins/` (repo root). This directory is gitignored.
-- The registry auto-loads `site-plugins/**/*.ts` via the `@site` alias.
-- You can place any site-specific tests under `site-plugins/` as well (they will be ignored by git). If you want to run them locally, point Vitest to that path explicitly.
+## Adding a new plugin
 
-Notes
+1. Create `your-domain.plugin.ts` alongside this README.
+2. Default-export a plugin that uses structural heuristics (selectors, metadata
+   attributes) rather than brittle text matching.
+3. Catch unexpected exceptions and return `null` so the orchestrator falls back
+   gracefully.
+4. If a plugin needs to stay private, place it under `/site-plugins/` instead—
+   it will load automatically but remains ignored by git.
 
-- Keep plugins focused and fail-soft: catch errors and return `null` to fall back.
-- Do not execute scripts or fetch remote data from plugins.
-- Prefer structural selectors; avoid hard-coding language-specific keywords.
+## Tips
+
+* Prefer `doc.location.hostname` or URL parsing to domain-match—plugins run in
+  the page context and have access to a live `document`.
+* Do not fetch external resources or execute script tags; extraction must remain
+  self-contained for security reasons.
+* When debugging, inspect `sitePlugins` in the console—it is exported from
+  `index.ts` for quick introspection.

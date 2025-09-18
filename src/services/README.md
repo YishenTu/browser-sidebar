@@ -1,69 +1,71 @@
-# Services Module
+# Services
 
-High‑level facades that coordinate core modules and platform wrappers.
+`src/services/` exposes high-level facades that the React sidebar and tests use
+to talk to the underlying engines, storage, and Chrome APIs.  They hide
+transport details and coordinate state with the Zustand stores from `@data`.
 
-## Structure
+## Directory
 
 ```
 services/
-├─ chat/        # Provider‑agnostic streaming
-│  └─ ChatService.ts
-├─ engine/      # Provider creation/selection
-│  ├─ EngineManagerService.ts
-│  └─ ValidationService.ts
-├─ extraction/  # Background‑mediated extraction with retries
-│  └─ ExtractionService.ts
-├─ keys/        # Encrypted BYOK storage + validation
-│  └─ KeyService.ts
-└─ session/     # Session keying + URL normalization helpers
-   └─ SessionService.ts
+├─ chat/        # ChatService + factories for streaming provider responses
+├─ engine/      # EngineManager singleton and validation helpers
+├─ extraction/  # ExtractionService and convenience helpers for tab scraping
+├─ keys/        # KeyService (BYOK encryption/validation)
+└─ session/     # SessionService for deterministic tab session management
 ```
 
-## Chat Service (`chat/ChatService.ts`)
+### Chat (`chat/`)
 
-- Streams responses from the active provider
-- Supports cancellation via `AbortController`
-- Normalizes error formatting from providers
+* `ChatService` wraps an `AIProvider` and exposes a streaming API with built-in
+  cancellation and error normalisation.
+* Factories `createChatService()` and `createChatServiceWithProvider()` simplify
+  bootstrapping in hooks/tests.
+* When a `Transport` is provided, the service ensures engines derived from
+  `BaseEngine` receive it via `setTransport`.
 
-Usage:
+### Engine (`engine/`)
+
+* `EngineManagerService` is a singleton that initialises providers from
+  `config/models.ts`, keeps track of the active engine, and records usage stats.
+* The service understands OpenAI-compatible providers via
+  `data/storage/keys/compat` and can switch models on demand.
+* `ValidationService.ts` exports helpers (`validateOpenAIKey`,
+  `validateGeminiKey`, `validateCompatProvider`, …) that probe provider APIs via
+  the correct transport (direct or background proxy).
+
+### Extraction (`extraction/`)
+
+* `ExtractionService` talks to the background worker using typed messages,
+  applies retry logic, and exposes helpers like `extractCurrentTab()` and
+  `extractTabs()`.
+* Convenience exports `extractCurrentTab` / `extractTabs` share a default
+  instance so UI code can use simple functions when dependency injection is not
+  needed.
+
+### Keys (`keys/`)
+
+* `KeyService` encrypts API keys with AES-GCM, stores them via
+  `data/storage/chrome`, and validates them against provider endpoints (honouring
+  the proxy policy).
+* Methods cover the full lifecycle: `initialize`, `set/get/remove`,
+  `listProviders`, `getMetadata`, `validate`, `clearAll`, and `shutdown`.
+* The default export is an alias of the class to ease migration from older code.
+
+### Session (`session/`)
+
+* `SessionService` generates deterministic session keys (`tab_<id>:<url>`),
+  surfaces helpers (`getSessionInfo`, `clearSession`, `cleanupInactiveSessions`),
+  and proxies to `useSessionStore` for actual data mutation.
+* The module exports a default `sessionService` instance plus
+  `createSessionService(config)` for scenarios that need custom URL normalisation.
+
+## Usage
+
+All service modules re-export their public surface from `services/index.ts`:
 
 ```ts
-import { createChatService } from '@services/chat';
-
-const chat = createChatService();
-chat.setProvider(myProvider);
-
-for await (const chunk of chat.stream(messages, { systemPrompt: 'Be concise.' })) {
-  // consume StreamChunk
-}
+import { ChatService, EngineManagerService, extractCurrentTab, KeyService, sessionService } from '@services';
 ```
 
-## Engine Manager (`engine/EngineManagerService.ts`)
-
-- Creates and initializes providers (OpenAI, Gemini, OpenRouter, OpenAI‑Compat)
-- Switches active provider/model; wires transports
-- Validation helpers live in `ValidationService.ts`
-
-## Extraction Service (`extraction/ExtractionService.ts`)
-
-- Asks background to extract the current tab or multiple tabs
-- Retries with exponential backoff and classifies common error cases
-- Returns structured `TabContent` consistent with UI hooks
-
-## Key Service (`keys/KeyService.ts`)
-
-- Encrypts keys with AES‑GCM via `data/security/crypto`
-- Stores encrypted data in Chrome storage; masks values for display
-- Validates keys against provider endpoints using the transport layer (direct vs background‑proxied based on CORS policy)
-
-## Session Service (`session/SessionService.ts`)
-
-- Deterministic session keys from `tabId + normalizedUrl`
-- URL normalization (includes query, excludes hash)
-- Helpers used by the Zustand session store and hooks
-
-## Error Handling & Performance
-
-- Services catch and classify errors close to their boundary
-- Lazy initialize dependencies; avoid holding long‑lived references
-- Use the background proxy only when CORS requires it
+This keeps imports ergonomic and makes it easy to stub services in tests.
