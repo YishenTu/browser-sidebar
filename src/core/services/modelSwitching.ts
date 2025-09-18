@@ -89,29 +89,3 @@ export async function switchModel(options: ModelSwitchOptions): Promise<ModelSwi
     };
   }
 }
-
-/**
- * Check if a model requires an API key and if it's configured
- */
-export function isModelAvailable(modelId: string): boolean {
-  const state = useSettingsStore.getState();
-  return state.settings.availableModels.some(m => m.id === modelId && m.available);
-}
-
-/**
- * Get the provider type for a model
- */
-export function getModelProvider(modelId: string): string | null {
-  const state = useSettingsStore.getState();
-  return state.getProviderTypeForModel(modelId);
-}
-
-/**
- * Check if switching between two models requires a provider change
- */
-export function requiresProviderChange(fromModelId: string, toModelId: string): boolean {
-  const state = useSettingsStore.getState();
-  const fromProvider = state.getProviderTypeForModel(fromModelId);
-  const toProvider = state.getProviderTypeForModel(toModelId);
-  return fromProvider !== toProvider;
-}
