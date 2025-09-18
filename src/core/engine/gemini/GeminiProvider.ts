@@ -5,6 +5,7 @@ import { GeminiStreamProcessor } from '@/core/ai/gemini/streamProcessor';
 import { buildRequest, buildHeaders, buildApiUrl } from '@/core/ai/gemini/requestBuilder';
 import { convertToStreamChunk, processStreamChunk } from '@/core/ai/gemini/responseParser';
 import { withErrorHandlingGenerator } from '@/core/ai/gemini/errorHandler';
+import { debugLog } from '@/utils/debug';
 import type {
   ProviderChatMessage,
   StreamChunk,
@@ -68,8 +69,10 @@ export class GeminiProvider extends BaseEngine {
     const geminiConfig = this.getConfig()?.config as GeminiConfig;
     const request = buildRequest(messages, geminiConfig, config);
 
-    // Log the full raw request
-    // Gemini Request logging removed for production
+    // Log the actual Gemini request
+    debugLog('GeminiProvider', '=== Gemini Request ===');
+    debugLog('GeminiProvider', JSON.stringify(request, null, 2));
+    debugLog('GeminiProvider', '=====================');
 
     const url = buildApiUrl(
       `/models/${geminiConfig.model}:streamGenerateContent`,

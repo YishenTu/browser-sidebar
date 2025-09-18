@@ -331,6 +331,7 @@ export function useAIChat(options: UseAIChatOptions = {}): UseAIChatReturn {
               ...metadata,
               hasTabContext,
               originalUserContent: hasTabContext ? trimmedContent : undefined,
+              sections: formatResult?.sections,
             },
           });
         } else {
@@ -349,6 +350,7 @@ export function useAIChat(options: UseAIChatOptions = {}): UseAIChatReturn {
                 ...userMessage.metadata,
                 hasTabContext,
                 originalUserContent: trimmedContent,
+                sections: formatResult?.sections,
               },
             });
           }
@@ -366,9 +368,7 @@ export function useAIChat(options: UseAIChatOptions = {}): UseAIChatReturn {
               m => m.id === modelOverride && m.available
             );
             if (!available) {
-              console.warn(
-                `Slash command requested model ${modelOverride} but no API key is configured. Using default model.`
-              );
+              // Slash command requested unavailable model - fall back to default
               modelOverride = undefined;
             } else {
               originalModel = state.settings.selectedModel;
@@ -434,6 +434,7 @@ export function useAIChat(options: UseAIChatOptions = {}): UseAIChatReturn {
                   userMessage.timestamp instanceof Date
                     ? userMessage.timestamp
                     : new Date(userMessage.timestamp),
+                metadata: userMessage.metadata, // Include metadata for attachments
               },
             ];
           } else {
@@ -455,6 +456,7 @@ export function useAIChat(options: UseAIChatOptions = {}): UseAIChatReturn {
                 role: msg.role as 'user' | 'assistant',
                 content: msg.content,
                 timestamp: new Date(msg.timestamp),
+                metadata: msg.metadata, // Include metadata for attachments
               }));
           }
 
@@ -664,9 +666,8 @@ export function useAIChat(options: UseAIChatOptions = {}): UseAIChatReturn {
                 chatServiceRef.current.setProvider(restoredProvider);
               }
             }
-          } catch (restoreError) {
-            // Log but don't throw - we don't want to break the chat flow
-            console.error('Failed to restore original model after slash command:', restoreError);
+          } catch {
+            // Don't throw - we don't want to break the chat flow
           }
         }
       }

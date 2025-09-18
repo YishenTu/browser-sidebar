@@ -34,11 +34,12 @@ export function buildRequest(
     throw new Error('Messages array cannot be empty');
   }
 
+  // Build request with contents at the end for better token caching
   const request: GeminiRequest = {
-    contents,
     generationConfig: buildGenerationConfig(geminiConfig, chatConfig),
     // Always enable Google Search grounding for better accuracy
     tools: [{ google_search: {} }],
+    contents: [], // Initialize with empty array, will be replaced below
   };
 
   // Add system instruction if provided
@@ -53,6 +54,9 @@ export function buildRequest(
     request.safetySettings = geminiConfig.safetySettings as GeminiSafetySetting[];
   }
 
+  // Add contents at the end for better token caching in multi-turn conversations
+  request.contents = contents;
+
   // Content analysis removed - was only for debugging
 
   return request;
@@ -65,8 +69,31 @@ export function convertMessages(messages: ProviderChatMessage[]): GeminiContent[
   return messages.map(message => {
     const parts: GeminiPart[] = [];
 
-    // Add text content
-    if (message.content.trim()) {
+    // Check if the message has sections metadata (from formatTabContent)
+    const sections = message.metadata?.['sections'] as
+      | {
+          systemInstruction?: string;
+          tabContent?: string;
+          userQuery?: string;
+        }
+      | undefined;
+
+    if (sections) {
+      // If we have sections, add them as separate parts
+      if (sections.systemInstruction !== undefined) {
+        parts.push({ text: sections.systemInstruction });
+      }
+      // Handle tabContent section - may contain images
+      if (sections.tabContent !== undefined && sections.tabContent !== '') {
+        // Parse the tabContent to check for image references
+        const tabContentParts = parseTabContentForImages(sections.tabContent);
+        parts.push(...tabContentParts);
+      }
+      if (sections.userQuery !== undefined) {
+        parts.push({ text: sections.userQuery });
+      }
+    } else if (message.content.trim()) {
+      // Otherwise use the regular content
       parts.push({ text: message.content });
     }
 
@@ -75,6 +102,8 @@ export function convertMessages(messages: ProviderChatMessage[]): GeminiContent[
       for (const attachment of message.metadata['attachments'] as Array<{
         type: string;
         data?: string;
+        fileUri?: string;
+        mimeType?: string;
       }>) {
         if (attachment.type === 'image') {
           const imagePart = processImageAttachment(attachment);
@@ -98,31 +127,22 @@ export function convertMessages(messages: ProviderChatMessage[]): GeminiContent[
  * Process image attachment into Gemini format
  */
 function processImageAttachment(attachment: unknown): GeminiPart | null {
-  const att = attachment as { data?: string };
-  if (!att.data) {
-    return null;
-  }
-  // Extract base64 data and mime type
-  const matches = att.data.match(/^data:([^;]+);base64,(.+)$/);
-  if (!matches) {
-    return null;
-  }
+  const att = attachment as { fileUri?: string; mimeType?: string };
 
-  const [, mimeType, data] = matches;
+  // Only process if we have a file URI
+  if (!att.fileUri || !att.mimeType) {
+    return null;
+  }
 
   // Validate supported image types
-  if (!mimeType || !data) {
-    throw new Error('Invalid image data format');
-  }
-
-  if (!isSupportedImageType(mimeType!)) {
-    throw new Error(`Unsupported image type: ${mimeType!}`);
+  if (!isSupportedImageType(att.mimeType)) {
+    throw new Error(`Unsupported image type: ${att.mimeType}`);
   }
 
   return {
-    inlineData: {
-      mimeType: mimeType!,
-      data: data!,
+    fileData: {
+      mimeType: att.mimeType,
+      fileUri: att.fileUri,
     },
   };
 }
@@ -134,10 +154,7 @@ export function buildGenerationConfig(
   geminiConfig: GeminiConfig,
   chatConfig?: GeminiChatConfig
 ): GeminiGenerationConfig {
-  // Use a reasonable default for max output tokens
-  const config: GeminiGenerationConfig = {
-    maxOutputTokens: 8192, // Default max output tokens
-  };
+  const config: GeminiGenerationConfig = {};
 
   // Add stop sequences
   if (geminiConfig.stopSequences && geminiConfig.stopSequences.length > 0) {
@@ -220,4 +237,68 @@ export function buildApiUrl(
  */
 export function isSupportedImageType(mimeType: string): mimeType is SupportedImageType {
   return SUPPORTED_IMAGE_TYPES.includes(mimeType.toLowerCase() as SupportedImageType);
+}
+
+/**
+ * Parse tab content for image references and split into text and image parts
+ */
+function parseTabContentForImages(tabContent: string): GeminiPart[] {
+  const parts: GeminiPart[] = [];
+
+  // Check if the tab content contains image references
+  const imagePattern =
+    /<content\s+type="image">\s*<fileUri>([^<]+)<\/fileUri>\s*<mimeType>([^<]+)<\/mimeType>/g;
+
+  let lastIndex = 0;
+  let match;
+  let hasImage = false;
+
+  // Find all image references in the content
+  const matches: Array<{ fileUri: string; mimeType: string; start: number; end: number }> = [];
+  while ((match = imagePattern.exec(tabContent)) !== null) {
+    matches.push({
+      fileUri: match[1] || '',
+      mimeType: match[2] || '',
+      start: match.index,
+      end: match.index + match[0].length,
+    });
+    hasImage = true;
+  }
+
+  if (!hasImage) {
+    // No images, return the entire content as text
+    parts.push({ text: tabContent });
+    return parts;
+  }
+
+  // Split content around image references
+  for (const imageMatch of matches) {
+    // Add text before the image
+    if (imageMatch.start > lastIndex) {
+      const textBefore = tabContent.substring(lastIndex, imageMatch.start);
+      if (textBefore.trim()) {
+        parts.push({ text: textBefore });
+      }
+    }
+
+    // Add the image reference
+    parts.push({
+      fileData: {
+        fileUri: imageMatch.fileUri,
+        mimeType: imageMatch.mimeType as SupportedImageType,
+      },
+    });
+
+    lastIndex = imageMatch.end;
+  }
+
+  // Add any remaining text after the last image
+  if (lastIndex < tabContent.length) {
+    const textAfter = tabContent.substring(lastIndex);
+    if (textAfter.trim()) {
+      parts.push({ text: textAfter });
+    }
+  }
+
+  return parts;
 }

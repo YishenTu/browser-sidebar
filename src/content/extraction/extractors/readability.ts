@@ -118,11 +118,6 @@ export async function extractWithReadability(
       },
     };
   } catch (error) {
-    // Log error if in debug mode
-    if (options.debug) {
-      console.error('[Readability Extractor] Extraction failed:', error);
-    }
-
     // Return partial content with error indication
     throw new Error(
       `Readability extraction failed: ${error instanceof Error ? error.message : 'Unknown error'}`

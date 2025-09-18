@@ -29,6 +29,7 @@
 /* Reusable UI components (alphabetical order) */
 @import './3-components/alert.css' layer(components);
 @import './3-components/chat-input.css' layer(components);
+@import './3-components/chat-input-images.css' layer(components);
 @import './3-components/code-block.css' layer(components);
 @import './3-components/collapsible.css' layer(components);
 @import './3-components/copy-button.css' layer(components);
@@ -38,9 +39,11 @@
 @import 'katex/dist/katex.min.css' layer(components);
 @import './3-components/katex-math.css' layer(components);
 @import './3-components/markdown-content.css' layer(components);
+@import './3-components/message-attachments.css' layer(components);
 @import './3-components/message-bubbles.css' layer(components);
 @import './3-components/message-list.css' layer(components);
 @import './3-components/model-selector.css' layer(components);
+@import './3-components/screenshot-preview.css' layer(components);
 @import './3-components/settings.css' layer(components);
 @import './3-components/thinking-wrapper.css' layer(components);
 @import './3-components/tooltip.css' layer(components);

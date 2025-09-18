@@ -10,7 +10,20 @@ import type { TabInfo, TabContent } from '@/types/tabs';
 
 export interface FooterProps {
   /** Send message handler */
-  onSend: (message: string, metadata?: { expandedPrompt?: string }) => void;
+  onSend: (
+    message: string,
+    metadata?: {
+      expandedPrompt?: string;
+      modelOverride?: string;
+      attachments?: Array<{
+        type: string;
+        data?: string;
+        fileUri?: string;
+        fileId?: string;
+        mimeType?: string;
+      }>;
+    }
+  ) => void;
   /** Cancel message handler */
   onCancel?: () => void;
   /** Whether currently loading */
@@ -29,6 +42,10 @@ export interface FooterProps {
   onTabRemove?: (tabId: number) => void;
   /** Callback when a tab is selected from @ mention dropdown */
   onMentionSelectTab?: (tabId: number) => void;
+  /** Callback fired when image is pasted */
+  onImagePaste?: (
+    file: File
+  ) => Promise<{ fileUri?: string; fileId?: string; mimeType: string } | null>;
 }
 
 /**
@@ -46,6 +63,7 @@ export const Footer: React.FC<FooterProps> = ({
   loadedTabs = {},
   onTabRemove,
   onMentionSelectTab,
+  onImagePaste,
 }) => {
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
@@ -53,7 +71,14 @@ export const Footer: React.FC<FooterProps> = ({
   const chatInputKey = editingMessage ? `edit-${editingMessage}` : 'normal';
 
   // Handle send with edit clearing
-  const handleSend = (message: string, metadata?: { expandedPrompt?: string }) => {
+  const handleSend = (
+    message: string,
+    metadata?: {
+      expandedPrompt?: string;
+      modelOverride?: string;
+      attachments?: Array<{ type: string; data?: string; fileUri?: string; mimeType?: string }>;
+    }
+  ) => {
     onSend(message, metadata);
     // Clear edit will be handled in ChatPanel after successful send
   };
@@ -91,6 +116,7 @@ export const Footer: React.FC<FooterProps> = ({
         loadedTabs={loadedTabs}
         onTabRemove={onTabRemove}
         onMentionSelectTab={onMentionSelectTab}
+        onImagePaste={onImagePaste}
       />
     </div>
   );

@@ -203,8 +203,6 @@ export function addMessageListener<T extends TypedMessage = TypedMessage>(
 
             if (onError) {
               onError(runtimeError);
-            } else {
-              console.error('Message handler error:', runtimeError);
             }
           }
         });
@@ -224,8 +222,6 @@ export function addMessageListener<T extends TypedMessage = TypedMessage>(
 
         if (onError) {
           onError(runtimeError);
-        } else {
-          console.error('Message handler error:', runtimeError);
         }
       }
       return false;
@@ -264,8 +260,6 @@ export function addInstalledListener(
 
         if (onError) {
           onError(runtimeError);
-        } else {
-          console.error('Installed handler error:', runtimeError);
         }
       }
     }
@@ -302,8 +296,6 @@ export function addStartupListener(
 
         if (onError) {
           onError(runtimeError);
-        } else {
-          console.error('Startup handler error:', runtimeError);
         }
       }
     }
@@ -340,8 +332,6 @@ export function addConnectListener(
 
         if (onError) {
           onError(runtimeError);
-        } else {
-          console.error('Connect handler error:', runtimeError);
         }
       }
     }

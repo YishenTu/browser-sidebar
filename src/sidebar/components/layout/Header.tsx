@@ -115,7 +115,9 @@ export const Header: React.FC<HeaderProps> = ({
       <div className="ai-sidebar-header-actions">
         {hasMessages && (
           <button
+            type="button"
             onClick={onClearConversation}
+            onMouseDown={event => event.stopPropagation()}
             className="ai-sidebar-clear"
             aria-label="New session"
             title="Start new session"
@@ -136,7 +138,9 @@ export const Header: React.FC<HeaderProps> = ({
           </button>
         )}
         <button
+          type="button"
           onClick={onToggleSettings}
+          onMouseDown={event => event.stopPropagation()}
           className="ai-sidebar-settings"
           aria-label="Settings"
           title="API Settings"
@@ -156,7 +160,9 @@ export const Header: React.FC<HeaderProps> = ({
           </svg>
         </button>
         <button
+          type="button"
           onClick={onClose}
+          onMouseDown={event => event.stopPropagation()}
           className="ai-sidebar-close"
           aria-label="Close sidebar"
           title="Close (Esc)"

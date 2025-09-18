@@ -269,8 +269,7 @@ function stripAndFlattenHTML(html: string): string {
     );
 
     return result;
-  } catch (error) {
-    console.error('[stripAndFlattenHTML] Error during optimization:', error);
+  } catch {
     // Return original HTML if optimization fails completely
     return html;
   }
@@ -580,9 +579,8 @@ function deepCloneVisible(
 
       try {
         clone.setAttribute(attr.name, attr.value);
-      } catch (e) {
+      } catch {
         // Skip invalid attributes (malformed HTML)
-        console.warn('[RAW] Skipping invalid attribute:', attr.name);
       }
     });
   }

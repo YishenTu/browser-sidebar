@@ -15,7 +15,20 @@ export const CHAT_INPUT_MAX_ROWS = 8;
 export interface ChatInputProps
   extends Omit<TextAreaProps, 'onKeyDown' | 'value' | 'onChange' | 'minRows' | 'maxRows'> {
   /** Callback fired when message is sent */
-  onSend: (message: string, metadata?: { expandedPrompt?: string; modelOverride?: string }) => void;
+  onSend: (
+    message: string,
+    metadata?: {
+      expandedPrompt?: string;
+      modelOverride?: string;
+      attachments?: Array<{
+        type: string;
+        data?: string;
+        fileUri?: string;
+        fileId?: string;
+        mimeType?: string;
+      }>;
+    }
+  ) => void;
   /** Callback fired when a tab is selected via @ mention */
   onMentionSelectTab?: (tabId: number) => void;
   /** Current message value (controlled) */
@@ -46,7 +59,13 @@ export interface ChatInputProps
   loadedTabs?: Record<number, TabContent>;
   /** Callback fired when a tab chip is removed */
   onTabRemove?: (tabId: number) => void;
+  /** Callback fired when image is pasted */
+  onImagePaste?: (
+    file: File
+  ) => Promise<{ fileUri?: string; fileId?: string; mimeType: string } | null>;
 }
+
+type ChatInputSendMetadata = NonNullable<Parameters<ChatInputProps['onSend']>[1]>;
 
 /**
  * ChatInput Component
@@ -73,6 +92,7 @@ export const ChatInput = React.forwardRef<HTMLTextAreaElement, ChatInputProps>(
       enableSlashCommands = true,
       onTabRemove: _onTabRemove,
       onMentionSelectTab,
+      onImagePaste,
       ...textAreaProps
     },
     ref
@@ -86,6 +106,18 @@ export const ChatInput = React.forwardRef<HTMLTextAreaElement, ChatInputProps>(
 
     // Track if we're currently sending to prevent double submission
     const [isSending, setIsSending] = useState(false);
+
+    // Track pasted images with loading state
+    const [pastedImages, setPastedImages] = useState<
+      Array<{
+        fileUri?: string;
+        fileId?: string;
+        mimeType: string;
+        previewUrl: string;
+        isLoading?: boolean;
+        id: string;
+      }>
+    >([]);
 
     // Ref for textarea
     const textAreaRef = useRef<HTMLTextAreaElement>(null);
@@ -369,7 +401,10 @@ export const ChatInput = React.forwardRef<HTMLTextAreaElement, ChatInputProps>(
       if (isSending || loading) return;
 
       const trimmedMessage = currentValue.trim();
-      if (!trimmedMessage) return;
+      const uploadedImages = pastedImages.filter(
+        img => (img.fileUri || img.fileId) && !img.isLoading
+      );
+      if (!trimmedMessage && uploadedImages.length === 0) return;
 
       setIsSending(true);
 
@@ -379,20 +414,40 @@ export const ChatInput = React.forwardRef<HTMLTextAreaElement, ChatInputProps>(
           handleValueChange('');
         }
 
-        // Pass expanded prompt and model override as metadata if available
+        // Build metadata object
+        const metadata: ChatInputSendMetadata = {};
+        if (expandedPromptRef) metadata.expandedPrompt = expandedPromptRef;
+        if (modelOverrideRef) metadata.modelOverride = modelOverrideRef;
+        // Only include images that have finished uploading (have fileUri)
+        const uploadedImages = pastedImages.filter(
+          img => (img.fileUri || img.fileId) && !img.isLoading
+        );
+        if (uploadedImages.length > 0) {
+          metadata.attachments = uploadedImages.map(img => ({
+            type: 'image',
+            fileUri: img.fileUri,
+            fileId: img.fileId,
+            mimeType: img.mimeType,
+            data: img.previewUrl, // Include preview URL for display
+          }));
+        }
+
+        // Pass metadata if it has any properties
         await onSend(
-          trimmedMessage,
-          expandedPromptRef || modelOverrideRef
-            ? {
-                ...(expandedPromptRef ? { expandedPrompt: expandedPromptRef } : {}),
-                ...(modelOverrideRef ? { modelOverride: modelOverrideRef } : {}),
-              }
-            : undefined
+          trimmedMessage || '[Image]',
+          Object.keys(metadata).length > 0 ? metadata : undefined
         );
 
-        // Clear expanded prompt and model override after sending
+        // Clear expanded prompt, model override, and pasted images after sending
         setExpandedPromptRef(null);
         setModelOverrideRef(null);
+        // Clean up preview URLs before clearing images
+        pastedImages.forEach(img => {
+          if (img.previewUrl) {
+            URL.revokeObjectURL(img.previewUrl);
+          }
+        });
+        setPastedImages([]);
       } finally {
         setIsSending(false);
       }
@@ -405,6 +460,7 @@ export const ChatInput = React.forwardRef<HTMLTextAreaElement, ChatInputProps>(
       loading,
       expandedPromptRef,
       modelOverrideRef,
+      pastedImages,
     ]);
 
     // Handle cancel
@@ -623,6 +679,71 @@ export const ChatInput = React.forwardRef<HTMLTextAreaElement, ChatInputProps>(
       handleCursorPositionChange();
     }, [handleCursorPositionChange]);
 
+    // Handle paste event
+    const handlePaste = useCallback(
+      async (event: React.ClipboardEvent<HTMLTextAreaElement>) => {
+        if (!onImagePaste) return;
+
+        const items = Array.from(event.clipboardData.items);
+        const imageItems = items.filter(item => item.type.startsWith('image/'));
+
+        if (imageItems.length > 0) {
+          event.preventDefault();
+
+          for (const item of imageItems) {
+            const file = item.getAsFile();
+            if (file) {
+              // Create a unique ID for this image
+              const imageId = `img_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+
+              // Create a preview URL for the image
+              const previewUrl = URL.createObjectURL(file);
+
+              // Add image immediately with loading state
+              setPastedImages(prev => [
+                ...prev,
+                {
+                  id: imageId,
+                  mimeType: file.type,
+                  previewUrl,
+                  isLoading: true,
+                },
+              ]);
+
+              try {
+                const result = await onImagePaste(file);
+                if (result) {
+                  // Update the image with the file URI or ID
+                  setPastedImages(prev =>
+                    prev.map(img =>
+                      img.id === imageId
+                        ? {
+                            ...img,
+                            fileUri: result.fileUri,
+                            fileId: result.fileId,
+                            isLoading: false,
+                          }
+                        : img
+                    )
+                  );
+                } else {
+                  // Remove the image if upload failed
+                  setPastedImages(prev => prev.filter(img => img.id !== imageId));
+                  URL.revokeObjectURL(previewUrl);
+                }
+              } catch (error) {
+                console.error('Failed to upload image:', error);
+                // Remove the image on error
+                setPastedImages(prev => prev.filter(img => img.id !== imageId));
+                URL.revokeObjectURL(previewUrl);
+              }
+            }
+          }
+        }
+      },
+      [onImagePaste]
+    );
+
     // Determine if buttons should be disabled
     const isDisabled = loading || isSending;
 
@@ -635,6 +756,52 @@ export const ChatInput = React.forwardRef<HTMLTextAreaElement, ChatInputProps>(
 
     return (
       <div className={`chat-input${className ? ` ${className}` : ''}`}>
+        {/* Display pasted images */}
+        {pastedImages.length > 0 && (
+          <div className="chat-input__images">
+            {pastedImages.map(img => (
+              <div
+                key={img.id}
+                className={`chat-input__image-preview${img.isLoading ? ' chat-input__image-preview--loading' : ''}`}
+              >
+                <div className="chat-input__image-thumbnail">
+                  <img
+                    src={img.previewUrl}
+                    alt="Pasted image"
+                    className="chat-input__image-thumb"
+                  />
+                  {img.isLoading && (
+                    <div className="chat-input__image-spinner">
+                      <svg className="spinner" viewBox="0 0 50 50">
+                        <circle
+                          className="path"
+                          cx="25"
+                          cy="25"
+                          r="20"
+                          fill="none"
+                          strokeWidth="3"
+                        ></circle>
+                      </svg>
+                    </div>
+                  )}
+                  <button
+                    type="button"
+                    className="chat-input__image-remove"
+                    onClick={() => {
+                      // Clean up the preview URL
+                      URL.revokeObjectURL(img.previewUrl);
+                      setPastedImages(prev => prev.filter(i => i.id !== img.id));
+                    }}
+                    aria-label="Remove image"
+                  >
+                    <CloseIcon />
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
         {/* Main input area with border */}
         <div className="chat-input__main">
           <div className="chat-input__textarea-container">
@@ -648,6 +815,7 @@ export const ChatInput = React.forwardRef<HTMLTextAreaElement, ChatInputProps>(
               onKeyPress={handleKeyPress}
               onClick={handleTextAreaClick}
               onSelect={handleTextAreaSelect}
+              onPaste={handlePaste}
               placeholder={placeholder}
               disabled={isDisabled}
               aria-label={ariaLabel}

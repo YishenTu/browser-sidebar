@@ -42,9 +42,8 @@ sendMessage(readyMessage)
       // Background acknowledged - ready to handle messages
     }
   })
-  .catch(error => {
-    // Handle error if needed
-    console.error('Failed to send ready message:', error);
+  .catch(() => {
+    // Silently ignore - content script can still function
   });
 
 export {};

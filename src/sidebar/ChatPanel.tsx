@@ -26,8 +26,13 @@ import { useTabExtraction } from '@hooks/useTabExtraction';
 import { useSessionManager } from '@hooks/useSessionManager';
 import { TabContentItem } from '@components/TabContentItem';
 import { ExtractionMode } from '@/types/extraction';
+import type { ImageExtractedContent } from '@/types/extraction';
 import { ContentPreview } from '@components/ContentPreview';
+import { ScreenshotPreview, type ScreenshotPreviewData } from '@components/ScreenshotPreview';
 import { createMessage, type CleanupTabCacheMessage } from '@/types/messages';
+import { uploadFileToGemini } from '@/core/ai/gemini/fileUpload';
+import { uploadFileToOpenAI } from '@/core/ai/openai/fileUpload';
+import type { GeminiConfig, OpenAIConfig } from '@/types/providers';
 import { sendMessage as sendRuntimeMessage } from '@platform/chrome/runtime';
 
 // Layout components
@@ -59,6 +64,137 @@ export interface ChatPanelProps {
   /** Initial selected text from the page */
   initialSelectedText?: string;
 }
+
+const loadImageDimensions = (src: string): Promise<{ width: number; height: number }> => {
+  return new Promise((resolve, reject) => {
+    if (typeof Image === 'undefined') {
+      resolve({ width: 0, height: 0 });
+      return;
+    }
+    const image = new Image();
+    image.decoding = 'async';
+    image.onload = () => {
+      resolve({ width: image.naturalWidth, height: image.naturalHeight });
+    };
+    image.onerror = () => {
+      reject(new Error('Failed to decode screenshot image'));
+    };
+    image.src = src;
+  });
+};
+
+const SYSTEM_CAPTURE_HIDE_DELAY_MS = 600;
+const CLIPBOARD_POLL_ATTEMPTS = 6;
+const CLIPBOARD_POLL_INTERVAL_MS = 200;
+
+interface ClipboardImageResult {
+  dataUrl: string;
+  width: number;
+  height: number;
+}
+
+const blobToDataUrl = (blob: Blob): Promise<string> => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result as string);
+    reader.onerror = () => reject(reader.error ?? new Error('Failed to read clipboard image'));
+    reader.readAsDataURL(blob);
+  });
+};
+
+const tryReadClipboardImage = async (): Promise<ClipboardImageResult | null> => {
+  if (!navigator.clipboard || typeof navigator.clipboard.read !== 'function') {
+    throw new Error('Clipboard read is not supported in this browser');
+  }
+
+  const items = await navigator.clipboard.read();
+  for (const item of items) {
+    const imageType = item.types.find(type => type.startsWith('image/'));
+    if (!imageType) continue;
+
+    const blob = await item.getType(imageType);
+    const dataUrl = await blobToDataUrl(blob);
+    const { width, height } = await loadImageDimensions(dataUrl);
+
+    return {
+      dataUrl,
+      width,
+      height,
+    };
+  }
+
+  return null;
+};
+
+const readClipboardImageWithRetries = async (
+  attempts: number,
+  intervalMs: number
+): Promise<ClipboardImageResult | null> => {
+  for (let i = 0; i < attempts; i += 1) {
+    const image = await tryReadClipboardImage();
+    if (image) {
+      return image;
+    }
+
+    if (i < attempts - 1) {
+      await new Promise(resolve => setTimeout(resolve, intervalMs));
+    }
+  }
+
+  return null;
+};
+
+const isSystemCaptureHotkey = (
+  event: KeyboardEvent,
+  hotkey: { enabled: boolean; modifiers: string[]; key: string }
+): boolean => {
+  if (!hotkey.enabled || !hotkey.key) {
+    return false;
+  }
+
+  // Check if all required modifiers are pressed
+  const modifiersMatch =
+    (!hotkey.modifiers.includes('ctrl') || event.ctrlKey) &&
+    (!hotkey.modifiers.includes('alt') || event.altKey) &&
+    (!hotkey.modifiers.includes('shift') || event.shiftKey) &&
+    (!hotkey.modifiers.includes('meta') || event.metaKey) &&
+    // Also check that ONLY the required modifiers are pressed
+    hotkey.modifiers.includes('ctrl') === event.ctrlKey &&
+    hotkey.modifiers.includes('alt') === event.altKey &&
+    hotkey.modifiers.includes('shift') === event.shiftKey &&
+    hotkey.modifiers.includes('meta') === event.metaKey;
+
+  if (!modifiersMatch) {
+    return false;
+  }
+
+  // Check if the key matches (case-insensitive)
+  const pressedKey = event.key.toLowerCase();
+  const configuredKey = hotkey.key.toLowerCase();
+
+  // Handle both event.key and event.code for better compatibility
+  if (pressedKey === configuredKey) {
+    return true;
+  }
+
+  // Handle digit keys generically - if configured key is a digit, check the code
+  if (configuredKey.match(/^[0-9]$/)) {
+    const digitCode = `Digit${configuredKey}`;
+    const numpadCode = `Numpad${configuredKey}`;
+    if (event.code === digitCode || event.code === numpadCode) {
+      return true;
+    }
+  }
+
+  // Handle function keys (F1-F12)
+  if (configuredKey.match(/^f([1-9]|1[0-2])$/i)) {
+    if (event.code.toLowerCase() === configuredKey.toLowerCase()) {
+      return true;
+    }
+  }
+
+  return false;
+};
 
 /**
  * Unified ChatPanel Component
@@ -180,6 +316,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
   const updateSelectedModel = useSettingsStore(state => state.updateSelectedModel);
   const getProviderTypeForModel = useSettingsStore(state => state.getProviderTypeForModel);
   const loadSettings = useSettingsStore(state => state.loadSettings);
+  const screenshotHotkey = useSettingsStore(state => state.settings.ui?.screenshotHotkey);
   const [settingsInitialized, setSettingsInitialized] = useState(false);
 
   // Load settings on mount and track when they're ready
@@ -285,10 +422,243 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
   const [editingMessage, setEditingMessage] = useState<{ id: string; content: string } | null>(
     null
   );
+  const [showScreenshotPreview, setShowScreenshotPreview] = useState(false);
+  const [screenshotPreview, setScreenshotPreview] = useState<ScreenshotPreviewData | null>(null);
+  const [, setScreenshotError] = useState<string | null>(null);
+  const [, setIsCapturingScreenshot] = useState(false);
+  const systemCaptureInProgressRef = useRef(false);
+
+  const handleCloseScreenshotPreview = useCallback(() => {
+    setScreenshotPreview(null);
+    setScreenshotError(null);
+    setShowScreenshotPreview(false);
+    setIsCapturingScreenshot(false);
+  }, []);
+
+  const handleUseScreenshot = useCallback(async () => {
+    if (!screenshotPreview?.dataUrl) {
+      showError('No screenshot available to use');
+      return;
+    }
+
+    if (!currentTabId) {
+      showError('No active tab available for attaching the image');
+      return;
+    }
+
+    const tabId = currentTabId;
+    const existingTab = tabStore.getTabContent(tabId);
+    const previousContent = existingTab?.extractedContent?.content;
+
+    // Close the preview window immediately
+    handleCloseScreenshotPreview();
+
+    // Optimistically switch to image mode while upload is in progress
+    const optimisticImageContent: ImageExtractedContent = {
+      type: 'image',
+      mimeType: 'image/png',
+      dataUrl: screenshotPreview.dataUrl,
+      uploadState: 'uploading',
+    };
+    tabStore.updateTabContent(tabId, optimisticImageContent);
+
+    try {
+      // Convert data URL to blob
+      const response = await fetch(screenshotPreview.dataUrl);
+      const blob = await response.blob();
+      const file = new File([blob], `screenshot_${Date.now()}.png`, { type: 'image/png' });
+
+      // Check current provider
+      const state = useSettingsStore.getState();
+      const currentModel = state.settings.selectedModel;
+      const currentProvider = state.getProviderTypeForModel(currentModel);
+
+      let imageReference: { fileUri?: string; fileId?: string; mimeType: string } | null = null;
+
+      if (currentProvider === 'gemini') {
+        const apiKey = state.settings.apiKeys.google;
+        if (!apiKey) {
+          setShowSettings(true);
+          throw new Error('Gemini API key is required for screenshot upload');
+        }
+
+        const geminiConfig: GeminiConfig = {
+          apiKey,
+          model: currentModel,
+        };
+
+        const metadata = await uploadFileToGemini(file, geminiConfig, {
+          displayName: `Screenshot_${Date.now()}`,
+          mimeType: 'image/png',
+        });
+
+        imageReference = {
+          fileUri: metadata.uri,
+          mimeType: 'image/png',
+        };
+      } else if (currentProvider === 'openai') {
+        const apiKey = state.settings.apiKeys.openai;
+        if (!apiKey) {
+          setShowSettings(true);
+          throw new Error('OpenAI API key is required for screenshot upload');
+        }
+
+        const openaiConfig: OpenAIConfig = {
+          apiKey,
+          model: currentModel,
+        };
+
+        const metadata = await uploadFileToOpenAI(file, openaiConfig, {
+          fileName: `screenshot_${Date.now()}.png`,
+          purpose: 'vision',
+        });
+
+        imageReference = {
+          fileId: metadata.id,
+          mimeType: 'image/png',
+        };
+      } else {
+        throw new Error(`Screenshot upload is not supported for ${currentProvider} provider`);
+      }
+
+      if (!imageReference) {
+        throw new Error('Unable to create image reference for screenshot');
+      }
+
+      // Replace current tab's content with the final image reference
+      const finalImageContent: ImageExtractedContent = {
+        type: 'image',
+        fileUri: imageReference.fileUri,
+        fileId: imageReference.fileId,
+        mimeType: imageReference.mimeType,
+        dataUrl: screenshotPreview.dataUrl,
+        uploadState: 'ready',
+      };
+
+      tabStore.updateTabContent(tabId, finalImageContent);
+
+      // Test the formatter with the updated content (best-effort)
+      try {
+        const { formatTabContent } = await import('@services/chat/contentFormatter');
+        const currentTabContentObj = tabStore.getTabContent(tabId);
+        if (currentTabContentObj) {
+          const testTabContent = {
+            ...currentTabContentObj,
+            extractedContent: {
+              ...currentTabContentObj.extractedContent,
+              content: finalImageContent,
+            },
+          };
+          formatTabContent('', [testTabContent]);
+        }
+      } catch (formatError) {
+        console.warn('Screenshot formatter verification failed', formatError);
+      }
+    } catch (error) {
+      // Revert to previous content on failure
+      if (previousContent !== undefined) {
+        tabStore.updateTabContent(tabId, previousContent as string | ImageExtractedContent);
+      } else {
+        tabStore.updateTabContent(tabId, '');
+      }
+
+      showError(error instanceof Error ? error.message : 'Failed to upload screenshot', 'error');
+    }
+  }, [screenshotPreview, currentTabId, showError, handleCloseScreenshotPreview, tabStore]);
+
+  const handleSystemClipboardCapture = useCallback(async () => {
+    if (systemCaptureInProgressRef.current) {
+      return;
+    }
+
+    const clipboardSupported = Boolean(
+      typeof navigator !== 'undefined' &&
+        navigator.clipboard &&
+        typeof navigator.clipboard.read === 'function'
+    );
+
+    if (!clipboardSupported) {
+      const message = 'Clipboard image access is not available in this browser.';
+      setScreenshotError(message);
+      setScreenshotPreview(null);
+      setShowScreenshotPreview(true);
+      showError(message);
+      return;
+    }
+
+    systemCaptureInProgressRef.current = true;
+
+    const captureStart = typeof performance !== 'undefined' ? performance.now() : Date.now();
+    const host = document.getElementById('ai-browser-sidebar-host');
+    const previousVisibility = host?.style.visibility;
+    const previousPointerEvents = host?.style.pointerEvents;
+
+    setScreenshotError(null);
+    setScreenshotPreview(null);
+    setShowScreenshotPreview(true);
+    setIsCapturingScreenshot(true);
+
+    if (host) {
+      host.style.visibility = 'hidden';
+      host.style.pointerEvents = 'none';
+    }
+
+    try {
+      await new Promise(resolve => setTimeout(resolve, SYSTEM_CAPTURE_HIDE_DELAY_MS));
+
+      const clipboardImage = await readClipboardImageWithRetries(
+        CLIPBOARD_POLL_ATTEMPTS,
+        CLIPBOARD_POLL_INTERVAL_MS
+      );
+
+      if (!clipboardImage) {
+        throw new Error(
+          'No screenshot found in the clipboard. Press Option+Shift+2 to capture and ensure the screenshot copies to the clipboard.'
+        );
+      }
+
+      const captureDuration =
+        (typeof performance !== 'undefined' ? performance.now() : Date.now()) - captureStart;
+
+      const resolvedWidth =
+        clipboardImage.width || (typeof window !== 'undefined' ? window.innerWidth : 0);
+      const resolvedHeight =
+        clipboardImage.height || (typeof window !== 'undefined' ? window.innerHeight : 0);
+
+      setScreenshotPreview({
+        dataUrl: clipboardImage.dataUrl,
+        width: resolvedWidth,
+        height: resolvedHeight,
+        capturedAt: Date.now(),
+        durationMs: captureDuration,
+        captureMethod: 'system-shortcut',
+        captureBeyondViewport: undefined,
+      });
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : 'Unable to read screenshot from clipboard';
+      setScreenshotError(message);
+      showError(`Screenshot failed: ${message}`);
+    } finally {
+      if (host) {
+        host.style.visibility = previousVisibility ?? '';
+        host.style.pointerEvents = previousPointerEvents ?? '';
+      }
+      setIsCapturingScreenshot(false);
+      systemCaptureInProgressRef.current = false;
+    }
+  }, [showError]);
 
   // Handle sending messages
   const handleSendMessage = useCallback(
-    async (userInput: string, metadata?: { expandedPrompt?: string; modelOverride?: string }) => {
+    async (
+      userInput: string,
+      metadata?: {
+        expandedPrompt?: string;
+        modelOverride?: string;
+        attachments?: Array<{ type: string; data?: string; fileUri?: string; mimeType?: string }>;
+      }
+    ) => {
       try {
         let isFirstMessage = false;
         let editedMessageMetadata: Record<string, unknown> = {};
@@ -325,6 +695,8 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
               ...metadata,
               // Store that a slash command was used if expanded prompt exists
               usedSlashCommand: !!metadata?.expandedPrompt,
+              // Include attachments if provided
+              ...(metadata?.attachments ? { attachments: metadata.attachments } : {}),
               // Pass model override if provided (from slash commands)
               ...(metadata?.modelOverride ? { modelOverride: metadata.modelOverride } : {}),
             };
@@ -540,6 +912,70 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
     [removeLoadedTab]
   );
 
+  // Handle image paste for providers that support file uploads
+  const handleImagePaste = useCallback(
+    async (file: File): Promise<{ fileUri?: string; fileId?: string; mimeType: string } | null> => {
+      try {
+        // Check if current provider is Gemini
+        const state = useSettingsStore.getState();
+        const currentModel = state.settings.selectedModel;
+        const currentProvider = state.getProviderTypeForModel(currentModel);
+
+        if (currentProvider === 'gemini') {
+          // Get Gemini config from API keys
+          const apiKey = state.settings.apiKeys.google;
+          if (!apiKey) {
+            throw new Error('Gemini API key is required for file upload');
+          }
+
+          const geminiConfig: GeminiConfig = {
+            apiKey,
+            model: currentModel,
+          };
+
+          const metadata = await uploadFileToGemini(file, geminiConfig, {
+            displayName: `Image_${Date.now()}`,
+            mimeType: file.type,
+          });
+
+          return {
+            fileUri: metadata.uri,
+            mimeType: file.type,
+          };
+        }
+
+        if (currentProvider === 'openai') {
+          const apiKey = state.settings.apiKeys.openai;
+          if (!apiKey) {
+            throw new Error('OpenAI API key is required for file upload');
+          }
+
+          const openaiConfig: OpenAIConfig = {
+            apiKey,
+            model: currentModel,
+          };
+
+          const metadata = await uploadFileToOpenAI(file, openaiConfig, {
+            fileName: file.name || `image_${Date.now()}`,
+            purpose: 'vision',
+          });
+
+          return {
+            fileId: metadata.id, // OpenAI uses fileId, not fileUri
+            mimeType: file.type,
+          };
+        }
+
+        // For other providers without upload support, return null so UI removes attachment
+        return null;
+      } catch (error) {
+        showError(error instanceof Error ? error.message : 'Failed to upload image');
+        return null;
+      }
+    },
+    [showError]
+  );
+
   const handleReextractTab = useCallback(
     (tabId: number, options?: { mode?: ExtractionMode }) => {
       // Re-extract tab content
@@ -606,6 +1042,20 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
   // Handle Escape key to cancel streaming or close sidebar
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      // Use empty hotkey if settings not loaded yet
+      const hotkey = screenshotHotkey || {
+        enabled: true,
+        modifiers: [],
+        key: '',
+      };
+
+      if (isSystemCaptureHotkey(e, hotkey)) {
+        if (!e.repeat) {
+          handleSystemClipboardCapture();
+        }
+        return;
+      }
+
       if (e.key === 'Escape') {
         // Don't close if the dropdown handled the event or if dropdown is visible
         if (e.defaultPrevented) return;
@@ -627,7 +1077,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
 
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [handleClose, isStreaming, cancelMessage]);
+  }, [handleClose, isStreaming, cancelMessage, handleSystemClipboardCapture, screenshotHotkey]);
 
   // Set tabindex for keyboard navigation but don't auto-focus to preserve selection
   useEffect(() => {
@@ -808,6 +1258,14 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
           />
         ))}
 
+      {showScreenshotPreview && (
+        <ScreenshotPreview
+          screenshot={screenshotPreview}
+          onClose={handleCloseScreenshotPreview}
+          onUseImage={handleUseScreenshot}
+        />
+      )}
+
       {showSettings ? (
         <div className="ai-sidebar-settings-panel">
           <Settings />
@@ -831,6 +1289,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
         onClearEdit={handleClearEdit}
         availableTabs={availableTabs}
         loadedTabs={loadedTabs}
+        onImagePaste={handleImagePaste}
         onTabRemove={handleRemoveTab}
         onMentionSelectTab={handleAddTab}
       />

@@ -304,7 +304,8 @@ describe('Gemini Request Builder', () => {
             attachments: [
               {
                 type: 'image',
-                data: 'data:image/jpeg;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==',
+                fileUri: 'https://generativelanguage.googleapis.com/v1beta/files/abc123',
+                mimeType: 'image/jpeg',
               },
             ],
           },
@@ -319,9 +320,9 @@ describe('Gemini Request Builder', () => {
           parts: [
             { text: 'Look at this image:' },
             {
-              inlineData: {
+              fileData: {
                 mimeType: 'image/jpeg',
-                data: 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==',
+                fileUri: 'https://generativelanguage.googleapis.com/v1beta/files/abc123',
               },
             },
           ],
@@ -338,11 +339,13 @@ describe('Gemini Request Builder', () => {
             attachments: [
               {
                 type: 'image',
-                data: 'data:image/png;base64,pngdata1',
+                fileUri: 'https://generativelanguage.googleapis.com/v1beta/files/png1',
+                mimeType: 'image/png',
               },
               {
                 type: 'image',
-                data: 'data:image/gif;base64,gifdata2',
+                fileUri: 'https://generativelanguage.googleapis.com/v1beta/files/gif2',
+                mimeType: 'image/gif',
               },
             ],
           },
@@ -354,15 +357,15 @@ describe('Gemini Request Builder', () => {
       expect(result[0].parts).toHaveLength(3);
       expect(result[0].parts[0]).toEqual({ text: 'Two images:' });
       expect(result[0].parts[1]).toEqual({
-        inlineData: {
+        fileData: {
           mimeType: 'image/png',
-          data: 'pngdata1',
+          fileUri: 'https://generativelanguage.googleapis.com/v1beta/files/png1',
         },
       });
       expect(result[0].parts[2]).toEqual({
-        inlineData: {
+        fileData: {
           mimeType: 'image/gif',
-          data: 'gifdata2',
+          fileUri: 'https://generativelanguage.googleapis.com/v1beta/files/gif2',
         },
       });
     });
@@ -409,25 +412,28 @@ describe('Gemini Request Builder', () => {
       }).toThrow('Unsupported media type: video');
     });
 
-    it('should throw error for unsupported image type', () => {
+    it('should skip attachments without fileUri', () => {
       const messages: ProviderChatMessage[] = [
         {
           role: 'user',
-          content: 'Unsupported image',
+          content: 'Missing fileUri',
           metadata: {
             attachments: [
               {
                 type: 'image',
-                data: 'data:image/bmp;base64,bmpdata',
+                mimeType: 'image/png',
+                // No fileUri provided
               },
             ],
           },
         },
       ];
 
-      expect(() => {
-        convertMessages(messages);
-      }).toThrow('Unsupported image type: image/bmp');
+      const result = convertMessages(messages);
+
+      // Should only have the text part, no image part
+      expect(result[0].parts).toHaveLength(1);
+      expect(result[0].parts[0]).toEqual({ text: 'Missing fileUri' });
     });
 
     it('should throw error for invalid image data format', () => {
@@ -744,7 +750,8 @@ describe('Gemini Request Builder', () => {
             attachments: [
               {
                 type: 'image',
-                data: 'data:image/png;base64,testdata',
+                fileUri: 'https://generativelanguage.googleapis.com/v1beta/files/testfile',
+                mimeType: 'image/png',
               },
             ],
           },
@@ -775,9 +782,9 @@ describe('Gemini Request Builder', () => {
       expect(request.contents[0].parts).toHaveLength(2);
       expect(request.contents[0].parts[0]).toEqual({ text: 'Analyze this image:' });
       expect(request.contents[0].parts[1]).toEqual({
-        inlineData: {
+        fileData: {
           mimeType: 'image/png',
-          data: 'testdata',
+          fileUri: 'https://generativelanguage.googleapis.com/v1beta/files/testfile',
         },
       });
       expect(request.generationConfig.maxOutputTokens).toBe(8192);
@@ -812,7 +819,8 @@ describe('Gemini Request Builder', () => {
             attachments: [
               {
                 type: 'image',
-                data: 'data:image/jpeg;base64,followupimage',
+                fileUri: 'https://generativelanguage.googleapis.com/v1beta/files/followup',
+                mimeType: 'image/jpeg',
               },
             ],
           },
@@ -837,7 +845,10 @@ describe('Gemini Request Builder', () => {
       expect(result[3].role).toBe('user');
       expect(result[3].parts).toHaveLength(2);
       expect(result[3].parts[0].text).toBe('Follow-up with image');
-      expect(result[3].parts[1].inlineData?.mimeType).toBe('image/jpeg');
+      expect(result[3].parts[1].fileData?.mimeType).toBe('image/jpeg');
+      expect(result[3].parts[1].fileData?.fileUri).toBe(
+        'https://generativelanguage.googleapis.com/v1beta/files/followup'
+      );
     });
   });
 
@@ -937,15 +948,19 @@ describe('Gemini Request Builder', () => {
             attachments: [
               {
                 type: 'image',
-                data: 'invalid-format',
+                mimeType: 'image/png',
+                // Missing fileUri - will be skipped
               },
               {
                 type: 'image',
-                data: 'data:image/png;base64,validdata',
+                fileUri: 'https://generativelanguage.googleapis.com/v1beta/files/valid',
+                mimeType: 'image/png',
               },
               {
                 type: 'image',
-                data: null,
+                fileUri: null,
+                mimeType: 'image/jpeg',
+                // Null fileUri - will be skipped
               },
             ],
           },
@@ -956,8 +971,10 @@ describe('Gemini Request Builder', () => {
 
       expect(result[0].parts).toHaveLength(2);
       expect(result[0].parts[0].text).toBe('Mixed attachments');
-      expect(result[0].parts[1].inlineData?.mimeType).toBe('image/png');
-      expect(result[0].parts[1].inlineData?.data).toBe('validdata');
+      expect(result[0].parts[1].fileData?.mimeType).toBe('image/png');
+      expect(result[0].parts[1].fileData?.fileUri).toBe(
+        'https://generativelanguage.googleapis.com/v1beta/files/valid'
+      );
     });
   });
 });

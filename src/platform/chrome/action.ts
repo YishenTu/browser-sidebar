@@ -22,7 +22,6 @@ export function addClickedListener(
       if (handleErrors) {
         const e = err instanceof Error ? err : new Error(String(err));
         if (onError) onError(e);
-        else console.error('Action click handler error:', e);
       }
     }
   };

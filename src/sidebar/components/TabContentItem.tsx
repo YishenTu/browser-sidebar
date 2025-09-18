@@ -7,9 +7,9 @@
  */
 
 import React, { useState } from 'react';
-import type { ExtractedContent } from '@/types/extraction';
+import type { ExtractedContent, ImageExtractedContent } from '@/types/extraction';
 import type { TabInfo } from '@/types/tabs';
-import { ExtractionMode } from '@/types/extraction';
+import { ExtractionMode, isImageExtractedContent } from '@/types/extraction';
 import { Spinner } from '@ui/Spinner';
 import { Alert } from '@ui/Alert';
 // Badge imported but not used - removed
@@ -75,15 +75,30 @@ export const TabContentItem: React.FC<TabContentItemProps> = ({
     ? getSessionMessageCount(currentSession.tabId, currentSession.url) > 0
     : false;
 
+  // Resolve image content (if present)
+  const imageContent: ImageExtractedContent | null =
+    content?.content &&
+    typeof content.content === 'object' &&
+    isImageExtractedContent(content.content)
+      ? content.content
+      : null;
+
+  const isImageContent = Boolean(imageContent);
+
+  // Get image data URL if it's an image content
+  const imageDataUrl = imageContent?.dataUrl ?? null;
+  const isImageUploading = imageContent?.uploadState === 'uploading';
+  const hasImageReference = Boolean(imageContent && (imageContent.fileUri || imageContent.fileId));
+
   // Unified display: Extract plain text from whatever content is available
   let displayText = '';
-  if (content) {
+  if (content && !isImageContent) {
     // Priority: textContent > excerpt > extract from content field
     if (content.textContent && content.textContent.trim()) {
       displayText = content.textContent;
     } else if (content.excerpt && content.excerpt.trim()) {
       displayText = content.excerpt;
-    } else if (content.content) {
+    } else if (content.content && typeof content.content === 'string') {
       // Extract plain text from markdown/HTML content field
       const tempDiv = document.createElement('div');
       tempDiv.innerHTML = content.content;
@@ -187,19 +202,25 @@ export const TabContentItem: React.FC<TabContentItemProps> = ({
               </div>
             </div>
           </div>
-          {(isHovered || !isCollapsed) && onClearContent && (
-            <button
-              className="content-preview-header-close"
-              onClick={e => {
-                e.stopPropagation();
-                onClearContent();
-              }}
-              aria-label="Clear content"
-              title="Clear content"
-            >
-              <CloseIcon size={12} />
-            </button>
-          )}
+          {/* Show both image badge and close button when appropriate */}
+          <div className="content-preview-header-actions">
+            {isImageContent && !isImageUploading && hasImageReference && isCollapsed && (
+              <span className="content-preview-badge content-preview-badge--image">Image</span>
+            )}
+            {(isHovered || !isCollapsed) && onClearContent && (
+              <button
+                className="content-preview-header-close"
+                onClick={e => {
+                  e.stopPropagation();
+                  onClearContent();
+                }}
+                aria-label="Clear content"
+                title="Clear content"
+              >
+                <CloseIcon size={12} />
+              </button>
+            )}
+          </div>
         </div>
       );
     }
@@ -269,41 +290,83 @@ export const TabContentItem: React.FC<TabContentItemProps> = ({
                   <p>Extracting webpage content...</p>
                 </div>
               ) : content ? (
-                <div className="content-preview-content">
-                  {/* Content excerpt with proper truncation */}
-                  {excerpt && (
-                    <div className="content-preview-excerpt">
-                      <p>{excerpt}</p>
+                <div
+                  className={`content-preview-content ${isImageContent ? 'content-preview-content--image' : ''}`}
+                >
+                  {/* Show image preview or text excerpt based on content type */}
+                  {isImageContent ? (
+                    <div className="content-preview-image-container">
+                      <div className="content-preview-image-scroll">
+                        {imageDataUrl ? (
+                          <img
+                            src={imageDataUrl}
+                            alt="Screenshot preview"
+                            className="content-preview-image-thumbnail"
+                            loading="lazy"
+                          />
+                        ) : (
+                          <>
+                            <div className="content-preview-image-badge">📷 Screenshot content</div>
+                            <p className="content-preview-image-description">
+                              This tab contains a screenshot image that will be sent with your
+                              message.
+                            </p>
+                          </>
+                        )}
+                      </div>
+                      {isImageUploading && (
+                        <div className="content-preview-image-uploading">
+                          <Spinner size="sm" />
+                          <span>Uploading image...</span>
+                        </div>
+                      )}
                     </div>
+                  ) : (
+                    excerpt && (
+                      <div className="content-preview-excerpt">
+                        <p>{excerpt}</p>
+                      </div>
+                    )
                   )}
 
                   {/* Actions row - debug info and buttons on new row */}
                   <div className="content-preview-actions-row">
-                    {/* Debug: Show content length */}
-                    {content.content && (
+                    {/* Debug: Show content info */}
+                    {!isImageContent && content.content && (
                       <div className="content-preview-debug-info">
-                        Length: {content.content?.length || 0}
+                        Length: {typeof content.content === 'string' ? content.content.length : 0}
                       </div>
                     )}
 
                     {/* Action buttons */}
                     <div className="content-preview-action-buttons">
-                      {truncated && <span className="content-preview-badge">Truncated</span>}
-                      {content?.extractionMethod === 'raw' && (
-                        <span className="content-preview-badge content-preview-badge--raw">
-                          Raw
+                      {/* Show badges based on content type */}
+                      {isImageContent ? (
+                        <span className="content-preview-badge content-preview-badge--image">
+                          {isImageUploading ? 'Uploading...' : 'Image'}
                         </span>
+                      ) : (
+                        <>
+                          {truncated && <span className="content-preview-badge">Truncated</span>}
+                          {content?.extractionMethod === 'raw' && (
+                            <span className="content-preview-badge content-preview-badge--raw">
+                              Raw
+                            </span>
+                          )}
+                          {content?.extractionMethod === 'readability' && (
+                            <span className="content-preview-badge content-preview-badge--readability">
+                              Readability
+                            </span>
+                          )}
+                          {content?.extractionMethod === 'defuddle' && (
+                            <span className="content-preview-badge content-preview-badge--defuddle">
+                              Defuddle
+                            </span>
+                          )}
+                        </>
                       )}
-                      {content?.extractionMethod === 'readability' && (
-                        <span className="content-preview-badge content-preview-badge--readability">
-                          Readability
-                        </span>
-                      )}
-                      {content?.extractionMethod === 'defuddle' && (
-                        <span className="content-preview-badge content-preview-badge--defuddle">
-                          Defuddle
-                        </span>
-                      )}
+
+                      {/* Extraction buttons - always show for re-extraction */}
                       {/* Readability Mode button - default clean extraction */}
                       <button
                         onClick={e => {
@@ -312,7 +375,11 @@ export const TabContentItem: React.FC<TabContentItemProps> = ({
                           onReextract({ mode: ExtractionMode.READABILITY });
                         }}
                         className="content-preview-readability-inline content-preview-extraction-button"
-                        title="Extract with Readability (default clean extraction)"
+                        title={
+                          isImageContent
+                            ? 'Extract text with Readability'
+                            : 'Extract with Readability (default clean extraction)'
+                        }
                         aria-label="Extract with Readability"
                       >
                         R
@@ -325,7 +392,11 @@ export const TabContentItem: React.FC<TabContentItemProps> = ({
                           onReextract({ mode: ExtractionMode.DEFUDDLE });
                         }}
                         className="content-preview-defuddle-inline content-preview-extraction-button"
-                        title="Extract with Defuddle (alternative method)"
+                        title={
+                          isImageContent
+                            ? 'Extract text with Defuddle'
+                            : 'Extract with Defuddle (alternative method)'
+                        }
                         aria-label="Extract with Defuddle"
                       >
                         D
@@ -338,22 +409,30 @@ export const TabContentItem: React.FC<TabContentItemProps> = ({
                           onReextract({ mode: ExtractionMode.RAW });
                         }}
                         className="content-preview-raw-inline content-preview-extraction-button"
-                        title="Extract with Raw HTML (preserves tables)"
+                        title={
+                          isImageContent
+                            ? 'Extract text with Raw HTML'
+                            : 'Extract with Raw HTML (preserves tables)'
+                        }
                         aria-label="Extract in Raw Mode"
                       >
                         H
                       </button>
-                      <button
-                        onClick={e => {
-                          e.stopPropagation();
-                          setShowFullContent(true);
-                        }}
-                        className="content-preview-expand-inline"
-                        title="View full content"
-                        aria-label="View full content"
-                      >
-                        <ExpandIcon size={14} />
-                      </button>
+
+                      {/* Expand button - only show for text content */}
+                      {!isImageContent && (
+                        <button
+                          onClick={e => {
+                            e.stopPropagation();
+                            setShowFullContent(true);
+                          }}
+                          className="content-preview-expand-inline"
+                          title="View full content"
+                          aria-label="View full content"
+                        >
+                          <ExpandIcon size={14} />
+                        </button>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -374,7 +453,9 @@ export const TabContentItem: React.FC<TabContentItemProps> = ({
         className="content-full-modal"
         editable={!!content && !isEditDisabled}
         content={
-          editedContent !== null ? editedContent : content?.content || content?.textContent || ''
+          editedContent !== null
+            ? editedContent
+            : (typeof content?.content === 'string' ? content.content : content?.textContent) || ''
         }
         edited={editedContent !== null}
         onContentSave={newContent => {

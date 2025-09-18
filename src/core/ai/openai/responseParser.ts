@@ -45,8 +45,13 @@ export function parseResponse(
     if (hasWebSearch && messages) {
       // Use dynamic import to avoid circular dependency
       // eslint-disable-next-line @typescript-eslint/no-var-requires
-      const { createFallbackSearchMetadata } = require('./searchMetadata');
-      searchMetadata = createFallbackSearchMetadata(undefined, messages);
+      const searchMetadataModule = require('./searchMetadata') as {
+        createFallbackSearchMetadata: (
+          query?: string,
+          messageHistory?: ProviderChatMessage[]
+        ) => SearchMetadata | null;
+      };
+      searchMetadata = searchMetadataModule.createFallbackSearchMetadata(undefined, messages);
     }
   }
 

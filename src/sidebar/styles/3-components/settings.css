@@ -7,6 +7,35 @@
   overscroll-behavior: contain; /* prevent scroll chaining to page */
 }
 
+/* Hotkey Input Styles */
+.settings-hotkey-input {
+  min-height: 38px;
+  font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Fira Code', monospace;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.settings-hotkey-input:focus {
+  outline: 2px solid rgba(59, 130, 246, 0.5);
+  outline-offset: -1px;
+}
+
+.settings-hotkey-input.recording {
+  animation: pulse-recording 1.5s ease-in-out infinite;
+  background-color: rgba(59, 130, 246, 0.1) !important;
+  border-color: rgba(59, 130, 246, 0.5) !important;
+}
+
+@keyframes pulse-recording {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.7;
+  }
+}
+
 .settings-title {
   font-size: 18px;
   font-weight: 600;

@@ -138,3 +138,4 @@ All modules use path aliases configured in `vite.config.ts` and `tsconfig.json`:
 - Message rendering: <20ms per message
 - Content extraction: <500ms average
 - Memory baseline: <50MB
+- run `npx vite build` every time files were edited.

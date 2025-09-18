@@ -124,6 +124,47 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
     return null;
   };
 
+  // Render image attachments for user messages
+  const renderImageAttachments = (): React.ReactElement | null => {
+    if (
+      message.role === 'user' &&
+      message.metadata?.['attachments'] &&
+      Array.isArray(message.metadata['attachments'])
+    ) {
+      const attachments = message.metadata['attachments'] as Array<{
+        type: string;
+        fileUri?: string;
+        mimeType?: string;
+        data?: string;
+      }>;
+
+      const imageAttachments = attachments.filter(att => att.type === 'image');
+
+      if (imageAttachments.length > 0) {
+        return (
+          <div className="message-image-attachments">
+            {imageAttachments.map((img, index) => (
+              <div key={index} className="message-image-attachment">
+                {img.data ? (
+                  <img
+                    src={img.data}
+                    alt={`Attached image ${index + 1}`}
+                    className="message-image-attachment__img"
+                  />
+                ) : (
+                  <div className="message-image-attachment__placeholder">
+                    <span>Image uploaded</span>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        );
+      }
+    }
+    return null;
+  };
+
   return (
     <div
       className={`message-row message-row--${message.role}${className ? ` ${className}` : ''}`}
@@ -133,6 +174,7 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
     >
       <div className={`message-content-wrapper message-content-wrapper--${message.role}`}>
         {renderTruncationWarning()}
+        {renderImageAttachments()}
         {message.role === 'assistant' && message.metadata?.['thinking'] ? (
           <ThinkingWrapper
             thinking={message.metadata['thinking'] as string}

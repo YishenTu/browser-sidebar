@@ -82,4 +82,118 @@ describe('OpenAI requestBuilder', () => {
     expect(firstContent[0].type).toBe('input_text');
     expect(firstContent[0].text).toBe('hello world');
   });
+
+  it('includes image attachments as input_image_file content when present', () => {
+    const messages = [
+      {
+        id: 'u1',
+        role: 'user' as const,
+        content: 'Please review this screenshot',
+        timestamp: new Date(),
+        metadata: {
+          attachments: [
+            {
+              type: 'image',
+              fileId: 'file-abc123',
+              mimeType: 'image/png',
+              detail: 'high',
+            },
+          ],
+        },
+      },
+      {
+        id: 'a1',
+        role: 'assistant' as const,
+        content: 'Looks good to me!',
+        timestamp: new Date(),
+      },
+    ];
+
+    const req = buildRequest(messages, baseConfig);
+
+    expect(req.input).toBeTruthy();
+    const firstInput = req.input?.[0];
+    expect(firstInput?.role).toBe('user');
+    const parts = firstInput?.content as Array<Record<string, unknown>>;
+    expect(parts).toHaveLength(2);
+    expect(parts[0]).toMatchObject({ type: 'input_text', text: 'Please review this screenshot' });
+    expect(parts[1]).toMatchObject({ type: 'input_image', file_id: 'file-abc123', detail: 'high' });
+  });
+
+  it('omits placeholder text when only image attachments are present', () => {
+    const messages = [
+      {
+        id: 'u1',
+        role: 'user' as const,
+        content: '[Image]',
+        timestamp: new Date(),
+        metadata: {
+          attachments: [
+            {
+              type: 'image',
+              fileId: 'file-only-image',
+              mimeType: 'image/jpeg',
+            },
+          ],
+        },
+      },
+    ];
+
+    const req = buildRequest(messages, baseConfig);
+
+    expect(req.input).toHaveLength(1);
+    const parts = req.input?.[0].content as Array<Record<string, unknown>>;
+    expect(parts).toHaveLength(1);
+    expect(parts[0]).toMatchObject({
+      type: 'input_image',
+      file_id: 'file-only-image',
+      detail: 'auto',
+    });
+  });
+
+  it('retains attachments when continuing a conversation with previousResponseId', () => {
+    const messages = [
+      {
+        id: 'u1',
+        role: 'user' as const,
+        content: 'Earlier chat',
+        timestamp: new Date(),
+      },
+      {
+        id: 'a1',
+        role: 'assistant' as const,
+        content: 'Previous response',
+        timestamp: new Date(),
+      },
+      {
+        id: 'u2',
+        role: 'user' as const,
+        content: '[Image]',
+        timestamp: new Date(),
+        metadata: {
+          attachments: [
+            {
+              type: 'image',
+              fileId: 'file-followup',
+              mimeType: 'image/png',
+            },
+          ],
+        },
+      },
+    ];
+
+    const req = buildRequest(messages, baseConfig, {
+      previousResponseId: 'resp_continue',
+    });
+
+    expect(req.previous_response_id).toBe('resp_continue');
+    expect(req.input).toHaveLength(1);
+    const parts = req.input?.[0].content as Array<Record<string, unknown>>;
+    expect(parts).toHaveLength(1);
+    expect(parts[0]).toMatchObject({
+      type: 'input_image',
+      file_id: 'file-followup',
+      detail: 'auto',
+    });
+  });
 });

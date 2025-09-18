@@ -67,8 +67,7 @@ export function useSessionManager() {
           // Switch to the appropriate session for this tab+URL
           switchSession(tabId, url);
         }
-      } catch (error) {
-        console.error('Failed to initialize session:', error);
+      } catch {
         // Continue without session - app can still function
       }
     }

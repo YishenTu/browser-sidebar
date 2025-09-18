@@ -32,11 +32,8 @@ export async function trySitePlugins(
       if (!plugin.matches(doc)) continue;
       const result = await plugin.extract(doc, options);
       if (result) return result;
-    } catch (e) {
+    } catch {
       // Fail-soft: continue to next plugin
-      if (typeof console !== 'undefined' && import.meta.env.DEV) {
-        console.warn('[SitePlugin]', plugin.id, 'failed:', e);
-      }
     }
   }
   return null;

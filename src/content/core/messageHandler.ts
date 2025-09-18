@@ -38,7 +38,7 @@ async function handleContentExtraction(message: Message): Promise<Message> {
     const extractedContent = await extractContent(extractionOptions, mode);
 
     const responsePayload = {
-      text: extractedContent.content,
+      text: typeof extractedContent.content === 'string' ? extractedContent.content : '',
       title: extractedContent.title,
       url: extractedContent.url,
       metadata: {

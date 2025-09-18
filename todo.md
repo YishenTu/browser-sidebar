@@ -20,4 +20,5 @@
 - [x] 18. architecture refactor
 - [ ] 19. optimize raw extraction
 - [x] 20. add readability extraction
-- [ ] 21. assign extraction method for different domain
+- [x] 21. assign extraction method for different domain
+- [x] 22. full page captured as extracted content

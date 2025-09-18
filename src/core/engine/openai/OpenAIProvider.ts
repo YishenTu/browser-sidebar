@@ -11,6 +11,7 @@ import {
 } from '@/core/ai/openai/errorHandler';
 import { handleStreamSearchMetadata } from '@/core/ai/openai/searchMetadata';
 import { getModelsByProvider, getModelById, modelExists, type ModelConfig } from '@/config/models';
+import { debugLog } from '@/utils/debug';
 import type { Transport } from '@/transport/types';
 import type {
   ProviderConfig,
@@ -118,7 +119,10 @@ export class OpenAIProvider extends BaseEngine {
           systemPrompt: config?.systemPrompt,
         });
 
-        // OpenAI request logging removed for production
+        // Log the actual OpenAI request
+        debugLog('OpenAIProvider', '=== OpenAI Request ===');
+        debugLog('OpenAIProvider', JSON.stringify(request, null, 2));
+        debugLog('OpenAIProvider', '=====================');
 
         const transportRequest = {
           url: 'https://api.openai.com/v1/responses',

@@ -154,8 +154,8 @@ export class OpenRouterProvider extends BaseEngine {
           const parsed = JSON.parse(data);
           const processedChunk = processStreamChunk(parsed);
           if (processedChunk) yield processedChunk;
-        } catch (e) {
-          console.warn('Failed to parse SSE chunk:', e);
+        } catch {
+          // Skip malformed SSE chunks
         }
       }
     }

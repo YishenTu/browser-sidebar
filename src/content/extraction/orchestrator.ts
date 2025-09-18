@@ -239,47 +239,29 @@ async function performExtraction(
   // Execute the selected extraction method
   // Each method handles its own processing internally
   switch (mode) {
-    case ExtractionMode.READABILITY:
-      try {
-        const readabilityExtractor = await getReadabilityExtractor();
-        result = await readabilityExtractor.extractWithReadability({
-          includeLinks,
-          debug: DEBUG,
-        });
-      } catch (error) {
-        if (DEBUG) {
-          console.error('[READABILITY] Extraction failed:', error);
-        }
-        throw error;
-      }
+    case ExtractionMode.READABILITY: {
+      const readabilityExtractor = await getReadabilityExtractor();
+      result = await readabilityExtractor.extractWithReadability({
+        includeLinks,
+        debug: DEBUG,
+      });
       break;
+    }
 
-    case ExtractionMode.RAW:
-      try {
-        const rawExtractor = await getRawExtractor();
-        // Raw extractor uses its own default settings
-        result = await rawExtractor.extractWithRaw();
-      } catch (error) {
-        if (DEBUG) {
-          console.error('[RAW] Extraction failed:', error);
-        }
-        throw error;
-      }
+    case ExtractionMode.RAW: {
+      const rawExtractor = await getRawExtractor();
+      // Raw extractor uses its own default settings
+      result = await rawExtractor.extractWithRaw();
       break;
+    }
 
-    case ExtractionMode.DEFUDDLE:
-      try {
-        const defuddleExtractor = await getDefuddleExtractor();
-        // Pass the full HTML snapshot for Defuddle to process
-        const originalHtmlSnapshot = document.documentElement?.outerHTML || '';
-        result = await defuddleExtractor.extractWithDefuddle(originalHtmlSnapshot);
-      } catch (error) {
-        if (DEBUG) {
-          console.error('[DEFUDDLE] Extraction failed:', error);
-        }
-        throw error;
-      }
+    case ExtractionMode.DEFUDDLE: {
+      const defuddleExtractor = await getDefuddleExtractor();
+      // Pass the full HTML snapshot for Defuddle to process
+      const originalHtmlSnapshot = document.documentElement?.outerHTML || '';
+      result = await defuddleExtractor.extractWithDefuddle(originalHtmlSnapshot);
       break;
+    }
 
     case ExtractionMode.SELECTION: {
       // Special case: extract only selected text

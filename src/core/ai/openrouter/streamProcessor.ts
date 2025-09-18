@@ -34,9 +34,9 @@ export function processStreamChunk(chunk: ChatCompletionChunk): StreamChunk | nu
   // Map OpenAI SDK chunk to our format
   const streamChunk: StreamChunk = {
     id: chunk.id,
-    object: chunk.object,
-    created: chunk.created,
-    model: chunk.model,
+    object: chunk.object ?? 'chat.completion.chunk',
+    created: chunk.created ?? Date.now(),
+    model: chunk.model ?? 'openrouter-unknown',
     choices: [],
     usage: chunk.usage
       ? {
@@ -277,8 +277,8 @@ export function processSSELine(line: string): StreamChunk | null {
     }
 
     return streamChunk;
-  } catch (error) {
-    console.error('Failed to parse SSE line:', error);
+  } catch {
+    // Skip malformed SSE lines
     return null;
   }
 }

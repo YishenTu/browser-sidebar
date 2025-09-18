@@ -4,7 +4,7 @@
   "version": "0.1.0",
   "description": "Chat with any webpage using AI. Privacy-focused extension with BYOK (Bring Your Own Key) support.",
 
-  "permissions": ["storage", "tabs", "activeTab", "scripting"],
+  "permissions": ["storage", "tabs", "activeTab", "scripting", "clipboardRead"],
 
   "host_permissions": [
     "<all_urls>",

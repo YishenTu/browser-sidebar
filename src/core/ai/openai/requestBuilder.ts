@@ -6,7 +6,12 @@
  */
 
 import type { ProviderChatMessage, OpenAIConfig } from '../../../types/providers';
-import type { OpenAIResponseRequest, OpenAIChatConfig } from './types';
+import type {
+  OpenAIResponseRequest,
+  OpenAIChatConfig,
+  OpenAIInputContent,
+  OpenAIImageDetail,
+} from './types';
 
 /**
  * Build complete OpenAI Responses API request
@@ -43,65 +48,19 @@ export function buildRequest(
     // We have a previous response ID from the last OpenAI call
     // This means we're continuing an OpenAI conversation
     request.previous_response_id = chatConfig.previousResponseId;
+
     // Only include the LAST user message (the new input)
-    // The Response API maintains previous context server-side
     const userMessages = messages.filter(m => m.role === 'user');
     const lastUserMessage = userMessages[userMessages.length - 1];
-    if (lastUserMessage) {
-      request.input = [
-        {
-          role: 'user',
-          content: [
-            {
-              type: 'input_text',
-              text: lastUserMessage.content,
-            },
-          ],
-        },
-      ];
+    const normalizedLastUser = lastUserMessage ? mapMessageToOpenAIInput(lastUserMessage) : null;
+
+    if (normalizedLastUser) {
+      request.input = [normalizedLastUser];
     }
   } else {
-    // No previous response ID - either:
-    // 1. First message in conversation
-    // 2. Switched from another provider
-    // 3. Switched back to OpenAI after using another provider
-    // In all cases, send full conversation history
-
-    const hasAssistantMessages = messages.some(m => m.role === 'assistant');
-
-    if (hasAssistantMessages) {
-      // Mid-conversation with prior assistant turns (likely from a different provider)
-      // The Responses API requires assistant turns to be provided as output_text,
-      // while user turns remain input_text.
-      request.input = messages.map(m => {
-        const role = m.role as 'user' | 'assistant';
-        const isAssistant = role === 'assistant';
-        return {
-          role,
-          content: [
-            {
-              type: isAssistant ? 'output_text' : 'input_text',
-              text: m.content,
-            },
-          ],
-        };
-      });
-    } else {
-      // First message in conversation - only include the user message
-      const firstUserMessage = messages.find(m => m.role === 'user');
-      if (firstUserMessage) {
-        request.input = [
-          {
-            role: 'user',
-            content: [
-              {
-                type: 'input_text',
-                text: firstUserMessage.content,
-              },
-            ],
-          },
-        ];
-      }
+    const conversationInputs = buildConversationInputs(messages);
+    if (conversationInputs.length > 0) {
+      request.input = conversationInputs;
     }
   }
 
@@ -120,6 +79,219 @@ export function buildRequest(
   }
 
   return request;
+}
+
+function buildConversationInputs(
+  messages: ProviderChatMessage[]
+): Array<{ role: 'user' | 'assistant'; content: OpenAIInputContent[] }> {
+  const nonSystemMessages = messages.filter(m => m.role !== 'system');
+  const hasAssistantMessages = nonSystemMessages.some(m => m.role === 'assistant');
+
+  if (hasAssistantMessages) {
+    return nonSystemMessages
+      .map(mapMessageToOpenAIInput)
+      .filter(
+        (entry): entry is { role: 'user' | 'assistant'; content: OpenAIInputContent[] } =>
+          entry !== null
+      );
+  }
+
+  const firstUserMessage = nonSystemMessages.find(m => m.role === 'user');
+  const normalized = firstUserMessage ? mapMessageToOpenAIInput(firstUserMessage) : null;
+  return normalized ? [normalized] : [];
+}
+
+function mapMessageToOpenAIInput(
+  message: ProviderChatMessage
+): { role: 'user' | 'assistant'; content: OpenAIInputContent[] } | null {
+  if (message.role === 'system') {
+    return null;
+  }
+
+  const role = message.role === 'assistant' ? 'assistant' : 'user';
+  const content = buildContentParts(message, role);
+
+  if (content.length === 0) {
+    return null;
+  }
+
+  return {
+    role,
+    content,
+  };
+}
+
+function buildContentParts(
+  message: ProviderChatMessage,
+  role: 'user' | 'assistant'
+): OpenAIInputContent[] {
+  const parts: OpenAIInputContent[] = [];
+  const attachments = role === 'user' ? extractImageAttachments(message) : [];
+  const trimmed = message.content?.trim();
+
+  // Check if the message has sections metadata (from formatTabContent)
+  const sections = message.metadata?.['sections'] as
+    | {
+        systemInstruction?: string;
+        tabContent?: string;
+        userQuery?: string;
+      }
+    | undefined;
+
+  if (sections && role === 'user') {
+    // If we have sections, add them as separate text parts
+    if (sections.systemInstruction !== undefined) {
+      parts.push({
+        type: 'input_text',
+        text: sections.systemInstruction,
+      });
+    }
+    // Handle tabContent section - may contain images
+    if (sections.tabContent !== undefined && sections.tabContent !== '') {
+      // Parse the tabContent to check for image references
+      const tabContentParts = parseTabContentForImages(sections.tabContent);
+      parts.push(...tabContentParts);
+    }
+    if (sections.userQuery !== undefined) {
+      parts.push({
+        type: 'input_text',
+        text: sections.userQuery,
+      });
+    }
+  } else if (trimmed && !(attachments.length > 0 && isPlaceholderContent(trimmed))) {
+    // Otherwise use the regular content
+    parts.push({
+      type: role === 'assistant' ? 'output_text' : 'input_text',
+      text: trimmed,
+    });
+  }
+
+  if (role === 'user') {
+    for (const attachment of attachments) {
+      // OpenAI uses fileId, not fileUri
+      const fileId = attachment.fileId;
+      if (!fileId) {
+        continue;
+      }
+
+      const detail = normalizeImageDetail(attachment.detail) ?? 'auto';
+      parts.push({
+        type: 'input_image',
+        file_id: fileId,
+        detail,
+      });
+    }
+  }
+
+  return parts;
+}
+
+function extractImageAttachments(message: ProviderChatMessage): Array<{
+  fileId?: string;
+  detail?: unknown;
+}> {
+  if (!message.metadata || !('attachments' in message.metadata)) {
+    return [];
+  }
+
+  const raw = message.metadata['attachments'];
+  if (!Array.isArray(raw)) {
+    return [];
+  }
+
+  return raw.filter(
+    att => att && typeof att === 'object' && (att as { type?: string }).type === 'image'
+  ) as Array<{
+    fileId?: string;
+    detail?: unknown;
+  }>;
+}
+
+function normalizeImageDetail(detail: unknown): OpenAIImageDetail | undefined {
+  if (typeof detail !== 'string') {
+    return undefined;
+  }
+
+  const normalized = detail.toLowerCase() as OpenAIImageDetail;
+  if (normalized === 'auto' || normalized === 'low' || normalized === 'high') {
+    return normalized;
+  }
+
+  return undefined;
+}
+
+function isPlaceholderContent(content: string): boolean {
+  return content === '[Image]' || content === '[Images]';
+}
+
+/**
+ * Parse tab content for image references and split into text and image parts
+ */
+function parseTabContentForImages(tabContent: string): OpenAIInputContent[] {
+  const parts: OpenAIInputContent[] = [];
+
+  // Check if the tab content contains image references
+  const imageFileIdMatch = /<content\s+type="image">\s*<fileId>([^<]+)<\/fileId>/g;
+
+  let lastIndex = 0;
+  let match;
+  let hasImage = false;
+
+  // Find all image references in the content
+  const matches: Array<{ fileId: string; start: number; end: number }> = [];
+  while ((match = imageFileIdMatch.exec(tabContent)) !== null) {
+    matches.push({
+      fileId: match[1] || '',
+      start: match.index,
+      end: match.index + match[0].length,
+    });
+    hasImage = true;
+  }
+
+  if (!hasImage) {
+    // No images, return the entire content as text
+    parts.push({
+      type: 'input_text',
+      text: tabContent,
+    });
+    return parts;
+  }
+
+  // Split content around image references
+  for (const imageMatch of matches) {
+    // Add text before the image
+    if (imageMatch.start > lastIndex) {
+      const textBefore = tabContent.substring(lastIndex, imageMatch.start);
+      if (textBefore.trim()) {
+        parts.push({
+          type: 'input_text',
+          text: textBefore,
+        });
+      }
+    }
+
+    // Add the image reference
+    parts.push({
+      type: 'input_image',
+      file_id: imageMatch.fileId,
+      detail: 'auto',
+    });
+
+    lastIndex = imageMatch.end;
+  }
+
+  // Add any remaining text after the last image
+  if (lastIndex < tabContent.length) {
+    const textAfter = tabContent.substring(lastIndex);
+    if (textAfter.trim()) {
+      parts.push({
+        type: 'input_text',
+        text: textAfter,
+      });
+    }
+  }
+
+  return parts;
 }
 
 /**

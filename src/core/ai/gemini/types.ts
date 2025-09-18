@@ -8,7 +8,7 @@ import type { FinishReason, ThinkingBudget } from '@/types/providers';
 export interface GeminiPart {
   text?: string;
   thinking?: string;
-  inlineData?: { mimeType: string; data: string };
+  fileData?: { mimeType: string; fileUri: string };
 }
 
 export interface GeminiContent {

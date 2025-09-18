@@ -6,13 +6,14 @@
 
 import { create } from 'zustand';
 import { TabContent } from '../../../types/tabs';
+import type { ImageExtractedContent } from '../../../types/extraction';
 import { useSessionStore } from './sessionStore';
 
 export interface TabState {
   // Actions for tab state management
   setLoadedTabs: (tabs: Record<number, TabContent>) => void;
   addLoadedTab: (tabId: number, tabContent: TabContent) => void;
-  updateTabContent: (tabId: number, editedContent: string) => void;
+  updateTabContent: (tabId: number, editedContent: string | ImageExtractedContent) => void;
   removeLoadedTab: (tabId: number) => void;
   setCurrentTabId: (tabId: number | null) => void;
   setHasAutoLoaded: (value: boolean) => void;
@@ -52,7 +53,7 @@ export const useTabStore = create<TabState>(() => ({
     }
   },
 
-  updateTabContent: (tabId: number, editedContent: string) => {
+  updateTabContent: (tabId: number, editedContent: string | ImageExtractedContent) => {
     const sessionStore = useSessionStore.getState();
     const session = sessionStore.getActiveSession();
 

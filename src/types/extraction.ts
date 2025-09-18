@@ -36,6 +36,16 @@ export enum ExtractionMode {
  * web page content through various extraction methods like Readability.js
  * or fallback techniques.
  */
+export interface ImageExtractedContent {
+  type: 'image';
+  fileUri?: string;
+  fileId?: string;
+  mimeType: string;
+  dataUrl: string;
+  uploadState?: 'uploading' | 'ready' | 'error';
+  errorMessage?: string;
+}
+
 export interface ExtractedContent {
   /** Page title extracted from document title or meta tags */
   title: string;
@@ -46,8 +56,8 @@ export interface ExtractedContent {
   /** Domain name of the source website */
   domain: string;
 
-  /** Main content converted to markdown format */
-  content: string;
+  /** Main content converted to markdown format or image reference */
+  content: string | ImageExtractedContent;
 
   /** Main content in markdown format (alias for compatibility) */
   markdown?: string;
@@ -126,6 +136,46 @@ export const DEFAULT_EXTRACTION_OPTIONS = {
 // ============================================================================
 
 /**
+ * Type guard to check if an object is a valid image content payload
+ */
+export function isImageExtractedContent(obj: unknown): obj is ImageExtractedContent {
+  if (typeof obj !== 'object' || obj === null) {
+    return false;
+  }
+
+  const content = obj as Record<string, unknown>;
+
+  if (content['type'] !== 'image') {
+    return false;
+  }
+
+  if (typeof content['mimeType'] !== 'string' || typeof content['dataUrl'] !== 'string') {
+    return false;
+  }
+
+  if (content['fileUri'] !== undefined && typeof content['fileUri'] !== 'string') {
+    return false;
+  }
+
+  if (content['fileId'] !== undefined && typeof content['fileId'] !== 'string') {
+    return false;
+  }
+
+  if (content['uploadState'] !== undefined) {
+    const uploadState = content['uploadState'];
+    if (uploadState !== 'uploading' && uploadState !== 'ready' && uploadState !== 'error') {
+      return false;
+    }
+  }
+
+  if (content['errorMessage'] !== undefined && typeof content['errorMessage'] !== 'string') {
+    return false;
+  }
+
+  return true;
+}
+
+/**
  * Type guard to check if an object is a valid ExtractedContent
  */
 export function isExtractedContent(obj: unknown): obj is ExtractedContent {
@@ -135,12 +185,14 @@ export function isExtractedContent(obj: unknown): obj is ExtractedContent {
 
   const content = obj as Record<string, unknown>;
   const metadata = content['metadata'] as Record<string, unknown> | undefined;
+  const contentValue = content['content'];
+  const hasValidContent = typeof contentValue === 'string' || isImageExtractedContent(contentValue);
 
   return (
     typeof content['title'] === 'string' &&
     typeof content['url'] === 'string' &&
     typeof content['domain'] === 'string' &&
-    typeof content['content'] === 'string' &&
+    hasValidContent &&
     (content['markdown'] === undefined || typeof content['markdown'] === 'string') &&
     typeof content['textContent'] === 'string' &&
     (content['wordCount'] === undefined || typeof content['wordCount'] === 'number') &&

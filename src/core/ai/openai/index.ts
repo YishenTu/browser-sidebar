@@ -4,3 +4,4 @@ export * from './responseParser';
 export * from './errorHandler';
 export * from './searchMetadata';
 export * from './types';
+export * from './fileUpload';

@@ -18,14 +18,22 @@
  */
 
 import { TabContent } from '../../types/tabs';
+import type { ImageExtractedContent } from '@/types/extraction';
+import { isImageExtractedContent } from '@/types/extraction';
 
 // ============================================================================
 // Types and Interfaces
 // ============================================================================
 
 export interface TabFormatResult {
-  /** Formatted content ready for AI processing */
+  /** Formatted content for display and storage */
   formatted: string;
+  /** Individual sections for provider-specific formatting */
+  sections: {
+    systemInstruction: string;
+    tabContent: string;
+    userQuery: string;
+  };
   /** Metadata about the formatting */
   metadata: {
     totalTabs: number;
@@ -49,12 +57,19 @@ export interface FormatOptions {
 
 /**
  * Safely extracts content from TabContent
+ * Now handles both text and image content
  */
-function extractContent(tabContent: TabContent | null | undefined): string {
+function extractContent(tabContent: TabContent | null | undefined): string | ImageExtractedContent {
   if (!tabContent?.extractedContent) {
     return '';
   }
   const content = tabContent.extractedContent.content;
+
+  // Check if content is an image reference object
+  if (isImageExtractedContent(content)) {
+    return content;
+  }
+
   return typeof content === 'string' ? content : '';
 }
 
@@ -113,20 +128,25 @@ export function formatTabContent(
 ): TabFormatResult {
   const { hasSelection = false } = options;
 
-  const sections: string[] = [];
-
   // If no tabs, just return the user message with a simple system instruction
   if (tabs.length === 0) {
-    const formatted = `<system_instruction>
+    const systemInstruction = `<system_instruction>
 You are a helpful assistant.
-</system_instruction>
-
-<user_query>
+</system_instruction>`;
+    const userQuery = `<user_query>
 ${userMessage}
 </user_query>`;
+    const formatted = `${systemInstruction}
+
+${userQuery}`;
 
     return {
       formatted,
+      sections: {
+        systemInstruction,
+        tabContent: '',
+        userQuery,
+      },
       metadata: {
         totalTabs: 0,
         totalChars: formatted.length,
@@ -135,39 +155,46 @@ ${userMessage}
     };
   }
 
+  const sectionsArray: string[] = [];
+
   // ====================================================================
   // PART 1: BROWSER CONTEXT INSTRUCTION
   // ====================================================================
   const tabWord = tabs.length === 1 ? 'web page' : 'web pages';
   const domains = [...new Set(tabs.map(tab => extractDomain(extractURL(tab))).filter(Boolean))];
 
-  sections.push('<system_instruction>');
-  sections.push(`The user is viewing ${tabs.length} ${tabWord} in the browser.`);
+  const systemInstructionParts: string[] = [];
+  systemInstructionParts.push('<system_instruction>');
+  systemInstructionParts.push(`The user is viewing ${tabs.length} ${tabWord} in the browser.`);
   if (domains.length > 0) {
-    sections.push(`Source${domains.length > 1 ? 's' : ''}: ${domains.join(', ')}`);
+    systemInstructionParts.push(`Source${domains.length > 1 ? 's' : ''}: ${domains.join(', ')}`);
   }
 
   if (hasSelection) {
-    sections.push(
+    systemInstructionParts.push(
       `Below is the extracted content from ${tabs.length === 1 ? 'this tab' : 'these tabs'}. Selected portions are marked within the tab content, followed by the user's query about it.`
     );
-    sections.push(
+    systemInstructionParts.push(
       `Please analyze the provided content to answer the user's query, and do prioritize consideration of the selected content.`
     );
   } else {
-    sections.push(
+    systemInstructionParts.push(
       `Below is the extracted content from ${tabs.length === 1 ? 'this tab' : 'these tabs'}, followed by the user's query about it.`
     );
-    sections.push(`Please analyze the provided content to answer the user's query.`);
+    systemInstructionParts.push(`Please analyze the provided content to answer the user's query.`);
   }
 
-  sections.push('</system_instruction>');
-  sections.push('');
+  systemInstructionParts.push('</system_instruction>');
+  const systemInstruction = systemInstructionParts.join('\n');
+
+  sectionsArray.push(systemInstruction);
+  sectionsArray.push('');
 
   // ====================================================================
   // PART 2: TAB CONTENT (Browser Tabs)
   // ====================================================================
-  sections.push('<tab_content>');
+  const tabContentParts: string[] = [];
+  tabContentParts.push('<tab_content>');
 
   // Process each tab with proper XML structure
   for (const tab of tabs) {
@@ -176,8 +203,44 @@ ${userMessage}
     const domain = extractDomain(url);
     const content = extractContent(tab);
 
-    // Build tab content with XML metadata and markdown content
-    const tabContent = `<tab>
+    // Build tab content with XML metadata and handle both text and image content
+    let contentSection: string;
+
+    if (isImageExtractedContent(content)) {
+      // Handle image content
+      if (content.uploadState === 'uploading') {
+        contentSection = `  <content>
+[Image content - uploading]
+  </content>`;
+      } else if (content.uploadState === 'error') {
+        const message = content.errorMessage || 'Image upload failed';
+        contentSection = `  <content>
+[Image content - ${message}]
+  </content>`;
+      } else if (content.fileUri) {
+        // Gemini format - only fileUri and mimeType required
+        contentSection = `  <content type="image">
+    <fileUri>${content.fileUri}</fileUri>
+    <mimeType>${content.mimeType}</mimeType>
+  </content>`;
+      } else if (content.fileId) {
+        // OpenAI format - only fileId required
+        contentSection = `  <content type="image">
+    <fileId>${content.fileId}</fileId>
+  </content>`;
+      } else {
+        contentSection = `  <content>
+[Image content - upload failed]
+  </content>`;
+      }
+    } else {
+      // Handle text content
+      contentSection = `  <content>
+${content || '[No content extracted]'}
+  </content>`;
+    }
+
+    const tabContentItem = `<tab>
   <metadata>
     <title>${title}</title>
     <url>${url}</url>${
@@ -187,26 +250,33 @@ ${userMessage}
         : ''
     }
   </metadata>
-  <content>
-${content || '[No content extracted]'}
-  </content>
+${contentSection}
 </tab>`;
 
-    sections.push(tabContent);
+    tabContentParts.push(tabContentItem);
   }
 
-  sections.push('\n</tab_content>');
-  sections.push('');
+  tabContentParts.push('\n</tab_content>');
+  const tabContent = tabContentParts.join('\n');
+
+  sectionsArray.push(tabContent);
+  sectionsArray.push('');
 
   // ====================================================================
   // PART 3: USER QUERY
   // ====================================================================
-  sections.push(`<user_query>\n${userMessage}\n</user_query>`);
+  const userQuery = `<user_query>\n${userMessage}\n</user_query>`;
+  sectionsArray.push(userQuery);
 
-  const formatted = sections.join('\n');
+  const formatted = sectionsArray.join('\n');
 
   return {
     formatted,
+    sections: {
+      systemInstruction,
+      tabContent,
+      userQuery,
+    },
     metadata: {
       totalTabs: tabs.length,
       totalChars: formatted.length,

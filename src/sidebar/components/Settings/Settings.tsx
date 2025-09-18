@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { useSettingsStore } from '@store/settings';
 import type { DomainExtractionRuleSetting } from '@/types/settings';
 import {
@@ -30,6 +30,10 @@ export function Settings() {
   const [geminiMasked, setGeminiMasked] = useState(true);
   const [openrouterMasked, setOpenrouterMasked] = useState(true);
 
+  // Debug mode state
+  const [debugMode, setDebugMode] = useState(false);
+  const updateUIPreferences = useSettingsStore(state => state.updateUIPreferences);
+
   // OpenAI-compatible provider states
   const [selectedCompatProvider, setSelectedCompatProvider] = useState<string>('deepseek');
   const [compatApiKey, setCompatApiKey] = useState('');
@@ -42,6 +46,20 @@ export function Settings() {
   const [domainRules, setDomainRules] = useState<DomainExtractionRuleSetting[]>([]);
   const updateExtractionPreferences = useSettingsStore(state => state.updateExtractionPreferences);
   const [rulesLoaded, setRulesLoaded] = useState(false);
+
+  // Screenshot hotkey state
+  const [screenshotHotkey, setScreenshotHotkey] = useState<{
+    enabled: boolean;
+    modifiers: string[];
+    key: string;
+  }>({
+    enabled: true,
+    modifiers: [],
+    key: '',
+  });
+  const [recordingHotkey, setRecordingHotkey] = useState(false);
+  const recordingHotkeyRef = useRef(false);
+  const [hotkeyDisplay, setHotkeyDisplay] = useState('');
 
   // Load existing API keys on mount
   useEffect(() => {
@@ -61,6 +79,15 @@ export function Settings() {
     if (apiKeys?.openrouter) {
       setOpenrouterKey(apiKeys.openrouter);
       setOpenrouterValid(true); // Mark as valid if already saved
+    }
+
+    // Load debug mode setting
+    setDebugMode(settings.settings.ui?.debugMode || false);
+
+    // Load screenshot hotkey setting
+    if (settings.settings.ui?.screenshotHotkey) {
+      setScreenshotHotkey(settings.settings.ui.screenshotHotkey);
+      updateHotkeyDisplay(settings.settings.ui.screenshotHotkey);
     }
 
     // Load saved compat providers
@@ -181,6 +208,151 @@ export function Settings() {
 
   const handleRemoveRule = (index: number) => {
     setDomainRules(prev => prev.filter((_, i) => i !== index));
+  };
+
+  // Update hotkey display text
+  const updateHotkeyDisplay = useCallback((hotkey: typeof screenshotHotkey) => {
+    if (!hotkey.enabled) {
+      setHotkeyDisplay('Disabled');
+      return;
+    }
+
+    if (!hotkey.key) {
+      setHotkeyDisplay('');
+      return;
+    }
+
+    const parts = [];
+    // Detect if we're on macOS
+    const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
+
+    if (hotkey.modifiers.includes('ctrl')) parts.push('Ctrl');
+    if (hotkey.modifiers.includes('alt')) parts.push(isMac ? 'Option' : 'Alt');
+    if (hotkey.modifiers.includes('shift')) parts.push('Shift');
+    if (hotkey.modifiers.includes('meta')) parts.push(isMac ? 'Cmd' : 'Win');
+    parts.push(hotkey.key.toUpperCase());
+
+    setHotkeyDisplay(parts.join(' + '));
+  }, []);
+
+  // Handle hotkey recording
+  const handleStartRecording = () => {
+    setRecordingHotkey(true);
+    recordingHotkeyRef.current = true;
+    setHotkeyDisplay('Press your hotkey combination...');
+    // Blur any focused element to ensure keyboard events go to document
+    if (document.activeElement instanceof HTMLElement) {
+      document.activeElement.blur();
+    }
+  };
+
+  // Handle hotkey toggle
+  const handleToggleHotkey = async () => {
+    const newHotkey = {
+      ...screenshotHotkey,
+      enabled: !screenshotHotkey.enabled,
+    };
+
+    setScreenshotHotkey(newHotkey);
+    updateHotkeyDisplay(newHotkey);
+
+    // Save to settings
+    const settings = useSettingsStore.getState();
+    const currentUI = settings.settings.ui || {};
+    await updateUIPreferences({
+      ...currentUI,
+      screenshotHotkey: newHotkey,
+    });
+  };
+
+  // Listen for hotkey recording
+  useEffect(() => {
+    if (!recordingHotkey) return;
+
+    const handleHotkeyRecord = (e: KeyboardEvent) => {
+      // Check ref instead of state to avoid stale closures
+      if (!recordingHotkeyRef.current) return;
+
+      e.preventDefault();
+      e.stopPropagation();
+
+      // Allow ESC to cancel recording
+      if (e.key === 'Escape') {
+        setRecordingHotkey(false);
+        recordingHotkeyRef.current = false;
+        updateHotkeyDisplay(screenshotHotkey);
+        return;
+      }
+
+      // Ignore modifier-only keypresses
+      if (['Control', 'Alt', 'Shift', 'Meta'].includes(e.key)) {
+        return;
+      }
+
+      const modifiers: string[] = [];
+      if (e.ctrlKey) modifiers.push('ctrl');
+      if (e.altKey) modifiers.push('alt');
+      if (e.shiftKey) modifiers.push('shift');
+      if (e.metaKey) modifiers.push('meta');
+
+      // Use e.code for digit keys to avoid character variations
+      let key = e.key;
+
+      // Handle digit keys using event.code for consistency
+      if (e.code.startsWith('Digit')) {
+        key = e.code.replace('Digit', '');
+      } else if (e.code.startsWith('Numpad')) {
+        key = e.code.replace('Numpad', '');
+      }
+
+      // Handle special cases where the key might be a special character
+      // but we want to store the actual key code
+      if (e.code === 'Digit2' && (e.key === '€' || e.key === '@' || e.key === '™')) {
+        key = '2';
+      }
+
+      // Handle function keys
+      if (e.code.startsWith('F') && e.code.match(/^F([1-9]|1[0-2])$/)) {
+        key = e.code; // F1-F12
+      }
+
+      const newHotkey = {
+        enabled: true,
+        modifiers,
+        key,
+      };
+
+      setScreenshotHotkey(newHotkey);
+      updateHotkeyDisplay(newHotkey);
+      setRecordingHotkey(false);
+      recordingHotkeyRef.current = false;
+
+      // Save to settings
+      const settings = useSettingsStore.getState();
+      const currentUI = settings.settings.ui || {};
+      updateUIPreferences({
+        ...currentUI,
+        screenshotHotkey: newHotkey,
+      });
+    };
+
+    document.addEventListener('keydown', handleHotkeyRecord);
+    return () => {
+      document.removeEventListener('keydown', handleHotkeyRecord);
+    };
+  }, [recordingHotkey, screenshotHotkey, updateHotkeyDisplay, updateUIPreferences]);
+
+  const handleDebugToggle = async () => {
+    const newDebugMode = !debugMode;
+    setDebugMode(newDebugMode);
+
+    // Update the UI preferences in the store
+    const settings = useSettingsStore.getState();
+    const currentUI = settings.settings.ui || {};
+    await updateUIPreferences({
+      ...currentUI,
+      debugMode: newDebugMode,
+    });
   };
 
   // Auto-save rules on change (debounced) after initial load
@@ -526,6 +698,104 @@ export function Settings() {
             Rules match the base domain and all subdomains. First match wins.
           </p>
         </div>
+      </div>
+
+      {/* Screenshot Hotkey Settings */}
+      <div className="settings-section settings-section--hotkey">
+        <h2 className="settings-title">Full Page Capture Hotkey</h2>
+        <div className="settings-input-group">
+          <label
+            className="settings-label"
+            style={{ display: 'flex', alignItems: 'center', gap: '10px' }}
+          >
+            <input
+              type="checkbox"
+              checked={screenshotHotkey.enabled}
+              onChange={handleToggleHotkey}
+              className="settings-checkbox"
+            />
+            <span>Enable Screenshot Hotkey</span>
+          </label>
+        </div>
+
+        {screenshotHotkey.enabled && (
+          <div className="settings-input-group" style={{ marginTop: '10px' }}>
+            <div className="settings-input-wrapper" style={{ flex: 1 }}>
+              <div
+                className={`settings-input settings-hotkey-input ${recordingHotkey ? 'recording' : ''}`}
+                onClick={!recordingHotkey ? handleStartRecording : undefined}
+                tabIndex={0}
+                role="button"
+                aria-label="Click to set hotkey"
+                style={{
+                  cursor: 'pointer',
+                  backgroundColor: recordingHotkey ? '#f0f0f0' : '',
+                  userSelect: 'none',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                }}
+              >
+                <span>{hotkeyDisplay}</span>
+              </div>
+            </div>
+            {screenshotHotkey.enabled && !recordingHotkey && screenshotHotkey.key && (
+              <button
+                onClick={() => {
+                  const emptyHotkey = {
+                    enabled: true,
+                    modifiers: [],
+                    key: '',
+                  };
+                  setScreenshotHotkey(emptyHotkey);
+                  setHotkeyDisplay('');
+
+                  // Save to settings
+                  const settings = useSettingsStore.getState();
+                  const currentUI = settings.settings.ui || {};
+                  updateUIPreferences({
+                    ...currentUI,
+                    screenshotHotkey: emptyHotkey,
+                  });
+                }}
+                className="settings-button"
+                style={{ marginLeft: '8px' }}
+              >
+                Clear
+              </button>
+            )}
+          </div>
+        )}
+
+        {screenshotHotkey.enabled && (
+          <p className="settings-hint">
+            {recordingHotkey
+              ? 'Press any key combination (ESC to cancel)'
+              : 'Click the field above to record a new hotkey combination'}
+          </p>
+        )}
+      </div>
+
+      {/* Debug Settings */}
+      <div className="settings-section settings-section--debug">
+        <h2 className="settings-title">Developer Options</h2>
+        <div className="settings-input-group">
+          <label
+            className="settings-label"
+            style={{ display: 'flex', alignItems: 'center', gap: '10px' }}
+          >
+            <input
+              type="checkbox"
+              checked={debugMode}
+              onChange={handleDebugToggle}
+              className="settings-checkbox"
+            />
+            <span>Enable Debug Mode</span>
+          </label>
+        </div>
+        <p className="settings-hint" style={{ marginTop: '8px' }}>
+          When enabled, outputs detailed console logs for debugging purposes.
+        </p>
       </div>
     </div>
   );

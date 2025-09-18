@@ -43,6 +43,17 @@ export interface UIPreferences {
   showAvatars: boolean;
   /** Enable animations and transitions */
   animationsEnabled: boolean;
+  /** Enable debug mode for console logging */
+  debugMode: boolean;
+  /** Hotkey configuration for full page screenshot capture */
+  screenshotHotkey: {
+    /** Enable/disable the hotkey */
+    enabled: boolean;
+    /** Modifier keys (alt, shift, ctrl, meta) */
+    modifiers: string[];
+    /** Main key (e.g., '2', '@', etc.) */
+    key: string;
+  };
 }
 
 /**

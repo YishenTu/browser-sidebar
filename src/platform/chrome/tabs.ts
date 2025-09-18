@@ -105,8 +105,7 @@ export async function getActiveTabId(): Promise<number | null> {
 
     const activeTab = tabs[0];
     return activeTab?.id ?? null;
-  } catch (error) {
-    console.error('Failed to get active tab ID:', error);
+  } catch {
     return null;
   }
 }
@@ -173,8 +172,7 @@ export async function queryTabs(options: TabQueryOptions = {}): Promise<TabInfo[
       .map(tab => createTabInfoFromChromeTab(tab));
 
     return accessibleTabs;
-  } catch (error) {
-    console.error('Failed to query tabs:', error);
+  } catch {
     return [];
   }
 }

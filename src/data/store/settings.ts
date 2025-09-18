@@ -59,6 +59,12 @@ const DEFAULT_SETTINGS: Settings = {
     showTimestamps: true,
     showAvatars: true,
     animationsEnabled: true,
+    debugMode: false,
+    screenshotHotkey: {
+      enabled: true,
+      modifiers: [],
+      key: '',
+    },
   },
   ai: {
     defaultProvider: null,
@@ -177,6 +183,26 @@ const validateAvailableModels = (models: unknown): Model[] => {
  */
 const validateUIPreferences = (ui: unknown): UIPreferences => {
   const u = (ui && typeof ui === 'object' ? ui : {}) as Partial<UIPreferences>;
+
+  // Validate screenshot hotkey
+  let screenshotHotkey = DEFAULT_SETTINGS.ui.screenshotHotkey;
+  if (u.screenshotHotkey && typeof u.screenshotHotkey === 'object') {
+    const sh = u.screenshotHotkey as Record<string, unknown>;
+    screenshotHotkey = {
+      enabled:
+        typeof sh['enabled'] === 'boolean'
+          ? sh['enabled']
+          : DEFAULT_SETTINGS.ui.screenshotHotkey.enabled,
+      modifiers: Array.isArray(sh['modifiers'])
+        ? (sh['modifiers'] as string[])
+        : DEFAULT_SETTINGS.ui.screenshotHotkey.modifiers,
+      key:
+        typeof sh['key'] === 'string'
+          ? (sh['key'] as string)
+          : DEFAULT_SETTINGS.ui.screenshotHotkey.key,
+    };
+  }
+
   return {
     fontSize: isValidFontSize(u.fontSize) ? u.fontSize! : DEFAULT_SETTINGS.ui.fontSize,
     compactMode:
@@ -189,6 +215,8 @@ const validateUIPreferences = (ui: unknown): UIPreferences => {
       typeof u.animationsEnabled === 'boolean'
         ? u.animationsEnabled
         : DEFAULT_SETTINGS.ui.animationsEnabled,
+    debugMode: typeof u.debugMode === 'boolean' ? u.debugMode : DEFAULT_SETTINGS.ui.debugMode,
+    screenshotHotkey,
   };
 };
 
@@ -639,8 +667,8 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
       const updatedSettings = { ...currentSettings, availableModels: next };
       set({ settings: updatedSettings });
       await saveToStorage(updatedSettings);
-    } catch (error) {
-      console.error('Failed to refresh models with compat providers:', error);
+    } catch {
+      // Failed to refresh models - continue with existing list
     }
   },
 }));

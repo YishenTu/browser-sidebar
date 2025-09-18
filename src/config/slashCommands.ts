@@ -27,11 +27,7 @@ export const SLASH_COMMANDS: SlashCommand[] = [
     name: 'summarize',
     description: 'Summarize the content concisely',
     prompt: `
-      Summarize the provided content
-
-      # Language Instructions
-      - If a specific output language is explicitly requested using language codes (zh for Chinese, en for English, etc.), respond in that language
-      - If no output language is specified, automatically detect and respond in the same language as the source content
+      Summarize the provided content in Chinese
     `,
   },
   {

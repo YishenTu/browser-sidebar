@@ -40,6 +40,106 @@
   flex-direction: column;
 }
 
+/* ==== IMAGE CONTENT STYLES ==== */
+/* Increase height when showing image content */
+.content-preview-content--image {
+  min-height: 300px !important;
+  max-height: 500px !important;
+  height: auto !important;
+  padding: 0 !important;
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+/* Ensure collapsible expands for image content */
+.content-preview-collapsible:has(.content-preview-content--image) .collapsible-content {
+  max-height: 550px !important;
+}
+
+.content-preview-image-container {
+  padding: 0 12px; /* Match header/footer padding */
+  background: transparent;
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+  position: relative;
+}
+
+.content-preview-image-scroll {
+  border-radius: 6px;
+  overflow: hidden;
+  overflow-y: auto;
+  overflow-x: hidden;
+  text-align: center;
+  min-height: 200px;
+  max-height: 460px; /* Leave space for action buttons */
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.content-preview-image-thumbnail {
+  width: 100%;
+  height: auto;
+  object-fit: contain;
+  border-radius: 0;
+  border: none;
+  background: transparent;
+  display: block;
+  margin: 0;
+}
+
+.content-preview-image-uploading {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px;
+  background: rgba(17, 24, 39, 0.6);
+  color: rgba(255, 255, 255, 0.88);
+  font-size: 13px;
+  border-radius: 6px;
+  pointer-events: none;
+  z-index: 1;
+  backdrop-filter: blur(2px);
+}
+
+.content-preview-image-badge {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--color-text-primary);
+  margin-bottom: 8px;
+}
+
+.content-preview-image-description {
+  font-size: 13px;
+  color: var(--color-text-secondary);
+  margin: 0;
+}
+
+.content-preview-badge--image {
+  background: rgba(59, 130, 246, 0.15);
+  color: rgb(59, 130, 246);
+  border: 1px solid rgba(59, 130, 246, 0.3);
+}
+
+/* Header actions container for badge and close button */
+.content-preview-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+  margin-left: auto; /* Push to the right */
+  position: relative;
+}
+
+/* Badge in header should align properly */
+.content-preview-header .content-preview-badge {
+  flex-shrink: 0;
+}
+
 /* ==== HEADER SECTION ==== */
 
 /* Override generic collapsible header for content-preview with higher specificity */
@@ -103,11 +203,7 @@
   max-width: 100%; /* Let title use full width by default */
 }
 
-/* Reserve space for close button only when visible */
-.content-preview-wrapper:hover .content-preview-header-content,
-.content-preview-collapsible.expanded .content-preview-header-content {
-  padding-right: 24px; /* 16px button + 8px breathing room */
-}
+/* Remove padding-right since we now use flex gap */
 
 .content-preview-header-main {
   display: flex;
@@ -156,29 +252,13 @@
   padding: 0;
   color: var(--text-secondary);
   border-radius: var(--radius-sm);
-  display: flex; /* Keep in layout to avoid shifts */
+  display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0; /* Don't shrink */
-  transition:
-    opacity 0.2s ease,
-    background 0.2s ease,
-    visibility 0.2s ease;
-  position: absolute;
-  right: 0;
-  top: 50%;
-  transform: translateY(-50%);
-  opacity: 0;
-  visibility: hidden;
-  pointer-events: none;
-}
-
-/* Show close button on wrapper hover or when expanded with higher specificity */
-.ai-sidebar-container .content-preview-wrapper:hover .content-preview-header-close,
-.ai-sidebar-container .content-preview-collapsible.expanded .content-preview-header-close {
-  opacity: 1;
-  visibility: visible;
-  pointer-events: auto;
+  transition: background 0.2s ease;
+  /* Remove absolute positioning - use flex layout instead */
+  position: relative;
 }
 
 .content-preview-header-close:hover {
@@ -243,6 +323,7 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
+  flex-shrink: 0; /* Prevent shrinking */
   padding: 4px 12px;
   border-top: 1px solid rgba(75, 85, 99, 0.2);
   min-height: 32px; /* Minimum height to ensure consistency */

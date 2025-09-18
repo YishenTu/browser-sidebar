@@ -2,12 +2,21 @@
  * @file OpenAI Provider Type Definitions (Core)
  */
 
+/** Detail level for image inputs */
+export type OpenAIImageDetail = 'auto' | 'low' | 'high';
+
 /** Input content items for OpenAI Responses API */
 export type OpenAIInputContent =
   | { type: 'input_text'; text: string }
   // When reconstructing prior assistant turns without a previous_response_id,
   // the Responses API expects assistant content as output_text.
-  | { type: 'output_text'; text: string };
+  | { type: 'output_text'; text: string }
+  | {
+      type: 'input_image';
+      detail: OpenAIImageDetail;
+      file_id?: string | null;
+      image_url?: string | null;
+    };
 
 /** OpenAI Responses API request format */
 export interface OpenAIResponseRequest {

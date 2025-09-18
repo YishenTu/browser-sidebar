@@ -6,6 +6,10 @@
  * Note: Dynamic content changes based on:
  * - Number of tabs (1 web page vs 2+ web pages)
  * - Presence of text selection(s) - marked within tab content
+ *
+ * IMPORTANT: Image attachments are NOT included in formatTabContent output!
+ * Images are passed separately via message metadata.attachments array.
+ * The formatter only handles text content and tab context.
  */
 
 const exampleOutput = `
@@ -246,6 +250,70 @@ How do these initialization methods relate to each other?
 `;
 
 /**
+ * Example showing how images are handled (separate from content formatter)
+ *
+ * When user pastes an image and types text:
+ * 1. The text content goes through formatTabContent()
+ * 2. Images are passed separately in message.metadata.attachments
+ * 3. AI providers combine both when building requests
+ */
+const exampleWithImage = {
+  // This is what formatTabContent returns (text only, no images)
+  formattedContent: `
+<system_instruction>
+The user is viewing 1 web page in the browser.
+Source: example.com
+Below is the extracted content from this tab, followed by the user's query about it.
+Please analyze the provided content to answer the user's query.
+</system_instruction>
+
+<tab_content>
+<tab>
+  <metadata>
+    <title>Product Page</title>
+    <url>https://example.com/product</url>
+    <domain>example.com</domain>
+  </metadata>
+  <content>
+Product details and specifications...
+  </content>
+</tab>
+</tab_content>
+
+<user_query>
+What's different between this image and the product shown on the page?
+</user_query>
+`,
+
+  // Images are passed separately in metadata (NOT in formatted content)
+  metadata: {
+    attachments: [
+      {
+        type: 'image',
+        mimeType: 'image/png',
+        // For Gemini: uploaded file URI
+        fileUri: 'https://generativelanguage.googleapis.com/v1beta/files/abc123',
+        // For OpenAI: uploaded file ID (no base64 support)
+        fileId: 'file-xyz789',
+      },
+    ],
+  },
+
+  // What actually gets sent to AI providers
+  aiProviderMessage: {
+    role: 'user',
+    // Text content (formatted by formatTabContent if first message)
+    content: '...formatted content above...',
+    // Images handled by provider-specific logic
+    metadata: {
+      attachments: [
+        /* image attachments */
+      ],
+    },
+  },
+};
+
+/**
  * Benefits of the new structure:
  *
  * 1. **Clear Separation**: Three distinct parts with XML labels
@@ -276,6 +344,19 @@ How do these initialization methods relate to each other?
  * 6. **Simple Selection Handling**:
  *    - No complex logic for tracking which tabs have selections
  *    - Just mentions selections are marked within the content
+ *
+ * 7. **Image Handling**:
+ *    - Images are NOT included in formatTabContent output
+ *    - Images passed via metadata.attachments array
+ *    - Each provider handles images differently:
+ *      - Gemini: uploads to File API, uses fileUri
+ *      - OpenAI: uploads via file API, uses fileId (no base64 support)
  */
 
-export { exampleOutput, exampleNoTabs, exampleSingleTab, exampleMultipleSelections };
+export {
+  exampleOutput,
+  exampleNoTabs,
+  exampleSingleTab,
+  exampleMultipleSelections,
+  exampleWithImage,
+};

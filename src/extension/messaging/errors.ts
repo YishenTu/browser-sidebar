@@ -32,8 +32,12 @@ export class ExtensionError extends Error {
     this.details = details;
     this.timestamp = Date.now();
     this.source = source;
-    if (Error.captureStackTrace) {
-      Error.captureStackTrace(this, ExtensionError);
+    if (typeof Error.captureStackTrace === 'function') {
+      const captureStackTrace = Error.captureStackTrace as (
+        targetObject: object,
+        constructorOpt?: new (...args: unknown[]) => unknown
+      ) => void;
+      captureStackTrace(this, this.constructor as new (...args: unknown[]) => unknown);
     }
   }
 
