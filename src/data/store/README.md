@@ -1,48 +1,47 @@
 # Zustand Stores
 
-Chat/session state lives in a set of small, focused stores. Only the session store holds data; the others delegate to the active session.
+Zustand stores keep session/chat state in-memory and persist user settings to Chrome storage. Only the session store owns data; other stores delegate to it so we avoid duplicate state.
 
-## Stores
+## Chat Stores
 
 ```
-useSessionStore  # sessions map + activeSessionKey + create/switch/clear
-useMessageStore  # add/update/delete messages in the active session
-useTabStore      # manage extracted tab content for the active session
-useUIStore       # loading/error/activeMessageId for the active session
-useSettingsStore # persistent user settings and API key refs
+useSessionStore  # Master store (sessions map, activeSessionKey, creation/cleanup helpers)
+useMessageStore  # Message list for the active session (add/update/delete/edit)
+useTabStore      # Extracted tab cache (current tab + additional tabs, selection order)
+useUIStore       # Loading/error flags, streaming state, activeMessageId
+useSettingsStore # Persistent settings (API keys, compat providers, UI prefs, extraction defaults)
 ```
 
-## Session keying
+### Session Keys
 
-`createSessionKey(tabId, url)` → `tab_{id}:{normalizedUrl}` (query kept, hash dropped). See `@shared/utils/urlNormalizer`.
+`createSessionKey(tabId, url)` → `tab_{id}:{normalizedUrl}` using `@shared/utils/urlNormalizer` (lowercases host, removes hash, keeps query). Keeps sessions deterministic across reloads.
 
-## Usage
+### Settings Store Highlights
+
+- Persists to `chrome.storage.sync` with fallback to `local`.
+- Validates API key references before saving (`openai`, `google`, `openrouter`).
+- Computes available models from saved keys + compat provider registry (`@data/storage/keys/compat`).
+- Stores domain extraction rules (`domainRules`) consumed by the content script.
+- Tracks UI prefs (compact mode, timestamps, debug mode) and screenshot hotkey.
+- Exposes helpers: `loadSettings`, `updateAPIKeyReferences`, `refreshAvailableModelsWithCompat`, `updateExtractionPreferences`, `updateSelectedModel`, etc.
+
+### Usage Example
 
 ```ts
 import { useSessionStore, useMessageStore, useTabStore, useUIStore } from '@data/store/chat';
+import { useSettingsStore } from '@store/settings';
 
-// Switch to the session for the current tab+URL
-const sessionStore = useSessionStore.getState();
-sessionStore.switchSession(tabId, url);
-
-// Add a user message
-const messageStore = useMessageStore.getState();
-const msg = messageStore.addMessage({ role: 'user', content: 'Hello!' });
-
-// Update UI while streaming
-const uiStore = useUIStore.getState();
-uiStore.setLoading(true);
-
-// Save extracted content for the active session
-const tabStore = useTabStore.getState();
-tabStore.addLoadedTab(tabId, extractedContent);
+useSessionStore.getState().switchSession(tabId, url);
+const msg = useMessageStore.getState().addMessage({ role: 'user', content: 'Hello!' });
+useUIStore.getState().setLoading(true);
+useTabStore.getState().addLoadedTab(tabId, tabContent);
+await useSettingsStore
+  .getState()
+  .updateAPIKeyReferences({ openai: key, google: null, openrouter: null });
 ```
 
-## Settings
+## Guidelines
 
-`useSettingsStore` persists to Chrome storage and gates available models by saved API keys and OpenAI‑Compat providers. See `data/store/settings.ts` for details.
-
-## Notes
-
-- Stores are plain Zustand without persistence (except settings). Keep operations minimal and synchronous where possible.
-- Prefer selectors when subscribing in React components to avoid unnecessary re‑renders.
+- Keep store mutations synchronous and minimal; expensive work belongs in services or core utilities.
+- Use selectors (`useStore(state => state.foo)`) to avoid unnecessary renders.
+- When adding state, prefer updating `useSessionStore` so other stores can delegate.

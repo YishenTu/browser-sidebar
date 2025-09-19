@@ -1,368 +1,134 @@
 # Content Module
 
-The content script runs in page context. It injects the React sidebar, coordinates extraction, and routes messages to/from the background.
+The content script runs in the page context. It injects the React sidebar, coordinates extraction, and routes typed messages between the page, background service worker, and UI.
 
 ## Overview
 
-- Sidebar injection and lifecycle management
-- Robust page content extraction
-- Typed message routing with timeouts
-- DOM patching for asset loading
+- Shadow-DOM sidebar injection and lifecycle management
+- Domain-aware content extraction (Readability default with Raw/Defuddle/Selection fallbacks)
+- Site-specific extractor plugins (pre-flight before Readability/Raw/Defuddle)
+- Typed message routing with timeout safeguards
+- DOM patching to safely resolve extension assets
 
 ## Structure
 
 ```
 content/
-├─ index.ts                   # Entry & initialization
+├─ index.ts                 # Entry point, bootstraps sidebar + messaging
 ├─ core/
-│  ├─ documentPatcher.ts     # Resolve asset URLs safely
-│  ├─ messageHandler.ts      # Route incoming messages
-│  └─ sidebarController.ts   # Mount/unmount Shadow‑DOM UI
+│  ├─ documentPatcher.ts   # Rewrites asset URLs for extension context
+│  ├─ messageHandler.ts    # Handles background → content messages
+│  └─ sidebarController.ts # Mount/unmount Shadow-DOM React app
 ├─ extraction/
-│  ├─ orchestrator.ts        # Selects mode, enforces timeout
+│  ├─ orchestrator.ts      # Mode selection, timeout enforcement, domain rules
 │  ├─ extractors/
-│  │  ├─ readability.ts      # Default: Mozilla Readability → Markdown
-│  │  ├─ raw.ts              # Preserve HTML structure (good for tables)
-│  │  └─ defuddle.ts         # Defuddle‑based extraction
-│  └─ analyzers/
-│     ├─ contentAnalyzer.ts  # Code/table detection, excerpt
-│     └─ metadataExtractor.ts# Title/OG/Twitter meta
+│  │  ├─ readability.ts    # Reader-friendly HTML → Markdown (default)
+│  │  ├─ raw.ts            # Raw HTML capture (tables / structured data)
+│  │  └─ defuddle.ts       # Defuddle-backed article fallback
+│  ├─ analyzers/           # Content + metadata analyzers
+│  └─ sites/               # Site-specific plugins loaded ahead of extractors
 └─ utils/
-   ├─ domUtils.ts            # DOM helpers
-   └─ tabUtils.ts            # Tab helpers
+   ├─ domUtils.ts          # Safe DOM operations in content world
+   └─ tabUtils.ts          # Tab helpers shared with background
 ```
 
-## Architecture Overview
+## Initialization Flow
 
 ```
-Web Page Context
-    ↓
-Content Script (content/)
-    ├─ Document Patcher (asset URLs)
-    ├─ Message Handler (routing)
-    ├─ Sidebar Controller (UI)
-    └─ Extraction Pipeline (content)
-        ├─ Orchestrator
-        ├─ Extractors
-        ├─ Converters
-        └─ Analyzers
+1. documentPatcher patches element creation/href handling
+2. sidebarController mounts Shadow DOM root
+3. messageHandler registers listeners + health checks
+4. Content script notifies background (CONTENT_READY)
 ```
 
-## Core Components
+## Extraction Orchestrator
 
-### Entry Point (`index.ts`)
+`extraction/orchestrator.ts` coordinates every extraction request:
 
-Initialization sequence:
+1. Validates options (timeout, max length, link inclusion)
+2. Resolves effective mode:
+   - Explicit `mode` parameter from caller
+   - Domain rule from saved settings (`chrome.storage.sync` → fallback to `local`)
+   - Module-level default (`ExtractionMode.READABILITY` by default)
+3. Runs site plugins (`extraction/sites/**/*.plugin.ts`) — first plugin returning data wins
+4. Dynamically imports the correct extractor (cached between runs)
+5. Executes extractor with timeout protection (Promise.race)
+6. Runs analyzers (tables, code blocks, excerpts, metadata)
+7. Returns structured `ExtractedContent`
 
-1. Apply document patches for asset URL resolution
-2. Initialize sidebar controller
-3. Set up message handler
-4. Notify background script of readiness
+### Extraction Modes
 
-### Core Modules (`core/`)
+| Mode        | Best for               | Output                | Notes                                   |
+| ----------- | ---------------------- | --------------------- | --------------------------------------- |
+| Readability | Articles, blog posts   | Markdown + metadata   | Default, sanitizes HTML via Readability |
+| Raw         | Tables, dashboards     | HTML + plaintext      | Skips Markdown for token-efficiency     |
+| Defuddle    | Stubborn article pages | Markdown + metadata   | Uses `defuddle` fallback heuristics     |
+| Selection   | User text selections   | Raw selection content | Triggered from sidebar selection flow   |
 
-#### Document Patcher
-
-Patches DOM APIs to ensure dynamic content uses proper extension URLs:
-
-- Intercepts `document.querySelector` for link elements
-- Patches `document.createElement` for scripts/links
-- Converts relative paths to extension URLs
-
-#### Message Handler
-
-Routes messages from the background script:
-
-- `TOGGLE_SIDEBAR` - Show/hide sidebar
-- `CLOSE_SIDEBAR` - Force close sidebar
-- `EXTRACT_CONTENT` - Extract page content
-- `PING` - Health check
-
-#### Sidebar Controller
-
-Manages sidebar lifecycle:
-
-- Lazy loads React sidebar app
-- Tracks open/closed state
-- Handles mount/unmount operations
-- Dispatches custom DOM events
-
-### Content Extraction (`extraction/`)
-
-#### Orchestrator
-
-Selects a mode, validates options, enforces a timeout, and returns structured content. Default mode is Readability; callers may request Raw, Defuddle, or Selection.
-
-#### Extractors
-
-**Readability** (`readability.ts`)
-
-- Reader‑friendly extraction via Mozilla Readability
-- Converts HTML → Markdown (via `@core/extraction/markdownConverter`)
-- Detects tables and generates excerpts
-
-**Raw Extractor** (`raw.ts`)
-
-- Preserves HTML structure
-- Table-aware extraction
-- Token optimization (40-70% reduction)
-- Best for structured data sites
-
-**Defuddle** (`defuddle.ts`)
-
-- Alternative extraction using the `defuddle` library
-- Useful fallback on some article pages
-
-#### Converters
-
-**Markdown Converter** (`markdownConverter.ts`)
-
-- HTML to GitHub Flavored Markdown
-- Preserves code blocks with languages
-- Handles tables, lists, formatting
-- Optional link preservation
-
-#### Analyzers
-
-**Content Analyzer** (`contentAnalyzer.ts`)
-
-- Detects code blocks and tables
-- Counts words
-- Generates excerpts
-- Identifies content features
-
-**Metadata Extractor** (`metadataExtractor.ts`)
-
-- Extracts title, author, date
-- Parses Open Graph tags
-- Handles Twitter Card meta
-- Supports various metadata formats
-
-### Utilities (`utils/`)
-
-- DOM helpers for safe operations in page context
-- Tab helpers for metadata and messaging
-
-## Extraction Pipeline
-
-### Flow Diagram
-
-```
-Page Content
-    ↓
-Orchestrator
-    ├─ Validate Options
-    ├─ Select Extractor
-    │   ├─ Defuddle (articles)
-    │   └─ Raw (tables/data)
-    ├─ Clean HTML
-    ├─ Convert Format
-    │   └─ Markdown
-    ├─ Analyze Content
-    │   ├─ Word Count
-    │   ├─ Code Detection
-    │   └─ Table Detection
-    └─ Apply Limits
-        └─ Return Result
-```
-
-### Extraction Options
+### Code Snippets
 
 ```ts
-interface ExtractionOptions {
-  includeLinks?: boolean; // Default: false
-  maxLength?: number; // Default: 200_000
-  timeout?: number; // Default: 2000ms
-}
-// Mode is selected separately via ExtractionMode (readability | raw | defuddle | selection)
-```
-
-## API Usage
-
-### Basic Extraction
-
-```typescript
-import { extractContent } from '@content/extraction';
-
-// Default extraction (Defuddle mode)
-const content = await extractContent();
-
-// With options
-const content = await extractContent({
-  timeout: 5000,
-  includeLinks: false,
-  maxLength: 100000,
-});
-```
-
-### Raw Mode Extraction
-
-```ts
+import { extractContent, setDefaultExtractionMode } from '@content/extraction/orchestrator';
 import { ExtractionMode } from '@types/extraction';
-import { extractContent } from '@content/extraction/orchestrator';
 
-// Table‑heavy pages: returns HTML + text (no Markdown conversion)
-const content = await extractContent({ includeLinks: true }, ExtractionMode.RAW);
+// Set runtime default (e.g., testing)
+setDefaultExtractionMode(ExtractionMode.RAW);
+
+// Extract using domain-aware default (Readability unless settings override)
+const content = await extractContent({ timeout: 4000, includeLinks: true });
+
+// Force Defuddle and ignore cache
+const defuddleContent = await extractContent({ forceRefresh: true }, ExtractionMode.DEFUDDLE);
 ```
 
-### HTML to Markdown
+## Messaging
 
-The Markdown converter lives in `@core/extraction` and is used by the orchestrator
-for non-RAW modes. You can import it directly if needed:
+- Responds to background `EXTRACT_TAB_CONTENT` requests with structured payloads.
+- Emits `CONTENT_READY` once the script is ready.
+- Supports `TOGGLE_SIDEBAR`, `CLOSE_SIDEBAR`, `PING`, and `PING`/`PONG` keep-alives.
 
-```typescript
-import { htmlToMarkdown } from '@core/extraction/markdownConverter';
+```ts
+import { createMessage } from '@types/messages';
+import { sendMessage } from '@platform/chrome/runtime';
 
-const markdown = await htmlToMarkdown(htmlString, { includeLinks: true });
-```
-
-### Content Analysis
-
-The analyzer utilities live under `@core/extraction/analyzers` and are used by extractors to populate metadata (tables, excerpts, etc.).
-
-## Message Communication
-
-### Receiving Messages
-
-Content script primarily responds to `EXTRACT_TAB_CONTENT` via the background message orchestrated in `extension/background/messageHandler.ts`.
-
-### Sending Messages
-
-```typescript
-// To background script
-chrome.runtime.sendMessage({
+const ready = createMessage({
   type: 'CONTENT_READY',
-  tabId: getCurrentTabId(),
+  source: 'content',
+  target: 'background',
+  payload: { status: 'content-script-ready', url: location.href, title: document.title },
 });
+
+sendMessage(ready);
 ```
 
 ## Error Handling
 
-### Error Types
+- Per-request timeouts (default 2000 ms) with explicit errors (`Extraction timeout after X ms`).
+- Extractors catch and normalize DOM errors (`ExtractionErrorType.EXTRACTION_DOM_ERROR`).
+- Queue retry logic lives in the background `ExtractionQueue`; content script remains stateless.
 
-- `EXTRACTION_TIMEOUT` - Operation exceeded time limit
-- `EXTRACTION_NETWORK_ERROR` - Network-related failure
-- `EXTRACTION_DOM_ERROR` - DOM access issues
-- `EXTRACTION_MEMORY_ERROR` - Memory constraints
-- `EXTRACTION_PARSING_ERROR` - Content parsing failed
+## Performance Notes
 
-### Error Recovery
-
-- Timeout protection on all operations
-- Graceful degradation to basic extraction
-- Fallback strategies for each extractor
-- Safe DOM access with edge case handling
-
-## Security
-
-- Readability sanitizer + Markdown conversion minimize unsafe HTML in default mode
-- No script execution; avoid direct `innerHTML` without sanitization
-- Operates in an isolated content‑script world
-
-### Best Practices
-
-1. Never execute extracted scripts
-2. Sanitize all HTML content
-3. Validate URLs before processing
-4. Use timeout protection
-5. Handle memory constraints
-
-## Performance
-
-Optimization highlights:
-
-- Dynamic import caching per extractor
-- Timeout enforcement in orchestrator
-- Raw mode avoids Markdown conversion for speed and token savings
+- Dynamic imports cached after first load (Readability/Raw/Defuddle modules).
+- Site plugin registry precomputed on first extraction.
+- Timeout checks short-circuit long DOM traversals.
+- Raw mode skips Markdown conversion for large tables.
 
 ## Testing
 
-### Test Coverage
+Use Vitest to exercise extraction and DOM helpers:
 
 ```bash
-# Run all content tests
-npm test -- src/content
-
-# Specific test suites
-npm test -- src/content/extraction
-npm test -- src/content/core
-npm test -- src/content/utils
+npm test -- tests/unit/content/extraction
+npm test -- tests/unit/content/core
+npm test -- tests/integration/content
 ```
 
-### Test Types
+Mock DOM APIs with jsdom; keep plugins defensive (return `null` on failure so the orchestrator can fall back).
 
-- Unit tests for utilities
-- Integration tests for pipeline
-- E2E tests for sidebar interaction
-- Performance benchmarks
+## Security
 
-## Debugging
-
-### Enable Debug Logging
-
-```typescript
-// In any module
-const DEBUG = true; // Enable verbose logging
-```
-
-### Chrome DevTools
-
-1. Open target web page
-2. Open DevTools Console
-3. Filter by "ContentExtractor" or module name
-4. Check extraction timing and errors
-
-### Common Issues
-
-#### Content Not Extracting
-
-- Check if page has restricted permissions
-- Verify extraction timeout settings
-- Check for DOM mutation after load
-
-#### Sidebar Not Appearing
-
-- Verify content script injection
-- Check message passing
-- Confirm sidebar controller initialization
-
-## Extraction Modes Comparison
-
-| Feature         | Defuddle Mode     | Raw Mode        |
-| --------------- | ----------------- | --------------- |
-| Best For        | Articles, blogs   | Tables, data    |
-| Removes         | Ads, navigation   | Minimal removal |
-| Preserves       | Article content   | Full structure  |
-| Token Reduction | 60-80%            | 40-70%          |
-| Speed           | Fast              | Very fast       |
-| Accuracy        | High for articles | High for data   |
-
-## Dependencies
-
-- **defuddle** - Intelligent content extraction
-- **dompurify** - HTML sanitization (via Defuddle)
-- **Chrome APIs** - Extension communication
-- Markdown conversion is provided by `@core/extraction/markdownConverter` (Turndown + GFM)
-
-## Future Enhancements
-
-- Domain heuristics for extractor selection
-- Incremental extraction for long pages
-- PDF/Doc export
-
-## Contributing
-
-### Development Guidelines
-
-1. **Module Independence** - Self-contained modules
-2. **Error Handling** - Graceful edge case handling
-3. **Type Safety** - Full TypeScript coverage
-4. **Documentation** - Inline documentation for complex logic
-5. **Performance** - Consider memory and CPU impact
-
-### Code Standards
-
-- TypeScript strict mode
-- ESLint + Prettier formatting
-- 80% minimum test coverage
-- Comprehensive error handling
+- Never executes page scripts; only reads from DOM.
+- Sanitizes Readability output via Markdown conversion.
+- Respects restricted URL rules (`shared/utils/restrictedUrls`).
+- Honors Chrome's isolated world — no direct access to page JS closures.

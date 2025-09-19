@@ -1,26 +1,26 @@
 # Shared Module
 
-Cross‑cutting utilities shared across modules.
+Cross-cutting utilities shared across modules. Keep this folder tiny—only add items that truly belong everywhere.
 
 ## Structure
 
 ```
 shared/
 └─ utils/
-   ├─ restrictedUrls.ts  # Centralized check for restricted pages (chrome://, etc.)
-   └─ urlNormalizer.ts   # Normalizes URLs for session keys
+   ├─ restrictedUrls.ts  # Central allow/deny list for chrome://, chrome web store, file://, etc.
+   └─ urlNormalizer.ts   # Deterministic URL normalization for session keys + caches
 ```
 
 ## Utilities
 
 ### `restrictedUrls.ts`
 
-- `isRestrictedUrl(url)` — true for chrome://, file:// (unless permitted), web stores, etc.
-- `isValidTabUrl(url)` — helper guard used by background and UI filters
+- `isRestrictedUrl(url)` — `true` for URLs the extension must avoid (chrome://, file:// unless allowed, extension stores, etc.).
+- `isValidTabUrl(url)` — Helper guard used by the background `TabManager` and sidebar tab picker.
 
 ### `urlNormalizer.ts`
 
-- `normalizeUrl(url)` — removes trailing slash, keeps query, drops hash
-- `createSessionKey(tabId, url)` / `parseSessionKey(key)` — deterministic session keys
+- `normalizeUrl(url)` — Lowercases host, strips trailing slash, preserves query, drops hash.
+- `createSessionKey(tabId, url)` / `parseSessionKey(key)` — Shared with session store + services.
 
-All functions are pure and side‑effect free.
+Both modules expose pure functions shared by background, stores, and services.

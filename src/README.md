@@ -1,127 +1,130 @@
 # Source Code Overview
 
-This folder contains the AI Browser Sidebar extension code. It is organized into small, focused modules with clear boundaries and path aliases for easy navigation.
+The `src/` tree is organized into small, focused modules with clear boundaries and path aliases. Everything coordinates through typed messaging and service facades so UI code stays declarative and side-effect light.
 
 ## Directory Map
 
 ```
 src/
-├─ config/       # Central config: models, prompts, slash commands
-├─ content/      # Content script: extraction pipeline + sidebar injection glue
-├─ core/         # Provider protocol helpers (ai/) + engines + extraction utils
-├─ data/         # Zustand stores, Chrome storage wrapper, crypto/masking
-├─ extension/    # MV3 service worker, cache, messaging, tab + sidebar managers
-├─ platform/     # Typed wrappers over Chrome APIs (runtime, tabs, storage, …)
-├─ services/     # High‑level facades (chat, extraction, keys, engine manager)
-├─ shared/       # Cross‑cutting utilities (URL checks/normalization)
-├─ sidebar/      # React Shadow‑DOM UI (components, hooks, styles)
-├─ transport/    # HTTP transports (direct and background‑proxied streaming)
-└─ types/        # Shared TS types (messages, tabs, extraction, providers)
+├─ config/       # Model catalog, compat presets, slash commands, prompts
+├─ content/      # Content script bootstrap, extraction orchestrator, DOM glue
+├─ core/         # Provider helpers, engines, extraction utils, shared services
+├─ data/         # Zustand stores, Chrome storage abstractions, key vault
+├─ extension/    # MV3 service worker, keep-alive, messaging, tab/cache lifecycle
+├─ platform/     # Typed wrappers over chrome.* (runtime, tabs, storage, ...)
+├─ services/     # Facades (chat, engine manager, extraction, keys, session)
+├─ shared/       # Cross-cutting utilities (restricted URLs, URL normalization)
+├─ sidebar/      # Shadow-DOM React app: components, hooks, contexts, styles
+├─ transport/    # Direct/background transports + proxy policy
+└─ types/        # Shared TypeScript types (messages, extraction, providers, settings)
 ```
 
-## What Lives Where
+## Module Notes
 
 ### config/
 
-- `models.ts` — Model catalog and helpers (OpenAI, Gemini, OpenRouter, OpenAI‑Compat presets)
-- `systemPrompt.ts` — System prompt text helpers
-- `slashCommands.ts` — Built‑in commands (e.g., summarize, explain, fact‑check, rephrase)
+- `models.ts` — Model catalog with capability flags (`supportsReasoning`, `supportsThinking`), compat presets, helpers (`getDefaultModelForProvider`, `getPresetById`).
+- `slashCommands.ts` — Built-in slash commands (summarize, explain, analyze, comment, fact-check → Gemini, rephrase) with optional per-command model overrides.
+- `systemPrompt.ts` — Structured system prompts tailored for web-context Q&A.
 
 ### content/
 
-- `core/` — Document patcher, message handler, sidebar controller
-- `extraction/` — Orchestrator with modes: Readability (default), Raw, Defuddle, Selection
-- `extraction/extractors/` — `readability.ts`, `raw.ts`, `defuddle.ts`
-- `extraction/analyzers/` — Content + metadata analyzers
-- `utils/` — DOM and tab helpers
-
-Key updates (Sep 2025):
-
-- Readability extractor added and set as the default mode
-- Runtime toggle for default extraction mode (see `setDefaultExtractionMode`)
+- `core/` — Document patcher, message handler, Shadow-DOM controller bootstrap.
+- `extraction/` — Orchestrator + modes (Readability default, Raw, Defuddle, Selection) with domain-aware defaults (`resolveDefaultExtractionModeFromSettings`).
+- `extraction/extractors/` — Dynamic imports for readability/raw/defuddle implementations.
+- `extraction/analyzers/` — Feature detectors (tables, code, metadata) shared with core converters.
+- `extraction/sites/` — Site plugins registry (runs before extractor selection).
+- `utils/` — DOM + tab helpers kept free of UI deps.
 
 ### core/
 
-- `ai/<provider>/` — Stateless request builders, stream processors, error mappers
-- `engine/` — Stateful providers: OpenAI, Gemini, OpenRouter, OpenAI‑Compat
-- `extraction/` — Markdown converter and analyzers used by content pipeline
+- `ai/<provider>/` — Stateless request builders, SSE parsers, error normalization per provider.
+- `engine/` — Stateful providers built on `BaseEngine`, registry/factory to instantiate OpenAI, Gemini, OpenRouter, OpenAI-compatible stacks.
+- `extraction/` — Markdown converter + analyzers consumed by content pipeline.
+- `services/` — Pure domain services: message editing, image upload/sync, model switching, message queueing, tab content helpers.
+- `utils/` — Pure helpers (error classification, favicon resolution, geometry/layout, dropdown positioning, text processing, hotkey parsing, screenshot math).
 
 ### data/
 
-- `store/` — In‑memory chat/session stores (no persistence) and a persistent settings store
-- `storage/` — Typed Chrome storage wrapper (+ keys subsystem)
-- `security/` — AES‑GCM utilities and masking helpers
+- `store/` — Zustand stores: session/message/tab/ui aggregates plus persistent `settings` (Chrome storage with migrations, domain extraction rules, screenshot hotkey, API key references).
+- `storage/` — Chrome storage wrapper (`getMultiple`, `setMultiple`, listeners) and the modular key vault under `storage/keys` (AES-GCM encryption, IndexedDB metadata cache, hash-based duplicate detection, compat provider registry).
+- `security/` — Crypto helpers layered under the key vault (PBKDF2, AES-GCM, masking).
 
 ### extension/
 
-- `background/index.ts` — Service worker entry
-- `background/messageHandler.ts` — Typed message registry (PING/PONG, GET_TAB_ID/INFO, GET_ALL_TABS, EXTRACT_TAB_CONTENT, CLEANUP_TAB_CACHE, etc.)
-- `background/sidebarManager.ts` — Per‑tab sidebar lifecycle
-- `background/tabManager.ts` — Tab querying, extraction orchestration + cache
-- `background/cache/TabContentCache.ts` — Session storage TTL cache (5 minutes)
-- `background/queue/ExtractionQueue.ts` — Concurrency‑limited extraction queue
-- `messaging/` — Message helpers, error/response shapes
+- `background/index.ts` — Service worker entry; wires keep-alive and handler registry.
+- `background/messageHandler.ts` — Typed router for sidebar/content requests (`PING/PONG`, `GET_TAB_ID/INFO`, `GET_ALL_TABS`, `EXTRACT_TAB_CONTENT`, `CONTENT_READY`, `CLEANUP_TAB_CACHE`, `PROXY_REQUEST`, error replies).
+- `background/tabManager.ts` — Tab lookup, extraction queue (3 concurrent slots), cache coordination, content-script readiness.
+- `background/cache/TabContentCache.ts` — 5-minute TTL cache in `chrome.storage.session` with mode-aware invalidation.
+- `background/queue/ExtractionQueue.ts` — FIFO queue with backoff/retry helpers.
+- `messaging/` — Message factories + shared response/error shapes.
 
 ### platform/
 
-- Chrome API wrappers: `runtime.ts`, `tabs.ts`, `storage.ts`, `messaging.ts`, `ports.ts`, `keepAlive.ts`, `alarms.ts`, `action.ts`, `scripting.ts`
+Typed wrappers for `chrome.*`: runtime (install/update events), tabs, storage (sync/local/session, batch helpers), messaging, ports (long-lived channels), keepAlive strategies, alarms, action button, scripting injection.
 
 ### services/
 
-- `chat/ChatService.ts` — Provider‑agnostic streaming with cancel support
-- `engine/EngineManagerService.ts` — Creates/initializes providers, switches models
-- `extraction/ExtractionService.ts` — Background‑mediated extraction with retries
-- `keys/KeyService.ts` — Encrypted BYOK storage + live validation
-- `session/SessionService.ts` — Session keying and URL normalization helpers
+- `chat/ChatService.ts` — Provider-agnostic streaming with cancel support and stream chunk normalization.
+- `engine/EngineManagerService.ts` — Singleton orchestrator for provider lifecycle, statistics, auto-bootstrap from saved keys/compat providers, and model switching.
+- `extraction/ExtractionService.ts` — Sidebar-facing wrapper around background extraction with retries, batch helpers, and rich error typing.
+- `keys/KeyService.ts` — Lightweight BYOK helper now focused on live validation/metadata (full storage handled by `data/storage/keys`).
+- `session/SessionService.ts` — Deterministic session keys (`tab_{id}:{normalizedUrl}`), lifecycle cleanup, custom normalization hooks.
 
 ### shared/
 
-- `utils/restrictedUrls.ts` and `utils/urlNormalizer.ts`
+Currently `restrictedUrls.ts` (centralized allow/deny) and `urlNormalizer.ts` (used by session keys, stores, services).
 
 ### sidebar/
 
-- `ChatPanel.tsx`, `index.tsx`, components/, hooks/, contexts/, styles/
+- `ChatPanel.tsx` — Unified shell integrating layout, settings, screenshot capture, extraction preview.
+- `components/` — Layout primitives, chat widgets, `ScreenshotPreview`, settings panel.
+- `hooks/` — React hooks for AI orchestration (`useAIChat`, `useStreamHandler`), tab extraction, slash commands, mentions, screenshot capture, sidebar positioning, message editing.
+- `contexts/` — Error boundary context, etc.
+- `styles/` — Layered CSS (`@layer` foundation→features) under Shadow DOM isolation.
 
 ### transport/
 
-- `types.ts`, `DirectFetchTransport.ts`, `BackgroundProxyTransport.ts`, `policy.ts`
+- `DirectFetchTransport` — Native fetch wrapper with streaming.
+- `BackgroundProxyTransport` — Service-worker proxy for CORS-bound endpoints (used automatically via `policy.ts`).
+- `policy.ts` — Allow/deny heuristics plus helper to decide when to proxy.
 
 ### types/
 
-- Message protocol, tabs, extraction, providers, settings, storage, etc.
+Shared contracts: messages (`MessageType`, payloads), extraction (`ExtractionMode`, options/results), providers (engine config + capabilities), chat/session models, storage schemas, settings (UI, domain rules, screenshot hotkey), API key vault types.
 
 ## Message & Data Flow (High Level)
 
 ```
-User → Sidebar (React) → Services (chat/extraction/keys)
-   ↘                                  ↙
-    Background (service worker) ←→ Content script (page)
-                ↘
-               Transports → AI providers
+User → Sidebar (React) → Services (chat / extraction / engine)
+   ↘                                   ↙
+    Background (service worker) ←→ Content script
+              ↘
+           Transports → Provider APIs
 ```
 
 ## Path Aliases (vite.config.ts)
 
-- `@` → `src/*`, plus focused aliases like `@sidebar`, `@components`, `@hooks`,
-  `@extension`, `@content`, `@core`, `@data`, `@store`, `@storage`, `@security`,
-  `@platform`, `@services`, `@transport`, `@types`, `@config`, `@shared`.
+`@` → `src/*`, plus focused aliases like `@sidebar`, `@components`, `@hooks`, `@extension`, `@content`, `@core`, `@data`, `@store`, `@services`, `@transport`, `@platform`, `@config`, `@shared`, `@types`, `@config/models`, etc.
 
-## Current Highlights (Sep 2025)
+## Current Highlights (September 2025)
 
-- Readability is the default extraction mode; Raw/Defuddle/Selection available
-- Slash commands now include `rephrase` and allow per‑command model override
-- Available models in the UI are gated by saved API keys and compat providers
-- Stream cancel support wired through ChatService and the ChatInput cancel button
+- Domain-based extraction defaults (Readability/Raw/Defuddle/Selection) resolved in the content script.
+- Engine Manager tracks health/stats and lazily boots providers using saved keys + compat provider registry.
+- Screenshot capture pipeline (hotkey + preview + upload helper) wired through sidebar hooks and core services.
+- Slash commands support per-command model overrides; UI exposes reasoning/thinking badges based on model metadata.
+- Multi-tab extraction via @-mentions reuses background cache and maintains per-session tab ordering.
 
 ## Testing
 
 ```bash
-npm test              # All tests
-npm run test:watch    # Watch mode
-npm run test:ui       # Vitest UI
+npm test           # Run all tests
+npm run test:watch # Watch mode
+npm run test:ui    # Vitest UI runner
 ```
 
 ## Security & Privacy
 
-- BYOK only; keys encrypted at rest with AES‑GCM (see `data/security` and `services/keys`)
-- Minimal Chrome permissions; sidebar UI runs in Shadow DOM
+- BYOK only; secrets pass through the AES-GCM key vault (`data/storage/keys`) before hitting Chrome storage.
+- Compat provider catalog stored separately without secrets; Shadow DOM keeps UI isolated.
+- Minimal extension permissions (`activeTab`, `storage`) and strict message validation in the background service worker.

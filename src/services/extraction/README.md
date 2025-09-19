@@ -1,172 +1,65 @@
 # Extraction Service
 
-The Extraction Service provides a high-level API for extracting content from browser tabs with retry logic, error handling, and consistent TabContent formatting.
+High-level wrapper that lets the sidebar (or other callers) request tab content through the background script. It adds retry logic, error typing, and consistent `TabContent` formatting on top of the content script orchestrator.
 
 ## Features
 
-- **Current Tab Extraction**: Extract content from the currently active tab
-- **Multi-Tab Extraction**: Extract content from multiple tabs concurrently
-- **Retry Logic**: Automatic retry with exponential backoff for failed extractions
-- **Error Handling**: Comprehensive error classification and handling
-- **Background Messaging**: Integrates with the existing background script messaging system
-- **TypeScript Support**: Full type safety with proper interfaces
+- **Current tab extraction** — Auto-load the active tab when the sidebar mounts.
+- **Multi-tab extraction** — Load other tabs on demand (used by @-mentions) with duplicate prevention.
+- **Mode control** — Readability by default; explicitly request Raw, Defuddle, or Selection.
+- **Retry handling** — Exponential backoff on transient failures (configurable).
+- **Error classification** — Strongly typed `ExtractionErrorType` values.
+- **Background messaging** — Uses the service worker queue/cache for consistency.
 
-## Usage
+## Quick Usage
 
-### Basic Usage
+```ts
+import { ExtractionService, extractCurrentTab, extractTabs } from '@services/extraction';
+import { ExtractionMode } from '@types/extraction';
 
-```typescript
-import { ExtractionService } from '@/services/extraction';
-
-// Create a service instance (typically from sidebar context)
-const extractionService = new ExtractionService('sidebar');
-
-// Extract current tab content
-try {
-  const tabContent = await extractionService.extractCurrentTab();
-  console.log('Extracted content:', tabContent.extractedContent.content);
-} catch (error) {
-  console.error('Extraction failed:', error.message);
-}
-```
-
-### Convenience Functions
-
-```typescript
-import { extractCurrentTab, extractTabs } from '@/services/extraction';
-
-// Extract current tab using default service
-const currentTab = await extractCurrentTab({
-  mode: ExtractionMode.DEFUDDLE,
-  timeout: 5000,
+// Instance (e.g., in a hook)
+const service = new ExtractionService('sidebar');
+const current = await service.extractCurrentTab({
+  mode: ExtractionMode.READABILITY,
   forceRefresh: true,
 });
 
-// Extract multiple tabs
-const results = await extractTabs([123, 456, 789], {
-  maxRetries: 2,
-  timeout: 3000,
-});
-
-console.log(`Successfully extracted ${results.successCount}/${results.totalTabs} tabs`);
+// Convenience helpers
+await extractCurrentTab({ mode: ExtractionMode.SELECTION });
+await extractTabs([tabIdA, tabIdB], { mode: ExtractionMode.RAW, maxRetries: 2 });
 ```
 
-### Advanced Configuration
+## Options
 
-```typescript
-import { ExtractionService, ExtractionMode } from '@/services/extraction';
+`ServiceExtractionOptions` extends core `ExtractionOptions`:
 
-const service = new ExtractionService('sidebar');
-
-// Extract with custom options
-const tabContent = await service.extractCurrentTab({
-  mode: ExtractionMode.RAW, // Use raw mode for tables
-  timeout: 10000, // 10 second timeout
-  maxLength: 500000, // 500k character limit
-  forceRefresh: true, // Ignore cache
-  maxRetries: 3, // Retry up to 3 times
-  retryDelay: 2000, // Wait 2s between retries
-});
-
-// Batch extraction with error handling
-const batchResults = await service.extractTabs([123, 456, 789]);
-
-for (const result of batchResults.results) {
-  if (result.success) {
-    console.log(`Tab ${result.tabId}: ${result.content?.extractedContent.title}`);
-  } else {
-    console.error(`Tab ${result.tabId} failed: ${result.error}`);
-  }
+```ts
+interface ServiceExtractionOptions extends ExtractionOptions {
+  forceRefresh?: boolean; // Skip cache (default false)
+  mode?: ExtractionMode; // READABILITY | RAW | DEFUDDLE | SELECTION
+  maxRetries?: number; // Default 2
+  retryDelay?: number; // Default 1000 ms
 }
 ```
 
 ## Error Handling
 
-The service provides comprehensive error classification:
+Errors extend `ExtractionError` with a typed `type` field:
 
-```typescript
-import { ExtractionError, ExtractionErrorType } from '@/services/extraction';
+- `TIMEOUT` — content script timed out
+- `TAB_NOT_FOUND` — tab closed or unavailable
+- `RESTRICTED_URL` — blocked by restricted URL policy
+- `CONTENT_SCRIPT_UNAVAILABLE` — content script missing/not ready
+- `UNKNOWN` — fallback for unexpected issues
 
-try {
-  const content = await extractCurrentTab();
-} catch (error) {
-  if (error instanceof ExtractionError) {
-    switch (error.type) {
-      case ExtractionErrorType.TIMEOUT:
-        console.log('Extraction timed out');
-        break;
-      case ExtractionErrorType.TAB_NOT_FOUND:
-        console.log('Tab was closed or not found');
-        break;
-      case ExtractionErrorType.RESTRICTED_URL:
-        console.log('Cannot access restricted URL');
-        break;
-      case ExtractionErrorType.CONTENT_SCRIPT_UNAVAILABLE:
-        console.log('Content script not available');
-        break;
-      default:
-        console.log('Unknown extraction error');
-    }
-  }
-}
-```
+Callers can catch and switch on `error instanceof ExtractionError`. The hook `useTabExtraction` already maps these to user-friendly banners.
 
-## Integration with Existing Systems
+## Integration
 
-The service integrates seamlessly with the existing extraction infrastructure:
+- Delegates to background `TabManager` which respects cache TTLs and mode changes.
+- Consumed by `useTabExtraction` to auto-load the current tab and provide `@` tab mentions.
+- Cooperates with domain defaults: if no mode is passed, the content script still applies domain rules before running extraction.
 
-- **Uses TabManager**: Leverages the existing TabManager for actual extraction
-- **Background Messaging**: Communicates with background script using the established messaging protocol
-- **Consistent Types**: Returns TabContent in the same format as existing hooks
-- **Cache Integration**: Works with the existing content caching system
+## Testing
 
-## API Reference
-
-### ExtractionService
-
-Main service class for content extraction.
-
-#### Methods
-
-- `extractCurrentTab(options?): Promise<TabContent>` - Extract current tab content
-- `extractTabs(tabIds, options?): Promise<BatchExtractionResult>` - Extract multiple tabs
-
-### ServiceExtractionOptions
-
-Configuration options for extraction:
-
-```typescript
-interface ServiceExtractionOptions extends ExtractionOptions {
-  forceRefresh?: boolean; // Ignore cache
-  mode?: ExtractionMode; // DEFUDDLE, SELECTION, or RAW
-  maxRetries?: number; // Retry attempts (default: 2)
-  retryDelay?: number; // Delay between retries (default: 1000ms)
-}
-```
-
-### ExtractionResult
-
-Individual extraction result:
-
-```typescript
-interface ExtractionResult {
-  success: boolean;
-  content?: TabContent; // If successful
-  error?: string; // If failed
-  tabId: number;
-}
-```
-
-### BatchExtractionResult
-
-Batch extraction results with statistics:
-
-```typescript
-interface BatchExtractionResult {
-  results: ExtractionResult[];
-  totalTabs: number;
-  successCount: number;
-  failureCount: number;
-  successRate: number; // Percentage
-}
-```
+Unit tests live under `tests/unit/services/extraction/**`. Mock background messaging when running in Vitest (`sendMessage` from `@platform/chrome/runtime`).

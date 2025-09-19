@@ -1,120 +1,100 @@
 # Core Module
 
-Central business logic for the AI Browser Sidebar: provider adapters, engine wrappers, and extraction helpers.
+Pure business logic for the AI Browser Sidebar: provider adapters, engine wrappers, extraction helpers, and reusable services that remain UI-agnostic. The goal is that everything here can run in isolation (Vitest, node, or background contexts) without touching the DOM.
 
-## Overview
-
-The core module separates provider protocol glue from runtime orchestration:
-
-- `ai/` contains stateless, provider‑specific helpers (build requests, parse streams, map errors).
-- `engine/` contains stateful provider classes that implement a common interface, hold config, and wire transports. Engines call into `ai/` to talk to each vendor.
-- `extraction/` contains HTML → Markdown conversion and lightweight analyzers used by content extraction.
-
-This split lets us keep protocol details testable and isolated while giving the app a uniform, class‑based provider surface.
-
-## Structure
+## Layout
 
 ```
 core/
-├── ai/                      # Provider protocol helpers (stateless)
-│   ├── openai/              # Request builders, stream processors, error mappers
-│   ├── gemini/
-│   ├── openrouter/
-│   └── openai-compat/
-├── engine/                  # Stateful providers + orchestration
-│   ├── BaseEngine.ts        # Shared lifecycle, validation, streaming wrapper
-│   ├── EngineFactory.ts     # Creates providers, injects transport
-│   ├── EngineRegistry.ts    # Register/set active provider
-│   ├── openai/              # OpenAIProvider.ts (uses ai/openai/*)
-│   ├── gemini/              # GeminiProvider.ts (uses ai/gemini/*)
-│   ├── openrouter/          # OpenRouterProvider.ts (uses ai/openrouter/*)
-│   └── openai-compat/       # OpenAICompatibleProvider.ts
-└── extraction/              # HTML→Markdown + analyzers
-    ├── analyzers/
-    ├── markdownConverter.ts
-    └── text.ts
+├── ai/                 # Vendor-specific request builders, stream decoders, error mappers
+├── engine/             # Stateful provider classes + registry/factory helpers
+├── extraction/         # Markdown converter, analyzers, shared extraction utils
+├── services/           # Cross-cutting services (message editing, screenshots, model switching, ...)
+└── utils/              # Pure utilities (geometry, text processing, hotkeys, screenshots, ...)
 ```
 
-## ai vs engine
+## ai/
 
-- ai (stateless)
-  - Build HTTP payloads for each vendor (e.g., `ai/openai/requestBuilder.ts`).
-  - Parse vendor streaming events into a normalized delta (`ai/*/streamProcessor.ts`).
-  - Map vendor errors to `ProviderError` (`ai/*/errorHandler.ts`).
-  - No transport, no app state; pure, easily unit‑tested logic.
+Each provider folder (openai, gemini, openrouter, openai-compat) contains stateless helpers:
 
-- engine (stateful)
-  - Provider classes extend `BaseEngine` (config, capability flags, validation, rate limiting hooks).
-  - Inject a `Transport` (default: `DirectFetchTransport`) and call `ai/` helpers to perform requests.
-  - Yield normalized `StreamChunk` objects consumed by the UI.
-  - Factory/Registry manage creation and selection: `EngineFactory.ts`, `EngineRegistry.ts`.
+- `requestBuilder.ts` / `payload.ts` — Shape provider-friendly payloads.
+- `streamProcessor.ts` — Parse SSE/token streams into normalized `StreamChunk`s.
+- `errorHandler.ts` — Map provider errors to `ProviderError`.
 
-Data flow
+No transports or state live here; everything is deterministic and testable.
 
-```
-ProviderChatMessage[]
-  → engine/<Provider>.streamChat(...)
-    → ai/<provider>/requestBuilder → Transport.stream(fetch ...)
-      → ai/<provider>/streamProcessor → StreamChunk → UI
-```
+## engine/
 
-## Usage
+- `BaseEngine.ts` — Shared lifecycle, input validation, streaming helpers, capability flags.
+- `EngineFactory.ts` — Creates engines with injected transports and provider config.
+- `EngineRegistry.ts` — Tracks registered providers, active provider switching.
+- Provider folders (`openai`, `gemini`, `openrouter`, `openai-compat`) extend `BaseEngine` and use the `ai/` helpers.
 
-Create and register a provider
+Engines expose async iterators for chat streaming, metadata accessors (rate limits, reasoning support), and integrate with the transport policy.
+
+## extraction/
+
+- `markdownConverter.ts` — HTML → GitHub Flavored Markdown (tables, code fences, math, link options).
+- `analyzers/` — Content/metadata analyzers (table detection, summaries, metadata extraction).
+- `text.ts` — Utility helpers shared between extractors and analyzers.
+
+## services/
+
+Reusable, UI-free helpers that orchestrate core features:
+
+- `messageProcessing.ts` — Convert chat history into provider-ready payloads.
+- `messageEditing.ts` — Apply edits/undo, build metadata, split assistant thoughts vs final replies.
+- `messageQueueService.ts` — FIFO queue with concurrency guards for chat jobs.
+- `modelSwitching.ts` — Validate model switches against provider capabilities.
+- `fileUpload.ts` / `imageUploadService.ts` / `imageSyncService.ts` — Shared upload/sync orchestration (screenshots, future file attachments).
+- `tabContent.ts` — Utilities for merging/sorting multi-tab extraction results.
+
+Keep orchestration logic here when it is independent of React/DOM.
+
+## utils/
+
+Pure helpers with no side effects:
+
+- `errorUtils.ts` — Network/auth classification, retry hints.
+- `favicon.ts` — Resolve favicons safely (Google S2 + fallbacks).
+- `geometry.ts` — Bounds/size constraints for draggable/resizable UI.
+- `layoutCalculations.ts` — Initial sidebar layout math.
+- `positionCalculation.ts` — Dropdown positioning relative to caret/viewport.
+- `textProcessing.ts` — Slash command & @mention detection + insertion.
+- `hotkeys.ts` — Parse and compare keyboard shortcuts (screenshot capture).
+- `screenshot.ts` — Aspect ratio + downscaling helpers shared between capture and upload.
+
+Everything here should be deterministic (same input → same output) to keep tests straightforward.
+
+## Usage Patterns
 
 ```ts
 import { EngineFactory } from '@core/engine/EngineFactory';
 import { EngineRegistry } from '@core/engine/EngineRegistry';
-import type { ProviderChatMessage } from '@/types/providers';
+import { detectSlashCommandInternal } from '@core/utils/textProcessing';
+import { constrainPosition } from '@core/utils/geometry';
+import { prepareMessageContent } from '@core/services/messageEditing';
 
 const factory = new EngineFactory();
 const registry = new EngineRegistry();
+await factory.createAndRegister({ type: 'openai', config: {...} }, registry);
 
-// Example: OpenAI
-await factory.createAndRegister(
-  { type: 'openai', config: { apiKey: 'sk-...', model: 'gpt-5-nano' } },
-  registry
-);
-
-registry.setActiveProvider('openai');
-const provider = registry.getActiveProvider();
-
-const messages: ProviderChatMessage[] = [
-  { id: 'u1', role: 'user', content: 'Hello!', timestamp: new Date() },
-];
-
-for await (const chunk of provider!.streamChat(messages, { systemPrompt: 'Be concise.' })) {
-  // chunk.choices[0].delta.content / delta.thinking, etc.
-}
+const slash = detectSlashCommandInternal('/summarize this', 10, { enabled: true, isComposing: false });
+const bounds = constrainPosition({ x: 120, y: 240 }, { minX: 0, maxX: 600, minY: 0, maxY: 500 });
+const contentPayload = prepareMessageContent(history, editorState);
 ```
 
-Direct creation helpers also exist in the factory, e.g. `createOpenAIProvider`, `createGeminiProvider`.
+## Design Principles
 
-## When to add code
+1. **Pure-by-default** — Utilities and services avoid DOM/browser APIs so they can run in Vitest or the background service worker.
+2. **Separation of concerns** — Engines own provider state; `ai/` handles protocol details; `services/` orchestrate ongoing workflows.
+3. **Strong typing** — All inputs/outputs align with `@/types` contracts.
+4. **Testability** — New logic should land alongside targeted unit tests under `tests/unit/core/**`.
 
-- Add to `core/ai/<provider>/` when:
-  - The vendor’s payload shape, SSE event format, or error mapping changes.
-  - You need request/response utilities that are provider‑specific and stateless.
+## When to Add Code Here
 
-- Add to `core/engine/<provider>/` when:
-  - Introducing a new provider class or wiring config/transport/capabilities.
-  - You need to expose a consistent `streamChat` that uses `ai/` helpers.
+- Computation or orchestration that the UI or extension layer will call into repeatedly.
+- Logic that could be reused by different front ends (sidebar, popup, background).
+- Any functionality that must be tested without the DOM.
 
-- Add/adjust models in `src/config/models.ts` when introducing model IDs, defaults, or capability flags.
-
-## Transports
-
-- `DirectFetchTransport` (default) performs fetch with streaming.
-- `BackgroundProxyTransport` can proxy via the extension background if needed.
-  Engines receive a transport (factory injects `DirectFetchTransport` by default).
-
-## Testing
-
-- Unit tests for protocol helpers live under `tests/unit/core/ai/**` (request builders, stream processors, mappers).
-- Run with `npm test` or `npm run test:watch`.
-
-## Notes and tips
-
-- OpenAI Responses API: we send `tools: [{ type: 'web_search' }]` by default and stream reasoning/thinking when supported. Search metadata is surfaced via chunk metadata (see `ai/openai/responseParser.ts`).
-- Keep `ai/` functions pure and side‑effect free; engines own state and validation.
-- Use path aliases (`@core`, `@config`, `@transport`, etc.).
+Keep UI bindings, side effects, and Chrome APIs in `sidebar/`, `content/`, `extension/`, or `platform/`.

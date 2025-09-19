@@ -1,87 +1,88 @@
 # Sidebar Module
 
-React Shadow‑DOM chat UI: model selector, streaming, extraction preview, settings, and utilities.
+The sidebar is a Shadow-DOM React app. It renders the chat UI, handles streaming, surfaces extraction previews, and wires user actions into the service layer. UI logic stays here; provider logic lives in `@core`/`@services`.
 
 ## Directory Structure
 
 ```
 sidebar/
-├─ ChatPanel.tsx            # Main UI entry
-├─ index.tsx                # Mount/unmount into Shadow DOM
+├─ ChatPanel.tsx           # Unified entry (layout, settings, capture, messaging)
+├─ index.tsx               # Mount/unmount into Shadow DOM root
 ├─ components/
-│  ├─ layout/               # Header/Footer/Body/ResizeHandles
-│  ├─ ChatInput.tsx         # Multiline input (+ cancel when streaming)
-│  ├─ CodeBlock.tsx         # Syntax‑highlighted code
-│  ├─ ContentPreview.tsx    # Extracted page content preview
-│  ├─ ErrorBanner.tsx
-│  ├─ MarkdownRenderer.tsx  # GFM + KaTeX
-│  ├─ MessageBubble.tsx
-│  ├─ MessageList.tsx       # Virtualized list
-│  ├─ ModelSelector.tsx
-│  ├─ SearchSources.tsx
-│  ├─ Settings/Settings.tsx
+│  ├─ layout/              # Header, Body, Footer, ResizeHandles
+│  ├─ Settings/            # Settings panel (keys, compat providers, domain rules)
+│  ├─ ScreenshotPreview.tsx# Inline screenshot management
+│  ├─ ContentPreview.tsx   # Extracted tab content viewer
+│  ├─ ModelSelector.tsx    # Model dropdown with capability badges
 │  ├─ SlashCommandDropdown.tsx
-│  ├─ StreamingText.tsx
-│  ├─ TabContentItem.tsx
-│  ├─ TabErrorBoundary.tsx
-│  ├─ TabLoadingIndicator.tsx
 │  ├─ TabMentionDropdown.tsx
-│  ├─ ThinkingWrapper.tsx
-│  └─ ui/ (Alert, Collapsible, CopyButton, Dropdown, FullscreenModal, Icons, Spinner, TextArea, Tooltip)
-├─ contexts/ (ErrorContext.tsx, useError, etc.)
+│  ├─ MessageList.tsx / MessageBubble.tsx / StreamingText.tsx
+│  ├─ ErrorBanner.tsx, TabErrorBoundary.tsx, TabLoadingIndicator.tsx
+│  └─ ui/                  # Buttons, dropdowns, tooltips, alerts
 ├─ hooks/
-│  ├─ ai/ (useAIChat, useMessageHandler, useProviderManager, useStreamHandler)
-│  ├─ useSlashCommand.ts
-│  ├─ useDragPosition.ts
-│  ├─ useResize.ts
-│  └─ useTabMention.ts
-└─ styles/ (layered CSS; see styles/README.md)
+│  ├─ ai/                  # useAIChat, useMessageHandler, useProviderManager, useStreamHandler
+│  ├─ useTabExtraction.ts  # Multi-tab extraction + cache orchestration
+│  ├─ useSlashCommand.ts / useTabMention.ts
+│  ├─ useScreenshotCapture.ts
+│  ├─ useMessageEditing.ts
+│  ├─ useSidebarPosition.ts (drag + resize)
+│  ├─ useDragPosition.ts / useResize.ts (low-level geometry wrappers)
+│  └─ useSessionManager.ts
+├─ contexts/
+│  └─ ErrorContext (with hook re-export)
+├─ utils/
+│  └─ dropdownPosition.ts  # DOM wrappers around core positioning helpers
+├─ styles/                 # Layered CSS (see styles/README.md)
+└─ constants.ts            # Layout defaults/readability thresholds
 ```
 
-### Layout & Components
+## Responsibilities
 
-- Header (draggable), Footer (input/actions), Body (scrollable), Resize handles
-- MessageList (virtualized), MessageBubble, StreamingText
-- ModelSelector with capability hints
-- ContentPreview + TabContentItem for extracted page data
-- SlashCommandDropdown; ThinkingWrapper when provider supports reasoning
+- Render chat history with streaming updates, reasoning indicators, and markdown/KaTeX rendering.
+- Manage tab extraction (auto-load current tab, @-mention to load others, preview cards).
+- Handle screenshot capture (configurable hotkey, capture modal, upload via core services).
+- Expose Settings UI for API keys, compat provider vault, domain defaults, debug toggles, screenshot hotkey.
+- Provide slash command + @ mention UX powered by core text-processing utilities.
+- Coordinate session switching via `useSessionManager`/Zustand stores.
 
-### State Management
+## State Management
 
-- In‑memory chat/session stores under `@data/store`: `useSessionStore`, `useMessageStore`, `useTabStore`, `useUIStore`
-- Persistent settings/API keys via `useSettingsStore` (Chrome storage)
-- ErrorContext for cross‑component error reporting
+Hooks talk to the shared stores exported from `@data/store/chat`:
 
-## Messaging
+- `useSessionStore` — active session per `tabId + normalizedUrl`.
+- `useMessageStore` — message list with edit/remove helpers.
+- `useTabStore` — extracted tab cache per session (current tab + additional tabs).
+- `useUIStore` — loading flags, error ids, streaming status.
+- `useSettingsStore` — persisted settings (API keys, compat providers, domain rules, screenshot hotkey, UI prefs).
 
-The UI communicates with the background using the typed protocol in `@types/messages.ts`:
+## Key Hooks
 
-- Sidebar toggle/close
-- Tab metadata (`GET_TAB_INFO`, `GET_ALL_TABS`)
-- Content extraction (`EXTRACT_TAB_CONTENT`) with stream‑safe timeouts
+- `useAIChat` — Initializes providers, streams responses, handles cancel & retry.
+- `useProviderManager` — Boots providers from saved keys/compat providers, exposes model capability info.
+- `useTabExtraction` — Talks to background extraction service, maintains loaded tab order, auto-loads the current tab once.
+- `useScreenshotCapture` — Detects hotkeys (using `@core/utils/hotkeys`), captures screenshots, drives `ScreenshotPreview`.
+- `useMessageEditing` — Inline editing, re-send, “continue writing” flows.
+- `useSidebarPosition` — Simple wrapper over geometry utils for drag/resize.
 
-## Styling
+## Slash Commands & Mentions
 
-Layered CSS in `styles/` with Shadow‑DOM isolation. See `styles/README.md` for guidance and conventions.
+- `/summarize`, `/explain`, `/analyze`, `/comment`, `/fact-check` (Gemini), `/rephrase`.
+- Keyboard: `↑/↓` navigate, `Enter` confirm, `Esc` cancel.
+- `@` opens the tab mention dropdown populated via `useTabExtraction`.
 
-## Performance
+## Settings Panel Highlights
 
-- Virtualized lists for long chats
-- Memoization and selective re‑renders
-- Stream buffering to keep smooth output
+- Validate & store BYOK keys (OpenAI, Gemini, OpenRouter) before updating the settings store.
+- Manage OpenAI-compatible providers (built-ins + custom) via `@data/storage/keys/compat`.
+- Configure domain extraction defaults and screenshot hotkey.
+- Toggle debug mode and other UI preferences.
 
-## Accessibility
+## Styling & Theming
 
-- Keyboard navigation; accessible labels/roles
-- Escape closes modal and header close button (Esc) tooltips
-- Cancel button appears while streaming; supports keyboard focus
+See `styles/README.md` for the layered CSS approach. All styles live under a Shadow DOM root, so no leakage into host pages.
 
-## Browser Compatibility
+## Testing
 
-Chromium‑based browsers (Chrome, Edge, Arc, Brave, Opera). Some pages (e.g., `chrome://`) are restricted by design.
-
-## Slash Commands
-
-Type `/` to open the dropdown; filter by typing (`↑/↓` to navigate, `Enter` to select). The command expands into a template; some commands choose a one‑turn model (e.g., `/fact-check` → `gemini-2.5-flash`).
-
-Built‑ins: `summarize`, `explain`, `analyze`, `comment`, `fact-check`, `rephrase`.
+- Component tests live under `tests/integration/sidebar/**`.
+- Hook tests under `tests/integration/sidebar/hooks/**`.
+- Prefer React Testing Library + jsdom with mocked stores and services.

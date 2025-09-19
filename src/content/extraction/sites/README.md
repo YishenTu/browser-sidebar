@@ -1,18 +1,15 @@
 # Site-Specific Extraction Plugins
 
-This folder hosts site extractor plugins that run before Readability/Raw/Defuddle.
-Plugins are small modules that recognize a domain and return an `ExtractedContent` result.
+Plugins in this folder run _before_ the standard Readability/Raw/Defuddle pipeline. They let you short-circuit the normal extractor when a site needs custom markup handling (paywalls, heavy scripting, etc.). Selection mode bypasses plugins entirely.
 
-How It Works
+## How It Works
 
-- The registry auto-loads all `*.plugin.ts` files under this folder.
-- At runtime, Readability calls `trySitePlugins(document, options)`; the first matching plugin wins.
-- If no plugin handles the page, normal Readability (or the chosen mode) continues.
+1. The registry glob-imports every `*.plugin.ts` file in this folder.
+2. `trySitePlugins(document, options)` executes each plugin in registration order.
+3. The first plugin that returns an `ExtractedContent` wins; returning `null` defers to the main extractor.
+4. If no plugin handles the page, the orchestrator falls back to Readability (or the selected mode) as usual.
 
-Add/Remove a Plugin (repo-managed)
-
-1. Create `your-site.plugin.ts` in this folder.
-2. Default-export a `SiteExtractorPlugin`:
+## Creating a Plugin
 
 ```ts
 import type { SiteExtractorPlugin } from './types';
@@ -20,25 +17,25 @@ import type { ExtractedContent } from '@/types/extraction';
 
 const plugin: SiteExtractorPlugin = {
   id: 'example',
-  matches: (doc: Document) => doc.location.hostname.endsWith('example.com'),
-  extract: async (doc, options): Promise<ExtractedContent | null> => {
-    // return null to defer to normal extraction
-    // or return an ExtractedContent with markdown/textContent/etc.
-    return null;
+  matches: doc => doc.location.hostname.endsWith('example.com'),
+  async extract(doc, options): Promise<ExtractedContent | null> {
+    // Custom extraction logic...
+    return null; // return null to fall back to standard extraction
   },
 };
 
 export default plugin;
 ```
 
-User (local) Plugins (gitignored)
+## Local (Git-Ignored) Plugins
 
-- Keep private plugins in `site-plugins/` (repo root). This directory is gitignored.
-- The registry auto-loads `site-plugins/**/*.ts` via the `@site` alias.
-- You can place any site-specific tests under `site-plugins/` as well (they will be ignored by git). If you want to run them locally, point Vitest to that path explicitly.
+- Keep private plugins under `site-plugins/` in the repo root (gitignored).
+- They are auto-loaded via the `@site` alias.
+- Local tests can live alongside your plugins if you target them explicitly with Vitest.
 
-Notes
+## Guidelines
 
-- Keep plugins focused and fail-soft: catch errors and return `null` to fall back.
-- Do not execute scripts or fetch remote data from plugins.
-- Prefer structural selectors; avoid hard-coding language-specific keywords.
+- Fail soft: catch errors and return `null` so the main extractor can continue.
+- Avoid network requests or executing page scripts.
+- Prefer structural selectors or metadata over brittle text matching.
+- Remember that Selection mode bypasses plugins — keep plugins scoped to Readability/Raw/Defuddle use cases.
