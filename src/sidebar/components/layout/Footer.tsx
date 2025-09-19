@@ -24,6 +24,8 @@ export interface FooterProps {
       }>;
     }
   ) => void;
+  /** Message queued handler */
+  onMessageQueued?: (message: string, metadata?: Record<string, unknown>) => void;
   /** Cancel message handler */
   onCancel?: () => void;
   /** Whether currently loading */
@@ -44,8 +46,9 @@ export interface FooterProps {
   onMentionSelectTab?: (tabId: number) => void;
   /** Callback fired when image is pasted */
   onImagePaste?: (
-    file: File
-  ) => Promise<{ fileUri?: string; fileId?: string; mimeType: string } | null>;
+    file: File,
+    options?: { uploadId?: string; previewUrl?: string; mimeType?: string }
+  ) => Promise<{ fileUri?: string; fileId?: string; mimeType: string; uploadId?: string } | null>;
 }
 
 /**
@@ -54,6 +57,7 @@ export interface FooterProps {
  */
 export const Footer: React.FC<FooterProps> = ({
   onSend,
+  onMessageQueued,
   onCancel,
   loading,
   placeholder,
@@ -101,6 +105,7 @@ export const Footer: React.FC<FooterProps> = ({
         key={chatInputKey}
         ref={inputRef}
         onSend={handleSend}
+        onMessageQueued={onMessageQueued}
         onCancel={editingMessage ? onClearEdit : onCancel}
         loading={loading}
         placeholder={

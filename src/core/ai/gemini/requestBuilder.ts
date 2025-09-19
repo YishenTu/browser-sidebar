@@ -274,7 +274,7 @@ function parseTabContentForImages(tabContent: string): GeminiPart[] {
 
   // Check if the tab content contains image references
   const imagePattern =
-    /<content\s+type="image">\s*<fileUri>([^<]+)<\/fileUri>\s*<mimeType>([^<]+)<\/mimeType>/g;
+    /<content\s+type="image">\s*<fileUri>([^<]+)<\/fileUri>\s*<mimeType>([^<]+)<\/mimeType>\s*<\/content>/g;
 
   let lastIndex = 0;
   let match;
@@ -299,12 +299,25 @@ function parseTabContentForImages(tabContent: string): GeminiPart[] {
   }
 
   // Split content around image references
-  for (const imageMatch of matches) {
-    // Add text before the image
+  for (let i = 0; i < matches.length; i++) {
+    const imageMatch = matches[i];
+    if (!imageMatch) continue; // Type guard for TypeScript
+
+    // Add text before the image (including opening tags)
     if (imageMatch.start > lastIndex) {
       const textBefore = tabContent.substring(lastIndex, imageMatch.start);
       if (textBefore.trim()) {
-        parts.push({ text: textBefore });
+        // Replace <content type="image"> opening with regular <content>
+        const modifiedText =
+          i === 0 && textBefore.includes('</metadata>') ? textBefore + '\n  <content>' : textBefore;
+        parts.push({ text: modifiedText });
+      }
+    } else if (i === 0 && imageMatch.start === lastIndex) {
+      // Image is at the very beginning after metadata
+      const precedingText = tabContent.substring(0, imageMatch.start);
+      if (precedingText.includes('</metadata>')) {
+        // Add opening content tag
+        parts.push({ text: precedingText + '\n  <content>' });
       }
     }
 
@@ -319,12 +332,16 @@ function parseTabContentForImages(tabContent: string): GeminiPart[] {
     lastIndex = imageMatch.end;
   }
 
-  // Add any remaining text after the last image
+  // Add closing content tag and any remaining text (usually </tab> and </tab_content>)
   if (lastIndex < tabContent.length) {
     const textAfter = tabContent.substring(lastIndex);
     if (textAfter.trim()) {
-      parts.push({ text: textAfter });
+      // Include the closing </content> tag with the remaining XML
+      parts.push({ text: '\n  </content>' + textAfter });
     }
+  } else {
+    // No remaining text, just add the closing content tag
+    parts.push({ text: '\n  </content>' });
   }
 
   return parts;

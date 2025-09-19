@@ -251,7 +251,7 @@ function parseTabContentForImages(tabContent: string): OpenAIInputContent[] {
   const parts: OpenAIInputContent[] = [];
 
   // Check if the tab content contains image references
-  const imageFileIdMatch = /<content\s+type="image">\s*<fileId>([^<]+)<\/fileId>/g;
+  const imageFileIdMatch = /<content\s+type="image">\s*<fileId>([^<]+)<\/fileId>\s*<\/content>/g;
 
   let lastIndex = 0;
   let match;
@@ -278,14 +278,30 @@ function parseTabContentForImages(tabContent: string): OpenAIInputContent[] {
   }
 
   // Split content around image references
-  for (const imageMatch of matches) {
-    // Add text before the image
+  for (let i = 0; i < matches.length; i++) {
+    const imageMatch = matches[i];
+    if (!imageMatch) continue; // Type guard for TypeScript
+
+    // Add text before the image (including opening tags)
     if (imageMatch.start > lastIndex) {
       const textBefore = tabContent.substring(lastIndex, imageMatch.start);
       if (textBefore.trim()) {
+        // Replace <content type="image"> opening with regular <content>
+        const modifiedText =
+          i === 0 && textBefore.includes('</metadata>') ? textBefore + '\n  <content>' : textBefore;
         parts.push({
           type: 'input_text',
-          text: textBefore,
+          text: modifiedText,
+        });
+      }
+    } else if (i === 0 && imageMatch.start === lastIndex) {
+      // Image is at the very beginning after metadata
+      const precedingText = tabContent.substring(0, imageMatch.start);
+      if (precedingText.includes('</metadata>')) {
+        // Add opening content tag
+        parts.push({
+          type: 'input_text',
+          text: precedingText + '\n  <content>',
         });
       }
     }
@@ -300,15 +316,22 @@ function parseTabContentForImages(tabContent: string): OpenAIInputContent[] {
     lastIndex = imageMatch.end;
   }
 
-  // Add any remaining text after the last image
+  // Add closing content tag and any remaining text (usually </tab> and </tab_content>)
   if (lastIndex < tabContent.length) {
     const textAfter = tabContent.substring(lastIndex);
     if (textAfter.trim()) {
+      // Include the closing </content> tag with the remaining XML
       parts.push({
         type: 'input_text',
-        text: textAfter,
+        text: '\n  </content>' + textAfter,
       });
     }
+  } else {
+    // No remaining text, just add the closing content tag
+    parts.push({
+      type: 'input_text',
+      text: '\n  </content>',
+    });
   }
 
   return parts;

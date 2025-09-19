@@ -6,6 +6,7 @@ import { TabMentionDropdown } from './TabMentionDropdown';
 import { SlashCommandDropdown } from './SlashCommandDropdown';
 import { TabErrorBoundary } from './TabErrorBoundary';
 import { searchSlashCommands, type SlashCommand } from '@/config/slashCommands';
+import { messageQueueService } from '@core/services/messageQueueService';
 import type { TabInfo, TabContent } from '@/types/tabs';
 
 // Single source of truth for ChatInput dimensions
@@ -29,6 +30,8 @@ export interface ChatInputProps
       }>;
     }
   ) => void;
+  /** Callback fired when message is queued (waiting for uploads) */
+  onMessageQueued?: (message: string, metadata?: Record<string, unknown>) => void;
   /** Callback fired when a tab is selected via @ mention */
   onMentionSelectTab?: (tabId: number) => void;
   /** Current message value (controlled) */
@@ -61,8 +64,9 @@ export interface ChatInputProps
   onTabRemove?: (tabId: number) => void;
   /** Callback fired when image is pasted */
   onImagePaste?: (
-    file: File
-  ) => Promise<{ fileUri?: string; fileId?: string; mimeType: string } | null>;
+    file: File,
+    options?: { uploadId?: string; previewUrl?: string; mimeType?: string }
+  ) => Promise<{ fileUri?: string; fileId?: string; mimeType: string; uploadId?: string } | null>;
 }
 
 type ChatInputSendMetadata = NonNullable<Parameters<ChatInputProps['onSend']>[1]>;
@@ -77,6 +81,7 @@ export const ChatInput = React.forwardRef<HTMLTextAreaElement, ChatInputProps>(
   (
     {
       onSend,
+      onMessageQueued,
       value,
       defaultValue,
       onChange,
@@ -107,7 +112,7 @@ export const ChatInput = React.forwardRef<HTMLTextAreaElement, ChatInputProps>(
     // Track if we're currently sending to prevent double submission
     const [isSending, setIsSending] = useState(false);
 
-    // Track pasted images with loading state
+    // Track pasted images with loading state and upload IDs
     const [pastedImages, setPastedImages] = useState<
       Array<{
         fileUri?: string;
@@ -116,6 +121,7 @@ export const ChatInput = React.forwardRef<HTMLTextAreaElement, ChatInputProps>(
         previewUrl: string;
         isLoading?: boolean;
         id: string;
+        uploadId?: string; // Track queue upload ID
       }>
     >([]);
 
@@ -396,20 +402,23 @@ export const ChatInput = React.forwardRef<HTMLTextAreaElement, ChatInputProps>(
       ]
     );
 
-    // Send message
+    // Send message (now with queue support)
     const handleSend = useCallback(async () => {
       if (isSending || loading) return;
 
       const trimmedMessage = currentValue.trim();
+      const hasLoadingImages = pastedImages.some(img => img.isLoading);
       const uploadedImages = pastedImages.filter(
         img => (img.fileUri || img.fileId) && !img.isLoading
       );
-      if (!trimmedMessage && uploadedImages.length === 0) return;
+
+      // Don't send empty messages unless there are images
+      if (!trimmedMessage && uploadedImages.length === 0 && !hasLoadingImages) return;
 
       setIsSending(true);
 
       try {
-        // Clear input immediately after initiating send (before awaiting response)
+        // Clear input immediately after initiating send
         if (clearOnSend) {
           handleValueChange('');
         }
@@ -418,30 +427,54 @@ export const ChatInput = React.forwardRef<HTMLTextAreaElement, ChatInputProps>(
         const metadata: ChatInputSendMetadata = {};
         if (expandedPromptRef) metadata.expandedPrompt = expandedPromptRef;
         if (modelOverrideRef) metadata.modelOverride = modelOverrideRef;
-        // Only include images that have finished uploading (have fileUri)
-        const uploadedImages = pastedImages.filter(
-          img => (img.fileUri || img.fileId) && !img.isLoading
-        );
+
+        // Add already uploaded images to metadata
         if (uploadedImages.length > 0) {
           metadata.attachments = uploadedImages.map(img => ({
             type: 'image',
             fileUri: img.fileUri,
             fileId: img.fileId,
             mimeType: img.mimeType,
-            data: img.previewUrl, // Include preview URL for display
+            data: img.previewUrl,
           }));
         }
 
-        // Pass metadata if it has any properties
-        onSend(
-          trimmedMessage || '[Image]',
-          Object.keys(metadata).length > 0 ? metadata : undefined
-        );
+        // Check if we need to queue the message
+        const activeUploadIds = pastedImages
+          .filter(img => img.isLoading && img.uploadId)
+          .map(img => img.uploadId!);
 
-        // Clear expanded prompt, model override, and pasted images after sending
+        const queueStatusCurrent = messageQueueService.getStatus();
+        const shouldQueue = activeUploadIds.length > 0 || queueStatusCurrent.activeUploads > 0;
+
+        if (shouldQueue) {
+          // Notify that message is being queued (for UI update)
+          if (onMessageQueued) {
+            onMessageQueued(trimmedMessage, metadata);
+          }
+
+          // Queue the message - formatting will happen when processed
+          messageQueueService.queueMessage(
+            trimmedMessage,
+            metadata,
+            activeUploadIds,
+            (message, metadata) => {
+              // This callback is called when all uploads are complete
+              // At this point, tab content has the final image references
+              onSend(message, metadata);
+            }
+          );
+        } else {
+          // Send immediately if no uploads pending
+          onSend(
+            trimmedMessage || (uploadedImages.length > 0 ? '[Image]' : ''),
+            Object.keys(metadata).length > 0 ? metadata : undefined
+          );
+        }
+
+        // Clear state after queuing/sending
         setExpandedPromptRef(null);
         setModelOverrideRef(null);
-        // No need to clean up data URLs as they are embedded
         setPastedImages([]);
       } finally {
         setIsSending(false);
@@ -449,6 +482,7 @@ export const ChatInput = React.forwardRef<HTMLTextAreaElement, ChatInputProps>(
     }, [
       currentValue,
       onSend,
+      onMessageQueued,
       clearOnSend,
       handleValueChange,
       isSending,
@@ -693,6 +727,8 @@ export const ChatInput = React.forwardRef<HTMLTextAreaElement, ChatInputProps>(
                 const dataUrl = reader.result as string;
 
                 // Add image immediately with loading state
+                const uploadId = messageQueueService.registerUpload();
+
                 setPastedImages(prev => [
                   ...prev,
                   {
@@ -700,13 +736,18 @@ export const ChatInput = React.forwardRef<HTMLTextAreaElement, ChatInputProps>(
                     mimeType: file.type,
                     previewUrl: dataUrl,
                     isLoading: true,
+                    uploadId,
                   },
                 ]);
 
                 try {
-                  const result = await onImagePaste(file);
+                  const result = await onImagePaste(file, {
+                    uploadId,
+                    previewUrl: dataUrl,
+                    mimeType: file.type,
+                  });
                   if (result) {
-                    // Update the image with the file URI or ID
+                    // Update the image with the file URI or ID and upload ID
                     setPastedImages(prev =>
                       prev.map(img =>
                         img.id === imageId
@@ -714,17 +755,25 @@ export const ChatInput = React.forwardRef<HTMLTextAreaElement, ChatInputProps>(
                               ...img,
                               fileUri: result.fileUri,
                               fileId: result.fileId,
+                              uploadId: result.uploadId || uploadId, // Track the upload ID from queue registration
                               isLoading: false,
                             }
                           : img
                       )
                     );
                   } else {
+                    messageQueueService.failUpload(
+                      uploadId,
+                      new Error('Image upload returned no result')
+                    );
                     // Remove the image if upload failed
                     setPastedImages(prev => prev.filter(img => img.id !== imageId));
                   }
                 } catch (error) {
-                  console.error('Failed to upload image:', error);
+                  messageQueueService.failUpload(
+                    uploadId,
+                    error instanceof Error ? error : new Error('Image upload failed unexpectedly')
+                  );
                   // Remove the image on error
                   setPastedImages(prev => prev.filter(img => img.id !== imageId));
                 }

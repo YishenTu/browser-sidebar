@@ -40,11 +40,17 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
   onRegenerate,
   ...props
 }) => {
-  // Get message bubble styling based on role
-  const getMessageClasses = (role: MessageRole) => {
+  // Get message bubble styling based on role and status
+  const getMessageClasses = (role: MessageRole, status?: MessageStatus) => {
+    let classes = '';
     switch (role) {
       case 'user':
-        return 'message-bubble--user';
+        classes = 'message-bubble--user';
+        // Add pending status styling for queued messages
+        if (status === 'pending') {
+          classes += ' message-bubble--pending';
+        }
+        return classes;
       case 'assistant':
         return 'message-bubble--assistant full-width';
       case 'system':
@@ -186,7 +192,7 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
 
         {/* Hover container for bubble and footer */}
         <div className={`message-hover-container message-hover-container--${message.role}`}>
-          <div className={getMessageClasses(message.role)}>
+          <div className={getMessageClasses(message.role, message.status)}>
             {/* Context indicator - removed from here, will be added to footer */}
             <div data-testid="message-content">{messageContent}</div>
           </div>

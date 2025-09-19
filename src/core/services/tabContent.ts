@@ -49,18 +49,6 @@ export function buildCurrentTabInfo(
 }
 
 /**
- * Create optimistic image content while upload is in progress
- */
-export function createOptimisticImageContent(dataUrl: string): ImageExtractedContent {
-  return {
-    type: 'image',
-    mimeType: 'image/png',
-    dataUrl,
-    uploadState: 'uploading',
-  };
-}
-
-/**
  * Create final image content after successful upload
  */
 export function createFinalImageContent(

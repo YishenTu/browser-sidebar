@@ -13,6 +13,7 @@ export type MessageRole = 'user' | 'assistant' | 'system';
  * Message status types for tracking message lifecycle
  */
 export type MessageStatus =
+  | 'pending' // User message queued, waiting for uploads
   | 'sending' // User message being sent
   | 'sent' // User message successfully sent
   | 'streaming' // AI message being streamed

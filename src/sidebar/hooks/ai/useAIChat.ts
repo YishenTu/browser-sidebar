@@ -385,7 +385,10 @@ export function useAIChat(options: UseAIChatOptions = {}): UseAIChatReturn {
 
         // Check if this is the first message in the conversation
         const existingMessages = messageStore.getMessages();
-        const userMessages = existingMessages.filter(m => m.role === 'user');
+        // Exclude pending messages when checking if this is the first message
+        const userMessages = existingMessages.filter(
+          m => m.role === 'user' && m.status !== 'pending'
+        );
         const isFirstMessage =
           userMessages.length === 0 ||
           (isEditingFirstMessage &&
@@ -414,18 +417,45 @@ export function useAIChat(options: UseAIChatOptions = {}): UseAIChatReturn {
         // Add user message to chat store (unless we're regenerating or editing)
         let userMessage;
         if (!skipUserMessage) {
-          userMessage = messageStore.addMessage({
-            role: 'user',
-            content: finalContent,
-            displayContent: finalDisplayContent,
-            status: 'sending',
-            metadata: {
-              ...metadata,
-              hasTabContext,
-              originalUserContent: hasTabContext ? trimmedContent : undefined,
-              sections: formatResult?.sections,
-            },
-          });
+          // Check if there's a pending message to update
+          const messages = messageStore.getMessages();
+          const pendingMessage = messages.find(
+            msg => msg.role === 'user' && msg.status === 'pending'
+          );
+
+          if (pendingMessage) {
+            // Update the pending message to sending
+            messageStore.updateMessage(pendingMessage.id, {
+              content: finalContent,
+              displayContent: finalDisplayContent,
+              status: 'sending',
+              metadata: {
+                ...metadata,
+                hasTabContext,
+                originalUserContent: hasTabContext ? trimmedContent : undefined,
+                sections: formatResult?.sections,
+              },
+            });
+            // Get the updated message from the store (not the old reference)
+            userMessage = messageStore.getMessageById(pendingMessage.id);
+            if (!userMessage) {
+              throw new Error('Failed to retrieve updated pending message');
+            }
+          } else {
+            // Add new message
+            userMessage = messageStore.addMessage({
+              role: 'user',
+              content: finalContent,
+              displayContent: finalDisplayContent,
+              status: 'sending',
+              metadata: {
+                ...metadata,
+                hasTabContext,
+                originalUserContent: hasTabContext ? trimmedContent : undefined,
+                sections: formatResult?.sections,
+              },
+            });
+          }
         } else {
           // For editing or regeneration
           if (editingMessageId) {
@@ -729,9 +759,11 @@ export function useAIChat(options: UseAIChatOptions = {}): UseAIChatReturn {
           }
 
           // Mark user message as sent on success
-          messageStore.updateMessage(userMessage.id, {
-            status: 'sent',
-          });
+          if (userMessage) {
+            messageStore.updateMessage(userMessage.id, {
+              status: 'sent',
+            });
+          }
         } catch (error) {
           // Handle provider errors
           const providerError = activeProvider.formatError?.(error as Error);
@@ -739,10 +771,12 @@ export function useAIChat(options: UseAIChatOptions = {}): UseAIChatReturn {
           uiStore.setError(errorMessage);
 
           // Mark user message as error
-          messageStore.updateMessage(userMessage.id, {
-            status: 'error',
-            error: errorMessage,
-          });
+          if (userMessage) {
+            messageStore.updateMessage(userMessage.id, {
+              status: 'error',
+              error: errorMessage,
+            });
+          }
 
           throw error;
         }

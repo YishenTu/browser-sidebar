@@ -20,7 +20,7 @@ export type MessageRole = 'user' | 'assistant' | 'system';
 /**
  * Message status indicating current state
  */
-export type MessageStatus = 'sending' | 'sent' | 'error' | 'streaming';
+export type MessageStatus = 'pending' | 'sending' | 'sent' | 'error' | 'streaming';
 
 /**
  * Code block structure for syntax-highlighted content
@@ -169,7 +169,10 @@ export function isValidMessageRole(value: unknown): value is MessageRole {
  * Type guard to check if a value is a valid MessageStatus
  */
 export function isValidMessageStatus(value: unknown): value is MessageStatus {
-  return typeof value === 'string' && ['sending', 'sent', 'error', 'streaming'].includes(value);
+  return (
+    typeof value === 'string' &&
+    ['pending', 'sending', 'sent', 'error', 'streaming'].includes(value)
+  );
 }
 
 /**

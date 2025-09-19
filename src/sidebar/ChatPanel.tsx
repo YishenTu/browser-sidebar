@@ -261,8 +261,9 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
         const handled = await messageEditingHook.handleSendEditedMessage(userInput, metadata);
         if (handled) return;
 
-        // For new messages
-        const isFirstMessage = messages.length === 0;
+        // For new messages (exclude pending messages when checking)
+        const nonPendingMessages = messages.filter(m => m.status !== 'pending');
+        const isFirstMessage = nonPendingMessages.length === 0;
         const { messageContent, displayContent } = prepareMessageContent(userInput, metadata);
         const messageMetadata = buildMessageMetadata(false, {}, metadata);
 
@@ -300,6 +301,20 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
       tabExtractionError,
       tabExtractionLoading,
     ]
+  );
+
+  // Handle message being queued (show as pending)
+  const handleMessageQueued = useCallback(
+    (message: string, metadata?: Record<string, unknown>) => {
+      // Add message with pending status
+      messageStore.addMessage({
+        role: 'user',
+        content: message,
+        status: 'pending',
+        metadata,
+      });
+    },
+    [messageStore]
   );
 
   // Handle clear conversation (now clears only current session)
@@ -378,7 +393,15 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
 
   // Handle image paste for providers that support file uploads
   const handleImagePaste = useCallback(
-    async (file: File): Promise<{ fileUri?: string; fileId?: string; mimeType: string } | null> => {
+    async (
+      file: File,
+      options?: { uploadId?: string; previewUrl?: string; mimeType?: string }
+    ): Promise<{
+      fileUri?: string;
+      fileId?: string;
+      mimeType: string;
+      uploadId?: string;
+    } | null> => {
       try {
         const state = useSettingsStore.getState();
         const currentModel = state.settings.selectedModel;
@@ -402,6 +425,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
         }
 
         // Use unified image upload service
+        // Always registers with queue to get upload ID for tracking
         const result = await uploadImageUnified(
           { file },
           {
@@ -409,6 +433,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
             model: currentModel,
             provider: currentProvider,
             source: 'paste',
+            uploadId: options?.uploadId,
           }
         );
 
@@ -416,11 +441,12 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
           return null;
         }
 
-        // Return in the format expected by ChatInput
+        // Return in the format expected by ChatInput (including uploadId from queue registration)
         return {
           fileUri: result.fileUri,
           fileId: result.fileId,
           mimeType: result.mimeType,
+          uploadId: result.uploadId ?? options?.uploadId,
         };
       } catch (error) {
         showError(error instanceof Error ? error.message : 'Failed to upload image');
@@ -693,6 +719,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
 
       <Footer
         onSend={handleSendMessage}
+        onMessageQueued={handleMessageQueued}
         onCancel={cancelMessage}
         loading={isLoading}
         editingMessage={editingMessage?.content}

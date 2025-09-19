@@ -50,7 +50,7 @@ async function reuploadImage(
   }
 
   try {
-    // Use unified upload service
+    // Use unified upload service (skip queue for sync operations)
     const uploadResult = await uploadImage(
       { dataUrl: imageRef.data, mimeType: imageRef.mimeType },
       {

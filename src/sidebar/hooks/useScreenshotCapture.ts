@@ -11,7 +11,7 @@ import {
   readClipboardImageWithRetries,
 } from '@core/utils/screenshot';
 import { uploadImage } from '@core/services/imageUploadService';
-import { createOptimisticImageContent, createFinalImageContent } from '@core/services/tabContent';
+import { createFinalImageContent } from '@core/services/tabContent';
 import type { ImageExtractedContent } from '@/types/extraction';
 import type { ScreenshotPreviewData } from '@components/ScreenshotPreview';
 import { useSettingsStore } from '@store/settings';
@@ -92,12 +92,8 @@ export function useScreenshotCapture(
     // Close the preview window immediately
     handleCloseScreenshotPreview();
 
-    // Optimistically switch to image mode while upload is in progress
-    const optimisticContent = createOptimisticImageContent(screenshotPreview.dataUrl);
-    tabStore.updateTabContent(tabId, optimisticContent);
-
     try {
-      // Use unified image upload service
+      // Upload the screenshot with a callback to update tab content BEFORE queue processes
       const uploadResult = await uploadImage(
         { dataUrl: screenshotPreview.dataUrl },
         {
@@ -105,6 +101,19 @@ export function useScreenshotCapture(
           model: currentModel,
           provider: currentProvider,
           source: 'screenshot',
+          onBeforeQueueNotify: async result => {
+            // Update tab content BEFORE the queue is notified
+            const imageReference = {
+              fileUri: result.fileUri,
+              fileId: result.fileId,
+              mimeType: result.mimeType,
+            };
+            const finalContent = createFinalImageContent(imageReference, screenshotPreview.dataUrl);
+            tabStore.updateTabContent(tabId, finalContent);
+
+            // Small delay to ensure store update propagates
+            await new Promise(resolve => setTimeout(resolve, 10));
+          },
         }
       );
 
@@ -112,34 +121,7 @@ export function useScreenshotCapture(
         throw new Error('Unable to create image reference for screenshot');
       }
 
-      // Convert to expected format
-      const imageReference = {
-        fileUri: uploadResult.fileUri,
-        fileId: uploadResult.fileId,
-        mimeType: uploadResult.mimeType,
-      };
-
-      // Replace current tab's content with the final image reference
-      const finalContent = createFinalImageContent(imageReference, screenshotPreview.dataUrl);
-      tabStore.updateTabContent(tabId, finalContent);
-
-      // Test the formatter with the updated content (best-effort)
-      try {
-        const { formatTabContent } = await import('@services/chat/contentFormatter');
-        const currentTabContentObj = tabStore.getTabContent(tabId);
-        if (currentTabContentObj) {
-          const testTabContent = {
-            ...currentTabContentObj,
-            extractedContent: {
-              ...currentTabContentObj.extractedContent,
-              content: finalContent,
-            },
-          };
-          formatTabContent('', [testTabContent]);
-        }
-      } catch (formatError) {
-        console.warn('Screenshot formatter verification failed', formatError);
-      }
+      // Formatter test removed - content is updated in the callback
     } catch (error) {
       // Revert to previous content on failure
       if (previousContent !== undefined) {

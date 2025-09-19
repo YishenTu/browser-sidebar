@@ -62,6 +62,13 @@
   position: relative; /* For context indicator positioning */
 }
 
+/* Pending message state - grey background for queued messages */
+.ai-sidebar-container .message-bubble--pending {
+  background: var(--color-surface-tertiary, #e5e5e5); /* Grey background */
+  color: var(--color-text-secondary, #666); /* Darker text for contrast */
+  opacity: 0.8; /* Slightly transparent to indicate pending state */
+}
+
 /* Target all child elements inside user bubble for consistent spacing */
 .ai-sidebar-container .message-bubble--user * {
   margin: 0;

@@ -6,18 +6,20 @@
 
 import { uploadFile, type FileUploadResult } from './fileUpload';
 import type { ImageReference } from './imageSyncService';
-import { debugLog } from '@/utils/debug';
+import { messageQueueService } from './messageQueueService';
 
 export interface ImageUploadOptions {
   apiKey: string;
   model: string;
   provider: 'gemini' | 'openai' | 'openrouter';
   source: 'paste' | 'screenshot' | 'sync';
+  uploadId?: string;
   metadata?: {
     displayName?: string;
     fileName?: string;
     purpose?: string;
   };
+  onBeforeQueueNotify?: (result: ImageUploadResult) => void | Promise<void>;
 }
 
 export interface ImageUploadInput {
@@ -29,6 +31,7 @@ export interface ImageUploadInput {
 export interface ImageUploadResult extends FileUploadResult {
   previewUrl?: string;
   source: 'paste' | 'screenshot' | 'sync';
+  uploadId?: string; // Queue tracking ID
 }
 
 /**
@@ -74,7 +77,6 @@ export async function uploadImage(
 
   // Validate provider support
   if (provider === 'openrouter') {
-    console.warn('OpenRouter does not support image uploads');
     return null;
   }
 
@@ -104,11 +106,20 @@ export async function uploadImage(
     cacheKey = `${provider}_${hashDataUrl(input.dataUrl)}`;
     const cached = uploadCache.get(cacheKey);
     if (cached) {
-      debugLog(
-        'ImageUploadService',
-        `Using cached image upload for ${provider}:`,
-        cached.fileId || cached.fileUri
-      );
+      if (options.uploadId) {
+        messageQueueService.completeUpload(options.uploadId, {
+          fileUri: cached.fileUri,
+          fileId: cached.fileId,
+          mimeType: cached.mimeType,
+          previewUrl: cached.previewUrl,
+        });
+
+        return {
+          ...cached,
+          uploadId: options.uploadId,
+        };
+      }
+
       return cached;
     }
 
@@ -126,7 +137,14 @@ export async function uploadImage(
     purpose: metadata.purpose || 'vision',
   };
 
+  // Always register with message queue to get an upload ID
+  // This ensures ChatInput can track the upload even if we process it synchronously
+  const uploadId = options.uploadId ?? messageQueueService.registerUpload();
+
   try {
+    // Notify queue that upload is starting
+    messageQueueService.startUpload(uploadId);
+
     // Upload using the existing fileUpload service
     const result = await uploadFile({
       apiKey,
@@ -137,7 +155,7 @@ export async function uploadImage(
     });
 
     if (!result) {
-      console.warn(`Upload failed for ${provider}: no result returned`);
+      messageQueueService.failUpload(uploadId, new Error('Image upload returned no result'));
       return null;
     }
 
@@ -146,22 +164,34 @@ export async function uploadImage(
       ...result,
       previewUrl,
       source,
+      uploadId,
     };
+
+    // Call the before-notify callback if provided
+    if (options.onBeforeQueueNotify) {
+      await options.onBeforeQueueNotify(uploadResult);
+    }
+
+    // Notify queue of completion
+    messageQueueService.completeUpload(uploadId, {
+      fileUri: result.fileUri,
+      fileId: result.fileId,
+      mimeType: result.mimeType,
+      previewUrl,
+    });
 
     // Cache the result if we have a cache key
     if (cacheKey) {
       uploadCache.set(cacheKey, uploadResult);
     }
 
-    debugLog('ImageUploadService', `Successfully uploaded ${source} image to ${provider}:`, {
-      fileId: result.fileId,
-      fileUri: result.fileUri,
-      source,
-    });
-
     return uploadResult;
   } catch (error) {
-    console.error(`Failed to upload ${source} image to ${provider}:`, error);
+    // Notify queue of failure
+    messageQueueService.failUpload(
+      uploadId,
+      error instanceof Error ? error : new Error(String(error))
+    );
 
     // Provide detailed error information
     if (error instanceof Error) {
@@ -199,8 +229,7 @@ export async function uploadImages(
 ): Promise<(ImageUploadResult | null)[]> {
   // Upload in parallel for better performance
   const uploadPromises = inputs.map(input =>
-    uploadImage(input, options).catch(error => {
-      console.error('Failed to upload image:', error);
+    uploadImage(input, options).catch(() => {
       return null;
     })
   );
