@@ -34,7 +34,7 @@ import { useMessageEditing } from '@hooks/useMessageEditing';
 import { useSidebarPosition } from '@hooks/useSidebarPosition';
 // Extracted services
 import { isSystemCaptureHotkey } from '@core/utils/hotkeys';
-import { uploadImage } from '@core/services/fileUpload';
+import { uploadImage as uploadImageUnified } from '@core/services/imageUploadService';
 import { switchModel } from '@core/services/modelSwitching';
 import { prepareMessageContent, buildMessageMetadata } from '@core/services/messageEditing';
 import {
@@ -401,7 +401,27 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
           throw new Error(`${currentProvider} API key is required for file upload`);
         }
 
-        return await uploadImage(currentProvider, apiKey, currentModel, file);
+        // Use unified image upload service
+        const result = await uploadImageUnified(
+          { file },
+          {
+            apiKey,
+            model: currentModel,
+            provider: currentProvider,
+            source: 'paste',
+          }
+        );
+
+        if (!result) {
+          return null;
+        }
+
+        // Return in the format expected by ChatInput
+        return {
+          fileUri: result.fileUri,
+          fileId: result.fileId,
+          mimeType: result.mimeType,
+        };
       } catch (error) {
         showError(error instanceof Error ? error.message : 'Failed to upload image');
         return null;

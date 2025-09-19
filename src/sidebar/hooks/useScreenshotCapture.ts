@@ -10,7 +10,7 @@ import {
   CLIPBOARD_POLL_INTERVAL_MS,
   readClipboardImageWithRetries,
 } from '@core/utils/screenshot';
-import { uploadScreenshot } from '@core/services/fileUpload';
+import { uploadImage } from '@core/services/imageUploadService';
 import { createOptimisticImageContent, createFinalImageContent } from '@core/services/tabContent';
 import type { ImageExtractedContent } from '@/types/extraction';
 import type { ScreenshotPreviewData } from '@components/ScreenshotPreview';
@@ -97,16 +97,27 @@ export function useScreenshotCapture(
     tabStore.updateTabContent(tabId, optimisticContent);
 
     try {
-      const imageReference = await uploadScreenshot(
-        currentProvider,
-        apiKey,
-        currentModel,
-        screenshotPreview.dataUrl
+      // Use unified image upload service
+      const uploadResult = await uploadImage(
+        { dataUrl: screenshotPreview.dataUrl },
+        {
+          apiKey,
+          model: currentModel,
+          provider: currentProvider,
+          source: 'screenshot',
+        }
       );
 
-      if (!imageReference) {
+      if (!uploadResult) {
         throw new Error('Unable to create image reference for screenshot');
       }
+
+      // Convert to expected format
+      const imageReference = {
+        fileUri: uploadResult.fileUri,
+        fileId: uploadResult.fileId,
+        mimeType: uploadResult.mimeType,
+      };
 
       // Replace current tab's content with the final image reference
       const finalContent = createFinalImageContent(imageReference, screenshotPreview.dataUrl);
@@ -186,7 +197,8 @@ export function useScreenshotCapture(
     }
 
     try {
-      await new Promise(resolve => setTimeout(resolve, SYSTEM_CAPTURE_HIDE_DELAY_MS));
+      // Wait for sidebar to hide and user to take screenshot
+      await new Promise(resolve => setTimeout(resolve, SYSTEM_CAPTURE_HIDE_DELAY_MS * 2));
 
       const clipboardImage = await readClipboardImageWithRetries(
         CLIPBOARD_POLL_ATTEMPTS,

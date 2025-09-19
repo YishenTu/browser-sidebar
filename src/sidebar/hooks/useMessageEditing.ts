@@ -83,29 +83,24 @@ export function useMessageEditing(options: UseMessageEditingOptions): UseMessage
       // Remove all messages after the edited one
       editMessage(editingMessage.id);
 
-      // For the first message, don't update content here - let the handler deal with it
-      if (isFirstMessage) {
-        // Update status and displayContent immediately for UI feedback
-        updateMessage(editingMessage.id, {
-          displayContent: displayContent,
-          status: 'sending',
-        });
-      } else {
-        // For non-first messages, update normally
-        updateMessage(editingMessage.id, {
-          content: messageContent,
-          displayContent: displayContent,
-          status: 'sending',
-          metadata: Object.keys(messageMetadata).length > 0 ? messageMetadata : undefined,
-        });
-      }
+      // Update the message content
+      updateMessage(editingMessage.id, {
+        content: messageContent,
+        displayContent: displayContent,
+        status: 'sending',
+        metadata: Object.keys(messageMetadata).length > 0 ? messageMetadata : undefined,
+      });
 
       // Send message without creating a duplicate user message
-      // For first message, pass the raw user input so it can be formatted with tabs
-      await sendMessage(isFirstMessage ? userInput : messageContent, {
+      // Pass additional info about whether this is a first message edit
+      await sendMessage(messageContent, {
         skipUserMessage: true, // Prevent duplicate user message
         displayContent: displayContent,
-        metadata: Object.keys(messageMetadata).length > 0 ? messageMetadata : undefined,
+        metadata: {
+          ...(Object.keys(messageMetadata).length > 0 ? messageMetadata : {}),
+          isEditingFirstMessage: isFirstMessage,
+          editingMessageId: editingMessage.id,
+        },
       });
 
       // Clear edit mode

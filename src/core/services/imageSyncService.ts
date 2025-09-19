@@ -5,7 +5,7 @@
  */
 
 import type { ChatMessage } from '@store/chat';
-import { uploadFile } from './fileUpload';
+import { uploadImage, uploadResultToImageReference } from './imageUploadService';
 
 export interface ImageReference {
   fileUri?: string; // Gemini format
@@ -25,15 +25,6 @@ export interface ImageSyncResult {
  * Key format: `${provider}_${fileId/fileUri}`
  */
 const imageReferenceCache = new Map<string, ImageReference>();
-
-/**
- * Convert base64 data URL to File object
- */
-async function dataUrlToFile(dataUrl: string, fileName: string): Promise<File> {
-  const response = await fetch(dataUrl);
-  const blob = await response.blob();
-  return new File([blob], fileName, { type: blob.type });
-}
 
 /**
  * Re-upload an image to a different provider
@@ -58,32 +49,31 @@ async function reuploadImage(
   }
 
   try {
-    // Convert base64 to file
-    const fileName = `reupload_${Date.now()}.${imageRef.mimeType.split('/')[1] || 'png'}`;
-    const file = await dataUrlToFile(imageRef.data, fileName);
+    // Use unified upload service
+    const uploadResult = await uploadImage(
+      { dataUrl: imageRef.data, mimeType: imageRef.mimeType },
+      {
+        apiKey,
+        model,
+        provider: targetProvider,
+        source: 'sync',
+        metadata: {
+          displayName: `reupload_${Date.now()}`,
+          fileName: `reupload_${Date.now()}.${imageRef.mimeType.split('/')[1] || 'png'}`,
+          purpose: 'vision',
+        },
+      }
+    );
 
-    // Upload to target provider
-    const result = await uploadFile({
-      apiKey,
-      model,
-      provider: targetProvider,
-      file,
-      metadata: {
-        displayName: fileName,
-        fileName,
-        purpose: 'vision',
-      },
-    });
-
-    if (!result) {
+    if (!uploadResult) {
       console.warn(`File upload returned null for ${targetProvider} provider`);
       return null;
     }
 
-    // Create new reference with original data preserved
+    // Convert to ImageReference format and preserve original data
     const newRef: ImageReference = {
-      ...imageRef, // Preserve original fields like type, mimeType
-      ...result, // Override with new upload references
+      ...imageRef,
+      ...uploadResultToImageReference(uploadResult),
       data: imageRef.data, // Preserve the base64 data
     };
 
@@ -92,7 +82,7 @@ async function reuploadImage(
 
     console.log(`Successfully re-uploaded image to ${targetProvider}:`, {
       original: imageRef.fileId || imageRef.fileUri,
-      new: result.fileId || result.fileUri,
+      new: newRef.fileId || newRef.fileUri,
     });
 
     return newRef;

@@ -377,9 +377,18 @@ export function useAIChat(options: UseAIChatOptions = {}): UseAIChatReturn {
         let hasTabContext = false;
         let formatResult: ReturnType<typeof formatTabContent> | undefined;
 
+        // Check if this is editing the first message
+        const isEditingFirstMessage = metadata?.['isEditingFirstMessage'] === true;
+        const editingMessageId = metadata?.['editingMessageId'] as string | undefined;
+
         // Check if this is the first message in the conversation
         const existingMessages = messageStore.getMessages();
-        const isFirstMessage = existingMessages.filter(m => m.role === 'user').length === 0;
+        const userMessages = existingMessages.filter(m => m.role === 'user');
+        const isFirstMessage =
+          userMessages.length === 0 ||
+          (isEditingFirstMessage &&
+            userMessages.length === 1 &&
+            userMessages[0]?.id === editingMessageId);
 
         // Check if we have loaded tabs to include
         const loadedTabs = useTabStore.getState().getLoadedTabs();
@@ -400,7 +409,7 @@ export function useAIChat(options: UseAIChatOptions = {}): UseAIChatReturn {
           hasTabContext = allLoadedTabs.length > 0;
         }
 
-        // Add user message to chat store (unless we're regenerating)
+        // Add user message to chat store (unless we're regenerating or editing)
         let userMessage;
         if (!skipUserMessage) {
           userMessage = messageStore.addMessage({
@@ -416,24 +425,46 @@ export function useAIChat(options: UseAIChatOptions = {}): UseAIChatReturn {
             },
           });
         } else {
-          // For regeneration, get the last user message
-          const lastUserMessage = messageStore.getUserMessages().slice(-1)[0];
-          if (!lastUserMessage) {
-            throw new Error('No user message found for regeneration');
-          }
-          userMessage = lastUserMessage;
+          // For editing or regeneration
+          if (editingMessageId) {
+            // If we're editing a specific message, find it
+            userMessage = messageStore.getMessageById(editingMessageId);
+            if (!userMessage) {
+              throw new Error('Edited message not found');
+            }
 
-          // Update the user message with new content if tab context changed
-          if (hasTabContext && userMessage.content !== finalContent) {
-            messageStore.updateMessage(userMessage.id, {
-              content: finalContent,
-              metadata: {
-                ...userMessage.metadata,
-                hasTabContext,
-                originalUserContent: trimmedContent,
-                sections: formatResult?.sections,
-              },
-            });
+            // Update the message content for first message edits (with tab formatting)
+            if (isEditingFirstMessage && isFirstMessage) {
+              messageStore.updateMessage(userMessage.id, {
+                content: finalContent,
+                metadata: {
+                  ...userMessage.metadata,
+                  hasTabContext,
+                  originalUserContent: hasTabContext ? trimmedContent : undefined,
+                  sections: formatResult?.sections,
+                },
+              });
+            }
+          } else {
+            // For regeneration, get the last user message
+            const lastUserMessage = messageStore.getUserMessages().slice(-1)[0];
+            if (!lastUserMessage) {
+              throw new Error('No user message found for regeneration');
+            }
+            userMessage = lastUserMessage;
+
+            // Update the user message with new content if tab context changed
+            if (hasTabContext && userMessage.content !== finalContent) {
+              messageStore.updateMessage(userMessage.id, {
+                content: finalContent,
+                metadata: {
+                  ...userMessage.metadata,
+                  hasTabContext,
+                  originalUserContent: trimmedContent,
+                  sections: formatResult?.sections,
+                },
+              });
+            }
           }
         }
 
