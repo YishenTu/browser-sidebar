@@ -103,7 +103,7 @@ describe('Gemini Request Builder', () => {
       });
     });
 
-    it('should add safety settings when provided', () => {
+    it('should build request without safety settings', () => {
       const messages: ProviderChatMessage[] = [
         {
           role: 'user',
@@ -112,24 +112,17 @@ describe('Gemini Request Builder', () => {
         },
       ];
 
-      const configWithSafety: GeminiConfig = {
+      const config: GeminiConfig = {
         model: 'gemini-2.5-pro',
-        safetySettings: [
-          {
-            category: 'HARM_CATEGORY_HARASSMENT',
-            threshold: 'BLOCK_MEDIUM_AND_ABOVE',
-          },
-        ],
       };
 
-      const request = buildRequest(messages, configWithSafety);
+      const request = buildRequest(messages, config);
 
-      expect(request.safetySettings).toEqual([
-        {
-          category: 'HARM_CATEGORY_HARASSMENT',
-          threshold: 'BLOCK_MEDIUM_AND_ABOVE',
-        },
-      ]);
+      // Verify request structure without safety settings
+      expect(request.contents).toBeDefined();
+      expect(request.generationConfig).toBeDefined();
+      expect(request.tools).toBeDefined();
+      expect(request.safetySettings).toBeUndefined();
     });
 
     it('should throw error for empty messages', () => {
@@ -759,12 +752,6 @@ describe('Gemini Request Builder', () => {
         model: 'gemini-2.5-pro',
         stopSequences: ['END'],
         thinkingBudget: '1000',
-        safetySettings: [
-          {
-            category: 'HARM_CATEGORY_DANGEROUS_CONTENT',
-            threshold: 'BLOCK_LOW_AND_ABOVE',
-          },
-        ],
       };
 
       const chatConfig: GeminiChatConfig = {
@@ -786,7 +773,6 @@ describe('Gemini Request Builder', () => {
       });
       expect(request.generationConfig.stopSequences).toEqual(['END']);
       expect(request.generationConfig.thinkingConfig?.thinkingBudget).toBe(1000);
-      expect(request.safetySettings).toHaveLength(1);
       expect(request.systemInstruction?.parts[0].text).toBe('You are an image analysis expert.');
       expect(request.tools).toEqual([{ google_search: {} }]);
     });
