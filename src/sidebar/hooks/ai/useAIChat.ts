@@ -21,6 +21,7 @@ import {
   syncImagesToProvider,
   updateMessagesWithSyncedImages,
 } from '../../../core/services/imageSyncService';
+import { debugLog } from '@/utils/debug';
 import type { UseAIChatOptions, UseAIChatReturn, SendMessageOptions } from './types';
 import type { TabContent } from '../../../types/tabs';
 import type { AIProvider, ProviderType } from '../../../types/providers';
@@ -288,7 +289,8 @@ export function useAIChat(options: UseAIChatOptions = {}): UseAIChatReturn {
               }
             });
 
-            console.log(
+            debugLog(
+              'useAIChat',
               `Successfully synchronized ${syncResults.size} images to ${providerType} provider`
             );
           }

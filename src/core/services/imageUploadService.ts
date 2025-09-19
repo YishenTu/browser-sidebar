@@ -6,6 +6,7 @@
 
 import { uploadFile, type FileUploadResult } from './fileUpload';
 import type { ImageReference } from './imageSyncService';
+import { debugLog } from '@/utils/debug';
 
 export interface ImageUploadOptions {
   apiKey: string;
@@ -103,7 +104,11 @@ export async function uploadImage(
     cacheKey = `${provider}_${hashDataUrl(input.dataUrl)}`;
     const cached = uploadCache.get(cacheKey);
     if (cached) {
-      console.log(`Using cached image upload for ${provider}:`, cached.fileId || cached.fileUri);
+      debugLog(
+        'ImageUploadService',
+        `Using cached image upload for ${provider}:`,
+        cached.fileId || cached.fileUri
+      );
       return cached;
     }
 
@@ -148,7 +153,7 @@ export async function uploadImage(
       uploadCache.set(cacheKey, uploadResult);
     }
 
-    console.log(`Successfully uploaded ${source} image to ${provider}:`, {
+    debugLog('ImageUploadService', `Successfully uploaded ${source} image to ${provider}:`, {
       fileId: result.fileId,
       fileUri: result.fileUri,
       source,

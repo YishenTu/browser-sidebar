@@ -6,6 +6,7 @@
 
 import type { ChatMessage } from '@store/chat';
 import { uploadImage, uploadResultToImageReference } from './imageUploadService';
+import { debugLog } from '@/utils/debug';
 
 export interface ImageReference {
   fileUri?: string; // Gemini format
@@ -80,7 +81,7 @@ async function reuploadImage(
     // Cache the result
     imageReferenceCache.set(cacheKey, newRef);
 
-    console.log(`Successfully re-uploaded image to ${targetProvider}:`, {
+    debugLog('ImageSyncService', `Successfully re-uploaded image to ${targetProvider}:`, {
       original: imageRef.fileId || imageRef.fileUri,
       new: newRef.fileId || newRef.fileUri,
     });
