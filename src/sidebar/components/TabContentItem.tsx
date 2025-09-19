@@ -18,7 +18,7 @@ import { ExpandIcon, CloseIcon } from '@ui/Icons';
 import { FullscreenModal } from '@ui/FullscreenModal';
 import { useSessionStore } from '@/data/store/chat';
 import { useSessionManager } from '@hooks/useSessionManager';
-import { getDomSafeFaviconUrlSync } from '@sidebar/utils/favicon';
+import { getDomSafeFaviconUrlSync } from '@core/utils/favicon';
 import '../styles/4-features/tab-content-item.css';
 
 export interface TabContentItemProps {

@@ -6,11 +6,10 @@
  */
 
 import { useState, useCallback, useEffect, useRef } from 'react';
+import { constrainPosition as constrainPositionCore } from '@core/utils/geometry';
+import type { Position, Bounds } from '@core/utils/geometry';
 
-export interface Position {
-  x: number;
-  y: number;
-}
+export type { Position } from '@core/utils/geometry';
 
 export interface DragState {
   isDragging: boolean;
@@ -25,12 +24,7 @@ export interface UseDragPositionOptions {
   /** Whether dragging is enabled */
   enabled?: boolean;
   /** Boundary constraints */
-  bounds?: {
-    minX?: number;
-    maxX?: number;
-    minY?: number;
-    maxY?: number;
-  };
+  bounds?: Bounds;
   /** Callback when drag starts */
   onDragStart?: (position: Position) => void;
   /** Callback during drag */
@@ -75,12 +69,7 @@ export function useDragPosition(options: UseDragPositionOptions = {}): UseDragPo
   // Constrain position to bounds
   const constrainPosition = useCallback(
     (pos: Position): Position => {
-      if (!bounds) return pos;
-
-      return {
-        x: Math.max(bounds.minX ?? -Infinity, Math.min(bounds.maxX ?? Infinity, pos.x)),
-        y: Math.max(bounds.minY ?? -Infinity, Math.min(bounds.maxY ?? Infinity, pos.y)),
-      };
+      return constrainPositionCore(pos, bounds);
     },
     [bounds]
   );

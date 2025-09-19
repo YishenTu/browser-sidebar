@@ -1,8 +1,7 @@
 /**
- * @file Favicon Utilities (DOM-safe, unified)
+ * @file Favicon Utilities
  *
- * Single, DOM-safe favicon resolver shared by all UI components.
- * Order: tab.favIconUrl -> Google S2 -> generic (data URL)
+ * Pure URL manipulation and favicon resolution logic
  */
 
 export interface FaviconResult {
@@ -15,7 +14,7 @@ export interface FaviconResult {
 const GENERIC_FAVICON_DATA_URL =
   'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTYiIGhlaWdodD0iMTYiIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHBhdGggZD0iTTE0IDJIMTIuNUw2IDhWMjBBMiAyIDAgMCAwIDggMjJIMTZBMiAyIDAgMCAwIDE4IDIwVjRBMiAyIDAgMCAwIDE2IDJIMTRBMTI1NCIgc3Ryb2tlPSJjdXJyZW50Q29sb3IiIHN0cm9rZS13aWR0aD0iMiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIi8+CjxwYXRoIGQ9Im0xNCA4LTYgMCAyIDJoNFYxMiIgc3Ryb2tlPSJjdXJyZW50Q29sb3IiIHN0cm9rZS13aWR0aD0iMiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIi8+Cjwvc3ZnPgo=';
 
-function extractDomain(url: string): string {
+export function extractDomain(url: string): string {
   try {
     return new URL(url).hostname;
   } catch {
@@ -24,13 +23,12 @@ function extractDomain(url: string): string {
   }
 }
 
-function getGoogleFaviconUrl(domain: string, size: number = 16): string {
+export function getGoogleFaviconUrl(domain: string, size: number = 16): string {
   return `https://www.google.com/s2/favicons?domain=${encodeURIComponent(domain)}&sz=${size}`;
 }
 
 /**
- * DOM-safe favicon resolution for UI elements.
- * Avoids chrome-extension:// _favicon URLs that page CSP might block.
+ * Complete favicon resolution strategy
  * Order: tab.favIconUrl -> Google S2 -> generic.
  */
 export function getDomSafeFaviconUrlSync(

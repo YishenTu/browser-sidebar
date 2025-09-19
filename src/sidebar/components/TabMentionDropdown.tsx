@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect, useMemo, useCallback, memo } from 'react';
 import { TabInfo } from '@/types/tabs';
-import { getDomSafeFaviconUrlSync } from '@/sidebar/utils/favicon';
+import { getDomSafeFaviconUrlSync } from '@core/utils/favicon';
 import '../styles/4-features/tab-mention-dropdown.css';
 
 export interface TabMentionDropdownProps {

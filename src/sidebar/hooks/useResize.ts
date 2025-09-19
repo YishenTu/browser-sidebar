@@ -6,11 +6,14 @@
  */
 
 import { useState, useCallback, useEffect, useRef } from 'react';
+import {
+  calculateNewSizeAndPosition as calculateNewSizeAndPositionCore,
+  getCursorForHandle,
+  constrainSize as constrainSizeCore,
+} from '@core/utils/geometry';
+import type { Size, ResizeHandle } from '@core/utils/geometry';
 
-export interface Size {
-  width: number;
-  height: number;
-}
+export type { Size, ResizeHandle } from '@core/utils/geometry';
 
 export interface ResizeState {
   isResizing: boolean;
@@ -18,8 +21,6 @@ export interface ResizeState {
   startPosition: { x: number; y: number };
   handle: ResizeHandle | null;
 }
-
-export type ResizeHandle = 'n' | 'ne' | 'e' | 'se' | 's' | 'sw' | 'w' | 'nw';
 
 export interface UseResizeOptions {
   /** Initial size */
@@ -75,10 +76,7 @@ export function useResize(options: UseResizeOptions = {}): UseResizeReturn {
   // Constrain size to min/max bounds
   const constrainSize = useCallback(
     (newSize: Size): Size => {
-      return {
-        width: Math.max(minSize.width, Math.min(maxSize.width, newSize.width)),
-        height: Math.max(minSize.height, Math.min(maxSize.height, newSize.height)),
-      };
+      return constrainSizeCore(newSize, minSize, maxSize);
     },
     [minSize, maxSize]
   );
@@ -89,50 +87,18 @@ export function useResize(options: UseResizeOptions = {}): UseResizeReturn {
       const state = resizeState.current;
       if (!state.handle) return { size: state.startSize, deltaPosition: { x: 0, y: 0 } };
 
-      const deltaX = e.clientX - state.startPosition.x;
-      const deltaY = e.clientY - state.startPosition.y;
-      let newWidth = state.startSize.width;
-      let newHeight = state.startSize.height;
-      let positionDeltaX = 0;
-      let positionDeltaY = 0;
-
-      // Handle horizontal resizing
-      if (state.handle.includes('e')) {
-        // Resizing from right edge - width changes, position stays fixed
-        newWidth = Math.max(minSize.width, Math.min(maxSize.width, state.startSize.width + deltaX));
-      } else if (state.handle.includes('w')) {
-        // Resizing from left edge - width changes inversely, position must move
-        const proposedWidth = state.startSize.width - deltaX;
-        newWidth = Math.max(minSize.width, Math.min(maxSize.width, proposedWidth));
-
-        // Position should move by how much we actually resized
-        // If width changed from 400 to 350, we shrunk by 50, so move right by 50
-        const actualSizeChange = state.startSize.width - newWidth;
-        positionDeltaX = actualSizeChange;
-      }
-
-      // Handle vertical resizing
-      if (state.handle.includes('s')) {
-        // Resizing from bottom edge - height changes, position stays fixed
-        newHeight = Math.max(
-          minSize.height,
-          Math.min(maxSize.height, state.startSize.height + deltaY)
-        );
-      } else if (state.handle.includes('n')) {
-        // Resizing from top edge - height changes inversely, position must move
-        const proposedHeight = state.startSize.height - deltaY;
-        newHeight = Math.max(minSize.height, Math.min(maxSize.height, proposedHeight));
-
-        // Position should move by how much we actually resized
-        // If height changed from 400 to 350, we shrunk by 50, so move down by 50
-        const actualSizeChange = state.startSize.height - newHeight;
-        positionDeltaY = actualSizeChange;
-      }
-
-      return {
-        size: { width: newWidth, height: newHeight },
-        deltaPosition: { x: positionDeltaX, y: positionDeltaY },
-      };
+      return calculateNewSizeAndPositionCore(
+        state.startSize,
+        state.startPosition,
+        { x: e.clientX, y: e.clientY },
+        state.handle,
+        {
+          minWidth: minSize.width,
+          maxWidth: maxSize.width,
+          minHeight: minSize.height,
+          maxHeight: maxSize.height,
+        }
+      );
     },
     [minSize, maxSize]
   );
@@ -231,26 +197,4 @@ export function useResize(options: UseResizeOptions = {}): UseResizeReturn {
     onMouseDown,
     setSize: (newSize: Size) => setSize(constrainSize(newSize)),
   };
-}
-
-/**
- * Get appropriate cursor style for resize handle
- */
-function getCursorForHandle(handle: ResizeHandle): string {
-  switch (handle) {
-    case 'n':
-    case 's':
-      return 'ns-resize';
-    case 'e':
-    case 'w':
-      return 'ew-resize';
-    case 'ne':
-    case 'sw':
-      return 'nesw-resize';
-    case 'nw':
-    case 'se':
-      return 'nwse-resize';
-    default:
-      return 'default';
-  }
 }

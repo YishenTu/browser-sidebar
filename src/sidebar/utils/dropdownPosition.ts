@@ -1,9 +1,8 @@
 /**
  * Dropdown Position Calculator for Shadow DOM
  *
- * This utility calculates dropdown positioning within Shadow DOM contexts,
- * handling scroll positions, caret positioning, and boundary constraints
- * to prevent dropdowns from overflowing outside their containers.
+ * This utility provides DOM-specific wrappers around core position calculation
+ * functions, handling Shadow DOM contexts, scroll positions, and caret positioning.
  *
  * @example
  * ```typescript
@@ -29,38 +28,21 @@
  * ```
  */
 
-export interface DropdownPosition {
-  /** X coordinate for dropdown left position */
-  x: number;
-  /** Y coordinate for dropdown top position */
-  y: number;
-  /** Maximum X coordinate (right boundary) */
-  maxX: number;
-  /** Maximum Y coordinate (bottom boundary) */
-  maxY: number;
-  /** Whether dropdown should appear above the target (if no space below) */
-  shouldFlipVertical: boolean;
-  /** Whether dropdown should appear to the left of target (if no space right) */
-  shouldFlipHorizontal: boolean;
-}
+import {
+  calculateDropdownPosition as calculateDropdownPositionCore,
+  getDynamicLineHeight as getDynamicLineHeightCore,
+  getShadowDomBounds as getShadowDomBoundsCore,
+  type DropdownPosition,
+  type DropdownDimensions,
+  type CaretPosition,
+  type ElementBounds,
+} from '@core/utils/positionCalculation';
 
-export interface DropdownDimensions {
-  /** Expected dropdown width */
-  width: number;
-  /** Expected dropdown height */
-  height: number;
-  /** Minimum spacing from container edges */
-  padding?: number;
-}
-
-export interface CaretPosition {
-  /** X coordinate of caret */
-  x: number;
-  /** Y coordinate of caret */
-  y: number;
-  /** Height of the line at caret position */
-  lineHeight: number;
-}
+export type {
+  DropdownPosition,
+  DropdownDimensions,
+  CaretPosition,
+} from '@core/utils/positionCalculation';
 
 /**
  * Gets the caret position within a textarea or input element
@@ -109,7 +91,7 @@ export function getCaretPosition(element: HTMLTextAreaElement | HTMLInputElement
   const spanRect = caretSpan.getBoundingClientRect();
   const elementRect = element.getBoundingClientRect();
 
-  // Calculate line height
+  // Calculate line height using core function
   const lineHeight = getDynamicLineHeight(element);
 
   // Calculate relative position
@@ -131,28 +113,10 @@ export function getCaretPosition(element: HTMLTextAreaElement | HTMLInputElement
  */
 export function getDynamicLineHeight(element: HTMLElement): number {
   const style = window.getComputedStyle(element);
-  const lineHeight = style.lineHeight;
-
-  if (lineHeight === 'normal') {
-    // Calculate normal line height based on font size
-    const fontSize = parseFloat(style.fontSize);
-    return fontSize * 1.2; // Default line height multiplier
-  }
-
-  if (lineHeight.endsWith('px')) {
-    return parseFloat(lineHeight);
-  }
-
-  if (lineHeight.endsWith('em') || lineHeight.endsWith('rem')) {
-    const fontSize = parseFloat(style.fontSize);
-    const multiplier = parseFloat(lineHeight);
-    return fontSize * multiplier;
-  }
-
-  // For unitless values, multiply by font size
-  const fontSize = parseFloat(style.fontSize);
-  const multiplier = parseFloat(lineHeight) || 1.2;
-  return fontSize * multiplier;
+  return getDynamicLineHeightCore({
+    lineHeight: style.lineHeight,
+    fontSize: style.fontSize,
+  });
 }
 
 /**
@@ -198,26 +162,59 @@ function getContainerScrollInfo(element: HTMLElement): {
 /**
  * Gets the boundaries of the Shadow DOM container
  */
-function getShadowDomBounds(element: HTMLElement): DOMRect {
+function getShadowDomBounds(element: HTMLElement): ElementBounds {
   const root = element.getRootNode();
 
   if (root === document) {
     // Not in Shadow DOM, use viewport
-    return new DOMRect(0, 0, window.innerWidth, window.innerHeight);
+    return getShadowDomBoundsCore(null, {
+      width: window.innerWidth,
+      height: window.innerHeight,
+    });
   }
 
   const shadowRoot = root as ShadowRoot;
-  const host = shadowRoot.host as HTMLElement;
 
   // Find the actual container element within the shadow DOM
   const container = shadowRoot.querySelector('#ai-browser-sidebar-root') as HTMLElement;
 
   if (container) {
-    return container.getBoundingClientRect();
+    const rect = container.getBoundingClientRect();
+    return {
+      left: rect.left,
+      top: rect.top,
+      right: rect.right,
+      bottom: rect.bottom,
+      width: rect.width,
+      height: rect.height,
+    };
   }
 
   // Fallback to host element bounds
-  return host.getBoundingClientRect();
+  const host = shadowRoot.host as HTMLElement;
+  const hostRect = host.getBoundingClientRect();
+  return {
+    left: hostRect.left,
+    top: hostRect.top,
+    right: hostRect.right,
+    bottom: hostRect.bottom,
+    width: hostRect.width,
+    height: hostRect.height,
+  };
+}
+
+/**
+ * Convert DOMRect to ElementBounds
+ */
+function rectToBounds(rect: DOMRect): ElementBounds {
+  return {
+    left: rect.left,
+    top: rect.top,
+    right: rect.right,
+    bottom: rect.bottom,
+    width: rect.width,
+    height: rect.height,
+  };
 }
 
 /**
@@ -228,10 +225,9 @@ export function calculateDropdownPosition(
   dimensions: DropdownDimensions,
   caretPos?: CaretPosition
 ): DropdownPosition {
-  const { width, height, padding = 8 } = dimensions;
-
   // Get element bounds
   const elementRect = targetElement.getBoundingClientRect();
+  const targetBounds = rectToBounds(elementRect);
 
   // Get scroll information
   const scrollInfo = getContainerScrollInfo(targetElement);
@@ -239,59 +235,13 @@ export function calculateDropdownPosition(
   // Get Shadow DOM container bounds
   const containerBounds = getShadowDomBounds(targetElement);
 
-  // Use caret position if provided, otherwise use element position
-  let targetX: number;
-  let targetY: number;
-  let targetHeight: number;
-
-  if (caretPos) {
-    targetX = elementRect.left + caretPos.x;
-    targetY = elementRect.top + caretPos.y;
-    targetHeight = caretPos.lineHeight;
-  } else {
-    targetX = elementRect.left;
-    targetY = elementRect.bottom;
-    targetHeight = elementRect.height;
-  }
-
-  // Adjust for scroll position
-  const adjustedX = targetX - scrollInfo.scrollX;
-  const adjustedY = targetY - scrollInfo.scrollY;
-
-  // Calculate default positions (below and to the right)
-  let x = adjustedX;
-  let y = adjustedY + targetHeight;
-
-  // Check boundaries and determine if flipping is needed
-  const rightBoundary = containerBounds.right - padding;
-  const bottomBoundary = containerBounds.bottom - padding;
-  const leftBoundary = containerBounds.left + padding;
-  const topBoundary = containerBounds.top + padding;
-
-  // Check horizontal overflow
-  const shouldFlipHorizontal = x + width > rightBoundary && adjustedX - width >= leftBoundary;
-  if (shouldFlipHorizontal) {
-    x = adjustedX - width;
-  }
-
-  // Check vertical overflow
-  const shouldFlipVertical = y + height > bottomBoundary && adjustedY - height >= topBoundary;
-  if (shouldFlipVertical) {
-    y = adjustedY - height;
-  }
-
-  // Ensure dropdown stays within bounds
-  x = Math.max(leftBoundary, Math.min(x, rightBoundary - width));
-  y = Math.max(topBoundary, Math.min(y, bottomBoundary - height));
-
-  return {
-    x,
-    y,
-    maxX: rightBoundary,
-    maxY: bottomBoundary,
-    shouldFlipVertical,
-    shouldFlipHorizontal,
-  };
+  return calculateDropdownPositionCore(
+    targetBounds,
+    dimensions,
+    containerBounds,
+    scrollInfo,
+    caretPos
+  );
 }
 
 /**

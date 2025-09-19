@@ -1,11 +1,10 @@
 /**
  * @file Error Utilities
  *
- * Utility functions for error handling, separated from ErrorContext
- * to avoid React Fast Refresh warnings
+ * Pure utility functions for error handling and classification
  */
 
-import type { AppError } from './ErrorContext';
+import type { ErrorSource } from '@/types/errors';
 
 /**
  * Error type guards and utilities
@@ -31,7 +30,7 @@ export function isAuthError(error: Error | string): boolean {
   );
 }
 
-export function getErrorSource(error: Error | string): AppError['source'] {
+export function getErrorSource(error: Error | string): ErrorSource {
   if (isNetworkError(error)) return 'network';
   if (isAuthError(error)) return 'provider';
 

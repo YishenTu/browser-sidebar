@@ -17,4 +17,4 @@ export {
   type CaretPosition,
 } from './dropdownPosition';
 
-export { getDomSafeFaviconUrlSync } from './favicon';
+export { getDomSafeFaviconUrlSync } from '@core/utils/favicon';

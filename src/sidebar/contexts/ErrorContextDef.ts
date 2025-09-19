@@ -5,19 +5,9 @@
  */
 
 import { createContext } from 'react';
+import type { AppError } from '@/types/errors';
 
-export interface AppError {
-  id: string;
-  message: string;
-  type: 'error' | 'warning' | 'info';
-  source: 'chat' | 'settings' | 'provider' | 'network' | 'unknown';
-  timestamp: Date;
-  dismissible: boolean;
-  action?: {
-    label: string;
-    handler: () => void;
-  };
-}
+export type { AppError } from '@/types/errors';
 
 export interface ErrorContextValue {
   /** Current active error (only one shown at a time) */

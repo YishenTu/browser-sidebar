@@ -19,7 +19,8 @@ import { getModelById } from '@/config/models';
 import { getSystemPrompt } from '@/config/systemPrompt';
 import { formatTabContent } from '../../../services/chat/contentFormatter';
 import { ChatService } from '../../../services/chat/ChatService';
-import type { AIProvider, ProviderChatMessage, StreamChunk } from '../../../types/providers';
+import { convertToProviderMessages } from '@core/services/messageProcessing';
+import type { AIProvider, StreamChunk } from '../../../types/providers';
 import type { SendMessageOptions, UseMessageHandlerReturn } from './types';
 import type { TabContent } from '../../../types/tabs';
 import type { ChatMessage } from '@store/chat';
@@ -27,54 +28,6 @@ import type { ChatMessage } from '@store/chat';
 interface MessageHandlerDeps {
   getActiveProvider: () => AIProvider | null;
   enabled?: boolean;
-}
-
-/**
- * Helper function to convert chat messages to provider message format
- */
-function convertToProviderMessages(
-  currentMessages: ChatMessage[],
-  assistantMessage: ChatMessage,
-  userMessage?: ChatMessage
-): ProviderChatMessage[] {
-  let messages: ProviderChatMessage[];
-
-  if (userMessage && currentMessages.filter(m => m.role === 'user' && m.content).length === 1) {
-    // First message case - use the userMessage directly
-    messages = [
-      {
-        id: userMessage.id,
-        role: userMessage.role as 'user',
-        content: userMessage.content,
-        timestamp:
-          userMessage.timestamp instanceof Date
-            ? userMessage.timestamp
-            : new Date(userMessage.timestamp),
-      },
-    ];
-  } else {
-    // Get messages from store for follow-up messages
-    messages = currentMessages
-      .filter(msg => {
-        // Exclude the empty assistant message we just created
-        if (msg.id === assistantMessage.id) {
-          return false;
-        }
-        // Include all non-empty messages
-        if (!msg.content || msg.content.trim() === '') {
-          return false;
-        }
-        return true;
-      })
-      .map(msg => ({
-        id: msg.id,
-        role: msg.role as 'user' | 'assistant',
-        content: msg.content,
-        timestamp: new Date(msg.timestamp),
-      }));
-  }
-
-  return messages;
 }
 
 /**

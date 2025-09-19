@@ -10,7 +10,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { unmountSidebar } from './index';
 import { useSettingsStore } from '@store/settings';
 import { useError } from '@contexts/useError';
-import { getErrorSource } from '@contexts/errorUtils';
+import { getErrorSource } from '@core/utils/errorUtils';
 import { ErrorBanner } from '@components/ErrorBanner';
 import {
   useSessionStore,
