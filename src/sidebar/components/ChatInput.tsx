@@ -402,9 +402,43 @@ export const ChatInput = React.forwardRef<HTMLTextAreaElement, ChatInputProps>(
       ]
     );
 
+    const [isQueuePending, setIsQueuePending] = useState(false);
+
+    useEffect(() => {
+      let mounted = true;
+      const updateQueueState = () => {
+        if (!mounted) return;
+        const status = messageQueueService.getStatus();
+        setIsQueuePending(status.queueLength > 0);
+      };
+
+      const events = [
+        'messageQueued',
+        'messageProcessing',
+        'messageSent',
+        'messageFailed',
+        'messageCancelled',
+        'queueCleared',
+        'uploadRegistered',
+        'uploadStarted',
+        'uploadCompleted',
+        'uploadFailed',
+      ] as const;
+
+      events.forEach(event => messageQueueService.on(event, updateQueueState));
+
+      // Initialize after subscribing to avoid missing early events
+      updateQueueState();
+
+      return () => {
+        mounted = false;
+        events.forEach(event => messageQueueService.off(event, updateQueueState));
+      };
+    }, []);
+
     // Send message (now with queue support)
     const handleSend = useCallback(async () => {
-      if (isSending || loading) return;
+      if (isSending || loading || isQueuePending) return;
 
       const trimmedMessage = currentValue.trim();
       const hasLoadingImages = pastedImages.some(img => img.isLoading);
@@ -487,6 +521,7 @@ export const ChatInput = React.forwardRef<HTMLTextAreaElement, ChatInputProps>(
       handleValueChange,
       isSending,
       loading,
+      isQueuePending,
       expandedPromptRef,
       modelOverrideRef,
       pastedImages,
@@ -636,7 +671,7 @@ export const ChatInput = React.forwardRef<HTMLTextAreaElement, ChatInputProps>(
           }
         }
 
-        if (loading || isSending) {
+        if (loading || isSending || isQueuePending) {
           if (event.key === 'Enter' && !event.shiftKey && !event.ctrlKey && !event.metaKey) {
             event.preventDefault();
           }
@@ -676,6 +711,7 @@ export const ChatInput = React.forwardRef<HTMLTextAreaElement, ChatInputProps>(
         handleSend,
         loading,
         isSending,
+        isQueuePending,
         currentValue,
         handleValueChange,
         showDropdown,
@@ -727,7 +763,10 @@ export const ChatInput = React.forwardRef<HTMLTextAreaElement, ChatInputProps>(
                 const dataUrl = reader.result as string;
 
                 // Add image immediately with loading state
-                const uploadId = messageQueueService.registerUpload();
+                const uploadId = messageQueueService.registerUpload(undefined, {
+                  reason: 'paste-image',
+                  blockQueue: false,
+                });
 
                 setPastedImages(prev => [
                   ...prev,
@@ -787,7 +826,7 @@ export const ChatInput = React.forwardRef<HTMLTextAreaElement, ChatInputProps>(
     );
 
     // Determine if buttons should be disabled
-    const isDisabled = loading || isSending;
+    const isDisabled = loading || isSending || isQueuePending;
 
     // Focus textarea when component mounts
     useEffect(() => {

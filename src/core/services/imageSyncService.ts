@@ -34,7 +34,8 @@ async function reuploadImage(
   imageRef: ImageReference,
   targetProvider: 'gemini' | 'openai',
   apiKey: string,
-  model: string
+  model: string,
+  options: { messageId?: string; dependencyReason?: string } = {}
 ): Promise<ImageReference | null> {
   // Check if we have the base64 data
   if (!imageRef.data) {
@@ -58,6 +59,9 @@ async function reuploadImage(
         model,
         provider: targetProvider,
         source: 'sync',
+        messageId: options.messageId,
+        dependencyReason: options.dependencyReason,
+        blockQueue: true,
         metadata: {
           displayName: `reupload_${Date.now()}`,
           fileName: `reupload_${Date.now()}.${imageRef.mimeType.split('/')[1] || 'png'}`,
@@ -81,10 +85,9 @@ async function reuploadImage(
     // Cache the result
     imageReferenceCache.set(cacheKey, newRef);
 
-    debugLog('ImageSyncService', `Successfully re-uploaded image to ${targetProvider}:`, {
-      original: imageRef.fileId || imageRef.fileUri,
-      new: newRef.fileId || newRef.fileUri,
-    });
+    const sourceRef = imageRef.fileId || imageRef.fileUri || 'unknown';
+    const targetRef = newRef.fileId || newRef.fileUri || 'unknown';
+    debugLog('ImageSyncService', `reupload ${sourceRef} -> ${targetProvider}:${targetRef}`);
 
     return newRef;
   } catch (error) {
@@ -142,7 +145,10 @@ export async function syncImagesToProvider(
   // Sync all images in parallel for better performance
   const syncPromises = imagesToSync.map(async ({ message, attachment, index }) => {
     try {
-      const newRef = await reuploadImage(attachment, targetProvider, apiKey, model);
+      const newRef = await reuploadImage(attachment, targetProvider, apiKey, model, {
+        messageId: message.id,
+        dependencyReason: `message-sync:${message.id}`,
+      });
 
       if (newRef) {
         // Create a key for this specific image

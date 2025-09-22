@@ -14,6 +14,9 @@ export interface ImageUploadOptions {
   provider: 'gemini' | 'openai' | 'openrouter';
   source: 'paste' | 'screenshot' | 'sync';
   uploadId?: string;
+  messageId?: string;
+  dependencyReason?: string;
+  blockQueue?: boolean;
   metadata?: {
     displayName?: string;
     fileName?: string;
@@ -139,7 +142,12 @@ export async function uploadImage(
 
   // Always register with message queue to get an upload ID
   // This ensures ChatInput can track the upload even if we process it synchronously
-  const uploadId = options.uploadId ?? messageQueueService.registerUpload();
+  const uploadId =
+    options.uploadId ??
+    messageQueueService.registerUpload(options.messageId, {
+      reason: options.dependencyReason || `${provider}:${source}`,
+      blockQueue: options.blockQueue ?? options.source !== 'paste',
+    });
 
   try {
     // Notify queue that upload is starting

@@ -101,6 +101,8 @@ export function useScreenshotCapture(
           model: currentModel,
           provider: currentProvider,
           source: 'screenshot',
+          dependencyReason: 'tab-screenshot',
+          blockQueue: true,
           onBeforeQueueNotify: async result => {
             // Update tab content BEFORE the queue is notified
             const imageReference = {

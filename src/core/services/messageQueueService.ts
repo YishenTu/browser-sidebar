@@ -72,6 +72,13 @@ export interface ActiveUpload {
   };
   error?: Error;
   timeoutHandle?: NodeJS.Timeout;
+  reason?: string;
+  blockQueue: boolean;
+}
+
+export interface UploadRegistrationOptions {
+  reason?: string;
+  blockQueue?: boolean;
 }
 
 interface QueueState {
@@ -91,6 +98,7 @@ class MessageQueueService extends EventEmitter {
 
   private readonly UPLOAD_TIMEOUT_MS = 30000; // 30 seconds timeout for uploads
   private readonly MAX_QUEUE_SIZE = 50; // Maximum number of queued messages
+  private idleResolvers: Set<() => void> = new Set();
 
   constructor() {
     super();
@@ -99,7 +107,7 @@ class MessageQueueService extends EventEmitter {
   /**
    * Register a new upload and get a unique upload ID
    */
-  registerUpload(messageId?: string): string {
+  registerUpload(messageId?: string, options: UploadRegistrationOptions = {}): string {
     const uploadId = `upload_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
 
     // Set timeout for upload
@@ -107,15 +115,20 @@ class MessageQueueService extends EventEmitter {
       this.handleUploadTimeout(uploadId);
     }, this.UPLOAD_TIMEOUT_MS);
 
+    const blockQueue = options.blockQueue ?? !messageId;
+
     const upload: ActiveUpload = {
       id: uploadId,
       messageId,
       status: 'pending',
       startTime: Date.now(),
       timeoutHandle,
+      reason: options.reason,
+      blockQueue,
     };
 
     this.state.activeUploads.set(uploadId, upload);
+
     this.emit('uploadRegistered', uploadId);
     return uploadId;
   }
@@ -132,7 +145,7 @@ class MessageQueueService extends EventEmitter {
     upload.status = 'uploading';
     this.emit('uploadStarted', uploadId);
 
-    debugLog('MessageQueue', `Upload ${uploadId} started`);
+    debugLog('MessageQueue', `start ${uploadId}`);
   }
 
   /**
@@ -156,9 +169,13 @@ class MessageQueueService extends EventEmitter {
     upload.endTime = Date.now();
     upload.result = result;
 
-    debugLog('MessageQueue', `Upload ${uploadId} completed`, {
-      duration: upload.endTime - upload.startTime,
-    });
+    const completeParts: string[] = [
+      `complete ${uploadId}`,
+      `t+${upload.endTime - upload.startTime}ms`,
+    ];
+    if (upload.messageId) completeParts.push(`msg:${upload.messageId}`);
+    if (upload.reason) completeParts.push(`reason:${upload.reason}`);
+    debugLog('MessageQueue', completeParts.join(' | '));
 
     // Update associated message if exists
     if (upload.messageId) {
@@ -184,8 +201,12 @@ class MessageQueueService extends EventEmitter {
 
     this.emit('uploadCompleted', uploadId, result);
 
+    // Remove upload from active set to avoid leaking completed entries
+    this.state.activeUploads.delete(uploadId);
+
     // Check if we can process queue
     this.processQueue();
+    this.checkIdle();
   }
 
   /**
@@ -206,10 +227,14 @@ class MessageQueueService extends EventEmitter {
     upload.endTime = Date.now();
     upload.error = error;
 
-    debugLog('MessageQueue', `Upload ${uploadId} failed`, {
-      duration: upload.endTime - upload.startTime,
-      error: error.message,
-    });
+    const failParts: string[] = [
+      `fail ${uploadId}`,
+      `t+${upload.endTime - upload.startTime}ms`,
+      `error:${error.message}`,
+    ];
+    if (upload.messageId) failParts.push(`msg:${upload.messageId}`);
+    if (upload.reason) failParts.push(`reason:${upload.reason}`);
+    debugLog('MessageQueue', failParts.join(' | '));
 
     // Update associated message if exists
     if (upload.messageId) {
@@ -218,8 +243,12 @@ class MessageQueueService extends EventEmitter {
 
     this.emit('uploadFailed', uploadId, error);
 
+    // Remove failed upload to unblock queue
+    this.state.activeUploads.delete(uploadId);
+
     // Check if we can process queue (might proceed without this upload)
     this.processQueue();
+    this.checkIdle();
   }
 
   /**
@@ -253,12 +282,10 @@ class MessageQueueService extends EventEmitter {
       if (upload) {
         upload.messageId = messageId; // Associate upload with message
 
-        debugLog('MessageQueue', `Creating attachment for upload ${uploadId}`, {
-          status: upload.status,
-          hasResult: !!upload.result,
-          fileUri: upload.result?.fileUri,
-          fileId: upload.result?.fileId,
-        });
+        debugLog(
+          'MessageQueue',
+          `attach ${uploadId} -> ${messageId} (status:${upload.status}${upload.result ? ',ready' : ''})`
+        );
       }
 
       return {
@@ -271,10 +298,14 @@ class MessageQueueService extends EventEmitter {
       };
     });
 
+    const metadataCopy = metadata
+      ? (JSON.parse(JSON.stringify(metadata)) as Record<string, unknown>)
+      : undefined;
+
     const message: QueuedMessage = {
       id: messageId,
       content,
-      metadata,
+      metadata: metadataCopy,
       attachments,
       timestamp: Date.now(),
       status: 'queued',
@@ -283,9 +314,7 @@ class MessageQueueService extends EventEmitter {
 
     this.state.messages.push(message);
 
-    debugLog('MessageQueue', `Message ${messageId} queued`, {
-      queueLength: this.state.messages.length,
-    });
+    debugLog('MessageQueue', `queued ${messageId} (len:${this.state.messages.length})`);
 
     this.emit('messageQueued', messageId);
 
@@ -298,9 +327,9 @@ class MessageQueueService extends EventEmitter {
   /**
    * Check if there are active uploads not associated with any message
    */
-  hasUnassociatedActiveUploads(): boolean {
+  hasBlockingDependencies(): boolean {
     for (const upload of this.state.activeUploads.values()) {
-      if (!upload.messageId && upload.status !== 'completed' && upload.status !== 'failed') {
+      if (upload.blockQueue && (upload.status === 'pending' || upload.status === 'uploading')) {
         return true;
       }
     }
@@ -315,8 +344,8 @@ class MessageQueueService extends EventEmitter {
       return;
     }
 
-    // Check if there are unassociated uploads in progress
-    if (this.hasUnassociatedActiveUploads()) {
+    // Check if there are blocking uploads in progress
+    if (this.hasBlockingDependencies()) {
       return;
     }
 
@@ -344,11 +373,6 @@ class MessageQueueService extends EventEmitter {
         att => att.status === 'completed' && (att.fileUri || att.fileId)
       );
 
-      debugLog('MessageQueue', `Processing attachments for ${nextMessage.id}`, {
-        attachments: nextMessage.attachments,
-        successfulCount: successfulAttachments?.length || 0,
-      });
-
       // Merge existing attachments from metadata with newly uploaded ones
       const existingAttachments = Array.isArray(nextMessage.metadata?.['attachments'])
         ? nextMessage.metadata['attachments']
@@ -364,12 +388,6 @@ class MessageQueueService extends EventEmitter {
 
       const allAttachments = [...existingAttachments, ...newAttachments];
 
-      debugLog('MessageQueue', `Final attachments for ${nextMessage.id}`, {
-        existing: existingAttachments.length,
-        new: newAttachments.length,
-        total: allAttachments.length,
-      });
-
       const finalMetadata = {
         ...nextMessage.metadata,
         ...(allAttachments.length > 0 && {
@@ -377,16 +395,13 @@ class MessageQueueService extends EventEmitter {
         }),
       };
 
-      // Send the message
       if (nextMessage.onSend) {
+        debugLog('MessageQueue', `dequeue ${nextMessage.id}`);
         await nextMessage.onSend(
           nextMessage.content || (successfulAttachments?.length ? '[Image]' : ''),
           Object.keys(finalMetadata).length > 0 ? finalMetadata : undefined
         );
       }
-
-      nextMessage.status = 'sent';
-      this.emit('messageSent', nextMessage.id);
 
       // Clean up associated uploads
       nextMessage.attachments?.forEach(att => {
@@ -396,20 +411,20 @@ class MessageQueueService extends EventEmitter {
       // Remove from queue
       this.state.messages = this.state.messages.filter(msg => msg.id !== nextMessage.id);
 
-      debugLog('MessageQueue', `Message ${nextMessage.id} dequeued`, {
-        remainingMessages: this.state.messages.length,
-      });
+      nextMessage.status = 'sent';
+      this.emit('messageSent', nextMessage.id);
     } catch (error) {
-      nextMessage.status = 'failed';
-      this.emit('messageFailed', nextMessage.id, error);
-
       // Remove failed message from queue
       this.state.messages = this.state.messages.filter(msg => msg.id !== nextMessage.id);
+
+      nextMessage.status = 'failed';
+      this.emit('messageFailed', nextMessage.id, error);
     } finally {
       this.state.isProcessing = false;
 
       // Process next message if available
       setTimeout(() => this.processQueue(), 0);
+      this.checkIdle();
     }
   }
 
@@ -454,12 +469,25 @@ class MessageQueueService extends EventEmitter {
   getStatus(): {
     queueLength: number;
     activeUploads: number;
+    blockingDependencies: number;
     isProcessing: boolean;
     isPaused: boolean;
   } {
+    let activeUploads = 0;
+    let blockingDependencies = 0;
+    for (const upload of this.state.activeUploads.values()) {
+      if (upload.status === 'pending' || upload.status === 'uploading') {
+        activeUploads += 1;
+        if (upload.blockQueue) {
+          blockingDependencies += 1;
+        }
+      }
+    }
+
     return {
       queueLength: this.state.messages.length,
-      activeUploads: this.state.activeUploads.size,
+      activeUploads,
+      blockingDependencies,
       isProcessing: this.state.isProcessing,
       isPaused: this.state.isPaused,
     };
@@ -504,6 +532,7 @@ class MessageQueueService extends EventEmitter {
     this.state.activeUploads.clear();
     this.state.isProcessing = false;
     this.emit('queueCleared');
+    this.checkIdle();
   }
 
   /**
@@ -530,7 +559,45 @@ class MessageQueueService extends EventEmitter {
 
     this.state.messages.splice(messageIndex, 1);
     this.emit('messageCancelled', messageId);
+    this.checkIdle();
     return true;
+  }
+
+  /**
+   * Await completion of all queued messages and blocking uploads
+   */
+  waitUntilIdle(): Promise<void> {
+    if (this.isIdle()) {
+      return Promise.resolve();
+    }
+
+    return new Promise(resolve => {
+      this.idleResolvers.add(resolve);
+    });
+  }
+
+  private isIdle(): boolean {
+    const hasQueued = this.state.messages.some(
+      msg => msg.status === 'queued' || msg.status === 'processing'
+    );
+    const hasActiveUploads = Array.from(this.state.activeUploads.values()).some(
+      upload => upload.status === 'pending' || upload.status === 'uploading'
+    );
+
+    return !hasQueued && !hasActiveUploads;
+  }
+
+  private checkIdle(): void {
+    if (!this.isIdle()) {
+      return;
+    }
+
+    if (this.idleResolvers.size > 0) {
+      for (const resolve of this.idleResolvers) {
+        resolve();
+      }
+      this.idleResolvers.clear();
+    }
   }
 }
 

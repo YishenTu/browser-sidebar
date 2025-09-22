@@ -340,6 +340,8 @@ export function useAIChat(options: UseAIChatOptions = {}): UseAIChatReturn {
                       model,
                       provider: providerType,
                       source: 'sync',
+                      dependencyReason: `tab-sync:${tab.tabInfo.id}`,
+                      blockQueue: true,
                       metadata: {
                         displayName: `tab_${tab.tabInfo.id}_sync`,
                         fileName: `tab_${tab.tabInfo.id}.${imageContent.mimeType.split('/')[1] || 'png'}`,
