@@ -108,7 +108,6 @@ export interface GeminiResponse {
 // Configuration Types
 export interface GeminiChatConfig {
   thinkingBudget?: ThinkingBudget;
-  showThoughts?: boolean;
   signal?: AbortSignal;
   systemPrompt?: string;
   [key: string]: unknown;

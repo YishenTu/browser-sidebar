@@ -97,7 +97,6 @@ export interface GeminiConfig {
   apiKey: string;
   model: string;
   thinkingBudget?: ThinkingBudget;
-  showThoughts?: boolean;
   stopSequences?: string[];
   endpoint?: string; // Optional custom endpoint for testing
   [key: string]: unknown; // Index signature for compatibility with Record<string, unknown>
@@ -573,10 +572,6 @@ export function validateGeminiConfig(config: unknown): ProviderValidationResult 
 
   if (cfg['thinkingBudget'] !== undefined && !isValidThinkingBudget(cfg['thinkingBudget'])) {
     errors.push('Invalid thinking budget');
-  }
-
-  if (cfg['showThoughts'] !== undefined && typeof cfg['showThoughts'] !== 'boolean') {
-    errors.push('Invalid show thoughts setting');
   }
 
   if (!cfg['model'] || typeof cfg['model'] !== 'string') {

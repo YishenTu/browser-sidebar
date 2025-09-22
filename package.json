@@ -19,6 +19,7 @@
     "test:ui": "vitest --ui",
     "test:coverage": "vitest run --coverage",
     "test:openai": "tsx test-openai-gpt5-nano.ts",
+    "test:gemini:stream": "tsx dev-tools/gemini-thinking-probe.ts",
     "prepare": "husky"
   },
   "dependencies": {

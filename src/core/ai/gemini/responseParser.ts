@@ -13,7 +13,7 @@ import type {
   ProviderType,
   SearchResult,
 } from '../../../types/providers';
-import type { GeminiResponse, GeminiCandidate, GeminiChatConfig } from './types';
+import type { GeminiResponse, GeminiCandidate } from './types';
 import { FINISH_REASON_MAP } from './types';
 import { formatSearchMetadata } from './searchMetadata';
 
@@ -264,30 +264,12 @@ function generateChunkId(): string {
 /**
  * Process stream chunk with configuration
  */
-export function processStreamChunk(
-  chunk: StreamChunk,
-  config?: GeminiChatConfig,
-  defaultShowThoughts?: boolean
-): StreamChunk {
-  const showThoughts = config?.showThoughts ?? defaultShowThoughts;
-
-  // Create a copy to avoid mutating the original
-  const processedChunk = { ...chunk };
-  processedChunk.choices = chunk.choices.map(choice => {
-    const processedChoice = { ...choice };
-
-    // Filter out thinking content if showThoughts is false
-    if (!showThoughts && choice.delta?.thinking) {
-      processedChoice.delta = {
-        ...choice.delta,
-        thinking: undefined,
-      };
-    } else {
-      processedChoice.delta = { ...choice.delta };
-    }
-
-    return processedChoice;
-  });
-
+export function processStreamChunk(chunk: StreamChunk): StreamChunk {
+  // Shallow clone to prevent downstream mutation
+  const processedChunk: StreamChunk = { ...chunk };
+  processedChunk.choices = chunk.choices.map(choice => ({
+    ...choice,
+    delta: { ...choice.delta },
+  }));
   return processedChunk;
 }

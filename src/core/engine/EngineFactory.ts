@@ -181,7 +181,6 @@ export class EngineFactory {
       apiKey,
       model: defaultModel,
       thinkingBudget: (modelCfg?.thinkingBudget as number | undefined) ?? -1,
-      showThoughts: false,
     } as GeminiConfig;
   }
   async createOpenRouterProvider(config: OpenRouterConfig): Promise<OpenRouterProvider> {

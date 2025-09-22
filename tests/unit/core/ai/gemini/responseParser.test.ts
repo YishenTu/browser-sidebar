@@ -16,7 +16,6 @@ import {
 import type {
   GeminiResponse,
   GeminiCandidate,
-  GeminiChatConfig,
   GeminiUsageMetadata,
   GeminiSearchMetadata,
 } from '@/core/ai/gemini/types';
@@ -473,59 +472,26 @@ describe('Gemini Response Parser', () => {
       ],
     });
 
-    it('should preserve chunk when showThoughts is true', () => {
-      const config: GeminiChatConfig = { showThoughts: true };
+    it('preserves thinking deltas by default', () => {
       const chunk = createMockChunk('Thinking content');
 
-      const result = processStreamChunk(chunk, config);
+      const result = processStreamChunk(chunk);
 
       expect(result.choices[0].delta.thinking).toBe('Thinking content');
       expect(result.choices[0].delta.content).toBe('Test content');
     });
 
-    it('should filter thinking when showThoughts is false', () => {
-      const config: GeminiChatConfig = { showThoughts: false };
-      const chunk = createMockChunk('Thinking content');
-
-      const result = processStreamChunk(chunk, config);
-
-      expect(result.choices[0].delta.thinking).toBeUndefined();
-      expect(result.choices[0].delta.content).toBe('Test content');
-    });
-
-    it('should use defaultShowThoughts when config.showThoughts is undefined', () => {
-      const chunk = createMockChunk('Thinking content');
-
-      // With defaultShowThoughts = true
-      const result1 = processStreamChunk(chunk, {}, true);
-      expect(result1.choices[0].delta.thinking).toBe('Thinking content');
-
-      // With defaultShowThoughts = false
-      const result2 = processStreamChunk(chunk, {}, false);
-      expect(result2.choices[0].delta.thinking).toBeUndefined();
-    });
-
-    it('should preserve chunk without thinking', () => {
-      const config: GeminiChatConfig = { showThoughts: false };
-      const chunk = createMockChunk(); // No thinking
-
-      const result = processStreamChunk(chunk, config);
-
-      expect(result.choices[0].delta.content).toBe('Test content');
-      expect(result.choices[0].delta.thinking).toBeUndefined();
-    });
-
-    it('should not mutate original chunk', () => {
-      const config: GeminiChatConfig = { showThoughts: false };
+    it('clones chunk without mutating the original', () => {
       const originalChunk = createMockChunk('Original thinking');
 
-      processStreamChunk(originalChunk, config);
+      const result = processStreamChunk(originalChunk);
 
-      // Original should be unchanged
+      expect(result).not.toBe(originalChunk);
+      expect(result.choices[0]).not.toBe(originalChunk.choices[0]);
       expect(originalChunk.choices[0].delta.thinking).toBe('Original thinking');
     });
 
-    it('should handle multiple choices', () => {
+    it('retains multiple choices and their thinking content', () => {
       const chunk: StreamChunk = {
         id: 'multi-choice',
         object: 'response.chunk',
@@ -545,16 +511,16 @@ describe('Gemini Response Parser', () => {
         ],
       };
 
-      const result = processStreamChunk(chunk, { showThoughts: false });
+      const result = processStreamChunk(chunk);
 
       expect(result.choices).toHaveLength(2);
-      expect(result.choices[0].delta.thinking).toBeUndefined();
-      expect(result.choices[1].delta.thinking).toBeUndefined();
+      expect(result.choices[0].delta.thinking).toBe('Thinking 1');
+      expect(result.choices[1].delta.thinking).toBe('Thinking 2');
       expect(result.choices[0].delta.content).toBe('Choice 1');
       expect(result.choices[1].delta.content).toBe('Choice 2');
     });
 
-    it('should preserve other chunk properties', () => {
+    it('preserves usage and metadata fields', () => {
       const chunk: StreamChunk = {
         id: 'test-preserve',
         object: 'response.chunk',
@@ -577,7 +543,7 @@ describe('Gemini Response Parser', () => {
         },
       };
 
-      const result = processStreamChunk(chunk, { showThoughts: false });
+      const result = processStreamChunk(chunk);
 
       expect(result.id).toBe('test-preserve');
       expect(result.object).toBe('response.chunk');
@@ -885,7 +851,7 @@ describe('Gemini Response Parser', () => {
       } as any;
 
       expect(() => {
-        processStreamChunk(chunk, { showThoughts: false });
+        processStreamChunk(chunk);
       }).toThrow(); // Will throw when trying to map undefined choices
     });
   });

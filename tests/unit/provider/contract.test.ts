@@ -99,7 +99,6 @@ describe('Provider Contract Tests', () => {
             apiKey: 'AIza-test123456789',
             model: 'gemini-2.5-flash',
             thinkingBudget: '-1',
-            showThoughts: true,
           } as GeminiConfig,
         },
       },

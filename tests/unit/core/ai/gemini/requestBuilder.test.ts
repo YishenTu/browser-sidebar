@@ -50,8 +50,7 @@ describe('Gemini Request Builder', () => {
 
       const chatConfig: GeminiChatConfig = {
         systemPrompt: 'You are a helpful assistant.',
-        thinkingBudget: 'high',
-        showThoughts: true,
+        thinkingBudget: 5,
       };
 
       const request = buildRequest(messages, mockGeminiConfig, chatConfig);
@@ -65,7 +64,10 @@ describe('Gemini Request Builder', () => {
         ],
         generationConfig: {
           stopSequences: ['STOP'],
-          responseModalities: ['TEXT', 'THOUGHT'],
+          thinkingConfig: {
+            thinkingBudget: 5,
+            includeThoughts: true,
+          },
         },
         tools: [{ google_search: {} }],
         systemInstruction: {
@@ -96,9 +98,7 @@ describe('Gemini Request Builder', () => {
             parts: [{ text: 'Simple message' }],
           },
         ],
-        generationConfig: {
-          responseModalities: ['TEXT'],
-        },
+        generationConfig: {},
         tools: [{ google_search: {} }],
       });
     });
@@ -503,9 +503,7 @@ describe('Gemini Request Builder', () => {
 
       const config = buildGenerationConfig(geminiConfig);
 
-      expect(config).toEqual({
-        responseModalities: ['TEXT'],
-      });
+      expect(config).toEqual({});
     });
 
     it('should include stop sequences when provided', () => {
@@ -517,6 +515,32 @@ describe('Gemini Request Builder', () => {
       const config = buildGenerationConfig(geminiConfig);
 
       expect(config.stopSequences).toEqual(['STOP', 'END', 'TERMINATE']);
+    });
+
+    it('should auto-enable includeThoughts when non-zero thinking budget is provided', () => {
+      const geminiConfig: GeminiConfig = {
+        model: 'gemini-2.5-flash',
+        thinkingBudget: 12,
+      };
+
+      const config = buildGenerationConfig(geminiConfig);
+
+      expect(config.thinkingConfig).toEqual({
+        thinkingBudget: 12,
+        includeThoughts: true,
+      });
+    });
+
+    it('should not auto-enable includeThoughts when thinking budget is zero', () => {
+      const geminiConfig: GeminiConfig = {
+        model: 'gemini-2.5-flash',
+        thinkingBudget: 0,
+      };
+
+      const config = buildGenerationConfig(geminiConfig);
+
+      expect(config.thinkingConfig?.includeThoughts).toBe(false);
+      expect(config.thinkingConfig?.thinkingBudget).toBe(0);
     });
 
     it('should not include empty stop sequences', () => {
@@ -657,7 +681,7 @@ describe('Gemini Request Builder', () => {
       const url = buildApiUrl('models/gemini-pro:streamGenerateContent', testApiKey);
 
       expect(url).toBe(
-        'https://generativelanguage.googleapis.com/v1betamodels/gemini-pro:streamGenerateContent?key=test-key-123'
+        'https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:streamGenerateContent?key=test-key-123&alt=sse'
       );
     });
 
@@ -669,7 +693,7 @@ describe('Gemini Request Builder', () => {
       );
 
       expect(url).toBe(
-        'https://api.example.com//v1beta/models/gemini-pro:generateContent?key=test-key-123'
+        'https://api.example.com/v1beta/models/gemini-pro:generateContent?key=test-key-123'
       );
     });
 
@@ -677,13 +701,23 @@ describe('Gemini Request Builder', () => {
       const keyWithSpecialChars = 'key+with/special=chars&more';
       const url = buildApiUrl('/test', keyWithSpecialChars);
 
-      expect(url).toContain('?key=key+with/special=chars&more'); // API key is not URL encoded
+      expect(url).toBe(
+        'https://generativelanguage.googleapis.com/v1beta/test?key=key%2Bwith%2Fspecial%3Dchars%26more'
+      );
     });
 
     it('should handle empty endpoint', () => {
       const url = buildApiUrl('', testApiKey);
 
       expect(url).toBe('https://generativelanguage.googleapis.com/v1beta?key=test-key-123');
+    });
+
+    it('should add alt=sse when streaming endpoint is used', () => {
+      const url = buildApiUrl('/models/test:streamGenerateContent', testApiKey);
+
+      expect(url).toBe(
+        'https://generativelanguage.googleapis.com/v1beta/models/test:streamGenerateContent?key=test-key-123&alt=sse'
+      );
     });
   });
 
@@ -756,7 +790,6 @@ describe('Gemini Request Builder', () => {
 
       const chatConfig: GeminiChatConfig = {
         systemPrompt: 'You are an image analysis expert.',
-        showThoughts: true,
       };
 
       const request = buildRequest(messages, geminiConfig, chatConfig);

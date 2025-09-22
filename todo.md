@@ -22,4 +22,5 @@
 - [x] 20. add readability extraction
 - [x] 21. assign extraction method for different domain
 - [x] 22. full page captured as extracted content
-- [ ] 23. multimodal routing
+- [x] 23. multimodal routing
+- [x] 24. fix: gemini model thinking summary and streaming issue

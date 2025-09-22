@@ -109,7 +109,7 @@ export class GeminiProvider extends BaseEngine {
         const objects = processor.processChunk(textChunk);
         for (const item of objects) {
           const streamChunk = convertToStreamChunk(item, geminiConfig.model);
-          const processedChunk = processStreamChunk(streamChunk, config, geminiConfig.showThoughts);
+          const processedChunk = processStreamChunk(streamChunk);
           if (processedChunk.choices[0]?.finishReason)
             lastFinishReason = processedChunk.choices[0].finishReason;
           const hasContent = processedChunk.choices[0]?.delta?.content;

@@ -83,15 +83,12 @@ vi.mock('@core/ai/gemini/responseParser', () => ({
       metadata: candidate?.groundingMetadata ? { searchResults: {} } : undefined,
     };
   }),
-  processStreamChunk: vi.fn((chunk: any, config: any, showThoughts: boolean) => {
+  processStreamChunk: vi.fn((chunk: any) => {
     const processedChunk = { ...chunk };
     if (processedChunk.choices) {
       processedChunk.choices = processedChunk.choices.map((choice: any) => ({
         ...choice,
-        delta: {
-          ...choice.delta,
-          thinking: (config?.showThoughts ?? showThoughts) ? choice.delta.thinking : undefined,
-        },
+        delta: { ...choice.delta },
       }));
     }
     return processedChunk;
@@ -126,7 +123,6 @@ describe('GeminiProvider Transport Integration', () => {
         apiKey: 'test-key',
         model: 'gemini-2.5-flash',
         thinkingBudget: '0' as const,
-        showThoughts: false,
       },
     };
 
@@ -243,7 +239,6 @@ describe('GeminiProvider Transport Integration', () => {
 
       const config: GeminiChatConfig = {
         thinkingBudget: '-1',
-        showThoughts: true,
         signal: new AbortController().signal,
       };
 
@@ -345,9 +340,7 @@ describe('GeminiProvider Transport Integration', () => {
         { id: '1', role: 'user', content: 'What is the answer?', timestamp: new Date() },
       ];
 
-      const config: GeminiChatConfig = {
-        showThoughts: true,
-      };
+      const config: GeminiChatConfig = {};
 
       const chunks: StreamChunk[] = [];
       for await (const chunk of provider.streamChat(messages, config)) {
@@ -549,7 +542,6 @@ describe('GeminiProvider Transport Integration', () => {
 
       const config: GeminiChatConfig = {
         thinkingBudget: '-1',
-        showThoughts: true,
       };
 
       const iterator = provider.streamChat(messages, config);
@@ -561,77 +553,6 @@ describe('GeminiProvider Transport Integration', () => {
         expect.any(Object), // Provider's internal config
         config // Runtime config
       );
-    });
-
-    it('should respect showThoughts configuration', async () => {
-      const streamWithThinking = (async function* () {
-        const chunk = JSON.stringify({
-          candidates: [
-            {
-              content: {
-                parts: [{ text: 'Thinking...', thought: true }, { text: 'Final answer' }],
-              },
-            },
-          ],
-        });
-        yield new TextEncoder().encode(`data: ${chunk}\n\n`);
-      })();
-
-      const messages: ProviderChatMessage[] = [
-        { id: '1', role: 'user', content: 'Question with thinking', timestamp: new Date() },
-      ];
-
-      // Test with showThoughts = false
-      (mockTransport.stream as any).mockReturnValue(streamWithThinking);
-
-      const configHideThoughts: GeminiChatConfig = {
-        showThoughts: false,
-      };
-
-      const chunksHidden: StreamChunk[] = [];
-      for await (const chunk of provider.streamChat(messages, configHideThoughts)) {
-        chunksHidden.push(chunk);
-        if (chunksHidden.length >= 1) break;
-      }
-
-      expect(chunksHidden.length).toBeGreaterThan(0);
-      if (chunksHidden[0]) {
-        expect(chunksHidden[0].choices[0].delta.thinking).toBeUndefined();
-        expect(chunksHidden[0].choices[0].delta.content).toBe('Final answer');
-      }
-
-      // Reset mock for next test
-      (mockTransport.stream as any).mockReturnValue(
-        (async function* () {
-          const chunk = JSON.stringify({
-            candidates: [
-              {
-                content: {
-                  parts: [{ text: 'Thinking...', thought: true }, { text: 'Final answer' }],
-                },
-              },
-            ],
-          });
-          yield new TextEncoder().encode(`data: ${chunk}\n\n`);
-        })()
-      );
-
-      // Test with showThoughts = true
-      const configShowThoughts: GeminiChatConfig = {
-        showThoughts: true,
-      };
-
-      const chunksShown: StreamChunk[] = [];
-      for await (const chunk of provider.streamChat(messages, configShowThoughts)) {
-        chunksShown.push(chunk);
-        if (chunksShown.length >= 1) break;
-      }
-
-      expect(chunksShown.length).toBeGreaterThan(0);
-      if (chunksShown[0]) {
-        expect(chunksShown[0].choices[0].delta.thinking).toBe('Thinking...');
-        expect(chunksShown[0].choices[0].delta.content).toBe('Final answer');
-      }
     });
 
     it('should handle different thinking budget values', async () => {

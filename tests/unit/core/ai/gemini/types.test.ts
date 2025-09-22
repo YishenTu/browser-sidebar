@@ -461,13 +461,11 @@ describe('Gemini Types', () => {
       const configs: GeminiChatConfig[] = [
         {},
         { thinkingBudget: 'high' },
-        { showThoughts: true },
         { signal: new AbortController().signal },
         { systemPrompt: 'Test prompt' },
         { customField: 'custom value' },
         {
           thinkingBudget: 'medium',
-          showThoughts: false,
           systemPrompt: 'Complex prompt',
           signal: new AbortController().signal,
           customField: 123,

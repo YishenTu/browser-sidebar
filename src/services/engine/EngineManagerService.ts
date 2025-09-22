@@ -499,7 +499,6 @@ export class EngineManagerService {
                 ? selectedModel
                 : getDefaultModelForProvider('gemini') || 'gemini-2.5-flash-lite'
             )?.thinkingBudget as number | undefined) ?? -1,
-          showThoughts: false,
         },
       };
 

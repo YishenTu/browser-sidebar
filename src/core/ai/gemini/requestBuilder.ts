@@ -217,14 +217,10 @@ export function buildGenerationConfig(
     if (typeof normalizedBudget === 'number' && Number.isInteger(normalizedBudget)) {
       config.thinkingConfig = {
         thinkingBudget: normalizedBudget,
-        // Only include thought summaries when requested
-        includeThoughts: geminiConfig.showThoughts === true || chatConfig?.showThoughts === true,
+        // Always request thought summaries when thinking is enabled
+        includeThoughts: normalizedBudget !== 0,
       };
     }
-
-    // Ask for text by default; include THOUGHT modality when showing thoughts
-    const wantThoughts = geminiConfig.showThoughts === true || chatConfig?.showThoughts === true;
-    config.responseModalities = wantThoughts ? ['TEXT', 'THOUGHT'] : ['TEXT'];
   }
 
   return config;
@@ -254,9 +250,22 @@ export function buildApiUrl(
   apiKey: string,
   baseUrl: string = 'https://generativelanguage.googleapis.com'
 ): string {
-  const fullUrl = `${baseUrl}/v1beta${endpoint}`;
-  // Add API key as query parameter
-  return `${fullUrl}?key=${apiKey}`;
+  const normalizedBase = baseUrl.replace(/\/+$/, '');
+  const trimmedEndpoint = endpoint.trim();
+  const normalizedEndpoint =
+    trimmedEndpoint === ''
+      ? ''
+      : trimmedEndpoint.startsWith('/')
+        ? trimmedEndpoint
+        : `/${trimmedEndpoint}`;
+  const query = new URLSearchParams({ key: apiKey });
+
+  if (normalizedEndpoint && /:[^/]*streamGenerateContent$/i.test(normalizedEndpoint)) {
+    query.set('alt', 'sse');
+  }
+
+  const path = normalizedEndpoint ? `/v1beta${normalizedEndpoint}` : '/v1beta';
+  return `${normalizedBase}${path}?${query.toString()}`;
 }
 
 /**

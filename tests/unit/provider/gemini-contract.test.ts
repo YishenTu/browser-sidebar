@@ -99,7 +99,6 @@ describe('Gemini Provider Contract Tests', () => {
         apiKey: 'AIza-test123456789',
         model: 'gemini-2.5-flash',
         thinkingBudget: '-1',
-        showThoughts: true,
       } as GeminiConfig,
     };
     messages = createMockMessages(1);
@@ -506,7 +505,6 @@ describe('Gemini Provider Contract Tests', () => {
         apiKey: 'AIza-test123',
         model: 'gemini-2.5-flash',
         thinkingBudget: '-1' as const,
-        showThoughts: true,
       };
 
       const validation = provider.validateConfig(validConfig);
@@ -525,7 +523,6 @@ describe('Gemini Provider Contract Tests', () => {
         apiKey: 'AIza-test123',
         model: 'gemini-2.5-flash',
         thinkingBudget: 'invalid' as any,
-        showThoughts: true,
       };
 
       const validation = provider.validateConfig(invalidConfig);
