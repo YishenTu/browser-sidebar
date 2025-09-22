@@ -21,6 +21,8 @@ import {
   syncImagesToProvider,
   updateMessagesWithSyncedImages,
 } from '../../../core/services/imageSyncService';
+import { isImageExtractedContent, type ImageExtractedContent } from '@/types/extraction';
+import { uploadImage } from '@/core/services/imageUploadService';
 import { debugLog } from '@/utils/debug';
 import type { UseAIChatOptions, UseAIChatReturn, SendMessageOptions } from './types';
 import type { TabContent } from '../../../types/tabs';
@@ -50,6 +52,9 @@ export function useAIChat(options: UseAIChatOptions = {}): UseAIChatReturn {
   // Service layer instances
   const providerManagerServiceRef = useRef<EngineManagerService | null>(null);
   const chatServiceRef = useRef<ChatService | null>(null);
+
+  // Track pending image syncs (message history, tab content)
+  const pendingSyncsRef = useRef<Promise<void>[]>([]);
 
   // Initialize services
   useEffect(() => {
@@ -240,64 +245,226 @@ export function useAIChat(options: UseAIChatOptions = {}): UseAIChatReturn {
 
       await providerManagerServiceRef.current.switch(providerType);
 
-      // Sync images to the new provider if we have chat history
+      // Sync images to the new provider if we have chat history or tab content
       const messages = messageStore.getMessages();
+      const loadedTabs = tabStore.getLoadedTabs();
+
+      // Get API key and model for the target provider
+      const settings = settingsStore.settings;
+      let apiKey: string;
+      let model: string;
+
+      if (providerType === 'gemini') {
+        apiKey = settings.apiKeys?.google || '';
+        model = settings.selectedModel;
+      } else if (providerType === 'openai') {
+        apiKey = settings.apiKeys?.openai || '';
+        model = settings.selectedModel;
+      } else {
+        // For other providers, skip image sync for now
+        console.warn(`Image synchronization not implemented for provider: ${providerType}`);
+        return;
+      }
+
+      if (!apiKey) {
+        console.warn(`No API key available for ${providerType}, skipping image synchronization`);
+        return;
+      }
+
+      // Sync message attachments
       if (messages.length > 0) {
+        const messageSyncPromise = (async () => {
+          try {
+            const syncResults = await syncImagesToProvider(messages, providerType, apiKey, model);
+
+            if (syncResults.size > 0) {
+              const updatedMessages = updateMessagesWithSyncedImages(messages, syncResults);
+
+              updatedMessages.forEach(updatedMessage => {
+                const existingMessage = messageStore.getMessageById(updatedMessage.id);
+                if (
+                  existingMessage &&
+                  existingMessage.metadata?.['attachments'] !==
+                    updatedMessage.metadata?.['attachments']
+                ) {
+                  messageStore.updateMessage(updatedMessage.id, {
+                    metadata: updatedMessage.metadata,
+                  });
+                }
+              });
+
+              debugLog(
+                'useAIChat',
+                `Successfully synchronized ${syncResults.size} message images to ${providerType} provider`
+              );
+            }
+          } catch (error) {
+            console.error('Failed to synchronize message images during provider switch:', error);
+            // Don't throw - provider switch should still succeed even if image sync fails
+          }
+        })();
+
+        pendingSyncsRef.current.push(messageSyncPromise);
+
         try {
-          // Get API key for the target provider
-          const settings = settingsStore.settings;
-          let apiKey: string;
-          let model: string;
-
-          if (providerType === 'gemini') {
-            apiKey = settings.apiKeys?.google || '';
-            model = settings.selectedModel; // Use current selected model
-          } else if (providerType === 'openai') {
-            apiKey = settings.apiKeys?.openai || '';
-            model = settings.selectedModel; // Use current selected model
-          } else {
-            // For other providers, skip image sync for now
-            console.warn(`Image synchronization not implemented for provider: ${providerType}`);
-            return;
-          }
-
-          if (!apiKey) {
-            console.warn(
-              `No API key available for ${providerType}, skipping image synchronization`
-            );
-            return;
-          }
-
-          // Sync images to the target provider
-          const syncResults = await syncImagesToProvider(messages, providerType, apiKey, model);
-
-          if (syncResults.size > 0) {
-            // Update messages with synced image references
-            const updatedMessages = updateMessagesWithSyncedImages(messages, syncResults);
-
-            // Update the message store with the synced images
-            updatedMessages.forEach(updatedMessage => {
-              const existingMessage = messageStore.getMessageById(updatedMessage.id);
-              if (
-                existingMessage &&
-                existingMessage.metadata?.['attachments'] !==
-                  updatedMessage.metadata?.['attachments']
-              ) {
-                messageStore.updateMessage(updatedMessage.id, {
-                  metadata: updatedMessage.metadata,
-                });
-              }
-            });
-
-            debugLog(
-              'useAIChat',
-              `Successfully synchronized ${syncResults.size} images to ${providerType} provider`
-            );
-          }
-        } catch (error) {
-          console.error('Failed to synchronize images during provider switch:', error);
-          // Don't throw - provider switch should still succeed even if image sync fails
+          await messageSyncPromise;
+        } finally {
+          pendingSyncsRef.current = pendingSyncsRef.current.filter(p => p !== messageSyncPromise);
         }
+      }
+
+      // Sync tab content images
+      const loadedTabsArray = Object.values(loadedTabs);
+      if (loadedTabsArray.length > 0) {
+        // Create a promise for this sync operation
+        const syncPromise = (async () => {
+          try {
+            for (const tab of loadedTabsArray) {
+              if (
+                tab.extractedContent?.content &&
+                isImageExtractedContent(tab.extractedContent.content)
+              ) {
+                const imageContent = tab.extractedContent.content as ImageExtractedContent;
+
+                // Check if this image needs syncing to target provider
+                const needsSync =
+                  (providerType === 'gemini' && imageContent.fileId && !imageContent.fileUri) ||
+                  (providerType === 'openai' && imageContent.fileUri && !imageContent.fileId);
+
+                if (needsSync && imageContent.dataUrl) {
+                  // Re-upload the image to the new provider
+                  const uploadResult = await uploadImage(
+                    { dataUrl: imageContent.dataUrl, mimeType: imageContent.mimeType },
+                    {
+                      apiKey,
+                      model,
+                      provider: providerType,
+                      source: 'sync',
+                      metadata: {
+                        displayName: `tab_${tab.tabInfo.id}_sync`,
+                        fileName: `tab_${tab.tabInfo.id}.${imageContent.mimeType.split('/')[1] || 'png'}`,
+                        purpose: 'vision',
+                      },
+                    }
+                  );
+
+                  if (uploadResult) {
+                    // Update the tab's image content with new references
+                    const updatedImageContent: ImageExtractedContent = {
+                      ...imageContent,
+                      ...(providerType === 'gemini'
+                        ? { fileUri: uploadResult.fileUri }
+                        : { fileId: uploadResult.fileId }),
+                    };
+
+                    // Update the tab content in the store
+                    tabStore.updateTabContent(tab.tabInfo.id, updatedImageContent);
+
+                    // Update ALL messages (including pending/queued) that contain this tab's content in their metadata
+                    const allMessages = messageStore.getMessages();
+                    const messagesToUpdate = allMessages.filter(msg => {
+                      const sections = msg.metadata?.['sections'] as any;
+                      if (!sections?.tabContent) return false;
+
+                      // Check if this message contains the tab's image
+                      return (
+                        (providerType === 'gemini' &&
+                          sections.tabContent.includes(
+                            `<fileId>${imageContent.fileId}</fileId>`
+                          )) ||
+                        (providerType === 'openai' &&
+                          sections.tabContent.includes(
+                            `<fileUri>${imageContent.fileUri}</fileUri>`
+                          ))
+                      );
+                    });
+
+                    for (const msg of messagesToUpdate) {
+                      const sections = msg.metadata?.['sections'] as any;
+                      if (sections?.tabContent) {
+                        let updatedTabContent = sections.tabContent;
+
+                        if (providerType === 'gemini') {
+                          // Replace fileId with fileUri for Gemini
+                          updatedTabContent = updatedTabContent.replace(
+                            /<content type="image">\s*<fileId>[^<]+<\/fileId>\s*<\/content>/g,
+                            `<content type="image">
+    <fileUri>${uploadResult.fileUri}</fileUri>
+    <mimeType>${imageContent.mimeType}</mimeType>
+  </content>`
+                          );
+                        } else if (providerType === 'openai') {
+                          // Replace fileUri with fileId for OpenAI
+                          updatedTabContent = updatedTabContent.replace(
+                            /<content type="image">\s*<fileUri>[^<]+<\/fileUri>\s*<mimeType>[^<]+<\/mimeType>\s*<\/content>/g,
+                            `<content type="image">
+    <fileId>${uploadResult.fileId}</fileId>
+  </content>`
+                          );
+                        }
+
+                        // Update the message metadata with new tab content
+                        // Also update the content field if it's formatted content
+                        const updatedSections = {
+                          ...sections,
+                          tabContent: updatedTabContent,
+                        };
+
+                        // Rebuild the full formatted content if the message has sections
+                        let updatedContent = msg.content;
+                        if (
+                          sections.systemInstruction !== undefined ||
+                          sections.userQuery !== undefined
+                        ) {
+                          const parts = [];
+                          if (sections.systemInstruction) {
+                            parts.push(sections.systemInstruction);
+                            parts.push('');
+                          }
+                          if (updatedTabContent) {
+                            parts.push(updatedTabContent);
+                            parts.push('');
+                          }
+                          if (sections.userQuery) {
+                            parts.push(sections.userQuery);
+                          }
+                          updatedContent = parts.join('\n');
+                        }
+
+                        messageStore.updateMessage(msg.id, {
+                          content: updatedContent,
+                          metadata: {
+                            ...msg.metadata,
+                            sections: updatedSections,
+                          },
+                        });
+                      }
+                    }
+
+                    debugLog(
+                      'useAIChat',
+                      `Successfully synchronized tab ${tab.tabInfo.id} image to ${providerType} provider`
+                    );
+                  }
+                }
+              }
+            }
+          } catch (error) {
+            console.error(
+              'Failed to synchronize tab content images during provider switch:',
+              error
+            );
+            // Don't throw - provider switch should still succeed even if image sync fails
+          }
+        })();
+
+        // Track this sync promise
+        pendingSyncsRef.current.push(syncPromise);
+
+        // Clean up completed promises after they resolve
+        syncPromise.finally(() => {
+          pendingSyncsRef.current = pendingSyncsRef.current.filter(p => p !== syncPromise);
+        });
       }
 
       // Update chat service with new active provider without interrupting streams unnecessarily
@@ -313,7 +480,7 @@ export function useAIChat(options: UseAIChatOptions = {}): UseAIChatReturn {
         }
       }
     },
-    [messageStore, settingsStore]
+    [messageStore, settingsStore, tabStore]
   );
 
   const serviceGetStats = useCallback(() => {
@@ -349,6 +516,13 @@ export function useAIChat(options: UseAIChatOptions = {}): UseAIChatReturn {
       }
 
       const { skipUserMessage = false, displayContent, metadata } = options;
+
+      // Wait for any pending image syncs to complete
+      if (pendingSyncsRef.current.length > 0) {
+        debugLog('useAIChat', 'Waiting for pending image syncs to complete...');
+        await Promise.all(pendingSyncsRef.current);
+        debugLog('useAIChat', 'All pending image syncs completed');
+      }
 
       // Model override variables need to be accessible in finally block
       let modelOverride: string | undefined;
@@ -626,6 +800,131 @@ export function useAIChat(options: UseAIChatOptions = {}): UseAIChatReturn {
           if (chatServiceRef.current && !chatServiceRef.current.getProvider() && activeProvider) {
             chatServiceRef.current.setProvider(activeProvider);
           }
+
+          // Update message tab content format for the current provider
+          // This ensures queued messages have the correct image references
+          const currentProviderType = providerForPrompt.type;
+          messages = messages.map(msg => {
+            const sections = msg.metadata?.['sections'] as any;
+            if (!sections?.tabContent) return msg;
+
+            let updatedTabContent = sections.tabContent;
+            let needsUpdate = false;
+
+            if (currentProviderType === 'gemini') {
+              // Check if tab content has OpenAI format (fileId) that needs conversion
+              if (updatedTabContent.includes('<fileId>')) {
+                // Extract all image fileIds and look up their fileUris
+                const fileIdMatches = [...updatedTabContent.matchAll(/<fileId>([^<]+)<\/fileId>/g)];
+
+                for (const match of fileIdMatches) {
+                  const fileId = match[1];
+                  // Look for the corresponding tab with this image
+                  for (const tab of Object.values(loadedTabs)) {
+                    const content = tab.extractedContent?.content;
+                    if (
+                      content &&
+                      typeof content === 'object' &&
+                      'type' in content &&
+                      content.type === 'image'
+                    ) {
+                      const imageContent = content as any;
+                      if (imageContent.fileId === fileId && imageContent.fileUri) {
+                        // Replace fileId format with fileUri format
+                        updatedTabContent = updatedTabContent.replace(
+                          `<content type="image">
+    <fileId>${fileId}</fileId>
+  </content>`,
+                          `<content type="image">
+    <fileUri>${imageContent.fileUri}</fileUri>
+    <mimeType>${imageContent.mimeType}</mimeType>
+  </content>`
+                        );
+                        needsUpdate = true;
+                      }
+                    }
+                  }
+                }
+              }
+            } else if (currentProviderType === 'openai') {
+              // Check if tab content has Gemini format (fileUri) that needs conversion
+              if (updatedTabContent.includes('<fileUri>')) {
+                // Extract all image fileUris and look up their fileIds
+                const fileUriMatches = [
+                  ...updatedTabContent.matchAll(/<fileUri>([^<]+)<\/fileUri>/g),
+                ];
+
+                for (const match of fileUriMatches) {
+                  const fileUri = match[1];
+                  // Look for the corresponding tab with this image
+                  for (const tab of Object.values(loadedTabs)) {
+                    const content = tab.extractedContent?.content;
+                    if (
+                      content &&
+                      typeof content === 'object' &&
+                      'type' in content &&
+                      content.type === 'image'
+                    ) {
+                      const imageContent = content as any;
+                      if (imageContent.fileUri === fileUri && imageContent.fileId) {
+                        // Replace fileUri format with fileId format
+                        const mimeTypeMatch = updatedTabContent.match(
+                          new RegExp(
+                            `<fileUri>${fileUri.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}</fileUri>\\s*<mimeType>([^<]+)</mimeType>`
+                          )
+                        );
+                        if (mimeTypeMatch) {
+                          updatedTabContent = updatedTabContent.replace(
+                            `<content type="image">
+    <fileUri>${fileUri}</fileUri>
+    <mimeType>${mimeTypeMatch[1]}</mimeType>
+  </content>`,
+                            `<content type="image">
+    <fileId>${imageContent.fileId}</fileId>
+  </content>`
+                          );
+                          needsUpdate = true;
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+
+            if (needsUpdate) {
+              // Rebuild the full content
+              const updatedSections = {
+                ...sections,
+                tabContent: updatedTabContent,
+              };
+
+              const parts = [];
+              if (sections.systemInstruction) {
+                parts.push(sections.systemInstruction);
+                parts.push('');
+              }
+              if (updatedTabContent) {
+                parts.push(updatedTabContent);
+                parts.push('');
+              }
+              if (sections.userQuery) {
+                parts.push(sections.userQuery);
+              }
+              const updatedContent = parts.join('\n');
+
+              return {
+                ...msg,
+                content: updatedContent,
+                metadata: {
+                  ...msg.metadata,
+                  sections: updatedSections,
+                },
+              };
+            }
+
+            return msg;
+          });
 
           // Start streaming using ChatService
           const stream = chatServiceRef.current.stream(messages, {

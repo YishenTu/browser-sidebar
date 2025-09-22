@@ -42,6 +42,7 @@ import {
   shouldShowContentPreview,
   isMultiTabMode,
 } from '@core/services/tabContent';
+import { createExtractionService } from '@/services/extraction/ExtractionService';
 
 // Layout components
 import { Header } from '@components/layout/Header';
@@ -202,7 +203,6 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
     (async () => {
       if (!currentTabId) return;
       try {
-        const { createExtractionService } = await import('@services/extraction/ExtractionService');
         const tabs = await createExtractionService('sidebar').getAllTabs();
         const ct = Array.isArray(tabs) ? tabs.find(t => t.id === currentTabId) : undefined;
         if (!didCancel && ct) {
