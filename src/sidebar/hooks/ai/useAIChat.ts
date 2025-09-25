@@ -262,7 +262,10 @@ export function useAIChat(options: UseAIChatOptions = {}): UseAIChatReturn {
         model = settings.selectedModel;
       } else {
         // For other providers, skip image sync for now
-        console.warn(`Image synchronization not implemented for provider: ${providerType}`);
+        debugLog(
+          'useAIChat',
+          `Image synchronization currently skipped for provider: ${providerType}`
+        );
         return;
       }
 

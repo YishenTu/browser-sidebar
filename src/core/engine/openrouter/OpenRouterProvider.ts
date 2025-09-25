@@ -19,6 +19,7 @@ import { validateOpenRouterConfig } from '@/types/providers';
 import type { ModelConfig } from '@/config/models';
 import type { Transport } from '@/transport/types';
 import { getExtensionId } from '@/platform/chrome/runtime';
+import { debugLog } from '@/utils/debug';
 
 export class OpenRouterProvider extends BaseEngine {
   private openRouterConfig: OpenRouterConfig | null = null;
@@ -87,7 +88,9 @@ export class OpenRouterProvider extends BaseEngine {
         systemPrompt: config?.systemPrompt,
       });
 
-      // OpenRouter request logging removed for production
+      debugLog('OpenRouterProvider', '=== OpenRouter Request ===');
+      debugLog('OpenRouterProvider', JSON.stringify(request, null, 2));
+      debugLog('OpenRouterProvider', '========================');
 
       if (this.transport) {
         yield* this.streamViaTransport(request, config?.signal);

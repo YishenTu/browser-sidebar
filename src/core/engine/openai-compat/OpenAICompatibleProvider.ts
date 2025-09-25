@@ -4,6 +4,7 @@ import { buildRequest } from '@/core/ai/openai-compat/requestBuilder';
 import { processStreamChunk } from '@/core/ai/openai-compat/streamProcessor';
 import { mapErrorToProviderError } from '@/core/ai/openai-compat/errorHandler';
 import { getModelsByProvider, isBuiltInPreset } from '@/config/models';
+import { debugLog } from '@/utils/debug';
 import type {
   ProviderChatMessage,
   StreamChunk,
@@ -80,7 +81,9 @@ export class OpenAICompatibleProvider extends BaseEngine {
         systemPrompt: config?.systemPrompt,
       });
 
-      // OpenAI-Compatible request logging removed for production
+      debugLog('OpenAICompatibleProvider', '=== OpenAI-Compatible Request ===');
+      debugLog('OpenAICompatibleProvider', JSON.stringify(request, null, 2));
+      debugLog('OpenAICompatibleProvider', '================================');
 
       const stream = this.client.streamCompletion(
         request as unknown as Record<string, unknown>,

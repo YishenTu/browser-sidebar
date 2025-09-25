@@ -117,6 +117,18 @@ export const DEFAULT_MODELS: ModelConfig[] = [
     reasoningMaxTokens: 8000, // Anthropic models use max_tokens for reasoning
   },
   {
+    id: 'x-ai/grok-4-fast:free',
+    name: 'Grok 4 Fast (OpenRouter)',
+    provider: 'openrouter',
+    reasoningEffort: 'low',
+  },
+  {
+    id: 'x-ai/grok-4',
+    name: 'Grok 4 (OpenRouter)',
+    provider: 'openrouter',
+    reasoningEffort: 'high',
+  },
+  {
     id: 'openai/gpt-5-nano',
     name: 'GPT 5 Nano (OpenRouter)',
     provider: 'openrouter',
@@ -150,6 +162,11 @@ export const DEFAULT_MODELS: ModelConfig[] = [
   {
     id: 'qwen3-235b-a22b-instruct-2507',
     name: 'Qwen3 235B A22B Instruct',
+    provider: 'qwen',
+  },
+  {
+    id: 'qwen3-max',
+    name: 'Qwen3 Max',
     provider: 'qwen',
   },
   {

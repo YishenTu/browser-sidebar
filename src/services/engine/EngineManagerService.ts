@@ -31,6 +31,7 @@ import type {
   ProviderType,
   ProviderConfig,
   ProviderError,
+  OpenRouterConfig,
 } from '../../types/providers';
 
 // ============================================================================
@@ -512,14 +513,32 @@ export class EngineManagerService {
 
   private async initializeOpenRouterProvider(apiKey: string, selectedModel: string): Promise<void> {
     try {
+      const defaultModel = getDefaultModelForProvider('openrouter') || 'anthropic/claude-sonnet-4';
+      const selectedModelConfig = getModelById(selectedModel);
+      const useSelectedModel = selectedModelConfig?.provider === 'openrouter';
+
+      const openRouterConfig = {
+        apiKey,
+        model: useSelectedModel ? selectedModel : defaultModel,
+      } as OpenRouterConfig;
+
+      if (useSelectedModel && selectedModelConfig) {
+        if (selectedModelConfig.reasoningMaxTokens !== undefined) {
+          openRouterConfig.reasoning = {
+            maxTokens: selectedModelConfig.reasoningMaxTokens,
+          };
+        } else if (selectedModelConfig.reasoningEffort !== undefined) {
+          const effort =
+            selectedModelConfig.reasoningEffort === 'minimal'
+              ? 'low'
+              : selectedModelConfig.reasoningEffort;
+          openRouterConfig.reasoning = { effort };
+        }
+      }
+
       const config: ProviderConfig = {
         type: 'openrouter',
-        config: {
-          apiKey,
-          model: selectedModel.includes('anthropic/')
-            ? selectedModel
-            : getDefaultModelForProvider('openrouter') || 'anthropic/claude-sonnet-4',
-        },
+        config: openRouterConfig,
       };
 
       const provider = await this.factory.createProvider(config);

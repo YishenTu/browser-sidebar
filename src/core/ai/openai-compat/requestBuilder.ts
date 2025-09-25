@@ -16,6 +16,8 @@ interface BuildRequestOptions {
 /**
  * Build OpenAI-compatible chat completion request
  */
+type CompatRequestPayload = ChatCompletionCreateParams & { stream?: boolean };
+
 export function buildRequest(options: BuildRequestOptions): ChatCompletionCreateParams {
   const { messages, config, systemPrompt } = options;
 
@@ -69,10 +71,15 @@ export function buildRequest(options: BuildRequestOptions): ChatCompletionCreate
     }
   }
 
-  return {
+  const request: CompatRequestPayload = {
     model: config.model,
-    messages: formattedMessages,
-    // No temperature/top_p/max_tokens defaults for now.
-    // The caller or provider-specific defaults may supply these later.
-  } as ChatCompletionCreateParams;
+  } as CompatRequestPayload;
+
+  // Streamed responses are the default for compat requests
+  request.stream = true;
+
+  // Place the heavy conversation payload at the tail for cleaner debug logs
+  request.messages = formattedMessages;
+
+  return request as ChatCompletionCreateParams;
 }

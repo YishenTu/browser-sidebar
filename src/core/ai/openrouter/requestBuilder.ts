@@ -73,56 +73,66 @@ export function buildRequest({
     }
   }
 
-  // Handle model ID and web search suffix
-  // Strip any existing suffix for config lookup
-  const baseModelId = config.model.split(':')[0] || config.model;
+  // Handle model ID and optional web search suffix
+  const WEB_SEARCH_SUFFIX = ':online';
+  const hasWebSearchSuffix = config.model.endsWith(WEB_SEARCH_SUFFIX);
+  const baseModelId = hasWebSearchSuffix
+    ? config.model.slice(0, -WEB_SEARCH_SUFFIX.length)
+    : config.model;
   // Optionally add :online suffix for OpenRouter models to enable web search
   // Set enableWebSearch to true to add the suffix
   const enableWebSearch = false; // Toggle this to enable/disable web search
-  const modelId = enableWebSearch ? `${baseModelId}:online` : baseModelId;
+  const modelId = enableWebSearch
+    ? hasWebSearchSuffix
+      ? config.model
+      : `${config.model}${WEB_SEARCH_SUFFIX}`
+    : baseModelId;
 
-  // Build base request
-  const request: OpenRouterRequestOptions = {
-    model: modelId,
-    messages: formattedMessages,
-    stream: true,
-  };
-
-  // Add reasoning configuration based on model
-  // Use the base model id for lookup (exclude any suffix)
+  // Evaluate reasoning configuration before building the request so logging shows it before content arrays
   const modelConfig = getModelById(baseModelId);
+  type ReasoningPayload = {
+    effort?: 'low' | 'medium' | 'high';
+    max_tokens?: number;
+    exclude?: boolean;
+  };
+  let reasoningPayload: ReasoningPayload | undefined;
 
-  // Check if model config specifies reasoning support
   if (modelConfig && (modelConfig.reasoningEffort || modelConfig.reasoningMaxTokens)) {
-    // Build reasoning configuration according to model's configuration
-    type ReasoningPayload = {
-      effort?: 'low' | 'medium' | 'high';
-      max_tokens?: number;
-      exclude?: boolean;
-    };
-    const reasoning: ReasoningPayload = {};
+    const reasoningCandidate: ReasoningPayload = {};
 
     if (modelConfig.reasoningMaxTokens !== undefined) {
       // Model uses max_tokens for reasoning (e.g., Anthropic models)
-      reasoning.max_tokens = config.reasoning?.maxTokens ?? modelConfig.reasoningMaxTokens;
+      reasoningCandidate.max_tokens = config.reasoning?.maxTokens ?? modelConfig.reasoningMaxTokens;
     } else if (modelConfig.reasoningEffort !== undefined) {
       // Model uses effort-based reasoning (e.g., OpenAI, DeepSeek models)
       const rawEffort = config.reasoning?.effort ?? modelConfig.reasoningEffort;
       const mappedEffort: 'low' | 'medium' | 'high' | undefined =
         rawEffort === 'minimal' ? 'low' : rawEffort;
-      reasoning.effort = mappedEffort;
+      reasoningCandidate.effort = mappedEffort;
     }
 
-    // Add exclude flag if specified
     if (config.reasoning?.exclude) {
-      reasoning.exclude = true;
+      reasoningCandidate.exclude = true;
     }
 
-    // Add reasoning configuration if we have any settings
-    if (Object.keys(reasoning).length > 0) {
-      request.reasoning = reasoning;
+    if (Object.keys(reasoningCandidate).length > 0) {
+      reasoningPayload = reasoningCandidate;
     }
   }
+
+  // Build base request ensuring stream/reasoning fields appear before the verbose content payload
+  const request: OpenRouterRequestOptions = reasoningPayload
+    ? {
+        model: modelId,
+        stream: true,
+        reasoning: reasoningPayload,
+        messages: formattedMessages,
+      }
+    : {
+        model: modelId,
+        stream: true,
+        messages: formattedMessages,
+      };
 
   // Add cache_control for models that support it
   // Only cache large content blocks (>2000 chars) to maximize efficiency
