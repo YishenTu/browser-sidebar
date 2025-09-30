@@ -73,19 +73,19 @@ export function isBuiltInPreset(id: string): boolean {
 export const DEFAULT_MODELS: ModelConfig[] = [
   // Gemini models
   {
-    id: 'gemini-2.5-flash-lite',
+    id: 'gemini-flash-lite-latest',
     name: 'Gemini 2.5 Flash Lite',
     provider: 'gemini',
     thinkingBudget: 0, // 512 to 24576 supported; default off
   },
   {
-    id: 'gemini-2.5-flash',
+    id: 'gemini-flash-latest',
     name: 'Gemini 2.5 Flash',
     provider: 'gemini',
     thinkingBudget: -1, // 0 to 24576; dynamic by default
   },
   {
-    id: 'gemini-2.5-pro',
+    id: 'gemini-pro-latest',
     name: 'Gemini 2.5 Pro',
     provider: 'gemini',
     thinkingBudget: -1, // 128 to 32768; cannot be 0
@@ -111,8 +111,8 @@ export const DEFAULT_MODELS: ModelConfig[] = [
   },
   // OpenRouter models
   {
-    id: 'anthropic/claude-sonnet-4',
-    name: 'Claude Sonnet 4 (OpenRouter)',
+    id: 'anthropic/claude-sonnet-4.5',
+    name: 'Claude Sonnet 4.5 (OpenRouter)',
     provider: 'openrouter',
     reasoningMaxTokens: 8000, // Anthropic models use max_tokens for reasoning
   },
@@ -121,12 +121,6 @@ export const DEFAULT_MODELS: ModelConfig[] = [
     name: 'Grok 4 Fast (OpenRouter)',
     provider: 'openrouter',
     reasoningEffort: 'low',
-  },
-  {
-    id: 'x-ai/grok-4',
-    name: 'Grok 4 (OpenRouter)',
-    provider: 'openrouter',
-    reasoningEffort: 'high',
   },
   {
     id: 'openai/gpt-5-nano',
