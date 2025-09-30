@@ -127,6 +127,7 @@ export function getSystemPrompt(
     - Present formulas and mathematical expressions in LaTeX format
 
     ## Response Guidelines
+    - Reply user's query straightly without "OK. here's what I found base on what you provided" or similar beginning phrases
     - DO NOT offer follow up actions or questions
     - If the webpage is forum, ignore users' metadata like "level", "register date", "currency", "reputation", etc., focus on the content only
 
