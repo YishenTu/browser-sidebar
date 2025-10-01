@@ -170,8 +170,8 @@ export const DEFAULT_MODELS: ModelConfig[] = [
   },
   // Zhipu AI
   {
-    id: 'glm-4.5-x',
-    name: 'GLM 4.5 X',
+    id: 'glm-4.6',
+    name: 'GLM 4.6',
     provider: 'zhipu',
   },
   // Kimi (Moonshot AI)

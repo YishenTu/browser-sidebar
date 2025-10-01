@@ -123,6 +123,7 @@ export class EngineManagerService {
   // Track initialization state to prevent concurrent operations
   private lastInitializedKeys: Record<string, string | undefined> = {};
   private lastInitializedModel: string | null = null;
+  private lastInitializedProvider: ProviderType | null = null;
 
   /**
    * Private constructor for singleton pattern
@@ -354,6 +355,10 @@ export class EngineManagerService {
       return; // Prevent concurrent initialization
     }
 
+    // Capture settings at start of initialization to detect changes during initialization
+    let initStartKeys: { openai?: string; google?: string; openrouter?: string } | undefined;
+    let initStartModel: string | undefined;
+
     try {
       this.state.isInitializing = true;
       this.state.lastError = null;
@@ -365,6 +370,13 @@ export class EngineManagerService {
         throw new Error('Settings or API keys not available');
       }
 
+      initStartKeys = {
+        openai: settings.apiKeys['openai'] || undefined,
+        google: settings.apiKeys['google'] || undefined,
+        openrouter: settings.apiKeys['openrouter'] || undefined,
+      };
+      initStartModel = settings.selectedModel;
+
       // Check if settings have changed to avoid unnecessary re-initialization
       const { apiKeys } = settings;
       const keysChanged =
@@ -374,7 +386,17 @@ export class EngineManagerService {
 
       const modelChanged = settings.selectedModel !== this.lastInitializedModel;
 
-      if (!keysChanged && !modelChanged && this.state.isInitialized && this.registry.size() > 0) {
+      // Also check if the target provider changed (important for switching between providers)
+      const targetProvider = (settings.ai.defaultProvider ?? null) as ProviderType | null;
+      const targetProviderChanged = targetProvider !== this.lastInitializedProvider;
+
+      if (
+        !keysChanged &&
+        !modelChanged &&
+        !targetProviderChanged &&
+        this.state.isInitialized &&
+        this.registry.size() > 0
+      ) {
         return; // No changes, skip re-initialization
       }
 
@@ -406,10 +428,16 @@ export class EngineManagerService {
         );
       }
 
-      // Initialize OpenAI-Compatible provider if the selected model belongs to a
-      // compat provider saved in storage. This registers a single logical
-      // 'openai_compat' provider configured for that provider/model.
-      initPromises.push(this.initializeOpenAICompatProvider(settings.selectedModel));
+      // Initialize OpenAI-Compatible provider only when the target model/provider requires it.
+      const shouldInitCompat =
+        settings.ai.defaultProvider === 'openai_compat' ||
+        OPENAI_COMPAT_PROVIDER_IDS.some(pid =>
+          getModelsByProviderId(pid).some(model => model.id === settings.selectedModel)
+        );
+
+      if (shouldInitCompat) {
+        initPromises.push(this.initializeOpenAICompatProvider(settings.selectedModel));
+      }
 
       // Wait for all provider initializations
       await Promise.allSettled(initPromises);
@@ -428,6 +456,8 @@ export class EngineManagerService {
           }
         }
       }
+
+      this.lastInitializedProvider = this.registry.getActiveProviderType();
 
       this.state.isInitialized = true;
       this.state.initializationCount++;
@@ -455,6 +485,27 @@ export class EngineManagerService {
       throw error;
     } finally {
       this.state.isInitializing = false;
+
+      // Check if settings changed during initialization (race condition handling)
+      // If so, trigger re-initialization to ensure we use the latest settings
+      if (initStartKeys && initStartModel !== undefined) {
+        const currentSettings = useSettingsStore.getState().settings;
+        const settingsChangedDuringInit =
+          currentSettings.selectedModel !== initStartModel ||
+          (currentSettings.apiKeys['openai'] || undefined) !== initStartKeys.openai ||
+          (currentSettings.apiKeys['google'] || undefined) !== initStartKeys.google ||
+          (currentSettings.apiKeys['openrouter'] || undefined) !== initStartKeys.openrouter;
+
+        if (settingsChangedDuringInit) {
+          // Settings changed while we were initializing, re-initialize with new settings
+          // Use setImmediate/setTimeout to avoid recursion and allow current call stack to complete
+          setTimeout(() => {
+            this.initializeFromSettings().catch(() => {
+              // Ignore errors in retry, will be handled by next initialization attempt
+            });
+          }, 0);
+        }
+      }
     }
   }
 
@@ -582,7 +633,6 @@ export class EngineManagerService {
 
       const details = await getCompatProviderById(matchedProviderId);
       if (!details) {
-        // Compat provider details not found
         return;
       }
 

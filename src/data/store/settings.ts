@@ -104,10 +104,11 @@ const isValidFontSize = (fontSize: unknown): fontSize is 'small' | 'medium' | 'l
  */
 const isValidProvider = (
   provider: unknown
-): provider is 'openai' | 'gemini' | 'openrouter' | null => {
+): provider is 'openai' | 'gemini' | 'openrouter' | 'openai_compat' | null => {
   return (
     provider === null ||
-    (typeof provider === 'string' && ['openai', 'gemini', 'openrouter'].includes(provider))
+    (typeof provider === 'string' &&
+      ['openai', 'gemini', 'openrouter', 'openai_compat'].includes(provider))
   );
 };
 
@@ -431,15 +432,35 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
 
       // Ensure selectedModel is part of availableModels if any are present
       const updated = get().settings;
-      const isSelectedAvailable = updated.availableModels.some(m => m.id === updated.selectedModel);
+      const selectedModelObj = updated.availableModels.find(m => m.id === updated.selectedModel);
+      const isSelectedAvailable = !!selectedModelObj;
+
+      let needsSave = false;
+
       if (!isSelectedAvailable) {
         if (updated.availableModels.length > 0) {
           // Pick the first available model to keep app usable
-          updated.selectedModel = updated.availableModels[0]!.id;
+          const firstModel = updated.availableModels[0]!;
+          updated.selectedModel = firstModel.id;
+          // Update defaultProvider to match the new model
+          updated.ai.defaultProvider = getProviderTypeFromModel(firstModel);
+          needsSave = true;
         } else {
           // No available models; keep default selection (may not be usable until a key is added)
           updated.selectedModel = DEFAULT_MODEL_ID;
+          updated.ai.defaultProvider = null;
+          needsSave = true;
         }
+      } else {
+        // Model is available, but validate that defaultProvider matches the model
+        const correctProvider = getProviderTypeFromModel(selectedModelObj);
+        if (updated.ai.defaultProvider !== correctProvider) {
+          updated.ai.defaultProvider = correctProvider;
+          needsSave = true;
+        }
+      }
+
+      if (needsSave) {
         await saveToStorage(updated);
       }
 
@@ -473,8 +494,29 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
     try {
       const currentSettings = get().settings;
       const validatedAI = validateAISettings(ai);
-      currentSettings.ai = validatedAI;
-      await saveToStorage(currentSettings);
+
+      // Normalize provider to match currently selected model when we can infer it
+      const selectedModel = currentSettings.availableModels.find(
+        model => model.id === currentSettings.selectedModel
+      );
+      const inferredProvider = selectedModel ? getProviderTypeFromModel(selectedModel) : null;
+      const normalizedAI =
+        inferredProvider && validatedAI.defaultProvider !== inferredProvider
+          ? { ...validatedAI, defaultProvider: inferredProvider }
+          : validatedAI;
+
+      const aiChanged =
+        normalizedAI.defaultProvider !== currentSettings.ai.defaultProvider ||
+        normalizedAI.streamResponse !== currentSettings.ai.streamResponse;
+
+      if (!aiChanged) {
+        set({ isLoading: false });
+        return;
+      }
+
+      const updatedSettings = { ...currentSettings, ai: normalizedAI };
+      set({ settings: updatedSettings });
+      await saveToStorage(updatedSettings);
       set({ isLoading: false });
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Failed to save settings';
@@ -664,6 +706,24 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
       }
 
       // Write new list
+      const previous = currentSettings.availableModels;
+      const listsMatch =
+        previous.length === next.length &&
+        previous.every((model, index) => {
+          const candidate = next[index];
+          return (
+            !!candidate &&
+            candidate.id === model.id &&
+            candidate.name === model.name &&
+            candidate.provider === model.provider &&
+            candidate.available === model.available
+          );
+        });
+
+      if (listsMatch) {
+        return;
+      }
+
       const updatedSettings = { ...currentSettings, availableModels: next };
       set({ settings: updatedSettings });
       await saveToStorage(updatedSettings);

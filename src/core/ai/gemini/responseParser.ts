@@ -13,7 +13,7 @@ import type {
   ProviderType,
   SearchResult,
 } from '../../../types/providers';
-import type { GeminiResponse, GeminiCandidate } from './types';
+import type { GeminiResponse, GeminiCandidate, GeminiChatConfig } from './types';
 import { FINISH_REASON_MAP } from './types';
 import { formatSearchMetadata } from './searchMetadata';
 
