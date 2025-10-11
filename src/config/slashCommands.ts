@@ -26,9 +26,7 @@ export const SLASH_COMMANDS: SlashCommand[] = [
   {
     name: 'summarize',
     description: 'Summarize the content concisely',
-    prompt: `
-      Summarize the provided content in Chinese
-    `,
+    prompt: `Summarize the provided content in Chinese`,
   },
   {
     name: 'explain',

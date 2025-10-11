@@ -39,12 +39,24 @@ export interface TabFormatResult {
     totalTabs: number;
     totalChars: number;
     format: 'markdown' | 'structured';
+    urlContextTabs?: number;
+    urlContextEnabled?: boolean;
   };
 }
 
 export interface FormatOptions {
   /** Whether there's a text selection in any tab */
   hasSelection?: boolean;
+  /**
+   * Whether the active provider supports URL context (Gemini only). Individual tabs opt-in
+   * by setting metadata.useUrlContext.
+   */
+  useUrlContext?: boolean;
+  /**
+   * Whether the active provider supports video content via file_uri (Gemini only).
+   * When enabled, YouTube videos are sent as video references instead of extracted content.
+   */
+  providerSupportsVideo?: boolean;
 }
 
 // ============================================================================
@@ -109,6 +121,30 @@ function extractDomain(url: string): string {
   }
 }
 
+/**
+ * Escapes XML special characters
+ */
+function escapeXml(text: string): string {
+  return text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&apos;');
+}
+
+/**
+ * Checks if a URL is a YouTube video URL
+ */
+function isYouTubeUrl(url: string): boolean {
+  try {
+    const urlObj = new URL(url);
+    return urlObj.hostname === 'www.youtube.com' || urlObj.hostname === 'youtube.com';
+  } catch {
+    return false;
+  }
+}
+
 // ============================================================================
 // Main Formatting Functions
 // ============================================================================
@@ -126,7 +162,15 @@ export function formatTabContent(
   tabs: TabContent[] = [],
   options: FormatOptions = {}
 ): TabFormatResult {
-  const { hasSelection = false } = options;
+  const {
+    hasSelection = false,
+    useUrlContext: urlContextSupported = false,
+    providerSupportsVideo = false,
+  } = options;
+  const urlContextTabs = urlContextSupported
+    ? tabs.filter(tab => tab.metadata?.useUrlContext === true)
+    : [];
+  const hasUrlContextTabs = urlContextTabs.length > 0;
 
   // If no tabs, just return the user message with a simple system instruction
   if (tabs.length === 0) {
@@ -150,7 +194,7 @@ ${userQuery}`;
       metadata: {
         totalTabs: 0,
         totalChars: formatted.length,
-        format: 'markdown',
+        format: 'structured',
       },
     };
   }
@@ -163,6 +207,12 @@ ${userQuery}`;
   const tabWord = tabs.length === 1 ? 'web page' : 'web pages';
   const domains = [...new Set(tabs.map(tab => extractDomain(extractURL(tab))).filter(Boolean))];
 
+  // Count YouTube video tabs
+  const youtubeVideoTabs = providerSupportsVideo
+    ? tabs.filter(tab => isYouTubeUrl(extractURL(tab)))
+    : [];
+  const hasYoutubeVideos = youtubeVideoTabs.length > 0;
+
   const systemInstructionParts: string[] = [];
   systemInstructionParts.push('<system_instruction>');
   systemInstructionParts.push(`The user is viewing ${tabs.length} ${tabWord} in the browser.`);
@@ -170,23 +220,52 @@ ${userQuery}`;
     systemInstructionParts.push(`Source${domains.length > 1 ? 's' : ''}: ${domains.join(', ')}`);
   }
 
-  if (hasSelection) {
+  // Build content description based on content types
+  if (hasYoutubeVideos) {
+    const videoCount = youtubeVideoTabs.length;
+    const otherTabsCount = tabs.length - videoCount;
+
+    if (videoCount === tabs.length) {
+      // All tabs are YouTube videos
+      systemInstructionParts.push(
+        `${videoCount === 1 ? 'A YouTube video is' : `${videoCount} YouTube videos are`} provided below, followed by the user's query about ${videoCount === 1 ? 'it' : 'them'}.`
+      );
+    } else {
+      // Mixed: some YouTube videos, some regular content
+      systemInstructionParts.push(
+        `Below are ${videoCount === 1 ? 'a YouTube video' : `${videoCount} YouTube videos`} and ${otherTabsCount === 1 ? 'a web page' : `${otherTabsCount} web pages`} with extracted content, followed by the user's query about them.`
+      );
+    }
     systemInstructionParts.push(
-      `Below is the extracted content from ${tabs.length === 1 ? 'this tab' : 'these tabs'}. Selected portions are marked within the tab content, followed by the user's query about it.`
-    );
-    systemInstructionParts.push(
-      `Please analyze the provided content to answer the user's query, and do prioritize consideration of the selected content.`
+      `Please analyze the provided ${videoCount === 1 && tabs.length === 1 ? 'video' : 'content'} to answer the user's query.`
     );
   } else {
-    systemInstructionParts.push(
-      `Below is the extracted content from ${tabs.length === 1 ? 'this tab' : 'these tabs'}, followed by the user's query about it.`
-    );
-    systemInstructionParts.push(`Please analyze the provided content to answer the user's query.`);
+    // No YouTube videos - regular content only
+    if (hasSelection) {
+      systemInstructionParts.push(
+        `Below is the extracted content from ${tabs.length === 1 ? 'this tab' : 'these tabs'}. Selected portions are marked within the tab content, followed by the user's query about it.`
+      );
+      systemInstructionParts.push(
+        `Please analyze the provided content to answer the user's query, and do prioritize consideration of the selected content.`
+      );
+    } else {
+      systemInstructionParts.push(
+        `Below is the extracted content from ${tabs.length === 1 ? 'this tab' : 'these tabs'}, followed by the user's query about it.`
+      );
+      systemInstructionParts.push(
+        `Please analyze the provided content to answer the user's query.`
+      );
+    }
   }
 
+  if (urlContextSupported && hasUrlContextTabs) {
+    systemInstructionParts.push(
+      `Use \`url_context\` tool to fetch web content from the URL in tab metadata for tabs marked with URL Context.`
+    );
+  }
   systemInstructionParts.push('</system_instruction>');
-  const systemInstruction = systemInstructionParts.join('\n');
 
+  const systemInstruction = systemInstructionParts.join('\n');
   sectionsArray.push(systemInstruction);
   sectionsArray.push('');
 
@@ -196,18 +275,26 @@ ${userQuery}`;
   const tabContentParts: string[] = [];
   tabContentParts.push('<tab_content>');
 
-  // Process each tab with proper XML structure
+  // Process each tab with XML structure
   for (const tab of tabs) {
     const title = extractTitle(tab);
     const url = extractURL(tab);
     const domain = extractDomain(url);
     const content = extractContent(tab);
+    const tabUsesUrlContext = urlContextSupported && tab?.metadata?.useUrlContext === true;
+    const isYouTubeVideo = providerSupportsVideo && isYouTubeUrl(url);
 
-    // Build tab content with XML metadata and handle both text and image content
     let contentSection: string;
 
-    if (isImageExtractedContent(content)) {
-      // Handle image content
+    if (isYouTubeVideo) {
+      // YouTube video - send URL as video reference for Gemini
+      contentSection = `  <content type="video">
+    <fileUri>${escapeXml(url)}</fileUri>
+  </content>`;
+    } else if (tabUsesUrlContext) {
+      // URL context - no content section needed
+      contentSection = '';
+    } else if (isImageExtractedContent(content)) {
       if (content.uploadState === 'uploading') {
         contentSection = `  <content>
 [Image content - uploading]
@@ -218,13 +305,11 @@ ${userQuery}`;
 [Image content - ${message}]
   </content>`;
       } else if (content.fileUri) {
-        // Gemini format - only fileUri and mimeType required
         contentSection = `  <content type="image">
     <fileUri>${content.fileUri}</fileUri>
     <mimeType>${content.mimeType}</mimeType>
   </content>`;
       } else if (content.fileId) {
-        // OpenAI format - only fileId required
         contentSection = `  <content type="image">
     <fileId>${content.fileId}</fileId>
   </content>`;
@@ -234,7 +319,6 @@ ${userQuery}`;
   </content>`;
       }
     } else {
-      // Handle text content
       contentSection = `  <content>
 ${content || '[No content extracted]'}
   </content>`;
@@ -242,15 +326,19 @@ ${content || '[No content extracted]'}
 
     const tabContentItem = `<tab>
   <metadata>
-    <title>${title}</title>
-    <url>${url}</url>${
+    <title>${escapeXml(title)}</title>
+    <url>${escapeXml(url)}</url>${
       domain
         ? `
-    <domain>${domain}</domain>`
+    <domain>${escapeXml(domain)}</domain>`
+        : ''
+    }${
+      tabUsesUrlContext
+        ? `
+    <urlContextEnabled>true</urlContextEnabled>`
         : ''
     }
-  </metadata>
-${contentSection}
+  </metadata>${contentSection ? '\n' + contentSection : ''}
 </tab>`;
 
     tabContentParts.push(tabContentItem);
@@ -265,7 +353,9 @@ ${contentSection}
   // ====================================================================
   // PART 3: USER QUERY
   // ====================================================================
-  const userQuery = `<user_query>\n${userMessage}\n</user_query>`;
+  const userQuery = `<user_query>
+${userMessage}
+</user_query>`;
   sectionsArray.push(userQuery);
 
   const formatted = sectionsArray.join('\n');
@@ -280,7 +370,9 @@ ${contentSection}
     metadata: {
       totalTabs: tabs.length,
       totalChars: formatted.length,
-      format: 'markdown',
+      format: 'structured',
+      urlContextTabs: hasUrlContextTabs ? urlContextTabs.length : undefined,
+      urlContextEnabled: urlContextSupported && hasUrlContextTabs ? true : undefined,
     },
   };
 }

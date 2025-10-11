@@ -469,3 +469,22 @@
   background: rgba(168, 85, 247, 0.1);
   color: #a855f7;
 }
+
+/* URL Context mode button */
+.content-preview-url-context-inline:hover {
+  color: #f59e0b;
+  border-color: #f59e0b;
+  background: rgba(245, 158, 11, 0.1);
+}
+
+.content-preview-url-context-inline.active {
+  color: #f59e0b;
+  background: rgba(245, 158, 11, 0.2);
+  border-color: #f59e0b;
+}
+
+/* URL Context mode badge */
+.content-preview-badge--url-context {
+  background: rgba(245, 158, 11, 0.1);
+  color: #f59e0b;
+}

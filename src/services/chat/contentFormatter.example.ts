@@ -1,15 +1,14 @@
 /**
- * Example output of the new content formatter
- * Clean markdown with minimal XML tags as separators
- * Includes browser context instruction for clarity
+ * Example outputs for the tab content formatter (XML-style structure).
  *
- * Note: Dynamic content changes based on:
- * - Number of tabs (1 web page vs 2+ web pages)
- * - Presence of text selection(s) - marked within tab content
+ * Format:
+ * <system_instruction> ... </system_instruction>
+ * <tab_content>
+ *   <tab> ... </tab>
+ * </tab_content>
+ * <user_query> ... </user_query>
  *
- * IMPORTANT: Image attachments are NOT included in formatTabContent output!
- * Images are passed separately via message metadata.attachments array.
- * The formatter only handles text content and tab context.
+ * Images remain out-of-band (provided via message metadata attachments).
  */
 
 const exampleOutput = `
@@ -120,7 +119,6 @@ All methods return promises that may reject with the following error types:
 - \`NetworkError\`: Connection or timeout issues
   </content>
 </tab>
-
 </tab_content>
 
 <user_query>
@@ -129,7 +127,7 @@ How do I initialize this product with my API key?
 `;
 
 /**
- * Example with no tabs loaded
+ * Example with no tabs loaded.
  */
 const exampleNoTabs = `
 <system_instruction>
@@ -142,7 +140,7 @@ What is the weather like today?
 `;
 
 /**
- * Example with single tab and no selection
+ * Example with a single tab and no selection.
  */
 const exampleSingleTab = `
 <system_instruction>
@@ -171,7 +169,7 @@ What is this page about?
 `;
 
 /**
- * Example with multiple tabs having multiple selections
+ * Example with multiple tabs and selections.
  */
 const exampleMultipleSelections = `
 <system_instruction>
@@ -250,15 +248,9 @@ How do these initialization methods relate to each other?
 `;
 
 /**
- * Example showing how images are handled (separate from content formatter)
- *
- * When user pastes an image and types text:
- * 1. The text content goes through formatTabContent()
- * 2. Images are passed separately in message.metadata.attachments
- * 3. AI providers combine both when building requests
+ * Example showing how images are handled (text only here; images in metadata).
  */
 const exampleWithImage = {
-  // This is what formatTabContent returns (text only, no images)
   formattedContent: `
 <system_instruction>
 The user is viewing 1 web page in the browser.
@@ -284,27 +276,19 @@ Product details and specifications...
 What's different between this image and the product shown on the page?
 </user_query>
 `,
-
-  // Images are passed separately in metadata (NOT in formatted content)
   metadata: {
     attachments: [
       {
         type: 'image',
         mimeType: 'image/png',
-        // For Gemini: uploaded file URI
         fileUri: 'https://generativelanguage.googleapis.com/v1beta/files/abc123',
-        // For OpenAI: uploaded file ID (no base64 support)
         fileId: 'file-xyz789',
       },
     ],
   },
-
-  // What actually gets sent to AI providers
   aiProviderMessage: {
     role: 'user',
-    // Text content (formatted by formatTabContent if first message)
     content: '...formatted content above...',
-    // Images handled by provider-specific logic
     metadata: {
       attachments: [
         /* image attachments */
@@ -314,44 +298,115 @@ What's different between this image and the product shown on the page?
 };
 
 /**
- * Benefits of the new structure:
- *
- * 1. **Clear Separation**: Three distinct parts with XML labels
- *    - <system_instruction>: System instruction explaining the context with dynamic text
- *    - <tab_content>: The actual tab content with structured metadata
- *    - <user_query>: The user's actual question
- *
- * 2. **Dynamic Context**: System instruction adapts based on:
- *    - Number of tabs (singular/plural forms)
- *    - Presence of text selection(s) - simply mentions they are marked in content
- *
- * 3. **Better Organization**: Each tab is a separate XML element with:
- *    - Structured metadata (title, url, domain)
- *    - Content with "Selected Content" and "Full Page Content" sections when applicable
- *    - Content properly escaped for XML
- *
- * 4. **Easier Parsing**: AI providers can easily:
- *    - Extract specific tab content
- *    - Understand the context before the query
- *    - Focus on selected content when present
- *    - Process the user question at the end
- *
- * 5. **Truncation Support**: When content is truncated:
- *    - Individual tabs can be marked as truncated
- *    - A truncation notice is included
- *    - Metadata shows which tabs were omitted
- *
- * 6. **Simple Selection Handling**:
- *    - No complex logic for tracking which tabs have selections
- *    - Just mentions selections are marked within the content
- *
- * 7. **Image Handling**:
- *    - Images are NOT included in formatTabContent output
- *    - Images passed via metadata.attachments array
- *    - Each provider handles images differently:
- *      - Gemini: uploads to File API, uses fileUri
- *      - OpenAI: uploads via file API, uses fileId (no base64 support)
+ * Example with YouTube video (Gemini only).
  */
+const exampleYouTubeVideo = `
+<system_instruction>
+The user is viewing 1 web page in the browser.
+Source: youtube.com
+A YouTube video is provided below, followed by the user's query about it.
+Please analyze the provided video to answer the user's query.
+</system_instruction>
+
+<tab_content>
+<tab>
+  <metadata>
+    <title>Introduction to Machine Learning</title>
+    <url>https://www.youtube.com/watch?v=abc123xyz</url>
+    <domain>youtube.com</domain>
+  </metadata>
+  <content type="video">
+    <fileUri>https://www.youtube.com/watch?v=abc123xyz</fileUri>
+  </content>
+</tab>
+</tab_content>
+
+<user_query>
+Summarize the key concepts explained in this video.
+</user_query>
+`;
+
+/**
+ * Example with mixed YouTube videos and regular content.
+ */
+const exampleMixedContent = `
+<system_instruction>
+The user is viewing 2 web pages in the browser.
+Sources: youtube.com, example.com
+Below are a YouTube video and a web page with extracted content, followed by the user's query about them.
+Please analyze the provided content to answer the user's query.
+</system_instruction>
+
+<tab_content>
+<tab>
+  <metadata>
+    <title>Machine Learning Tutorial</title>
+    <url>https://www.youtube.com/watch?v=abc123xyz</url>
+    <domain>youtube.com</domain>
+  </metadata>
+  <content type="video">
+    <fileUri>https://www.youtube.com/watch?v=abc123xyz</fileUri>
+  </content>
+</tab>
+
+<tab>
+  <metadata>
+    <title>ML Documentation</title>
+    <url>https://example.com/ml-docs</url>
+    <domain>example.com</domain>
+  </metadata>
+  <content>
+# Machine Learning Basics
+
+Machine learning is a subset of artificial intelligence that focuses on...
+  </content>
+</tab>
+</tab_content>
+
+<user_query>
+How does the video tutorial relate to the concepts in the documentation?
+</user_query>
+`;
+
+/**
+ * Example with URL Context (Gemini only - for live/dynamic content).
+ */
+const exampleUrlContext = `
+<system_instruction>
+The user is viewing 2 web pages in the browser.
+Sources: example.com, api.example.com
+Below is the extracted content from these tabs, followed by the user's query about it.
+Please analyze the provided content to answer the user's query.
+Use \`url_context\` tool to fetch web content from the URL in tab metadata for tabs marked with URL Context.
+</system_instruction>
+
+<tab_content>
+<tab>
+  <metadata>
+    <title>Live Stock Prices</title>
+    <url>https://example.com/stocks/live</url>
+    <domain>example.com</domain>
+  </metadata>
+</tab>
+
+<tab>
+  <metadata>
+    <title>Stock Analysis Guide</title>
+    <url>https://api.example.com/docs/analysis</url>
+    <domain>api.example.com</domain>
+  </metadata>
+  <content>
+# Stock Analysis Guide
+
+When analyzing stock performance, consider these key metrics...
+  </content>
+</tab>
+</tab_content>
+
+<user_query>
+What are the current stock prices and how do they compare to the analysis recommendations?
+</user_query>
+`;
 
 export {
   exampleOutput,
@@ -359,4 +414,7 @@ export {
   exampleSingleTab,
   exampleMultipleSelections,
   exampleWithImage,
+  exampleYouTubeVideo,
+  exampleMixedContent,
+  exampleUrlContext,
 };

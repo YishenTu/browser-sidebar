@@ -6,7 +6,7 @@
  * Used as the atomic unit within ContentPreview for tab scenarios.
  */
 
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import type { ExtractedContent, ImageExtractedContent } from '@/types/extraction';
 import type { TabInfo } from '@/types/tabs';
 import { ExtractionMode, isImageExtractedContent } from '@/types/extraction';
@@ -16,8 +16,9 @@ import { Alert } from '@ui/Alert';
 import { Collapsible } from '@ui/Collapsible';
 import { ExpandIcon, CloseIcon } from '@ui/Icons';
 import { FullscreenModal } from '@ui/FullscreenModal';
-import { useSessionStore } from '@/data/store/chat';
+import { useSessionStore, useTabStore } from '@/data/store/chat';
 import { useSessionManager } from '@hooks/useSessionManager';
+import { useSettingsStore } from '@/data/store/settings';
 import { getDomSafeFaviconUrlSync } from '@core/utils/favicon';
 import '../styles/4-features/tab-content-item.css';
 
@@ -65,6 +66,38 @@ export const TabContentItem: React.FC<TabContentItemProps> = ({
   const [isExpanded, setIsExpanded] = useState(false);
   const [editedContent, setEditedContent] = useState<string | null>(null);
   const truncated = content?.metadata?.truncated ?? false;
+
+  // Check if current provider is Gemini for URL Context button
+  const getProviderTypeForModel = useSettingsStore(state => state.getProviderTypeForModel);
+  const selectedModel = useSettingsStore(state => state.settings.selectedModel);
+  const currentProvider = getProviderTypeForModel(selectedModel);
+  const isGeminiProvider = currentProvider === 'gemini';
+
+  // Tab store for updating URL context flag
+  const tabStore = useTabStore();
+  const loadedTabs = tabStore.getLoadedTabs();
+  const currentTabData = tabId !== undefined ? loadedTabs[tabId as number] : null;
+  const useUrlContext = currentTabData?.metadata?.useUrlContext ?? false;
+
+  // Handler to toggle URL context mode
+  const handleToggleUrlContext = useCallback(() => {
+    if (tabId === undefined) return;
+
+    const currentTabs = tabStore.getLoadedTabs();
+    const tab = currentTabs[tabId as number];
+    if (!tab) return;
+
+    const currentValue = tab.metadata?.useUrlContext === true;
+    const updatedTab = {
+      ...tab,
+      metadata: {
+        ...tab.metadata,
+        useUrlContext: !currentValue,
+      },
+    };
+
+    tabStore.addLoadedTab(tabId as number, updatedTab);
+  }, [tabId, tabStore]);
 
   // Check if editing should be disabled for current session
   const { getSessionMessageCount } = useSessionStore();
@@ -348,17 +381,22 @@ export const TabContentItem: React.FC<TabContentItemProps> = ({
                       ) : (
                         <>
                           {truncated && <span className="content-preview-badge">Truncated</span>}
-                          {content?.extractionMethod === 'raw' && (
+                          {useUrlContext && (
+                            <span className="content-preview-badge content-preview-badge--url-context">
+                              URL Context
+                            </span>
+                          )}
+                          {!useUrlContext && content?.extractionMethod === 'raw' && (
                             <span className="content-preview-badge content-preview-badge--raw">
                               Raw
                             </span>
                           )}
-                          {content?.extractionMethod === 'readability' && (
+                          {!useUrlContext && content?.extractionMethod === 'readability' && (
                             <span className="content-preview-badge content-preview-badge--readability">
                               Readability
                             </span>
                           )}
-                          {content?.extractionMethod === 'defuddle' && (
+                          {!useUrlContext && content?.extractionMethod === 'defuddle' && (
                             <span className="content-preview-badge content-preview-badge--defuddle">
                               Defuddle
                             </span>
@@ -418,6 +456,25 @@ export const TabContentItem: React.FC<TabContentItemProps> = ({
                       >
                         H
                       </button>
+                      {/* URL Context button - Gemini only, sends URL instead of content */}
+                      {isGeminiProvider && !isImageContent && (
+                        <button
+                          onClick={e => {
+                            e.stopPropagation();
+                            // Toggle URL Context mode (Gemini only)
+                            handleToggleUrlContext();
+                          }}
+                          className={`content-preview-url-context-inline content-preview-extraction-button ${useUrlContext ? 'active' : ''}`}
+                          title={
+                            useUrlContext
+                              ? 'URL Context enabled - Gemini fetches from URL (click to disable)'
+                              : 'Enable URL Context - Gemini will fetch content directly from URL'
+                          }
+                          aria-label="Toggle URL Context mode"
+                        >
+                          U
+                        </button>
+                      )}
 
                       {/* Expand button - only show for text content */}
                       {!isImageContent && (

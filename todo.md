@@ -24,3 +24,4 @@
 - [x] 22. full page captured as extracted content
 - [x] 23. multimodal routing
 - [x] 24. fix: gemini model thinking summary and streaming issue
+- [x] 25. url content and youtube video for gemini

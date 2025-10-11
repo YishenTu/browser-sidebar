@@ -13,7 +13,7 @@
 /**
  * Method used to extract content from a web page
  */
-export type ExtractionMethod = 'defuddle' | 'selection' | 'raw' | 'readability';
+export type ExtractionMethod = 'defuddle' | 'selection' | 'raw' | 'readability' | 'url_context';
 
 /**
  * Extraction mode for content capture
@@ -23,6 +23,7 @@ export enum ExtractionMode {
   SELECTION = 'selection', // Selection-only extraction
   RAW = 'raw', // Raw mode extraction (preserves tables)
   READABILITY = 'readability', // Mozilla Readability extraction (default)
+  URL_CONTEXT = 'url_context', // URL-only mode for Gemini URL Context tool
 }
 
 // ============================================================================
@@ -201,7 +202,7 @@ export function isExtractedContent(obj: unknown): obj is ExtractedContent {
     (content['author'] === undefined || typeof content['author'] === 'string') &&
     (content['publishedDate'] === undefined || typeof content['publishedDate'] === 'string') &&
     typeof content['extractedAt'] === 'number' &&
-    ['defuddle', 'selection', 'raw', 'readability'].includes(
+    ['defuddle', 'selection', 'raw', 'readability', 'url_context'].includes(
       content['extractionMethod'] as string
     ) &&
     (metadata === undefined ||

@@ -104,6 +104,9 @@ export interface TabContent {
 
     /** Performance metrics */
     extractionTime?: number;
+
+    /** Whether to use URL context mode (Gemini only - sends URL instead of content) */
+    useUrlContext?: boolean;
   };
 }
 
