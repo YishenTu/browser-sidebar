@@ -585,8 +585,20 @@ export function useAIChat(options: UseAIChatOptions = {}): UseAIChatReturn {
             .map(tabId => loadedTabs[tabId])
             .filter((tab): tab is TabContent => Boolean(tab));
 
+          const providerSupportsUrlContext = activeProvider.type === 'gemini';
+          const urlContextTabs = providerSupportsUrlContext
+            ? allLoadedTabs.filter(tab => tab.metadata?.useUrlContext === true)
+            : [];
+          const shouldEnableUrlContext = providerSupportsUrlContext && urlContextTabs.length > 0;
+
+          // Gemini also supports YouTube videos via file_uri
+          const providerSupportsVideo = activeProvider.type === 'gemini';
+
           // Format the content - will add system instruction even if no tabs
-          formatResult = formatTabContent(trimmedContent, allLoadedTabs);
+          formatResult = formatTabContent(trimmedContent, allLoadedTabs, {
+            useUrlContext: shouldEnableUrlContext,
+            providerSupportsVideo,
+          });
 
           // Use formatted content for AI but keep original for display
           finalContent = formatResult.formatted;
@@ -931,10 +943,18 @@ export function useAIChat(options: UseAIChatOptions = {}): UseAIChatReturn {
             return msg;
           });
 
+          // Check if any loaded tab is using URL context mode (Gemini only)
+          const providerSupportsUrlContext = providerForPrompt.type === 'gemini';
+          const urlContextTabs = providerSupportsUrlContext
+            ? Object.values(loadedTabs).filter(tab => tab?.metadata?.useUrlContext === true)
+            : [];
+          const shouldUseUrlContext = providerSupportsUrlContext && urlContextTabs.length > 0;
+
           // Start streaming using ChatService
           const stream = chatServiceRef.current.stream(messages, {
             previousResponseId: previousResponseId || undefined,
             systemPrompt,
+            providerConfig: shouldUseUrlContext ? { useUrlContext: true } : undefined,
           });
 
           let lastSuccessfulContent = '';

@@ -13,6 +13,7 @@ import type {
   GeminiPart,
   GeminiGenerationConfig,
   GeminiChatConfig,
+  GeminiTool,
   SupportedImageType,
 } from './types';
 import { SUPPORTED_IMAGE_TYPES } from './types';
@@ -47,7 +48,11 @@ export function buildRequest(
   request.generationConfig = buildGenerationConfig(geminiConfig, chatConfig);
 
   // Always enable Google Search grounding for better accuracy
-  request.tools = [{ google_search: {} }];
+  const tools: GeminiTool[] = [{ google_search: {} }];
+  if (chatConfig?.useUrlContext) {
+    tools.push({ url_context: {} });
+  }
+  request.tools = tools;
 
   // Add contents at the end for better token caching in multi-turn conversations
   request.contents = contents;
@@ -78,10 +83,10 @@ export function convertMessages(messages: ProviderChatMessage[]): GeminiContent[
       if (sections.systemInstruction !== undefined) {
         parts.push({ text: sections.systemInstruction });
       }
-      // Handle tabContent section - may contain images
+      // Handle tabContent section - may contain images and videos
       if (sections.tabContent !== undefined && sections.tabContent !== '') {
-        // Parse the tabContent to check for image references
-        const tabContentParts = parseTabContentForImages(sections.tabContent);
+        // Parse the tabContent to check for media references (images, videos)
+        const tabContentParts = parseTabContentForMedia(sections.tabContent);
         parts.push(...tabContentParts);
       }
       if (sections.userQuery !== undefined) {
@@ -276,69 +281,103 @@ export function isSupportedImageType(mimeType: string): mimeType is SupportedIma
 }
 
 /**
- * Parse tab content for image references and split into text and image parts
+ * Parse tab content for media references (images and videos) and split into text and media parts
  */
-function parseTabContentForImages(tabContent: string): GeminiPart[] {
+function parseTabContentForMedia(tabContent: string): GeminiPart[] {
   const parts: GeminiPart[] = [];
 
-  // Check if the tab content contains image references
+  // Check if the tab content contains image or video references
   const imagePattern =
     /<content\s+type="image">\s*<fileUri>([^<]+)<\/fileUri>\s*<mimeType>([^<]+)<\/mimeType>\s*<\/content>/g;
+  const videoPattern = /<content\s+type="video">\s*<fileUri>([^<]+)<\/fileUri>\s*<\/content>/g;
 
   let lastIndex = 0;
   let match;
-  let hasImage = false;
+  let hasMedia = false;
 
-  // Find all image references in the content
-  const matches: Array<{ fileUri: string; mimeType: string; start: number; end: number }> = [];
+  // Find all media references (images and videos) in the content
+  const matches: Array<{
+    fileUri: string;
+    mimeType?: string;
+    start: number;
+    end: number;
+    type: 'image' | 'video';
+  }> = [];
+
+  // Find image references
   while ((match = imagePattern.exec(tabContent)) !== null) {
     matches.push({
       fileUri: match[1] || '',
       mimeType: match[2] || '',
       start: match.index,
       end: match.index + match[0].length,
+      type: 'image',
     });
-    hasImage = true;
+    hasMedia = true;
   }
 
-  if (!hasImage) {
-    // No images, return the entire content as text
+  // Find video references
+  while ((match = videoPattern.exec(tabContent)) !== null) {
+    matches.push({
+      fileUri: match[1] || '',
+      start: match.index,
+      end: match.index + match[0].length,
+      type: 'video',
+    });
+    hasMedia = true;
+  }
+
+  if (!hasMedia) {
+    // No media, return the entire content as text
     parts.push({ text: tabContent });
     return parts;
   }
 
-  // Split content around image references
-  for (let i = 0; i < matches.length; i++) {
-    const imageMatch = matches[i];
-    if (!imageMatch) continue; // Type guard for TypeScript
+  // Sort matches by position in the content
+  matches.sort((a, b) => a.start - b.start);
 
-    // Add text before the image (including opening tags)
-    if (imageMatch.start > lastIndex) {
-      const textBefore = tabContent.substring(lastIndex, imageMatch.start);
+  // Split content around media references
+  for (let i = 0; i < matches.length; i++) {
+    const mediaMatch = matches[i];
+    if (!mediaMatch) continue; // Type guard for TypeScript
+
+    // Add text before the media (including opening tags)
+    if (mediaMatch.start > lastIndex) {
+      const textBefore = tabContent.substring(lastIndex, mediaMatch.start);
       if (textBefore.trim()) {
-        // Replace <content type="image"> opening with regular <content>
+        // Replace <content type="image/video"> opening with regular <content>
         const modifiedText =
           i === 0 && textBefore.includes('</metadata>') ? textBefore + '\n  <content>' : textBefore;
         parts.push({ text: modifiedText });
       }
-    } else if (i === 0 && imageMatch.start === lastIndex) {
-      // Image is at the very beginning after metadata
-      const precedingText = tabContent.substring(0, imageMatch.start);
+    } else if (i === 0 && mediaMatch.start === lastIndex) {
+      // Media is at the very beginning after metadata
+      const precedingText = tabContent.substring(0, mediaMatch.start);
       if (precedingText.includes('</metadata>')) {
         // Add opening content tag
         parts.push({ text: precedingText + '\n  <content>' });
       }
     }
 
-    // Add the image reference
-    parts.push({
-      fileData: {
-        fileUri: imageMatch.fileUri,
-        mimeType: imageMatch.mimeType as SupportedImageType,
-      },
-    });
+    // Add the media reference (image or video)
+    if (mediaMatch.type === 'video') {
+      // Video: no mimeType needed for YouTube URLs
+      parts.push({
+        fileData: {
+          fileUri: mediaMatch.fileUri,
+        },
+      });
+    } else {
+      // Image: include mimeType
+      parts.push({
+        fileData: {
+          fileUri: mediaMatch.fileUri,
+          mimeType: mediaMatch.mimeType as SupportedImageType,
+        },
+      });
+    }
 
-    lastIndex = imageMatch.end;
+    lastIndex = mediaMatch.end;
   }
 
   // Add closing content tag and any remaining text (usually </tab> and </tab_content>)

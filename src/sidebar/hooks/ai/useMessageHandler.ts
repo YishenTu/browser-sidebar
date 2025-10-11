@@ -75,10 +75,17 @@ function createChatServiceStreamHandler(
       // Get the system prompt with provider type and tab content status
       const systemPrompt = getSystemPrompt(provider.type, hasTabContent);
 
+      const providerSupportsUrlContext = provider.type === 'gemini';
+      const urlContextTabs = providerSupportsUrlContext
+        ? Object.values(loadedTabs).filter(tab => tab?.metadata?.useUrlContext === true)
+        : [];
+      const shouldUseUrlContext = providerSupportsUrlContext && urlContextTabs.length > 0;
+
       // Start streaming using ChatService
       const stream = chatServiceRef.current.stream(messages, {
         previousResponseId: previousResponseId || undefined,
         systemPrompt,
+        providerConfig: shouldUseUrlContext ? { useUrlContext: true } : undefined,
       });
 
       let lastSuccessfulContent = '';
@@ -332,8 +339,20 @@ export function useMessageHandler({
             .map(tabId => loadedTabs[tabId])
             .filter((tab): tab is TabContent => Boolean(tab));
 
+          const providerSupportsUrlContext = provider.type === 'gemini';
+          const urlContextTabs = providerSupportsUrlContext
+            ? allLoadedTabs.filter(tab => tab.metadata?.useUrlContext === true)
+            : [];
+          const shouldEnableUrlContext = providerSupportsUrlContext && urlContextTabs.length > 0;
+
+          // Gemini also supports YouTube videos via file_uri
+          const providerSupportsVideo = provider.type === 'gemini';
+
           // Format the content - will add system instruction even if no tabs
-          formatResult = formatTabContent(trimmedContent, allLoadedTabs);
+          formatResult = formatTabContent(trimmedContent, allLoadedTabs, {
+            useUrlContext: shouldEnableUrlContext,
+            providerSupportsVideo,
+          });
 
           // Use formatted content for AI but keep original for display
           finalContent = formatResult.formatted;

@@ -8,7 +8,7 @@ import type { FinishReason, ThinkingBudget } from '@/types/providers';
 export interface GeminiPart {
   text?: string;
   thinking?: string;
-  fileData?: { mimeType: string; fileUri: string };
+  fileData?: { mimeType?: string; fileUri: string };
 }
 
 export interface GeminiContent {
@@ -25,6 +25,7 @@ export interface GeminiGenerationConfig {
 
 export interface GeminiTool {
   google_search?: Record<string, never>;
+  url_context?: Record<string, never>;
 }
 
 export interface GeminiSafetySetting {
@@ -110,6 +111,7 @@ export interface GeminiChatConfig {
   thinkingBudget?: ThinkingBudget;
   signal?: AbortSignal;
   systemPrompt?: string;
+  useUrlContext?: boolean;
   [key: string]: unknown;
 }
 
