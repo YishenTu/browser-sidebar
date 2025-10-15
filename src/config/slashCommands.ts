@@ -58,7 +58,7 @@ export const SLASH_COMMANDS: SlashCommand[] = [
   {
     name: 'comment',
     description: 'Summarize comments',
-    prompt: `总结网友评论`,
+    prompt: `总结网友评论，使用中文输出`,
   },
   {
     name: 'fact-check',

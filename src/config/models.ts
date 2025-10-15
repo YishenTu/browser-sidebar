@@ -111,34 +111,21 @@ export const DEFAULT_MODELS: ModelConfig[] = [
   },
   // OpenRouter models
   {
+    id: 'anthropic/claude-haiku-4.5',
+    name: 'Claude Haiku 4.5 (OpenRouter)',
+    provider: 'openrouter',
+  },
+  {
     id: 'anthropic/claude-sonnet-4.5',
     name: 'Claude Sonnet 4.5 (OpenRouter)',
     provider: 'openrouter',
     reasoningMaxTokens: 8000, // Anthropic models use max_tokens for reasoning
   },
   {
-    id: 'x-ai/grok-4-fast:free',
+    id: 'x-ai/grok-4-fast',
     name: 'Grok 4 Fast (OpenRouter)',
     provider: 'openrouter',
     reasoningEffort: 'low',
-  },
-  {
-    id: 'openai/gpt-5-nano',
-    name: 'GPT 5 Nano (OpenRouter)',
-    provider: 'openrouter',
-    reasoningEffort: 'low',
-  },
-  {
-    id: 'openai/gpt-5-mini',
-    name: 'GPT 5 Mini (OpenRouter)',
-    provider: 'openrouter',
-    reasoningEffort: 'low',
-  },
-  {
-    id: 'openai/gpt-5',
-    name: 'GPT 5 (OpenRouter)',
-    provider: 'openrouter',
-    reasoningEffort: 'medium',
   },
   // Add more OpenRouter models as needed - just specify either:
   // - reasoningEffort for OpenAI/DeepSeek/Grok models
