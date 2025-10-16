@@ -115,8 +115,8 @@ describe('OpenRouter Request Builder', () => {
         config: configWithSuffix,
       });
 
-      // The implementation strips suffixes and doesn't add them back since enableWebSearch is false
-      expect(result.model).toBe('anthropic/claude-3-5-sonnet-20241022');
+      // The implementation keeps non-:online suffixes since enableWebSearch is false
+      expect(result.model).toBe('anthropic/claude-3-5-sonnet-20241022:beta');
     });
 
     it('should not add web search suffix when enableWebSearch is false', () => {
@@ -268,7 +268,8 @@ describe('OpenRouter Request Builder', () => {
           },
         });
 
-        expect(mockGetModelById).toHaveBeenCalledWith('openai/gpt-4o');
+        // Model lookup strips :online suffix only, so :beta is preserved in the model ID
+        expect(mockGetModelById).toHaveBeenCalledWith('openai/gpt-4o:beta');
         expect(result.reasoning).toEqual({ effort: 'medium' });
       });
     });
@@ -501,9 +502,9 @@ describe('OpenRouter Request Builder', () => {
           },
         });
 
-        // The implementation strips all suffixes and uses the base model ID
-        expect(result.model).toBe('provider/model');
-        expect(mockGetModelById).toHaveBeenCalledWith('provider/model');
+        // The implementation keeps non-:online suffixes
+        expect(result.model).toBe('provider/model:suffix1:suffix2');
+        expect(mockGetModelById).toHaveBeenCalledWith('provider/model:suffix1:suffix2');
       });
 
       it('should handle AbortSignal parameter (not used in current implementation)', () => {

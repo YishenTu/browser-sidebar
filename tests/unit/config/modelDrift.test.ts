@@ -324,12 +324,12 @@ describe('Model Configuration Drift Detection', () => {
         { provider: 'openai', fallback: 'gpt-5-nano', context: 'OpenAI initialization fallback' },
         {
           provider: 'gemini',
-          fallback: 'gemini-2.5-flash-lite',
+          fallback: 'gemini-flash-lite-latest',
           context: 'Gemini initialization fallback',
         },
         {
           provider: 'openrouter',
-          fallback: 'anthropic/claude-sonnet-4',
+          fallback: 'anthropic/claude-haiku-4.5',
           context: 'OpenRouter initialization fallback',
         },
       ];
@@ -371,11 +371,11 @@ describe('Model Configuration Drift Detection', () => {
       // Expected minimum model counts based on current configuration
       const expectedMinCounts = {
         openai: 3, // gpt-5-nano, gpt-5-mini, gpt-5
-        gemini: 3, // gemini-2.5-flash-lite, gemini-2.5-flash, gemini-2.5-pro
-        openrouter: 1, // anthropic/claude-sonnet-4
+        gemini: 3, // gemini-flash-lite-latest, gemini-flash-latest, gemini-pro-latest
+        openrouter: 3, // anthropic/claude-haiku-4.5, anthropic/claude-sonnet-4.5, x-ai/grok-4-fast
         deepseek: 1, // deepseek-chat
-        qwen: 1, // qwen3-235b-a22b-instruct-2507
-        zhipu: 1, // glm-4.5-x
+        qwen: 3, // qwen3-235b-a22b-instruct-2507, qwen3-max, qwen3-next-80b-a3b-instruct
+        zhipu: 1, // glm-4.6
         kimi: 1, // kimi-k2-turbo-preview
       };
 

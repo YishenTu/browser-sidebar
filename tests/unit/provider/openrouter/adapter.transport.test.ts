@@ -16,6 +16,11 @@ import type {
 
 // Mock models
 vi.mock('@config/models', () => ({
+  DEFAULT_MODELS: [
+    { id: 'openai/gpt-4o-mini', name: 'GPT-4O Mini', provider: 'openrouter' },
+    { id: 'anthropic/claude-3-sonnet', name: 'Claude 3 Sonnet', provider: 'openrouter' },
+  ],
+  DEFAULT_MODEL_ID: 'openai/gpt-4o-mini',
   DEFAULT_OPENROUTER_MODEL_ID: 'openai/gpt-4o-mini',
   getModelsByProvider: () => [
     { id: 'openai/gpt-4o-mini', name: 'GPT-4O Mini' },
