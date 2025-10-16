@@ -50,10 +50,10 @@ export function ModelSelector({
     // Group by provider id/name
     const labelFor = (p: string) => {
       switch (p) {
-        case 'openai':
-          return 'OpenAI';
         case 'gemini':
           return 'Google Gemini';
+        case 'openai':
+          return 'OpenAI';
         case 'openrouter':
           return 'OpenRouter';
         case 'deepseek':
@@ -70,8 +70,8 @@ export function ModelSelector({
     };
 
     const order = (p: string) => {
-      if (p === 'openai') return 0;
-      if (p === 'gemini') return 1;
+      if (p === 'gemini') return 0;
+      if (p === 'openai') return 1;
       if (p === 'openrouter') return 2;
       return 3;
     };
