@@ -28,6 +28,16 @@
     "default_title": "Toggle AI Browser Sidebar"
   },
 
+  "commands": {
+    "_execute_action": {
+      "suggested_key": {
+        "default": "Ctrl+E",
+        "mac": "Command+E"
+      },
+      "description": "Toggle AI Browser Sidebar"
+    }
+  },
+
   "content_scripts": [
     {
       "matches": ["<all_urls>"],
