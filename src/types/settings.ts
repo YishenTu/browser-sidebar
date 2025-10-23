@@ -45,6 +45,8 @@ export interface UIPreferences {
   animationsEnabled: boolean;
   /** Enable debug mode for console logging */
   debugMode: boolean;
+  /** Enable auto-scroll during streaming responses */
+  autoScrollEnabled: boolean;
   /** Hotkey configuration for full page screenshot capture */
   screenshotHotkey: {
     /** Enable/disable the hotkey */

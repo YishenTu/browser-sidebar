@@ -32,6 +32,10 @@ export function Settings() {
 
   // Debug mode state
   const [debugMode, setDebugMode] = useState(false);
+
+  // Auto-scroll state
+  const [autoScrollEnabled, setAutoScrollEnabled] = useState(true);
+
   const updateUIPreferences = useSettingsStore(state => state.updateUIPreferences);
 
   // OpenAI-compatible provider states
@@ -83,6 +87,9 @@ export function Settings() {
 
     // Load debug mode setting
     setDebugMode(settings.settings.ui?.debugMode || false);
+
+    // Load auto-scroll setting
+    setAutoScrollEnabled(settings.settings.ui?.autoScrollEnabled ?? true);
 
     // Load screenshot hotkey setting
     if (settings.settings.ui?.screenshotHotkey) {
@@ -352,6 +359,19 @@ export function Settings() {
     await updateUIPreferences({
       ...currentUI,
       debugMode: newDebugMode,
+    });
+  };
+
+  const handleAutoScrollToggle = async () => {
+    const newAutoScrollEnabled = !autoScrollEnabled;
+    setAutoScrollEnabled(newAutoScrollEnabled);
+
+    // Update the UI preferences in the store
+    const settings = useSettingsStore.getState();
+    const currentUI = settings.settings.ui || {};
+    await updateUIPreferences({
+      ...currentUI,
+      autoScrollEnabled: newAutoScrollEnabled,
     });
   };
 
@@ -774,6 +794,28 @@ export function Settings() {
               : 'Click the field above to record a new hotkey combination.'}
           </p>
         )}
+      </div>
+
+      {/* Auto-scroll Settings */}
+      <div className="settings-section">
+        <h2 className="settings-title">Chat Behavior</h2>
+        <div className="settings-input-group">
+          <label
+            className="settings-label"
+            style={{ display: 'flex', alignItems: 'center', gap: '10px' }}
+          >
+            <input
+              type="checkbox"
+              checked={autoScrollEnabled}
+              onChange={handleAutoScrollToggle}
+              className="settings-checkbox"
+            />
+            <span>Auto-scroll during streaming</span>
+          </label>
+        </div>
+        <p className="settings-hint" style={{ marginTop: '8px' }}>
+          When enabled, automatically scrolls to show new content as the AI responds.
+        </p>
       </div>
 
       {/* Debug Settings */}

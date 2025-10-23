@@ -60,6 +60,7 @@ const DEFAULT_SETTINGS: Settings = {
     showAvatars: true,
     animationsEnabled: true,
     debugMode: false,
+    autoScrollEnabled: true,
     screenshotHotkey: {
       enabled: true,
       modifiers: [],
@@ -217,6 +218,10 @@ const validateUIPreferences = (ui: unknown): UIPreferences => {
         ? u.animationsEnabled
         : DEFAULT_SETTINGS.ui.animationsEnabled,
     debugMode: typeof u.debugMode === 'boolean' ? u.debugMode : DEFAULT_SETTINGS.ui.debugMode,
+    autoScrollEnabled:
+      typeof u.autoScrollEnabled === 'boolean'
+        ? u.autoScrollEnabled
+        : DEFAULT_SETTINGS.ui.autoScrollEnabled,
     screenshotHotkey,
   };
 };

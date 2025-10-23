@@ -2,6 +2,7 @@ import React, { useRef, useEffect, useState, useCallback, useMemo } from 'react'
 import { VariableSizeList as List, ListOnScrollProps } from 'react-window';
 import type { ChatMessage } from '@store/chat';
 import { MessageBubble } from './MessageBubble';
+import { useSettingsStore } from '@store/settings';
 
 /**
  * Props for the MessageList component
@@ -103,6 +104,9 @@ export const MessageList: React.FC<MessageListProps> = ({
     messages.reduce((acc, m) => (m.role === 'user' ? acc + 1 : acc), 0)
   );
 
+  // Get auto-scroll setting from store
+  const autoScrollEnabled = useSettingsStore(state => state.settings.ui?.autoScrollEnabled ?? true);
+
   /**
    * Determine if virtualization should be used based on message count
    */
@@ -169,7 +173,16 @@ export const MessageList: React.FC<MessageListProps> = ({
     );
     const userJustSentMessage = currentUserMessageCount > lastUserMessageCountRef.current;
 
+    // Skip all auto-scroll logic if disabled
+    if (!autoScrollEnabled) {
+      lastMessageCountRef.current = messages.length;
+      lastMessageContentRef.current = currentContent;
+      lastUserMessageCountRef.current = currentUserMessageCount;
+      return;
+    }
+
     if (userJustSentMessage) {
+      // Force auto-scroll when user sends message
       setShouldAutoScroll(true);
       requestAnimationFrame(() => {
         scrollToBottom(true);
@@ -183,7 +196,7 @@ export const MessageList: React.FC<MessageListProps> = ({
     lastMessageCountRef.current = messages.length;
     lastMessageContentRef.current = currentContent;
     lastUserMessageCountRef.current = currentUserMessageCount;
-  }, [messages, shouldAutoScroll, scrollToBottom]);
+  }, [messages, shouldAutoScroll, scrollToBottom, autoScrollEnabled]);
 
   /**
    * Handle scroll events
