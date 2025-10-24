@@ -2,6 +2,8 @@
 
 Privacy-focused, Bring-Your-Own-Key Chrome sidebar that lets you chat with any web page, capture context (text, tables, screenshots), and switch between modern AI providers on the fly.
 
+![AI Browser Sidebar Preview](public/preview.png)
+
 ## Quick Start
 
 1. **Requirements**
