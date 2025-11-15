@@ -104,8 +104,8 @@ export const DEFAULT_MODELS: ModelConfig[] = [
     reasoningEffort: 'low',
   },
   {
-    id: 'gpt-5',
-    name: 'GPT 5',
+    id: 'gpt-5.1',
+    name: 'GPT 5.1',
     provider: 'openai',
     reasoningEffort: 'medium',
   },
@@ -148,11 +148,6 @@ export const DEFAULT_MODELS: ModelConfig[] = [
   {
     id: 'qwen3-max',
     name: 'Qwen3 Max',
-    provider: 'qwen',
-  },
-  {
-    id: 'qwen3-next-80b-a3b-instruct',
-    name: 'Qwen3 Next Instruct',
     provider: 'qwen',
   },
   // Zhipu AI
