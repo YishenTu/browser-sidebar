@@ -4,6 +4,7 @@
  * Type definitions for session management and tab state
  */
 
+import type { ProviderType } from '../../../types/providers';
 import { TabContent } from '../../../types/tabs';
 import { ChatMessage } from './message';
 
@@ -15,6 +16,7 @@ export interface SessionData {
   messages: ChatMessage[];
   conversationId: string;
   lastResponseId: string | null;
+  lastResponseProvider: ProviderType | null;
 
   // Session-specific UI state
   isLoading: boolean;

@@ -15,8 +15,6 @@ export interface UIState {
   clearError: () => void;
   setActiveMessage: (messageId: string | null) => void;
   clearActiveMessage: () => void;
-  setLastResponseId: (responseId: string | null) => void;
-  getLastResponseId: () => string | null;
 
   // Conversation management
   clearConversation: () => void;
@@ -53,16 +51,6 @@ export const useUIStore = create<UIState>(() => ({
   clearActiveMessage: () => {
     const sessionStore = useSessionStore.getState();
     sessionStore.updateActiveSession({ activeMessageId: null });
-  },
-
-  setLastResponseId: (responseId: string | null) => {
-    const sessionStore = useSessionStore.getState();
-    sessionStore.updateActiveSession({ lastResponseId: responseId });
-  },
-
-  getLastResponseId: () => {
-    const session = useSessionStore.getState().getActiveSession();
-    return session ? session.lastResponseId : null;
   },
 
   clearConversation: () => {

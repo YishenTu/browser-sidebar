@@ -54,6 +54,7 @@ export function createNewSession(tabId: number, url: string): SessionData {
     messages: [],
     conversationId: generateConversationId(),
     lastResponseId: null,
+    lastResponseProvider: null,
     isLoading: false,
     error: null,
     activeMessageId: null,

@@ -5,6 +5,7 @@
 import { useRef, useCallback, useEffect } from 'react';
 import { useSettingsStore } from '@store/settings';
 import { EngineManagerService } from '../../../services/engine/EngineManagerService';
+import { responseIdManager } from '@core/services/responseIdManager';
 import type { ProviderType, AIProvider } from '../../../types/providers';
 import type { UseProviderManagerReturn, AIStats } from './types';
 
@@ -51,8 +52,7 @@ export function useProviderManager(enabled = true): UseProviderManagerReturn {
       // Only clear response ID if we're actually switching providers
       // Response IDs are provider-specific (OpenAI and Grok both use them)
       if (isActualSwitch) {
-        const { useUIStore } = await import('@store/chat');
-        useUIStore.getState().setLastResponseId(null);
+        responseIdManager.clearResponseId();
       }
 
       await settingsStore.updateAISettings({

@@ -21,6 +21,7 @@ import {
   syncImagesToProvider,
   updateMessagesWithSyncedImages,
 } from '../../../core/services/imageSyncService';
+import { responseIdManager } from '@core/services/responseIdManager';
 import { isImageExtractedContent, type ImageExtractedContent } from '@/types/extraction';
 import { uploadImage } from '@/core/services/imageUploadService';
 import { debugLog } from '@/utils/debug';
@@ -724,10 +725,11 @@ export function useAIChat(options: UseAIChatOptions = {}): UseAIChatReturn {
 
               const prevType = state.getProviderTypeForModel(originalModel);
               if (
-                prevType === 'openai' &&
-                (targetProviderType !== 'openai' || modelOverride !== originalModel)
+                prevType &&
+                responseIdManager.supportsProvider(prevType) &&
+                (!targetProviderType || targetProviderType !== prevType)
               ) {
-                uiStore.setLastResponseId(null);
+                responseIdManager.clearResponseId();
               }
             }
           }
@@ -800,9 +802,6 @@ export function useAIChat(options: UseAIChatOptions = {}): UseAIChatReturn {
             throw new Error('No valid messages to send to AI provider');
           }
 
-          // Get last response ID for conversation continuity (OpenAI Response API)
-          const previousResponseId = uiStore.getLastResponseId();
-
           // Check if we have tab content loaded
           const loadedTabs = useTabStore.getState().getLoadedTabs();
           const hasTabContent = Object.keys(loadedTabs).length > 0;
@@ -812,6 +811,9 @@ export function useAIChat(options: UseAIChatOptions = {}): UseAIChatReturn {
           const providerForPrompt =
             chatServiceRef.current?.getProvider() || serviceGetActiveProvider() || activeProvider;
           const systemPrompt = getSystemPrompt(providerForPrompt.type, hasTabContent);
+
+          responseIdManager.setActiveProvider(providerForPrompt.type);
+          const previousResponseId = responseIdManager.getResponseId(providerForPrompt.type);
 
           // Ensure ChatService has an active provider (in case init just finished)
           if (chatServiceRef.current && !chatServiceRef.current.getProvider() && activeProvider) {
@@ -1070,7 +1072,7 @@ export function useAIChat(options: UseAIChatOptions = {}): UseAIChatReturn {
             });
             // Store response ID if we got one (OpenAI Response API)
             if (responseId) {
-              uiStore.setLastResponseId(responseId);
+              responseIdManager.storeResponseId(providerForPrompt.type, responseId);
             }
           } else {
             // Stream was interrupted with no content - remove the empty assistant message

@@ -20,6 +20,7 @@ import { getSystemPrompt } from '@/config/systemPrompt';
 import { formatTabContent } from '../../../services/chat/contentFormatter';
 import { ChatService } from '../../../services/chat/ChatService';
 import { convertToProviderMessages } from '@core/services/messageProcessing';
+import { responseIdManager } from '@core/services/responseIdManager';
 import type { AIProvider, StreamChunk } from '../../../types/providers';
 import type { SendMessageOptions, UseMessageHandlerReturn } from './types';
 import type { TabContent } from '../../../types/tabs';
@@ -65,8 +66,8 @@ function createChatServiceStreamHandler(
         throw new Error('No valid messages to send to AI provider');
       }
 
-      // Get last response ID for conversation continuity (OpenAI Response API)
-      const previousResponseId = uiStore.getLastResponseId();
+      responseIdManager.setActiveProvider(provider.type);
+      const previousResponseId = responseIdManager.getResponseId(provider.type);
 
       // Check if we have tab content loaded
       const loadedTabs = useTabStore.getState().getLoadedTabs();
@@ -209,7 +210,7 @@ function createChatServiceStreamHandler(
         });
         // Store response ID if we got one (OpenAI Response API)
         if (responseId) {
-          uiStore.setLastResponseId(responseId);
+          responseIdManager.storeResponseId(provider.type, responseId);
         }
       } else {
         // Surface the underlying error if available; otherwise emit generic message

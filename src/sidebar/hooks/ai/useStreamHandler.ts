@@ -10,6 +10,7 @@ import { getSystemPrompt } from '@/config/systemPrompt';
 import type { AIProvider, StreamChunk } from '../../../types/providers';
 import type { ChatMessage } from '@store/chat';
 import type { UseStreamHandlerReturn } from './types';
+import { responseIdManager } from '@core/services/responseIdManager';
 
 export function useStreamHandler(): UseStreamHandlerReturn {
   const messageStore = useMessageStore();
@@ -85,8 +86,8 @@ export function useStreamHandler(): UseStreamHandlerReturn {
         // Create abort controller for this stream
         abortControllerRef.current = new AbortController();
 
-        // Get last response ID for conversation continuity (OpenAI Response API)
-        const previousResponseId = uiStore.getLastResponseId();
+        responseIdManager.setActiveProvider(provider.type);
+        const previousResponseId = responseIdManager.getResponseId(provider.type);
 
         // Check if we have tab content loaded
         const loadedTabs = useTabStore.getState().getLoadedTabs();
@@ -223,7 +224,7 @@ export function useStreamHandler(): UseStreamHandlerReturn {
           });
           // Store response ID if we got one (OpenAI Response API)
           if (responseId) {
-            uiStore.setLastResponseId(responseId);
+            responseIdManager.storeResponseId(provider.type, responseId);
           }
         } else {
           // Surface the underlying error if available; otherwise emit generic message

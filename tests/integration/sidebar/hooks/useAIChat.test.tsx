@@ -58,8 +58,6 @@ const mockUseUIStore = vi.hoisted(() => {
     setLoading: vi.fn(),
     clearActiveMessage: vi.fn(),
     setActiveMessage: vi.fn(),
-    getLastResponseId: vi.fn(() => null),
-    setLastResponseId: vi.fn(),
     clearConversation: vi.fn(),
   };
   const useUIStore = vi.fn(() => store);
@@ -68,6 +66,14 @@ const mockUseUIStore = vi.hoisted(() => {
     useUIStore,
   };
 });
+
+const mockResponseIdManager = vi.hoisted(() => ({
+  setActiveProvider: vi.fn(),
+  getResponseId: vi.fn(() => null),
+  storeResponseId: vi.fn(),
+  clearResponseId: vi.fn(),
+  supportsProvider: vi.fn(() => true),
+}));
 
 const mockUseMessageStore = vi.hoisted(() => {
   const store = {
@@ -90,6 +96,10 @@ vi.mock('@store/chat', () => ({
   ...mockUseTabStore,
   ...mockUseUIStore,
   ...mockUseMessageStore,
+}));
+
+vi.mock('@core/services/responseIdManager', () => ({
+  responseIdManager: mockResponseIdManager,
 }));
 
 // Mock the legacy hooks
@@ -231,8 +241,6 @@ describe('useAIChat Integration Tests', () => {
       setLoading: vi.fn(),
       clearActiveMessage: vi.fn(),
       setActiveMessage: vi.fn(),
-      getLastResponseId: vi.fn(() => null),
-      setLastResponseId: vi.fn(),
       clearConversation: vi.fn(),
     };
 
@@ -252,6 +260,14 @@ describe('useAIChat Integration Tests', () => {
     mockUseUIStore.useUIStore.getState.mockReturnValue(uiStore);
     mockUseMessageStore.useMessageStore.mockReturnValue(messageStore);
     mockUseMessageStore.useMessageStore.getState.mockReturnValue(messageStore);
+
+    mockResponseIdManager.setActiveProvider.mockClear();
+    mockResponseIdManager.getResponseId.mockClear();
+    mockResponseIdManager.getResponseId.mockReturnValue(null);
+    mockResponseIdManager.storeResponseId.mockClear();
+    mockResponseIdManager.clearResponseId.mockClear();
+    mockResponseIdManager.supportsProvider.mockClear();
+    mockResponseIdManager.supportsProvider.mockReturnValue(true);
 
     // Create fresh mock instances
     mockChatService = createMockChatService();

@@ -5,6 +5,7 @@
  */
 
 import { create } from 'zustand';
+import { responseIdManager } from '@core/services/responseIdManager';
 import { ChatMessage, CreateMessageOptions, UpdateMessageOptions } from '../types/message';
 import { generateMessageId, getDefaultStatus } from '../utils/chatHelpers';
 import { useSessionStore } from './sessionStore';
@@ -114,8 +115,9 @@ export const useMessageStore = create<MessageState>(() => ({
 
     sessionStore.updateActiveSession({
       messages: updatedMessages,
-      lastResponseId: null,
     });
+
+    responseIdManager.clearResponseId();
 
     return messageToEdit;
   },
@@ -148,8 +150,8 @@ export const useMessageStore = create<MessageState>(() => ({
     const updatedMessages = session.messages.slice(0, messageIndex);
     sessionStore.updateActiveSession({
       messages: updatedMessages,
-      lastResponseId: null,
     });
+    responseIdManager.clearResponseId();
   },
 
   // Selectors
