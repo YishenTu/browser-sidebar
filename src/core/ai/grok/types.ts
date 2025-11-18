@@ -44,11 +44,27 @@ export interface GrokOutputContent {
   text?: string;
 }
 
+export interface GrokAnnotation {
+  type?: string;
+  url?: string;
+  title?: string;
+  content?: string;
+  domain?: string;
+  url_citation?: {
+    url?: string;
+    title?: string;
+    content?: string;
+    domain?: string;
+  };
+  [key: string]: unknown;
+}
+
 export interface GrokResponseOutput {
   type?: string;
   role?: string;
   content?: GrokOutputContent[];
   status?: string;
+  annotations?: GrokAnnotation[];
 }
 
 /** Grok Response API response format */
@@ -93,4 +109,6 @@ export interface GrokStreamEvent {
   status?: string;
   finish_reason?: string | null;
   usage?: GrokUsage;
+  annotation?: GrokAnnotation;
+  annotations?: GrokAnnotation[];
 }

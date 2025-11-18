@@ -4,8 +4,13 @@
  * Handles processing of Grok Response API streaming responses
  */
 
-import type { StreamChunk, FinishReason } from '../../../types/providers';
-import type { GrokStreamEvent, GrokResponseOutput, GrokOutputContent } from './types';
+import type { StreamChunk, FinishReason, SearchResult } from '../../../types/providers';
+import type {
+  GrokStreamEvent,
+  GrokResponseOutput,
+  GrokOutputContent,
+  GrokAnnotation,
+} from './types';
 
 /**
  * Grok stream processor for handling Response API streaming responses
@@ -14,6 +19,7 @@ export class GrokStreamProcessor {
   private buffer: string = '';
   private lastSeenContent: string = '';
   private model: string;
+  private searchSources: SearchResult[] = [];
 
   constructor(model: string) {
     this.model = model;
@@ -55,6 +61,8 @@ export class GrokStreamProcessor {
    * Process a streaming event and return a StreamChunk if applicable
    */
   processEvent(event: GrokStreamEvent): StreamChunk | null {
+    this.captureSearchMetadata(event);
+
     // Extract the actual delta content for message text
     const deltaContent = this.extractDeltaContent(event);
 
@@ -77,6 +85,7 @@ export class GrokStreamProcessor {
   reset(): void {
     this.buffer = '';
     this.lastSeenContent = '';
+    this.searchSources = [];
   }
 
   /**
@@ -221,11 +230,7 @@ export class GrokStreamProcessor {
     };
 
     // Include response ID in metadata
-    if (responseId) {
-      chunk.metadata = {
-        responseId,
-      };
-    }
+    this.attachMetadata(chunk, responseId);
 
     return chunk;
   }
@@ -253,13 +258,138 @@ export class GrokStreamProcessor {
     };
 
     // Include response ID in metadata
+    this.attachMetadata(chunk, responseId);
+
+    return chunk;
+  }
+
+  /**
+   * Capture citation annotations and build search metadata
+   */
+  private captureSearchMetadata(event: GrokStreamEvent): void {
+    const annotations: GrokAnnotation[] = [];
+    if (event.annotation) {
+      annotations.push(event.annotation);
+    }
+    if (Array.isArray(event.annotations)) {
+      annotations.push(...event.annotations);
+    }
+    if (event.output) {
+      for (const output of event.output) {
+        if (output?.annotations && Array.isArray(output.annotations)) {
+          annotations.push(...output.annotations);
+        }
+      }
+    }
+    if (event.response?.output) {
+      for (const output of event.response.output) {
+        if (output?.annotations && Array.isArray(output.annotations)) {
+          annotations.push(...output.annotations);
+        }
+      }
+    }
+
+    for (const annotation of annotations) {
+      this.ingestAnnotation(annotation);
+    }
+  }
+
+  private ingestAnnotation(annotation: GrokAnnotation | null | undefined): void {
+    if (!annotation) return;
+    const type = annotation.type?.toLowerCase();
+    if (type !== 'url_citation') {
+      return;
+    }
+
+    const url = this.extractAnnotationUrl(annotation);
+    if (!url) return;
+
+    if (this.searchSources.some(source => source.url === url)) {
+      return;
+    }
+
+    const title = this.deriveAnnotationTitle(annotation, url);
+    const snippet = this.extractAnnotationSnippet(annotation);
+
+    const source: SearchResult = {
+      title,
+      url,
+    };
+    if (snippet) {
+      source.snippet = snippet;
+    }
+
+    this.searchSources.push(source);
+  }
+
+  private extractAnnotationUrl(annotation: GrokAnnotation): string | null {
+    if (annotation.url && typeof annotation.url === 'string') {
+      return annotation.url.trim();
+    }
+    const nestedUrl = annotation.url_citation?.url;
+    if (nestedUrl && typeof nestedUrl === 'string') {
+      return nestedUrl.trim();
+    }
+    return null;
+  }
+
+  private extractAnnotationSnippet(annotation: GrokAnnotation): string | undefined {
+    const snippet = annotation.content || annotation.url_citation?.content;
+    if (snippet && typeof snippet === 'string' && snippet.trim().length > 0) {
+      return snippet.trim();
+    }
+    return undefined;
+  }
+
+  private deriveAnnotationTitle(annotation: GrokAnnotation, url: string): string {
+    const candidates = [
+      annotation.title,
+      annotation.url_citation?.title,
+      annotation.domain,
+      annotation.url_citation?.domain,
+    ];
+
+    for (const candidate of candidates) {
+      if (candidate && typeof candidate === 'string' && candidate.trim().length > 0) {
+        return candidate.trim();
+      }
+    }
+
+    return this.deriveHostnameFromUrl(url);
+  }
+
+  private deriveHostnameFromUrl(url: string): string {
+    try {
+      const parsed = new URL(url);
+      const hostname = parsed.hostname.replace(/^www\./i, '').trim();
+      return hostname.length > 0 ? hostname : url;
+    } catch {
+      return url;
+    }
+  }
+
+  /**
+   * Attach response metadata (response ID + search sources) to chunk
+   */
+  private attachMetadata(chunk: StreamChunk, responseId?: string | null): void {
+    const metadata: Record<string, unknown> = {};
     if (responseId) {
-      chunk.metadata = {
-        responseId,
+      metadata['responseId'] = responseId;
+    }
+    if (this.searchSources.length > 0) {
+      metadata['searchResults'] = {
+        sources: this.searchSources.map(source => ({
+          ...source,
+        })),
       };
     }
 
-    return chunk;
+    if (Object.keys(metadata).length > 0) {
+      chunk.metadata = {
+        ...(chunk.metadata || {}),
+        ...metadata,
+      };
+    }
   }
 }
 

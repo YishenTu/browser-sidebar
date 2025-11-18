@@ -202,14 +202,14 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
             <div className="message-search-metadata">
               {(
                 message.metadata['searchResults'] as {
-                  sources?: Array<{ title: string; url: string; snippet?: string }>;
+                  sources?: Array<{ title?: string; url: string; snippet?: string }>;
                 }
               )?.sources ? (
                 <SearchSources
                   sources={
                     (
                       message.metadata['searchResults'] as {
-                        sources: Array<{ title: string; url: string; snippet?: string }>;
+                        sources: Array<{ title?: string; url: string; snippet?: string }>;
                       }
                     ).sources
                   }

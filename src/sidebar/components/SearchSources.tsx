@@ -2,8 +2,9 @@ import React from 'react';
 import { Collapsible } from '@ui/Collapsible';
 
 interface SearchSource {
-  title: string;
+  title?: string;
   url: string;
+  snippet?: string;
 }
 
 interface SearchSourcesProps {
@@ -13,6 +14,18 @@ interface SearchSourcesProps {
 
 export const SearchSources: React.FC<SearchSourcesProps> = ({ sources, className = '' }) => {
   if (!sources || sources.length === 0) return null;
+
+  const getDisplayLabel = (source: SearchSource): string => {
+    if (source.title && source.title.trim().length > 0) {
+      return source.title.trim();
+    }
+    try {
+      const parsed = new URL(source.url);
+      return parsed.hostname.replace(/^www\./i, '') || source.url;
+    } catch {
+      return source.url;
+    }
+  };
 
   return (
     <div className={`search-sources ${className}`}>
@@ -30,8 +43,9 @@ export const SearchSources: React.FC<SearchSourcesProps> = ({ sources, className
             target="_blank"
             rel="noopener noreferrer"
             className="search-source-link"
+            title={source.title && source.title.trim().length > 0 ? source.title : source.url}
           >
-            {source.title}
+            {getDisplayLabel(source)}
           </a>
         ))}
       </Collapsible>
