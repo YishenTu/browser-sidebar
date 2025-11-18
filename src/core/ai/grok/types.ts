@@ -1,7 +1,7 @@
 /**
  * @file Grok Provider Type Definitions
  *
- * Grok uses an OpenAI-compatible API format
+ * Grok uses xAI Response API format (similar to OpenAI Responses API)
  */
 
 /** Grok search parameters */
@@ -16,42 +16,49 @@ export interface GrokChatConfig {
   stream?: boolean;
   signal?: AbortSignal;
   systemPrompt?: string;
+  previousResponseId?: string;
 }
 
-/** Grok API request format */
+/** Grok Response API request format */
 export interface GrokRequest {
   model: string;
-  messages: Array<{
+  input?: Array<{
     role: 'system' | 'user' | 'assistant';
     content: string;
   }>;
+  previous_response_id?: string;
+  tools?: Array<{ type: string }>;
   stream?: boolean;
+  store?: boolean;
   temperature?: number;
   max_tokens?: number;
-  search_parameters?: GrokSearchParameters;
 }
 
-/** Grok API response format */
+/** Grok Response API response format */
 export interface GrokResponse {
   id: string;
+  response_id?: string;
   object: string;
   created: number;
   model: string;
-  choices: Array<{
-    index: number;
-    message: {
-      role: string;
-      content: string;
-    };
-    finish_reason: string | null;
+  output?: Array<{
+    type: string;
+    content?: Array<{
+      type: string;
+      text?: string;
+    }>;
   }>;
+  status?: string;
+  finish_reason?: string;
   usage?: GrokUsage;
 }
 
 /** Grok usage metadata */
 export interface GrokUsage {
   prompt_tokens?: number;
+  input_tokens?: number;
   completion_tokens?: number;
+  output_tokens?: number;
   total_tokens?: number;
   num_sources_used?: number;
 }
@@ -59,9 +66,21 @@ export interface GrokUsage {
 /** Grok streaming event */
 export interface GrokStreamEvent {
   id?: string;
+  response_id?: string;
+  response?: {
+    id?: string;
+  };
   object?: string;
   created?: number;
   model?: string;
+  type?: string;
+  delta?: string | { output_text?: string };
+  output_text?: string;
+  text?: string;
+  status?: string;
+  finish_reason?: string | null;
+  usage?: GrokUsage;
+  // Legacy chat completions format support (for backward compatibility)
   choices?: Array<{
     index: number;
     delta: {
@@ -70,5 +89,4 @@ export interface GrokStreamEvent {
     };
     finish_reason?: string | null;
   }>;
-  usage?: GrokUsage;
 }

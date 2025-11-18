@@ -3,8 +3,11 @@
  */
 import { BaseEngine } from '../BaseEngine';
 import { buildRequest, buildHeaders, buildApiUrl } from '@/core/ai/grok/requestBuilder';
-import { GrokStreamProcessor, convertToStreamChunk } from '@/core/ai/grok/streamProcessor';
-import { formatError as formatGrokError, withErrorHandlingGenerator } from '@/core/ai/grok/errorHandler';
+import { GrokStreamProcessor } from '@/core/ai/grok/streamProcessor';
+import {
+  formatError as formatGrokError,
+  withErrorHandlingGenerator,
+} from '@/core/ai/grok/errorHandler';
 import { getModelsByProvider, getModelById, modelExists, type ModelConfig } from '@/config/models';
 import { debugLog } from '@/utils/debug';
 import type { Transport } from '@/transport/types';
@@ -103,6 +106,7 @@ export class GrokProvider extends BaseEngine {
         const request = buildRequest(messages, currentConfig, {
           ...config,
           stream: true,
+          previousResponseId: config?.previousResponseId,
           systemPrompt: config?.systemPrompt,
         });
 
@@ -121,25 +125,40 @@ export class GrokProvider extends BaseEngine {
           signal: config?.signal,
         };
 
-        const processor = new GrokStreamProcessor();
-        const decoder = new TextDecoder();
+        const processor = new GrokStreamProcessor(currentConfig.model);
+        let capturedResponseId: string | null = null;
 
         for await (const chunk of transport.stream(transportRequest)) {
-          if (config?.signal?.aborted) throw new Error('Request aborted');
-
-          const textChunk = decoder.decode(chunk, { stream: true });
-          const events = processor.processChunk(textChunk);
-
-          for (const event of events) {
-            const streamChunk = convertToStreamChunk(event, currentConfig.model);
-
-            // Only yield chunks with content or finish reason
-            const hasContent = streamChunk.choices[0]?.delta?.content;
-            const isCompletion = streamChunk.choices[0]?.finishReason;
-
-            if (hasContent || isCompletion) {
-              yield streamChunk;
+          try {
+            const chunkStr = new TextDecoder().decode(chunk);
+            const lines = chunkStr.split('\n');
+            for (const line of lines) {
+              if (!line.startsWith('data: ')) continue;
+              const data = line.slice(6).trim();
+              if (data === '[DONE]') continue;
+              try {
+                const event = JSON.parse(data);
+                // Capture response ID from the first event - try multiple possible locations
+                if (!capturedResponseId && event.id) {
+                  capturedResponseId = event.id;
+                  debugLog('GrokProvider', `Captured response ID: ${capturedResponseId}`);
+                }
+                const streamChunk = processor.processEvent(event);
+                if (streamChunk) {
+                  if (capturedResponseId) {
+                    streamChunk.metadata = {
+                      ...streamChunk.metadata,
+                      responseId: capturedResponseId,
+                    };
+                  }
+                  yield streamChunk;
+                }
+              } catch {
+                continue;
+              }
             }
+          } catch {
+            continue;
           }
         }
       }.bind(this)

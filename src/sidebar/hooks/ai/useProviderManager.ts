@@ -41,10 +41,16 @@ export function useProviderManager(enabled = true): UseProviderManagerReturn {
 
   const switchProvider = useCallback(
     async (providerType: ProviderType) => {
+      // Check if we're actually switching to a different provider
+      const currentProvider = settingsStore.settings.ai.defaultProvider;
+      const isActualSwitch = currentProvider !== providerType;
+
       await serviceRef.current?.initializeFromSettings();
       await serviceRef.current?.switch(providerType);
 
-      if (providerType !== 'openai') {
+      // Only clear response ID if we're actually switching providers
+      // Response IDs are provider-specific (OpenAI and Grok both use them)
+      if (isActualSwitch) {
         const { useUIStore } = await import('@store/chat');
         useUIStore.getState().setLastResponseId(null);
       }

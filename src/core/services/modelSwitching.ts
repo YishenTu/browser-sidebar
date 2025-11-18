@@ -4,7 +4,6 @@
  */
 
 import { useSettingsStore } from '@store/settings';
-import { useUIStore } from '@store/chat';
 import type { ProviderType } from '@/types/providers';
 
 export interface ModelSwitchResult {
@@ -57,12 +56,10 @@ export async function switchModel(options: ModelSwitchOptions): Promise<ModelSwi
         await switchProvider(providerType);
       }
 
-      // Handle OpenAI-specific state clearing
-      const prevProvider = getProviderTypeForModel(previousModel) as ProviderType | null;
-      if (prevProvider === 'openai' && providerType === 'openai' && modelId !== previousModel) {
-        // Clear stored response id so the next OpenAI call sends full history
-        useUIStore.getState().setLastResponseId(null);
-      }
+      // Response IDs are provider-specific, not model-specific
+      // The server maintains conversation state, so switching models within the same provider
+      // does NOT require clearing the response ID - the conversation can continue
+      // Only provider switches require clearing (handled in switchProvider)
 
       return {
         success: true,
