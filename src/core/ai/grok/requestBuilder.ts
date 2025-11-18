@@ -52,6 +52,11 @@ export function buildRequest(
   const request: GrokRequest = {
     model: grokConfig.model,
     messages: requestMessages,
+    // Always enable live web search for better accuracy
+    search_parameters: {
+      mode: 'on',
+      return_citations: true,
+    },
   };
 
   // Add streaming flag if needed

@@ -71,12 +71,6 @@ export function isBuiltInPreset(id: string): boolean {
 }
 
 export const DEFAULT_MODELS: ModelConfig[] = [
-  // Grok models
-  {
-    id: 'grok-4-fast-non-reasoning',
-    name: 'Grok 4 Fast',
-    provider: 'grok',
-  },
   // Gemini models
   {
     id: 'gemini-flash-lite-latest',
@@ -115,6 +109,12 @@ export const DEFAULT_MODELS: ModelConfig[] = [
     provider: 'openai',
     reasoningEffort: 'medium',
   },
+  // Grok models
+  {
+    id: 'grok-4-fast-non-reasoning',
+    name: 'Grok 4 Fast',
+    provider: 'grok',
+  },
   // OpenRouter models
   {
     id: 'anthropic/claude-haiku-4.5',
@@ -126,12 +126,6 @@ export const DEFAULT_MODELS: ModelConfig[] = [
     name: 'Claude Sonnet 4.5 (OpenRouter)',
     provider: 'openrouter',
     reasoningMaxTokens: 8000, // Anthropic models use max_tokens for reasoning
-  },
-  {
-    id: 'x-ai/grok-4-fast',
-    name: 'Grok 4 Fast (OpenRouter)',
-    provider: 'openrouter',
-    reasoningEffort: 'low',
   },
   // Add more OpenRouter models as needed - just specify either:
   // - reasoningEffort for OpenAI/DeepSeek/Grok models

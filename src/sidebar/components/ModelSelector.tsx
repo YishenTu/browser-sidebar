@@ -74,8 +74,8 @@ export function ModelSelector({
     const order = (p: string) => {
       if (p === 'gemini') return 0;
       if (p === 'openai') return 1;
-      if (p === 'openrouter') return 2;
-      if (p === 'grok') return 3;
+      if (p === 'grok') return 2;
+      if (p === 'openrouter') return 3;
       return 4;
     };
 

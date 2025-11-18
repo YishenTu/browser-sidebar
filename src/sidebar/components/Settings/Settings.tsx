@@ -612,45 +612,6 @@ export function Settings() {
         )}
       </div>
 
-      {/* OpenRouter API Key */}
-      <div className="settings-section settings-section--openrouter">
-        <label className="settings-label">OpenRouter API Key</label>
-        <div className="settings-input-group">
-          <div className="settings-input-wrapper">
-            <input
-              type="text"
-              value={getMaskedValue(openrouterKey, openrouterMasked)}
-              onChange={e => {
-                if (!openrouterMasked) {
-                  setOpenrouterKey(e.target.value);
-                  setOpenrouterValid(null);
-                }
-              }}
-              onFocus={() => setOpenrouterMasked(false)}
-              onBlur={() => setOpenrouterMasked(true)}
-              placeholder="sk-or-..."
-              className={`settings-input ${openrouterMasked && openrouterKey ? 'settings-input--masked' : ''}`}
-            />
-          </div>
-          <button
-            onClick={handleVerifyAndSaveOpenRouter}
-            disabled={!openrouterKey.trim() || openrouterVerifying}
-            className="settings-button"
-          >
-            {openrouterVerifying ? 'Verifying...' : 'Verify & Save'}
-          </button>
-        </div>
-        {openrouterVerifying && (
-          <p className="settings-status settings-status--verifying">Verifying API key...</p>
-        )}
-        {!openrouterVerifying && openrouterValid === true && (
-          <p className="settings-status settings-status--valid">✓ API key is valid and saved</p>
-        )}
-        {!openrouterVerifying && openrouterValid === false && (
-          <p className="settings-status settings-status--invalid">✗ Invalid API key</p>
-        )}
-      </div>
-
       {/* Grok API Key */}
       <div className="settings-section settings-section--grok">
         <label className="settings-label">Grok (xAI) API Key</label>
@@ -686,6 +647,45 @@ export function Settings() {
           <p className="settings-status settings-status--valid">✓ API key is valid and saved</p>
         )}
         {!grokVerifying && grokValid === false && (
+          <p className="settings-status settings-status--invalid">✗ Invalid API key</p>
+        )}
+      </div>
+
+      {/* OpenRouter API Key */}
+      <div className="settings-section settings-section--openrouter">
+        <label className="settings-label">OpenRouter API Key</label>
+        <div className="settings-input-group">
+          <div className="settings-input-wrapper">
+            <input
+              type="text"
+              value={getMaskedValue(openrouterKey, openrouterMasked)}
+              onChange={e => {
+                if (!openrouterMasked) {
+                  setOpenrouterKey(e.target.value);
+                  setOpenrouterValid(null);
+                }
+              }}
+              onFocus={() => setOpenrouterMasked(false)}
+              onBlur={() => setOpenrouterMasked(true)}
+              placeholder="sk-or-..."
+              className={`settings-input ${openrouterMasked && openrouterKey ? 'settings-input--masked' : ''}`}
+            />
+          </div>
+          <button
+            onClick={handleVerifyAndSaveOpenRouter}
+            disabled={!openrouterKey.trim() || openrouterVerifying}
+            className="settings-button"
+          >
+            {openrouterVerifying ? 'Verifying...' : 'Verify & Save'}
+          </button>
+        </div>
+        {openrouterVerifying && (
+          <p className="settings-status settings-status--verifying">Verifying API key...</p>
+        )}
+        {!openrouterVerifying && openrouterValid === true && (
+          <p className="settings-status settings-status--valid">✓ API key is valid and saved</p>
+        )}
+        {!openrouterVerifying && openrouterValid === false && (
           <p className="settings-status settings-status--invalid">✗ Invalid API key</p>
         )}
       </div>

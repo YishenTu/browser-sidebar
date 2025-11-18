@@ -356,7 +356,9 @@ export class EngineManagerService {
     }
 
     // Capture settings at start of initialization to detect changes during initialization
-    let initStartKeys: { openai?: string; google?: string; openrouter?: string } | undefined;
+    let initStartKeys:
+      | { openai?: string; google?: string; openrouter?: string; grok?: string }
+      | undefined;
     let initStartModel: string | undefined;
 
     try {
@@ -374,6 +376,7 @@ export class EngineManagerService {
         openai: settings.apiKeys['openai'] || undefined,
         google: settings.apiKeys['google'] || undefined,
         openrouter: settings.apiKeys['openrouter'] || undefined,
+        grok: settings.apiKeys['grok'] || undefined,
       };
       initStartModel = settings.selectedModel;
 
@@ -382,7 +385,8 @@ export class EngineManagerService {
       const keysChanged =
         apiKeys['openai'] !== this.lastInitializedKeys['openai'] ||
         apiKeys['google'] !== this.lastInitializedKeys['google'] ||
-        apiKeys['openrouter'] !== this.lastInitializedKeys['openrouter'];
+        apiKeys['openrouter'] !== this.lastInitializedKeys['openrouter'] ||
+        apiKeys['grok'] !== this.lastInitializedKeys['grok'];
 
       const modelChanged = settings.selectedModel !== this.lastInitializedModel;
 
@@ -405,6 +409,7 @@ export class EngineManagerService {
         openai: apiKeys['openai'] || undefined,
         google: apiKeys['google'] || undefined,
         openrouter: apiKeys['openrouter'] || undefined,
+        grok: apiKeys['grok'] || undefined,
       };
       this.lastInitializedModel = settings.selectedModel;
 
@@ -426,6 +431,10 @@ export class EngineManagerService {
         initPromises.push(
           this.initializeOpenRouterProvider(apiKeys['openrouter'], settings.selectedModel)
         );
+      }
+
+      if (apiKeys['grok']) {
+        initPromises.push(this.initializeGrokProvider(apiKeys['grok'], settings.selectedModel));
       }
 
       // Initialize OpenAI-Compatible provider only when the target model/provider requires it.
@@ -597,6 +606,26 @@ export class EngineManagerService {
       this.initializeProviderStats('openrouter');
     } catch (error) {
       // Failed to initialize OpenRouter provider
+    }
+  }
+
+  private async initializeGrokProvider(apiKey: string, selectedModel: string): Promise<void> {
+    try {
+      const config: ProviderConfig = {
+        type: 'grok',
+        config: {
+          apiKey,
+          model: selectedModel.startsWith('grok-')
+            ? selectedModel
+            : getDefaultModelForProvider('grok') || 'grok-4-fast-non-reasoning',
+        },
+      };
+
+      const provider = await this.factory.createProvider(config);
+      this.registry.register(provider);
+      this.initializeProviderStats('grok');
+    } catch (error) {
+      // Failed to initialize Grok provider
     }
   }
 

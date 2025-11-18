@@ -4,6 +4,13 @@
  * Grok uses an OpenAI-compatible API format
  */
 
+/** Grok search parameters */
+export interface GrokSearchParameters {
+  mode: 'on';
+  return_citations?: boolean;
+  max_search_results?: number;
+}
+
 /** Grok chat configuration */
 export interface GrokChatConfig {
   stream?: boolean;
@@ -21,6 +28,7 @@ export interface GrokRequest {
   stream?: boolean;
   temperature?: number;
   max_tokens?: number;
+  search_parameters?: GrokSearchParameters;
 }
 
 /** Grok API response format */
@@ -45,6 +53,7 @@ export interface GrokUsage {
   prompt_tokens?: number;
   completion_tokens?: number;
   total_tokens?: number;
+  num_sources_used?: number;
 }
 
 /** Grok streaming event */

@@ -4,3 +4,4 @@ export * as openai from './openai';
 export * as openaiCompat from './openai-compat';
 export * as gemini from './gemini';
 export * as openrouter from './openrouter';
+export * as grok from './grok';
