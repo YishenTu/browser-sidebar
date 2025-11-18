@@ -90,6 +90,8 @@ export interface APIKeyReferences {
   google: string | null;
   /** OpenRouter API key reference */
   openrouter: string | null;
+  /** Grok (xAI) API key reference */
+  grok: string | null;
 }
 
 /**

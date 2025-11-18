@@ -30,6 +30,12 @@ export async function validateOpenRouterKey(apiKey: string): Promise<boolean> {
   return ks.validate('openrouter', apiKey);
 }
 
+/** Validate a Grok API key. */
+export async function validateGrokKey(apiKey: string): Promise<boolean> {
+  const ks = new KeyService();
+  return ks.validate('grok', apiKey);
+}
+
 /**
  * Validate an OpenAI-compatible provider by calling `${baseURL}/models`.
  * Uses background proxy transport where necessary to avoid CORS issues.

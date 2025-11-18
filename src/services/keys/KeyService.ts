@@ -69,6 +69,12 @@ const VALIDATION_ENDPOINTS: Partial<Record<APIProvider, ValidationEndpointConfig
     headers: { 'Content-Type': 'application/json' },
     expectedStatus: [200],
   },
+  grok: {
+    url: 'https://api.x.ai/v1/models',
+    method: 'GET',
+    headers: { 'Content-Type': 'application/json' },
+    expectedStatus: [200],
+  },
 };
 
 /**
@@ -312,6 +318,7 @@ export class KeyService {
       switch (provider) {
         case 'openai':
         case 'openrouter':
+        case 'grok':
           headers['Authorization'] = `Bearer ${key}`;
           break;
         case 'anthropic':

@@ -80,6 +80,7 @@ const DEFAULT_SETTINGS: Settings = {
     openai: null,
     google: null,
     openrouter: null,
+    grok: null,
   },
   extraction: {
     // Built-in defaults; user can modify in Settings UI
@@ -282,6 +283,10 @@ const validateAPIKeyReferences = (apiKeys: unknown): APIKeyReferences => {
       typeof a.openrouter === 'string' || a.openrouter === null
         ? (a.openrouter as string | null)
         : DEFAULT_SETTINGS.apiKeys.openrouter,
+    grok:
+      typeof a.grok === 'string' || a.grok === null
+        ? (a.grok as string | null)
+        : DEFAULT_SETTINGS.apiKeys.grok,
   };
 };
 

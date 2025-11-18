@@ -32,6 +32,7 @@ export type APIProvider =
   | 'custom'
   | 'openrouter'
   | 'gemini'
+  | 'grok'
   | 'openai_compat'
   | CompatProvider;
 

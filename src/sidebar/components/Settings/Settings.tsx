@@ -13,6 +13,7 @@ import {
   validateOpenAIKey,
   validateGeminiKey,
   validateOpenRouterKey,
+  validateGrokKey,
   validateCompatProvider,
 } from '@services/engine';
 
@@ -20,15 +21,19 @@ export function Settings() {
   const [openaiKey, setOpenaiKey] = useState('');
   const [geminiKey, setGeminiKey] = useState('');
   const [openrouterKey, setOpenrouterKey] = useState('');
+  const [grokKey, setGrokKey] = useState('');
   const [openaiValid, setOpenaiValid] = useState<boolean | null>(null);
   const [geminiValid, setGeminiValid] = useState<boolean | null>(null);
   const [openrouterValid, setOpenrouterValid] = useState<boolean | null>(null);
+  const [grokValid, setGrokValid] = useState<boolean | null>(null);
   const [openaiVerifying, setOpenaiVerifying] = useState(false);
   const [geminiVerifying, setGeminiVerifying] = useState(false);
   const [openrouterVerifying, setOpenrouterVerifying] = useState(false);
+  const [grokVerifying, setGrokVerifying] = useState(false);
   const [openaiMasked, setOpenaiMasked] = useState(true);
   const [geminiMasked, setGeminiMasked] = useState(true);
   const [openrouterMasked, setOpenrouterMasked] = useState(true);
+  const [grokMasked, setGrokMasked] = useState(true);
 
   // Debug mode state
   const [debugMode, setDebugMode] = useState(false);
@@ -83,6 +88,11 @@ export function Settings() {
     if (apiKeys?.openrouter) {
       setOpenrouterKey(apiKeys.openrouter);
       setOpenrouterValid(true); // Mark as valid if already saved
+    }
+
+    if (apiKeys?.grok) {
+      setGrokKey(apiKeys.grok);
+      setGrokValid(true); // Mark as valid if already saved
     }
 
     // Load debug mode setting
@@ -194,6 +204,31 @@ export function Settings() {
       setOpenrouterVerifying(false);
     }
   }, [openrouterKey]);
+
+  const handleVerifyAndSaveGrok = useCallback(async () => {
+    if (!grokKey.trim()) return;
+
+    setGrokVerifying(true);
+    setGrokValid(null);
+
+    try {
+      // Validate via service
+      const isValid = await validateGrokKey(grokKey);
+      setGrokValid(isValid);
+
+      // If valid, save the key
+      if (isValid) {
+        const state = useSettingsStore.getState();
+        const currentApiKeys = state.settings.apiKeys || {};
+        const updatedApiKeys = { ...currentApiKeys, grok: grokKey };
+        await state.updateAPIKeyReferences(updatedApiKeys);
+      }
+    } catch (error) {
+      setGrokValid(false);
+    } finally {
+      setGrokVerifying(false);
+    }
+  }, [grokKey]);
 
   // Extraction rules handlers
   const handleAddRule = () => {
@@ -464,9 +499,11 @@ export function Settings() {
       setOpenaiKey('');
       setGeminiKey('');
       setOpenrouterKey('');
+      setGrokKey('');
       setOpenaiValid(null);
       setGeminiValid(null);
       setOpenrouterValid(null);
+      setGrokValid(null);
 
       // Clear the input fields for compat providers
       setCompatApiKey('');
@@ -610,6 +647,45 @@ export function Settings() {
           <p className="settings-status settings-status--valid">✓ API key is valid and saved</p>
         )}
         {!openrouterVerifying && openrouterValid === false && (
+          <p className="settings-status settings-status--invalid">✗ Invalid API key</p>
+        )}
+      </div>
+
+      {/* Grok API Key */}
+      <div className="settings-section settings-section--grok">
+        <label className="settings-label">Grok (xAI) API Key</label>
+        <div className="settings-input-group">
+          <div className="settings-input-wrapper">
+            <input
+              type="text"
+              value={getMaskedValue(grokKey, grokMasked)}
+              onChange={e => {
+                if (!grokMasked) {
+                  setGrokKey(e.target.value);
+                  setGrokValid(null);
+                }
+              }}
+              onFocus={() => setGrokMasked(false)}
+              onBlur={() => setGrokMasked(true)}
+              placeholder="xai-..."
+              className={`settings-input ${grokMasked && grokKey ? 'settings-input--masked' : ''}`}
+            />
+          </div>
+          <button
+            onClick={handleVerifyAndSaveGrok}
+            disabled={!grokKey.trim() || grokVerifying}
+            className="settings-button"
+          >
+            {grokVerifying ? 'Verifying...' : 'Verify & Save'}
+          </button>
+        </div>
+        {grokVerifying && (
+          <p className="settings-status settings-status--verifying">Verifying API key...</p>
+        )}
+        {!grokVerifying && grokValid === true && (
+          <p className="settings-status settings-status--valid">✓ API key is valid and saved</p>
+        )}
+        {!grokVerifying && grokValid === false && (
           <p className="settings-status settings-status--invalid">✗ Invalid API key</p>
         )}
       </div>
