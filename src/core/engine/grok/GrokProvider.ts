@@ -126,39 +126,32 @@ export class GrokProvider extends BaseEngine {
         };
 
         const processor = new GrokStreamProcessor(currentConfig.model);
+        const decoder = new TextDecoder();
         let capturedResponseId: string | null = null;
 
         for await (const chunk of transport.stream(transportRequest)) {
-          try {
-            const chunkStr = new TextDecoder().decode(chunk);
-            const lines = chunkStr.split('\n');
-            for (const line of lines) {
-              if (!line.startsWith('data: ')) continue;
-              const data = line.slice(6).trim();
-              if (data === '[DONE]') continue;
-              try {
-                const event = JSON.parse(data);
-                // Capture response ID from the first event - try multiple possible locations
-                if (!capturedResponseId && event.id) {
-                  capturedResponseId = event.id;
-                  debugLog('GrokProvider', `Captured response ID: ${capturedResponseId}`);
-                }
-                const streamChunk = processor.processEvent(event);
-                if (streamChunk) {
-                  if (capturedResponseId) {
-                    streamChunk.metadata = {
-                      ...streamChunk.metadata,
-                      responseId: capturedResponseId,
-                    };
-                  }
-                  yield streamChunk;
-                }
-              } catch {
-                continue;
-              }
+          if (config?.signal?.aborted) throw new Error('Request aborted');
+
+          const decoded = decoder.decode(chunk, { stream: true });
+          const events = processor.processChunk(decoded);
+
+          for (const event of events) {
+            const possibleResponseId = event.response?.id || event.response_id || event.id;
+            if (!capturedResponseId && possibleResponseId) {
+              capturedResponseId = possibleResponseId;
+              debugLog('GrokProvider', `Captured response ID: ${capturedResponseId}`);
             }
-          } catch {
-            continue;
+
+            const streamChunk = processor.processEvent(event);
+            if (streamChunk) {
+              if (capturedResponseId) {
+                streamChunk.metadata = {
+                  ...streamChunk.metadata,
+                  responseId: capturedResponseId,
+                };
+              }
+              yield streamChunk;
+            }
           }
         }
       }.bind(this)

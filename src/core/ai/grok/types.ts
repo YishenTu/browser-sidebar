@@ -34,6 +34,23 @@ export interface GrokRequest {
   max_tokens?: number;
 }
 
+export interface GrokStreamDelta {
+  output_text?: string;
+  content?: GrokOutputContent[];
+}
+
+export interface GrokOutputContent {
+  type?: string;
+  text?: string;
+}
+
+export interface GrokResponseOutput {
+  type?: string;
+  role?: string;
+  content?: GrokOutputContent[];
+  status?: string;
+}
+
 /** Grok Response API response format */
 export interface GrokResponse {
   id: string;
@@ -41,13 +58,7 @@ export interface GrokResponse {
   object: string;
   created: number;
   model: string;
-  output?: Array<{
-    type: string;
-    content?: Array<{
-      type: string;
-      text?: string;
-    }>;
-  }>;
+  output?: GrokResponseOutput[];
   status?: string;
   finish_reason?: string;
   usage?: GrokUsage;
@@ -69,24 +80,17 @@ export interface GrokStreamEvent {
   response_id?: string;
   response?: {
     id?: string;
+    output?: GrokResponseOutput[];
   };
   object?: string;
   created?: number;
   model?: string;
   type?: string;
-  delta?: string | { output_text?: string };
+  delta?: string | GrokStreamDelta;
   output_text?: string;
+  output?: GrokResponseOutput[];
   text?: string;
   status?: string;
   finish_reason?: string | null;
   usage?: GrokUsage;
-  // Legacy chat completions format support (for backward compatibility)
-  choices?: Array<{
-    index: number;
-    delta: {
-      role?: string;
-      content?: string;
-    };
-    finish_reason?: string | null;
-  }>;
 }

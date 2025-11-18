@@ -42,15 +42,16 @@ export function useProviderManager(enabled = true): UseProviderManagerReturn {
 
   const switchProvider = useCallback(
     async (providerType: ProviderType) => {
-      // Check if we're actually switching to a different provider
-      const currentProvider = settingsStore.settings.ai.defaultProvider;
-      const isActualSwitch = currentProvider !== providerType;
+      ensureService();
 
       await serviceRef.current?.initializeFromSettings();
+
+      const activeProvider =
+        serviceRef.current?.getActive()?.type ?? settingsStore.settings.ai.defaultProvider;
+      const isActualSwitch = activeProvider !== providerType;
+
       await serviceRef.current?.switch(providerType);
 
-      // Only clear response ID if we're actually switching providers
-      // Response IDs are provider-specific (OpenAI and Grok both use them)
       if (isActualSwitch) {
         responseIdManager.clearResponseId();
       }
@@ -60,7 +61,7 @@ export function useProviderManager(enabled = true): UseProviderManagerReturn {
         defaultProvider: providerType,
       });
     },
-    [settingsStore]
+    [ensureService, settingsStore]
   );
 
   const getStats = useCallback((): AIStats => {

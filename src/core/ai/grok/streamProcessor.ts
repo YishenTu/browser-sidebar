@@ -5,7 +5,7 @@
  */
 
 import type { StreamChunk, FinishReason } from '../../../types/providers';
-import type { GrokStreamEvent } from './types';
+import type { GrokStreamEvent, GrokResponseOutput, GrokOutputContent } from './types';
 
 /**
  * Grok stream processor for handling Response API streaming responses
@@ -94,31 +94,108 @@ export class GrokStreamProcessor {
    * Extract delta content from event
    */
   private extractDeltaContent(event: GrokStreamEvent): string | undefined {
-    // Handle output text delta events (the actual message content)
-    if (event.type === 'response.output_text.delta' && event.delta) {
-      return typeof event.delta === 'string' ? event.delta : undefined;
+    const immediateDelta = this.extractImmediateDelta(event);
+    if (immediateDelta) {
+      this.lastSeenContent += immediateDelta;
+      return immediateDelta;
     }
 
-    if (event.output_text !== undefined && typeof event.output_text === 'string') {
-      const currentFullText = event.output_text;
-      // Extract only the new portion
-      if (currentFullText.length > this.lastSeenContent.length) {
-        const delta = currentFullText.substring(this.lastSeenContent.length);
-        this.lastSeenContent = currentFullText;
-        return delta;
-      }
-    }
-
-    if (event.delta && typeof event.delta === 'string') {
-      return event.delta;
-    }
-
-    // Legacy chat completions format support
-    if (event.choices?.[0]?.delta?.content) {
-      return event.choices[0].delta.content;
+    const snapshotText = this.extractSnapshotText(event);
+    if (snapshotText) {
+      return this.extractNewPortion(snapshotText);
     }
 
     return undefined;
+  }
+
+  private extractImmediateDelta(event: GrokStreamEvent): string | undefined {
+    if (!event.delta) return undefined;
+
+    if (typeof event.delta === 'string') {
+      return event.delta;
+    }
+
+    if (typeof event.delta.output_text === 'string') {
+      return event.delta.output_text;
+    }
+
+    const fromContent = this.extractTextFromContentParts(event.delta.content);
+    return fromContent || undefined;
+  }
+
+  private extractSnapshotText(event: GrokStreamEvent): string | undefined {
+    if (typeof event.output_text === 'string' && event.output_text.length > 0) {
+      return event.output_text;
+    }
+
+    if (typeof event.text === 'string' && event.text.length > 0) {
+      return event.text;
+    }
+
+    const outputFromEvent = this.extractTextFromOutput(event.output);
+    if (outputFromEvent) {
+      return outputFromEvent;
+    }
+
+    const outputFromResponse = this.extractTextFromOutput(event.response?.output);
+    if (outputFromResponse) {
+      return outputFromResponse;
+    }
+
+    return undefined;
+  }
+
+  private extractTextFromOutput(output?: GrokResponseOutput[] | null): string | undefined {
+    if (!output?.length) {
+      return undefined;
+    }
+
+    const textParts = output
+      .map(entry => this.extractTextFromContentParts(entry.content))
+      .filter((part): part is string => Boolean(part));
+
+    if (!textParts.length) {
+      return undefined;
+    }
+
+    return textParts.join('');
+  }
+
+  private extractTextFromContentParts(content?: GrokOutputContent[] | null): string | undefined {
+    if (!content?.length) {
+      return undefined;
+    }
+
+    const joined = content
+      .map(part => part?.text)
+      .filter((text): text is string => typeof text === 'string' && text.length > 0)
+      .join('');
+
+    return joined.length > 0 ? joined : undefined;
+  }
+
+  private extractNewPortion(snapshot: string): string | undefined {
+    if (!snapshot) {
+      return undefined;
+    }
+
+    if (!this.lastSeenContent) {
+      this.lastSeenContent = snapshot;
+      return snapshot;
+    }
+
+    const maxPrefix = Math.min(this.lastSeenContent.length, snapshot.length);
+    let prefixLength = 0;
+    while (
+      prefixLength < maxPrefix &&
+      this.lastSeenContent.charCodeAt(prefixLength) === snapshot.charCodeAt(prefixLength)
+    ) {
+      prefixLength++;
+    }
+
+    const delta = snapshot.substring(prefixLength);
+    this.lastSeenContent = snapshot;
+    return delta.length > 0 ? delta : undefined;
   }
 
   /**
@@ -184,29 +261,6 @@ export class GrokStreamProcessor {
 
     return chunk;
   }
-}
-
-/**
- * Convert Grok stream event to StreamChunk (legacy function for backward compatibility)
- */
-export function convertToStreamChunk(event: GrokStreamEvent, model: string): StreamChunk {
-  const processor = new GrokStreamProcessor(model);
-  const chunk = processor.processEvent(event);
-  return (
-    chunk || {
-      id: event.id || `grok-${Date.now()}`,
-      object: 'response.chunk',
-      created: event.created || Math.floor(Date.now() / 1000),
-      model: event.model || model,
-      choices: [
-        {
-          index: 0,
-          delta: {},
-          finishReason: null,
-        },
-      ],
-    }
-  );
 }
 
 /**
