@@ -691,6 +691,11 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
           next.push({ id: m.id, name: m.name, provider: m.provider, available: true });
         }
       }
+      if (currentSettings.apiKeys.grok) {
+        for (const m of getModelsByProviderId('grok')) {
+          next.push({ id: m.id, name: m.name, provider: m.provider, available: true });
+        }
+      }
 
       // Include OpenAI‑compatible providers saved in storage
       const compatProviders = await listOpenAICompatProviders();

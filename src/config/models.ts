@@ -73,7 +73,7 @@ export function isBuiltInPreset(id: string): boolean {
 export const DEFAULT_MODELS: ModelConfig[] = [
   // Grok models
   {
-    id: 'grok-4-fast',
+    id: 'grok-4-fast-non-reasoning',
     name: 'Grok 4 Fast',
     provider: 'grok',
   },

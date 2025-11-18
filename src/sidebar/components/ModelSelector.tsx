@@ -56,6 +56,8 @@ export function ModelSelector({
           return 'OpenAI';
         case 'openrouter':
           return 'OpenRouter';
+        case 'grok':
+          return 'Grok (xAI)';
         case 'deepseek':
           return 'DeepSeek';
         case 'qwen':
@@ -73,7 +75,8 @@ export function ModelSelector({
       if (p === 'gemini') return 0;
       if (p === 'openai') return 1;
       if (p === 'openrouter') return 2;
-      return 3;
+      if (p === 'grok') return 3;
+      return 4;
     };
 
     const grouped = new Map<string, { value: string; label: string }[]>();
