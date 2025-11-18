@@ -106,6 +106,7 @@ export interface GeminiConfig {
   apiKey: string;
   model: string;
   thinkingBudget?: ThinkingBudget;
+  thinkingLevel?: 'low' | 'medium' | 'high';
   stopSequences?: string[];
   endpoint?: string; // Optional custom endpoint for testing
   [key: string]: unknown; // Index signature for compatibility with Record<string, unknown>
@@ -371,7 +372,8 @@ export interface AIProvider {
  */
 export function isProviderType(value: unknown): value is ProviderType {
   return (
-    typeof value === 'string' && ['openai', 'gemini', 'openrouter', 'openai_compat', 'grok'].includes(value)
+    typeof value === 'string' &&
+    ['openai', 'gemini', 'openrouter', 'openai_compat', 'grok'].includes(value)
   );
 }
 

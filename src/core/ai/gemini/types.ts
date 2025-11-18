@@ -21,6 +21,7 @@ export interface GeminiGenerationConfig {
   stopSequences?: string[];
   responseModalities?: string[];
   thinkingConfig?: { thinkingBudget: number; includeThoughts?: boolean };
+  thinkingLevel?: 'low' | 'medium' | 'high';
 }
 
 export interface GeminiTool {
@@ -109,6 +110,7 @@ export interface GeminiResponse {
 // Configuration Types
 export interface GeminiChatConfig {
   thinkingBudget?: ThinkingBudget;
+  thinkingLevel?: 'low' | 'medium' | 'high';
   signal?: AbortSignal;
   systemPrompt?: string;
   useUrlContext?: boolean;

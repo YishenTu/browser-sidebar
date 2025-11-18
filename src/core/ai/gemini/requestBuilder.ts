@@ -193,23 +193,32 @@ export function buildGenerationConfig(
     config.stopSequences = geminiConfig.stopSequences;
   }
 
-  // Configure thinking budget if model supports it
-  const rawThinkingBudget = (chatConfig?.thinkingBudget ?? geminiConfig.thinkingBudget) as unknown;
-  let normalizedBudget: number | undefined;
+  // Configure thinking parameters
+  // Gemini 3 uses 'thinkingLevel'
+  // Gemini 2.5 uses 'thinkingConfig' (with budget)
 
-  if (typeof rawThinkingBudget === 'number' && Number.isInteger(rawThinkingBudget)) {
-    normalizedBudget = rawThinkingBudget;
-  } else if (typeof rawThinkingBudget === 'string') {
-    const trimmed = rawThinkingBudget.trim();
-    if (trimmed !== '') {
-      const parsed = Number(trimmed);
-      if (Number.isInteger(parsed)) {
-        normalizedBudget = parsed;
+  // Check for thinkingLevel first (Gemini 3)
+  const thinkingLevel = chatConfig?.thinkingLevel ?? geminiConfig.thinkingLevel;
+  if (thinkingLevel) {
+    config.thinkingLevel = thinkingLevel;
+  } else if (supportsThinking(geminiConfig.model)) {
+    // Fallback to thinkingBudget (Gemini 2.5) if no thinkingLevel
+    const rawThinkingBudget = (chatConfig?.thinkingBudget ??
+      geminiConfig.thinkingBudget) as unknown;
+    let normalizedBudget: number | undefined;
+
+    if (typeof rawThinkingBudget === 'number' && Number.isInteger(rawThinkingBudget)) {
+      normalizedBudget = rawThinkingBudget;
+    } else if (typeof rawThinkingBudget === 'string') {
+      const trimmed = rawThinkingBudget.trim();
+      if (trimmed !== '') {
+        const parsed = Number(trimmed);
+        if (Number.isInteger(parsed)) {
+          normalizedBudget = parsed;
+        }
       }
     }
-  }
 
-  if (supportsThinking(geminiConfig.model)) {
     // Safety: Gemini 2.5 Pro cannot disable thinking (0 is invalid)
     if (
       typeof normalizedBudget === 'number' &&
