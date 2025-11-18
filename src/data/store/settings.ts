@@ -105,11 +105,11 @@ const isValidFontSize = (fontSize: unknown): fontSize is 'small' | 'medium' | 'l
  */
 const isValidProvider = (
   provider: unknown
-): provider is 'openai' | 'gemini' | 'openrouter' | 'openai_compat' | null => {
+): provider is 'openai' | 'gemini' | 'openrouter' | 'openai_compat' | 'grok' | null => {
   return (
     provider === null ||
     (typeof provider === 'string' &&
-      ['openai', 'gemini', 'openrouter', 'openai_compat'].includes(provider))
+      ['openai', 'gemini', 'openrouter', 'openai_compat', 'grok'].includes(provider))
   );
 };
 
@@ -128,7 +128,7 @@ const isValidSelectedModel = (modelId: unknown, availableModels: Model[]): boole
  */
 const getProviderTypeFromModel = (
   model: Model
-): 'openai' | 'gemini' | 'openrouter' | 'openai_compat' | null => {
+): 'openai' | 'gemini' | 'openrouter' | 'openai_compat' | 'grok' | null => {
   // Prefer centralized config mapping
   const coreType = getProviderTypeForModelId(model.id);
   if (coreType) return coreType;

@@ -5,6 +5,7 @@ import { OpenAIProvider } from './openai/OpenAIProvider';
 import { GeminiProvider } from './gemini/GeminiProvider';
 import { OpenRouterProvider } from './openrouter/OpenRouterProvider';
 import { OpenAICompatibleProvider } from './openai-compat/OpenAICompatibleProvider';
+import { GrokProvider } from './grok/GrokProvider';
 import { EngineRegistry } from './EngineRegistry';
 import { getModelById, getDefaultModelForProvider } from '@/config/models';
 import { DirectFetchTransport } from '@/transport/DirectFetchTransport';
@@ -23,6 +24,7 @@ import {
   validateGeminiConfig,
   validateOpenRouterConfig,
   validateOpenAICompatibleConfig,
+  validateGrokConfig,
   isProviderType,
 } from '@/types/providers';
 
@@ -32,6 +34,7 @@ export class EngineFactory {
     'gemini',
     'openrouter',
     'openai_compat',
+    'grok',
   ] as ProviderType[];
 
   async createProvider(config: ProviderConfig): Promise<AIProvider> {
@@ -55,6 +58,9 @@ export class EngineFactory {
         break;
       case 'openai_compat':
         provider = new OpenAICompatibleProvider();
+        break;
+      case 'grok':
+        provider = new GrokProvider(transport);
         break;
       default:
         throw new Error(`Unsupported provider type: ${config.type}`);
@@ -105,6 +111,8 @@ export class EngineFactory {
         return validateOpenRouterConfig(config.config);
       case 'openai_compat':
         return validateOpenAICompatibleConfig(config.config);
+      case 'grok':
+        return validateGrokConfig(config.config);
       default:
         return { isValid: false, errors: [`Unsupported provider type: ${config.type}`] };
     }

@@ -6,7 +6,7 @@
 export interface ModelConfig {
   id: string;
   name: string;
-  provider: 'openai' | 'gemini' | 'openrouter' | 'openai_compat' | string;
+  provider: 'openai' | 'gemini' | 'openrouter' | 'openai_compat' | 'grok' | string;
   // Gemini specific thinking budget (tokens)
   //  - 0  = off (where supported, e.g. Flash/Lite)
   //  - -1 = dynamic (model‑decides)
@@ -71,6 +71,12 @@ export function isBuiltInPreset(id: string): boolean {
 }
 
 export const DEFAULT_MODELS: ModelConfig[] = [
+  // Grok models
+  {
+    id: 'grok-4-fast',
+    name: 'Grok 4 Fast',
+    provider: 'grok',
+  },
   // Gemini models
   {
     id: 'gemini-flash-lite-latest',
@@ -189,12 +195,13 @@ export function getModelById(id: string): ModelConfig | undefined {
  */
 export function getProviderTypeForModelId(
   modelId: string
-): 'openai' | 'gemini' | 'openrouter' | undefined {
+): 'openai' | 'gemini' | 'openrouter' | 'grok' | undefined {
   const model = getModelById(modelId);
   if (!model) return undefined;
   if (model.provider === 'openai') return 'openai';
   if (model.provider === 'gemini') return 'gemini';
   if (model.provider === 'openrouter') return 'openrouter';
+  if (model.provider === 'grok') return 'grok';
   // For OpenAI‑compatible and any other providers, return undefined here.
   // Callers that need to distinguish compat providers should map them to
   // 'openai_compat' explicitly based on model.provider.

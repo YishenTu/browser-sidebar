@@ -5,7 +5,7 @@
  * that provides context and instructions for AI models.
  */
 
-type ProviderType = 'openai' | 'gemini' | 'openrouter' | 'openai_compat';
+type ProviderType = 'openai' | 'gemini' | 'openrouter' | 'openai_compat' | 'grok';
 
 // ============================================================================
 // Helper Functions for Prompt Sections

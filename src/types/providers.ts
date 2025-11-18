@@ -21,7 +21,7 @@ export type { ModelConfig };
 /**
  * Supported AI provider types
  */
-export type ProviderType = 'openai' | 'gemini' | 'openrouter' | 'openai_compat';
+export type ProviderType = 'openai' | 'gemini' | 'openrouter' | 'openai_compat' | 'grok';
 
 /**
  * Chat message roles for AI providers
@@ -91,6 +91,15 @@ export interface OpenAIConfig {
 }
 
 /**
+ * Grok provider configuration
+ */
+export interface GrokConfig {
+  apiKey: string;
+  model: string;
+  [key: string]: unknown; // Index signature for compatibility with Record<string, unknown>
+}
+
+/**
  * Gemini provider configuration
  */
 export interface GeminiConfig {
@@ -132,7 +141,7 @@ export interface OpenAICompatibleConfig {
  */
 export interface ProviderConfig {
   type: ProviderType;
-  config: OpenAIConfig | GeminiConfig | OpenRouterConfig | OpenAICompatibleConfig;
+  config: OpenAIConfig | GeminiConfig | OpenRouterConfig | OpenAICompatibleConfig | GrokConfig;
 }
 
 // ============================================================================
@@ -362,7 +371,7 @@ export interface AIProvider {
  */
 export function isProviderType(value: unknown): value is ProviderType {
   return (
-    typeof value === 'string' && ['openai', 'gemini', 'openrouter', 'openai_compat'].includes(value)
+    typeof value === 'string' && ['openai', 'gemini', 'openrouter', 'openai_compat', 'grok'].includes(value)
   );
 }
 
@@ -676,6 +685,31 @@ export function validateOpenAICompatibleConfig(config: unknown): ProviderValidat
 }
 
 /**
+ * Validate Grok configuration
+ */
+export function validateGrokConfig(config: unknown): ProviderValidationResult {
+  const errors: string[] = [];
+  const cfg = config as Record<string, unknown>;
+
+  if (
+    !cfg['apiKey'] ||
+    typeof cfg['apiKey'] !== 'string' ||
+    (cfg['apiKey'] as string).trim() === ''
+  ) {
+    errors.push('Invalid API key');
+  }
+
+  if (!cfg['model'] || typeof cfg['model'] !== 'string') {
+    errors.push('Invalid model');
+  }
+
+  return {
+    isValid: errors.length === 0,
+    errors,
+  };
+}
+
+/**
  * Validate generic provider configuration
  */
 export function validateProviderConfig(config: ProviderConfig): ProviderValidationResult {
@@ -695,6 +729,8 @@ export function validateProviderConfig(config: ProviderConfig): ProviderValidati
       return validateOpenRouterConfig(config.config);
     case 'openai_compat':
       return validateOpenAICompatibleConfig(config.config);
+    case 'grok':
+      return validateGrokConfig(config.config);
     default:
       return {
         isValid: false,
