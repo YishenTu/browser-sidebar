@@ -19,7 +19,7 @@ useSettingsStore # Persistent settings (API keys, compat providers, UI prefs, ex
 ### Settings Store Highlights
 
 - Persists to `chrome.storage.sync` with fallback to `local`.
-- Validates API key references before saving (`openai`, `google`, `openrouter`).
+- Validates API key references before saving (`openai`, `google`, `grok`, `openrouter`).
 - Computes available models from saved keys + compat provider registry (`@data/storage/keys/compat`).
 - Stores domain extraction rules (`domainRules`) consumed by the content script.
 - Tracks UI prefs (compact mode, timestamps, debug mode) and screenshot hotkey.

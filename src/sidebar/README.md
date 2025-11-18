@@ -72,7 +72,7 @@ Hooks talk to the shared stores exported from `@data/store/chat`:
 
 ## Settings Panel Highlights
 
-- Validate & store BYOK keys (OpenAI, Gemini, OpenRouter) before updating the settings store.
+- Validate & store BYOK keys (OpenAI, Gemini, Grok, OpenRouter) before updating the settings store.
 - Manage OpenAI-compatible providers (built-ins + custom) via `@data/storage/keys/compat`.
 - Configure domain extraction defaults and screenshot hotkey.
 - Toggle debug mode and other UI preferences.

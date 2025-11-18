@@ -15,7 +15,7 @@ core/
 
 ## ai/
 
-Each provider folder (openai, gemini, openrouter, openai-compat) contains stateless helpers:
+Each provider folder (openai, gemini, grok, openrouter, openai-compat) contains stateless helpers:
 
 - `requestBuilder.ts` / `payload.ts` — Shape provider-friendly payloads.
 - `streamProcessor.ts` — Parse SSE/token streams into normalized `StreamChunk`s.
@@ -28,7 +28,7 @@ No transports or state live here; everything is deterministic and testable.
 - `BaseEngine.ts` — Shared lifecycle, input validation, streaming helpers, capability flags.
 - `EngineFactory.ts` — Creates engines with injected transports and provider config.
 - `EngineRegistry.ts` — Tracks registered providers, active provider switching.
-- Provider folders (`openai`, `gemini`, `openrouter`, `openai-compat`) extend `BaseEngine` and use the `ai/` helpers.
+- Provider folders (`openai`, `gemini`, `grok`, `openrouter`, `openai-compat`) extend `BaseEngine` and use the `ai/` helpers.
 
 Engines expose async iterators for chat streaming, metadata accessors (rate limits, reasoning support), and integrate with the transport policy.
 

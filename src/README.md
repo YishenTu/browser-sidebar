@@ -38,8 +38,8 @@ src/
 
 ### core/
 
-- `ai/<provider>/` — Stateless request builders, SSE parsers, error normalization per provider.
-- `engine/` — Stateful providers built on `BaseEngine`, registry/factory to instantiate OpenAI, Gemini, OpenRouter, OpenAI-compatible stacks.
+- `ai/<provider>/` — Stateless request builders (Gemini, Grok, OpenAI, OpenRouter), SSE parsers, error normalization per provider.
+- `engine/` — Stateful providers built on `BaseEngine`, registry/factory to instantiate OpenAI, Gemini, Grok, OpenRouter, OpenAI-compatible stacks.
 - `extraction/` — Markdown converter + analyzers consumed by content pipeline.
 - `services/` — Pure domain services: message editing, image upload/sync, model switching, message queueing, tab content helpers.
 - `utils/` — Pure helpers (error classification, favicon resolution, geometry/layout, dropdown positioning, text processing, hotkey parsing, screenshot math).
@@ -107,8 +107,9 @@ User → Sidebar (React) → Services (chat / extraction / engine)
 
 `@` → `src/*`, plus focused aliases like `@sidebar`, `@components`, `@hooks`, `@extension`, `@content`, `@core`, `@data`, `@store`, `@services`, `@transport`, `@platform`, `@config`, `@shared`, `@types`, `@config/models`, etc.
 
-## Current Highlights (September 2025)
+## Current Highlights (November 2025)
 
+- **Gemini 3 & Grok Support**: Added native support for Gemini 3 Pro (with thinking levels) and xAI Grok models.
 - Domain-based extraction defaults (Readability/Raw/Defuddle/Selection) resolved in the content script.
 - Engine Manager tracks health/stats and lazily boots providers using saved keys + compat provider registry.
 - Screenshot capture pipeline (hotkey + preview + upload helper) wired through sidebar hooks and core services.

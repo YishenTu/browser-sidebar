@@ -18,8 +18,10 @@ Privacy-focused, Bring-Your-Own-Key Chrome sidebar that lets you chat with any w
    - `npm run build`
    - Open `chrome://extensions` → enable Developer Mode → Load unpacked → choose the `dist/` folder
 
-## Highlights · September 19, 2025
+## Highlights · November 20, 2025
 
+- **Gemini 3 & Thinking Models** — Full support for Gemini 3 Pro with configurable "Thinking Levels" (Low/Medium/High) and token budgets.
+- **xAI Grok Integration** — Native support for Grok models (starting with Grok 4 Fast) with dedicated API key management and streaming.
 - **Domain-aware extraction rules** — Readability is the default; Raw, Defuddle, and Selection can be pinned per-domain from Settings.
 - **OpenAI-compatible vault** — Manage DeepSeek, Qwen, Zhipu, Kimi, or fully custom endpoints (base URL + key + default model) alongside the built-ins.
 - **Context capture upgrades** — Screenshot hotkey (configurable), multi-tab extraction via @-mentions, and inline content previews.
@@ -30,7 +32,7 @@ Privacy-focused, Bring-Your-Own-Key Chrome sidebar that lets you chat with any w
 
 - Rich page understanding with Readability-first extraction, Raw/Defuddle fallbacks, Selection capture, and site-specific plugins.
 - Multi-tab workflows: pull content from other tabs on demand, keep caches per session, and compare sources side-by-side.
-- Provider flexibility: OpenAI, Google Gemini, OpenRouter, and OpenAI-compatible endpoints — all BYOK.
+- Provider flexibility: OpenAI, Google Gemini, xAI (Grok), OpenRouter, and OpenAI-compatible endpoints — all BYOK.
 - Screenshot capture & upload pipeline for quick visual context (stored locally, never uploaded automatically).
 - Shadow-DOM React UI with streaming responses, cancel-in-flight, reasoning indicators, and markdown/code rendering.
 
@@ -51,7 +53,7 @@ Privacy-focused, Bring-Your-Own-Key Chrome sidebar that lets you chat with any w
 
 ## Settings & Personalization
 
-- Manage OpenAI, Gemini, and OpenRouter API keys (validated before saving).
+- Manage OpenAI, Gemini, Grok, and OpenRouter API keys (validated before saving).
 - Maintain a catalog of OpenAI-compatible providers (built-in presets plus custom entries).
 - Configure domain-specific default extraction modes.
 - Toggle debug features, compact layout, and fine-tune the screenshot hotkey.

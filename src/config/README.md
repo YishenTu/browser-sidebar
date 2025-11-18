@@ -15,13 +15,13 @@ config/
 
 Exports:
 
-- `DEFAULT_MODELS` — Canonical model list (OpenAI, Gemini, OpenRouter, compat placeholders) with provider metadata and capability flags (`supportsReasoning`, `supportsThinking`, `supportsVision`).
+- `DEFAULT_MODELS` — Canonical model list (OpenAI, Gemini, Grok, OpenRouter, compat placeholders) with provider metadata and capability flags (`supportsReasoning`, `supportsThinking`, `supportsVision`).
 - `OPENAI_COMPAT_PRESETS` / `OPENAI_COMPAT_PROVIDER_IDS` — Built-in compat endpoints (deepseek, qwen, zhipu, kimi, etc.).
 - `getDefaultModel()` / `getDefaultModelForProvider(providerId)` — Default model selectors.
 - `getModelsByProvider(providerType)` / `getModelsByProviderId(providerId)` — Filter helpers consumed by Engine Manager + settings store.
 - `getModelById(id)` / `modelExists(id)` — Lookup & validation.
 - `getPresetById(id)` / `isBuiltInPreset(id)` — Resolve compat preset metadata.
-- `getProviderTypeForModelId(id)` — Maps model → provider type (`openai`, `gemini`, `openrouter`, `openai_compat`).
+- `getProviderTypeForModelId(id)` — Maps model → provider type (`openai`, `gemini`, `grok`, `openrouter`, `openai_compat`).
 - `supportsReasoning(modelId)` / `supportsThinking(modelId)` — Capability helpers used for UI badges.
 
 ## slashCommands.ts
