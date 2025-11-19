@@ -54,6 +54,21 @@
   margin-bottom: 0.75em;
 }
 
+.markdown-renderer h1 {
+  font-size: var(--font-size-xl);
+}
+
+.markdown-renderer h2 {
+  font-size: var(--font-size-lg);
+}
+
+.markdown-renderer h3,
+.markdown-renderer h4,
+.markdown-renderer h5,
+.markdown-renderer h6 {
+  font-size: var(--font-size-base);
+}
+
 /* Markdown blockquote styles */
 .markdown-blockquote {
   margin: 1em 0;
