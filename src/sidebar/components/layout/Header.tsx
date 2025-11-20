@@ -95,6 +95,9 @@ export const Header: React.FC<HeaderProps> = ({
 
     return null;
   };
+  const selectorTooltip = hasMessages
+    ? 'Start a new conversation before changing models.'
+    : 'Select AI model';
   return (
     <div
       className={`ai-sidebar-header ${isDragging ? 'ai-sidebar-header--dragging' : ''}`}
@@ -102,13 +105,15 @@ export const Header: React.FC<HeaderProps> = ({
       data-testid="sidebar-header"
     >
       <div className="ai-sidebar-header-title">
-        <ModelSelector
-          className="model-selector--header"
-          value={selectedModel}
-          onChange={onModelChange}
-          disabled={isLoading}
-          aria-label="Select AI model"
-        />
+        <div title={selectorTooltip}>
+          <ModelSelector
+            className="model-selector--header"
+            value={selectedModel}
+            onChange={onModelChange}
+            disabled={isLoading || hasMessages}
+            aria-label="Select AI model"
+          />
+        </div>
         {renderExtractionStatus()}
         <h2></h2>
       </div>

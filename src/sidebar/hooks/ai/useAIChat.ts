@@ -3,9 +3,6 @@
  *
  * Main orchestrator hook that combines provider management, message handling,
  * and settings synchronization for AI chat functionality.
- *
- * Supports both legacy hook-based implementation and new service-based implementation
- * controlled by the refactorMode feature flag.
  */
 
 import { useEffect, useMemo, useRef, useCallback } from 'react';
@@ -17,27 +14,9 @@ import { ChatService } from '../../../services/chat/ChatService';
 import { getModelById } from '../../../config/models';
 import { getSystemPrompt } from '../../../config/systemPrompt';
 import { formatTabContent } from '../../../services/chat/contentFormatter';
-import {
-  syncImagesToProvider,
-  updateMessagesWithSyncedImages,
-} from '../../../core/services/imageSyncService';
-import { responseIdManager } from '@core/services/responseIdManager';
-import { isImageExtractedContent, type ImageExtractedContent } from '@/types/extraction';
-import { uploadImage } from '@/core/services/imageUploadService';
-import { debugLog } from '@/utils/debug';
 import type { UseAIChatOptions, UseAIChatReturn, SendMessageOptions } from './types';
-import type { TabContent } from '../../../types/tabs';
 import type { AIProvider, ProviderType } from '../../../types/providers';
-import type { ProviderChatMessage } from '../../../types/providers';
 
-/**
- * Custom hook for AI chat functionality with real providers
- *
- * This is a simplified orchestrator that delegates specific responsibilities
- * to specialized hooks for better maintainability and testing.
- *
- * With refactorMode enabled, uses the service layer instead of hooks.
- */
 export function useAIChat(options: UseAIChatOptions = {}): UseAIChatReturn {
   const { enabled = true, autoInitialize = false } = options;
 
@@ -47,15 +26,14 @@ export function useAIChat(options: UseAIChatOptions = {}): UseAIChatReturn {
   const settingsStore = useSettingsStore();
   const settings = settingsStore.settings;
 
-  // Initialize tab extraction hook (always use legacy implementation)
   const tabExtraction = useTabExtraction();
 
-  // Service layer instances
   const providerManagerServiceRef = useRef<EngineManagerService | null>(null);
   const chatServiceRef = useRef<ChatService | null>(null);
 
-  // Track pending image syncs (message history, tab content)
-  const pendingSyncsRef = useRef<Promise<void>[]>([]);
+  const hasActiveConversation = useCallback(() => {
+    return useMessageStore.getState().hasMessages();
+  }, []);
 
   // Initialize services
   useEffect(() => {
@@ -71,422 +49,131 @@ export function useAIChat(options: UseAIChatOptions = {}): UseAIChatReturn {
     }
   }, [enabled, autoInitialize]);
 
-  // Service-based provider initialization
+  // Provider initialization helper
   const serviceInitializeProviders = useCallback(async () => {
     if (!providerManagerServiceRef.current) return;
     try {
       await providerManagerServiceRef.current.initializeFromSettings();
-      // Update chat service with active provider if available
-      try {
-        const activeProvider = providerManagerServiceRef.current.getActive();
-        if (activeProvider && chatServiceRef.current) {
-          // Avoid interrupting any in‑flight stream; only set when
-          // there is no active stream or when provider type differs.
-          const existing = chatServiceRef.current.getProvider();
-          const streaming = chatServiceRef.current.isStreaming();
-          // If the provider instance differs (even if type is the same), update it
-          if (!existing || existing !== activeProvider) {
-            if (!streaming) {
-              chatServiceRef.current.setProvider(activeProvider);
-            }
+      const activeProvider = providerManagerServiceRef.current.getActive();
+      if (activeProvider && chatServiceRef.current) {
+        const existing = chatServiceRef.current.getProvider();
+        const streaming = chatServiceRef.current.isStreaming();
+        const conversationActive = hasActiveConversation();
+        if (existing && existing !== activeProvider && conversationActive) {
+          // Do not swap providers mid conversation
+          return;
+        }
+        if (!existing || existing !== activeProvider) {
+          if (!streaming) {
+            chatServiceRef.current.setProvider(activeProvider);
           }
         }
-      } catch (err) {
-        // Silently ignore when no providers are configured yet
-        const msg = (err as Error)?.message || '';
-        const benign =
-          msg.includes('No active provider available') ||
-          msg.includes('Settings or API keys not available');
-        if (!benign) {
-          // Service-based provider initialization warning
-        }
       }
-    } catch (error) {
-      // Service-based provider initialization failed
+    } catch (err) {
+      // Silently ignore initialization errors unless critical
     }
-  }, []);
+  }, [hasActiveConversation]);
 
-  // Auto-initialize providers from settings
+  // Auto-initialize
   useEffect(() => {
     if (!enabled || !autoInitialize) return;
-
-    const initialize = async () => {
-      try {
-        await serviceInitializeProviders();
-      } catch (_error) {
-        uiStore.setError('Failed to initialize AI providers');
-      }
-    };
-
-    initialize();
+    serviceInitializeProviders().catch(() => uiStore.setError('Failed to initialize AI providers'));
   }, [
     enabled,
     autoInitialize,
-    settings?.apiKeys?.openai,
-    settings?.apiKeys?.google,
+    settings?.apiKeys,
     settings?.selectedModel,
     serviceInitializeProviders,
     uiStore,
   ]);
 
-  // Sync providers with settings changes
+  // Sync on settings change
   useEffect(() => {
     if (!enabled) return;
-
-    const syncProviders = async () => {
-      try {
-        await serviceInitializeProviders();
-      } catch (_error) {
-        // Ignore initialization errors - provider will handle retry
-      }
-    };
-
-    // Apply immediately to ensure model switches reflect in the next request
-    syncProviders();
+    serviceInitializeProviders();
   }, [
     enabled,
     settings.ai?.defaultProvider,
-    settings.apiKeys?.openai,
-    settings.apiKeys?.google,
+    settings.apiKeys,
     settings.selectedModel,
     serviceInitializeProviders,
   ]);
 
-  // Sync tab extraction state with chat store
+  // Sync tab extraction
   useEffect(() => {
     if (!enabled) return;
-
     const { currentTabContent, currentTabId, loadedTabs, hasAutoLoaded } = tabExtraction;
-
-    // Update chat store with current tab information only if changed
-    // The Zustand hook returns a snapshot of state/actions; to access
-    // the store API use the hook function itself.
     const tabStoreState = useTabStore.getState();
 
     if (currentTabId !== null && tabStoreState.getCurrentTabId() !== currentTabId) {
       tabStore.setCurrentTabId(currentTabId);
     }
-
-    // Update has auto-loaded state only if changed
     if (tabStoreState.getHasAutoLoaded() !== hasAutoLoaded) {
       tabStore.setHasAutoLoaded(hasAutoLoaded);
     }
-
-    // Only update loaded tabs if there's an actual change
-    // Since loadedTabs already comes from the store via useTabExtraction,
-    // we don't need to set it back unless we're adding the current tab
     if (currentTabContent && currentTabId !== null && !loadedTabs[currentTabId]) {
-      // Create TabContent structure for current tab
-      const currentTabAsTabContent: TabContent = {
-        tabInfo: {
-          id: currentTabId,
-          title: currentTabContent.title || 'Current Tab',
-          url: currentTabContent.url || '',
-          domain: currentTabContent.url ? new URL(currentTabContent.url).hostname : '',
-          windowId: 0, // Default window ID
-          active: true,
-          index: 0, // Default index
-          pinned: false, // Default pinned state
-          lastAccessed: Date.now(),
-        },
-        extractedContent: currentTabContent,
-        extractionStatus: 'completed' as const,
-        isStale: false,
-      };
-
-      // Only update if current tab is not already in loaded tabs
-      const updatedTabs: Record<number, TabContent> = {
+      tabStore.setLoadedTabs({
         ...loadedTabs,
-        [currentTabId]: currentTabAsTabContent,
-      };
-      tabStore.setLoadedTabs(updatedTabs);
+        [currentTabId]: {
+          tabInfo: {
+            id: currentTabId,
+            title: currentTabContent.title || 'Current Tab',
+            url: currentTabContent.url || '',
+            domain: currentTabContent.url ? new URL(currentTabContent.url).hostname : '',
+            windowId: 0,
+            active: true,
+            index: 0,
+            pinned: false,
+            lastAccessed: Date.now(),
+          },
+          extractedContent: currentTabContent,
+          extractionStatus: 'completed',
+          isStale: false,
+        },
+      });
     }
-  }, [
-    enabled,
-    tabExtraction.currentTabContent,
-    tabExtraction.currentTabId,
-    tabExtraction.loadedTabs,
-    tabExtraction.hasAutoLoaded,
-    tabStore,
-    tabExtraction,
-  ]);
+  }, [enabled, tabExtraction, tabStore]);
 
-  // Service-based implementations
   const serviceGetActiveProvider = useCallback((): AIProvider | null => {
-    if (!providerManagerServiceRef.current) return null;
-    try {
-      return providerManagerServiceRef.current.getActive();
-    } catch {
-      return null;
-    }
+    return providerManagerServiceRef.current?.getActive() || null;
   }, []);
 
   const serviceSwitchProvider = useCallback(
-    async (providerType: ProviderType): Promise<void> => {
-      if (!providerManagerServiceRef.current)
-        throw new Error('Provider manager service not initialized');
+    async (providerType: ProviderType) => {
+      if (!providerManagerServiceRef.current) throw new Error('Provider manager not initialized');
 
-      // Get current provider to check if we're actually switching
-      let currentProviderType: ProviderType | undefined;
-      try {
-        const currentProvider = providerManagerServiceRef.current.getActive();
-        currentProviderType = currentProvider?.type;
-      } catch {
-        // No active provider yet, that's fine - we'll initialize one
-        currentProviderType = undefined;
-      }
-
-      // If we're switching to the same provider type, no image sync needed
-      if (currentProviderType === providerType) {
+      const activeProvider = serviceGetActiveProvider();
+      if (activeProvider?.type === providerType) {
         return;
       }
 
-      // Ensure providers are (re)initialized so the target provider is registered
-      await providerManagerServiceRef.current.initializeFromSettings();
+      if (chatServiceRef.current?.isStreaming()) {
+        const error = new Error(
+          'Cannot switch provider while a response is streaming. Wait for the reply to finish or cancel it.'
+        );
+        uiStore.setError(error.message);
+        throw error;
+      }
 
+      if (hasActiveConversation()) {
+        const error = new Error(
+          'Cannot switch provider during an active conversation. Start a new session to change providers.'
+        );
+        uiStore.setError(error.message);
+        throw error;
+      }
+
+      // Basic switch
+      await providerManagerServiceRef.current.initializeFromSettings();
       await providerManagerServiceRef.current.switch(providerType);
 
-      // Sync images to the new provider if we have chat history or tab content
-      const messages = messageStore.getMessages();
-      const loadedTabs = tabStore.getLoadedTabs();
-
-      // Get API key and model for the target provider
-      const settings = settingsStore.settings;
-      let apiKey: string;
-      let model: string;
-
-      if (providerType === 'gemini') {
-        apiKey = settings.apiKeys?.google || '';
-        model = settings.selectedModel;
-      } else if (providerType === 'openai') {
-        apiKey = settings.apiKeys?.openai || '';
-        model = settings.selectedModel;
-      } else {
-        // For other providers, skip image sync for now
-        debugLog(
-          'useAIChat',
-          `Image synchronization currently skipped for provider: ${providerType}`
-        );
-        return;
-      }
-
-      if (!apiKey) {
-        console.warn(`No API key available for ${providerType}, skipping image synchronization`);
-        return;
-      }
-
-      // Sync message attachments
-      if (messages.length > 0) {
-        const messageSyncPromise = (async () => {
-          try {
-            const syncResults = await syncImagesToProvider(messages, providerType, apiKey, model);
-
-            if (syncResults.size > 0) {
-              const updatedMessages = updateMessagesWithSyncedImages(messages, syncResults);
-
-              updatedMessages.forEach(updatedMessage => {
-                const existingMessage = messageStore.getMessageById(updatedMessage.id);
-                if (
-                  existingMessage &&
-                  existingMessage.metadata?.['attachments'] !==
-                    updatedMessage.metadata?.['attachments']
-                ) {
-                  messageStore.updateMessage(updatedMessage.id, {
-                    metadata: updatedMessage.metadata,
-                  });
-                }
-              });
-
-              debugLog(
-                'useAIChat',
-                `Successfully synchronized ${syncResults.size} message images to ${providerType} provider`
-              );
-            }
-          } catch (error) {
-            console.error('Failed to synchronize message images during provider switch:', error);
-            // Don't throw - provider switch should still succeed even if image sync fails
-          }
-        })();
-
-        pendingSyncsRef.current.push(messageSyncPromise);
-
-        try {
-          await messageSyncPromise;
-        } finally {
-          pendingSyncsRef.current = pendingSyncsRef.current.filter(p => p !== messageSyncPromise);
-        }
-      }
-
-      // Sync tab content images
-      const loadedTabsArray = Object.values(loadedTabs);
-      if (loadedTabsArray.length > 0) {
-        // Create a promise for this sync operation
-        const syncPromise = (async () => {
-          try {
-            for (const tab of loadedTabsArray) {
-              if (
-                tab.extractedContent?.content &&
-                isImageExtractedContent(tab.extractedContent.content)
-              ) {
-                const imageContent = tab.extractedContent.content as ImageExtractedContent;
-
-                // Check if this image needs syncing to target provider
-                const needsSync =
-                  (providerType === 'gemini' && imageContent.fileId && !imageContent.fileUri) ||
-                  (providerType === 'openai' && imageContent.fileUri && !imageContent.fileId);
-
-                if (needsSync && imageContent.dataUrl) {
-                  // Re-upload the image to the new provider
-                  const uploadResult = await uploadImage(
-                    { dataUrl: imageContent.dataUrl, mimeType: imageContent.mimeType },
-                    {
-                      apiKey,
-                      model,
-                      provider: providerType,
-                      source: 'sync',
-                      dependencyReason: `tab-sync:${tab.tabInfo.id}`,
-                      blockQueue: true,
-                      metadata: {
-                        displayName: `tab_${tab.tabInfo.id}_sync`,
-                        fileName: `tab_${tab.tabInfo.id}.${imageContent.mimeType.split('/')[1] || 'png'}`,
-                        purpose: 'vision',
-                      },
-                    }
-                  );
-
-                  if (uploadResult) {
-                    // Update the tab's image content with new references
-                    const updatedImageContent: ImageExtractedContent = {
-                      ...imageContent,
-                      ...(providerType === 'gemini'
-                        ? { fileUri: uploadResult.fileUri }
-                        : { fileId: uploadResult.fileId }),
-                    };
-
-                    // Update the tab content in the store
-                    tabStore.updateTabContent(tab.tabInfo.id, updatedImageContent);
-
-                    // Update ALL messages (including pending/queued) that contain this tab's content in their metadata
-                    const allMessages = messageStore.getMessages();
-                    const messagesToUpdate = allMessages.filter(msg => {
-                      const sections = msg.metadata?.['sections'] as any;
-                      if (!sections?.tabContent) return false;
-
-                      // Check if this message contains the tab's image
-                      return (
-                        (providerType === 'gemini' &&
-                          sections.tabContent.includes(
-                            `<fileId>${imageContent.fileId}</fileId>`
-                          )) ||
-                        (providerType === 'openai' &&
-                          sections.tabContent.includes(
-                            `<fileUri>${imageContent.fileUri}</fileUri>`
-                          ))
-                      );
-                    });
-
-                    for (const msg of messagesToUpdate) {
-                      const sections = msg.metadata?.['sections'] as any;
-                      if (sections?.tabContent) {
-                        let updatedTabContent = sections.tabContent;
-
-                        if (providerType === 'gemini') {
-                          // Replace fileId with fileUri for Gemini
-                          updatedTabContent = updatedTabContent.replace(
-                            /<content type="image">\s*<fileId>[^<]+<\/fileId>\s*<\/content>/g,
-                            `<content type="image">
-    <fileUri>${uploadResult.fileUri}</fileUri>
-    <mimeType>${imageContent.mimeType}</mimeType>
-  </content>`
-                          );
-                        } else if (providerType === 'openai') {
-                          // Replace fileUri with fileId for OpenAI
-                          updatedTabContent = updatedTabContent.replace(
-                            /<content type="image">\s*<fileUri>[^<]+<\/fileUri>\s*<mimeType>[^<]+<\/mimeType>\s*<\/content>/g,
-                            `<content type="image">
-    <fileId>${uploadResult.fileId}</fileId>
-  </content>`
-                          );
-                        }
-
-                        // Update the message metadata with new tab content
-                        // Also update the content field if it's formatted content
-                        const updatedSections = {
-                          ...sections,
-                          tabContent: updatedTabContent,
-                        };
-
-                        // Rebuild the full formatted content if the message has sections
-                        let updatedContent = msg.content;
-                        if (
-                          sections.systemInstruction !== undefined ||
-                          sections.userQuery !== undefined
-                        ) {
-                          const parts = [];
-                          if (sections.systemInstruction) {
-                            parts.push(sections.systemInstruction);
-                            parts.push('');
-                          }
-                          if (updatedTabContent) {
-                            parts.push(updatedTabContent);
-                            parts.push('');
-                          }
-                          if (sections.userQuery) {
-                            parts.push(sections.userQuery);
-                          }
-                          updatedContent = parts.join('\n');
-                        }
-
-                        messageStore.updateMessage(msg.id, {
-                          content: updatedContent,
-                          metadata: {
-                            ...msg.metadata,
-                            sections: updatedSections,
-                          },
-                        });
-                      }
-                    }
-
-                    debugLog(
-                      'useAIChat',
-                      `Successfully synchronized tab ${tab.tabInfo.id} image to ${providerType} provider`
-                    );
-                  }
-                }
-              }
-            }
-          } catch (error) {
-            console.error(
-              'Failed to synchronize tab content images during provider switch:',
-              error
-            );
-            // Don't throw - provider switch should still succeed even if image sync fails
-          }
-        })();
-
-        // Track this sync promise
-        pendingSyncsRef.current.push(syncPromise);
-
-        // Clean up completed promises after they resolve
-        syncPromise.finally(() => {
-          pendingSyncsRef.current = pendingSyncsRef.current.filter(p => p !== syncPromise);
-        });
-      }
-
-      // Update chat service with new active provider without interrupting streams unnecessarily
-      const newActiveProvider = providerManagerServiceRef.current.getActive();
-      if (newActiveProvider && chatServiceRef.current) {
-        const existing = chatServiceRef.current.getProvider();
-        const streaming = chatServiceRef.current.isStreaming();
-        // Always replace if the instance changed (regardless of type)
-        if (!existing || existing !== newActiveProvider) {
-          if (!streaming) {
-            chatServiceRef.current.setProvider(newActiveProvider);
-          }
-        }
+      // Update chat service
+      const newActive = providerManagerServiceRef.current.getActive();
+      if (newActive && chatServiceRef.current && !chatServiceRef.current.isStreaming()) {
+        chatServiceRef.current.setProvider(newActive);
       }
     },
-    [messageStore, settingsStore, tabStore]
+    [hasActiveConversation, serviceGetActiveProvider, uiStore]
   );
 
   const serviceGetStats = useCallback(() => {
@@ -512,662 +199,148 @@ export function useAIChat(options: UseAIChatOptions = {}): UseAIChatReturn {
   }, []);
 
   const serviceSendMessage = useCallback(
-    async (content: string, options: SendMessageOptions = {}): Promise<void> => {
+    async (content: string, options: SendMessageOptions = {}) => {
       if (!enabled) return;
+      if (!content.trim()) return;
 
-      // Validate input
-      const trimmedContent = content.trim();
-      if (!trimmedContent) {
-        return; // Don't send empty messages
-      }
+      uiStore.clearError();
+      uiStore.setLoading(true);
 
-      const { skipUserMessage = false, displayContent, metadata } = options;
-
-      // Wait for any pending image syncs to complete
-      if (pendingSyncsRef.current.length > 0) {
-        debugLog('useAIChat', 'Waiting for pending image syncs to complete...');
-        await Promise.all(pendingSyncsRef.current);
-        debugLog('useAIChat', 'All pending image syncs completed');
-      }
-
-      // Model override variables need to be accessible in finally block
-      let modelOverride: string | undefined;
-      let originalModel: string | undefined;
-      let switchedProvider = false;
+      let userMessageId: string | undefined;
+      let assistantMessageId: string | undefined;
 
       try {
-        // Clear any previous errors
-        uiStore.clearError();
-        settingsStore.clearError();
-
-        // Set loading state
-        uiStore.setLoading(true);
-
-        // Get active provider
-        if (!chatServiceRef.current) {
-          throw new Error('Chat service not initialized');
-        }
-
         const activeProvider = serviceGetActiveProvider();
-        if (!activeProvider) {
-          throw new Error('No active AI provider configured. Please add an API key in settings.');
-        }
+        if (!activeProvider) throw new Error('No active AI provider configured');
 
-        // Prepare message content with tab context if available
-        let finalContent = trimmedContent;
-        const finalDisplayContent = displayContent || trimmedContent;
-        let hasTabContext = false;
-        let formatResult: ReturnType<typeof formatTabContent> | undefined;
-
-        // Check if this is editing the first message
-        const isEditingFirstMessage = metadata?.['isEditingFirstMessage'] === true;
-        const editingMessageId = metadata?.['editingMessageId'] as string | undefined;
-
-        // Check if this is the first message in the conversation
+        // Formatting logic
+        const loadedTabs = useTabStore.getState().getLoadedTabs();
+        const allLoadedTabs = Object.values(loadedTabs);
         const existingMessages = messageStore.getMessages();
-        // Exclude pending messages when checking if this is the first message
         const userMessages = existingMessages.filter(
           m => m.role === 'user' && m.status !== 'pending'
         );
-        const isFirstMessage =
-          userMessages.length === 0 ||
-          (isEditingFirstMessage &&
-            userMessages.length === 1 &&
-            userMessages[0]?.id === editingMessageId);
+        const isFirst = userMessages.length === 0;
 
-        // Check if we have loaded tabs to include
-        const loadedTabs = useTabStore.getState().getLoadedTabs();
-        const loadedTabIds = Object.keys(loadedTabs).map(id => parseInt(id, 10));
+        let finalContent = content.trim();
 
-        // Always format the first message (with or without tabs)
-        if (isFirstMessage) {
-          // Get all loaded tabs (may be empty array)
-          const allLoadedTabs = loadedTabIds
-            .map(tabId => loadedTabs[tabId])
-            .filter((tab): tab is TabContent => Boolean(tab));
-
-          const providerSupportsUrlContext = activeProvider.type === 'gemini';
-          const urlContextTabs = providerSupportsUrlContext
-            ? allLoadedTabs.filter(tab => tab.metadata?.useUrlContext === true)
-            : [];
-          const shouldEnableUrlContext = providerSupportsUrlContext && urlContextTabs.length > 0;
-
-          // Gemini also supports YouTube videos via file_uri
-          const providerSupportsVideo = activeProvider.type === 'gemini';
-
-          // Format the content - will add system instruction even if no tabs
-          formatResult = formatTabContent(trimmedContent, allLoadedTabs, {
-            useUrlContext: shouldEnableUrlContext,
-            providerSupportsVideo,
-          });
-
-          // Use formatted content for AI but keep original for display
-          finalContent = formatResult.formatted;
-          hasTabContext = allLoadedTabs.length > 0;
+        if (isFirst && allLoadedTabs.length > 0) {
+          finalContent = formatTabContent(content.trim(), allLoadedTabs, {}).formatted;
         }
 
-        // Add user message to chat store (unless we're regenerating or editing)
-        let userMessage;
-        if (!skipUserMessage) {
-          // Check if there's a pending message to update
-          const messages = messageStore.getMessages();
-          const pendingMessage = messages.find(
-            msg => msg.role === 'user' && msg.status === 'pending'
-          );
-
-          if (pendingMessage) {
-            // Update the pending message to sending
-            messageStore.updateMessage(pendingMessage.id, {
-              content: finalContent,
-              displayContent: finalDisplayContent,
-              status: 'sending',
-              metadata: {
-                ...metadata,
-                hasTabContext,
-                originalUserContent: hasTabContext ? trimmedContent : undefined,
-                sections: formatResult?.sections,
-              },
-            });
-            // Get the updated message from the store (not the old reference)
-            userMessage = messageStore.getMessageById(pendingMessage.id);
-            if (!userMessage) {
-              throw new Error('Failed to retrieve updated pending message');
-            }
+        // Add/Update User Message
+        if (!options.skipUserMessage) {
+          const pending = messageStore
+            .getMessages()
+            .find(m => m.role === 'user' && m.status === 'pending');
+          if (pending) {
+            messageStore.updateMessage(pending.id, { content: finalContent, status: 'sending' });
+            userMessageId = pending.id;
           } else {
-            // Add new message
-            userMessage = messageStore.addMessage({
+            const msg = messageStore.addMessage({
               role: 'user',
               content: finalContent,
-              displayContent: finalDisplayContent,
+              displayContent: options.displayContent || content.trim(),
               status: 'sending',
-              metadata: {
-                ...metadata,
-                hasTabContext,
-                originalUserContent: hasTabContext ? trimmedContent : undefined,
-                sections: formatResult?.sections,
-              },
             });
+            userMessageId = msg.id;
           }
         } else {
-          // For editing or regeneration
-          if (editingMessageId) {
-            // If we're editing a specific message, find it
-            userMessage = messageStore.getMessageById(editingMessageId);
-            if (!userMessage) {
-              throw new Error('Edited message not found');
-            }
-
-            // Update the message content for first message edits (with tab formatting)
-            if (isEditingFirstMessage && isFirstMessage) {
-              messageStore.updateMessage(userMessage.id, {
-                content: finalContent,
-                metadata: {
-                  ...userMessage.metadata,
-                  hasTabContext,
-                  originalUserContent: hasTabContext ? trimmedContent : undefined,
-                  sections: formatResult?.sections,
-                },
-              });
-            }
-          } else {
-            // For regeneration, get the last user message
-            const lastUserMessage = messageStore.getUserMessages().slice(-1)[0];
-            if (!lastUserMessage) {
-              throw new Error('No user message found for regeneration');
-            }
-            userMessage = lastUserMessage;
-
-            // Update the user message with new content if tab context changed
-            if (hasTabContext && userMessage.content !== finalContent) {
-              messageStore.updateMessage(userMessage.id, {
-                content: finalContent,
-                metadata: {
-                  ...userMessage.metadata,
-                  hasTabContext,
-                  originalUserContent: trimmedContent,
-                  sections: formatResult?.sections,
-                },
-              });
-            }
-          }
+          userMessageId = messageStore.getUserMessages().slice(-1)[0]?.id;
         }
 
+        // Create Assistant Message
+        const modelInfo = getModelById(settingsStore.settings.selectedModel);
+        const assistantMsg = messageStore.addMessage({
+          role: 'assistant',
+          content: '',
+          status: 'streaming',
+          metadata: { model: modelInfo?.name || 'AI Assistant' },
+        });
+        assistantMessageId = assistantMsg.id;
+        uiStore.setActiveMessage(assistantMsg.id);
+
+        // Prepare Stream
+        const messages = messageStore
+          .getMessages()
+          .filter(m => m.id !== assistantMsg.id && m.content)
+          .map(m => ({
+            id: m.id,
+            role: m.role as 'user' | 'assistant' | 'system',
+            content: m.content,
+            timestamp: new Date(m.timestamp),
+            metadata: m.metadata,
+          }));
+
+        const systemPrompt = getSystemPrompt(activeProvider.type, allLoadedTabs.length > 0);
+
+        if (chatServiceRef.current && !chatServiceRef.current.getProvider()) {
+          chatServiceRef.current.setProvider(activeProvider);
+        }
+
+        const stream = chatServiceRef.current!.stream(messages, { systemPrompt });
+
+        // Consume Stream
+        let lastContent = '';
+        let streamInterrupted = false;
+
         try {
-          // Check for model override from slash commands
-          modelOverride = metadata?.['modelOverride'] as string | undefined;
-
-          // If there's a model override, temporarily switch to that model —
-          // only if it is present in availableModels (gated by stored keys).
-          if (modelOverride) {
-            const state = useSettingsStore.getState();
-            const available = state.settings.availableModels.some(
-              m => m.id === modelOverride && m.available
-            );
-            if (!available) {
-              // Slash command requested unavailable model - fall back to default
-              modelOverride = undefined;
-            } else {
-              originalModel = state.settings.selectedModel;
-              const targetProviderType = state.getProviderTypeForModel(modelOverride);
-              const currentProviderType = activeProvider.type;
-
-              if (targetProviderType && targetProviderType !== currentProviderType) {
-                await serviceSwitchProvider(targetProviderType);
-                switchedProvider = true;
-              }
-
-              await state.updateSelectedModel(modelOverride);
-              await serviceInitializeProviders();
-              const updatedProvider = serviceGetActiveProvider();
-              if (updatedProvider && chatServiceRef.current) {
-                chatServiceRef.current.setProvider(updatedProvider);
-              }
-
-              const prevType = state.getProviderTypeForModel(originalModel);
-              if (
-                prevType &&
-                responseIdManager.supportsProvider(prevType) &&
-                (!targetProviderType || targetProviderType !== prevType)
-              ) {
-                responseIdManager.clearResponseId();
-              }
+          for await (const chunk of stream) {
+            if (!chatServiceRef.current?.isStreaming()) {
+              streamInterrupted = true;
+              break;
+            }
+            const delta = chunk.choices?.[0]?.delta?.content || '';
+            if (delta) {
+              messageStore.appendToMessage(assistantMsg.id, delta);
+              lastContent += delta;
             }
           }
+        } catch (err) {
+          streamInterrupted = true;
+          // If we have content, we just mark interrupted. If not, we rethrow.
+          if (!lastContent) throw err;
 
-          // Get the model info (either override or selected)
-          const currentModel = modelOverride || settingsStore.settings.selectedModel;
-          const modelInfo = getModelById(currentModel);
+          // Append interruption note
+          messageStore.appendToMessage(assistantMsg.id, '\n\n[Interrupted]');
+        }
 
-          // Create assistant message for streaming with model metadata
-          const assistantMessage = messageStore.addMessage({
-            role: 'assistant',
-            content: '',
-            status: 'streaming',
-            metadata: {
-              model: modelInfo?.name || 'AI Assistant',
-            },
+        // Finalize Assistant Message
+        if (lastContent) {
+          messageStore.updateMessage(assistantMsg.id, {
+            status: 'received',
+            metadata: { ...assistantMsg.metadata, partial: streamInterrupted },
           });
-
-          // Set active message for streaming
-          uiStore.setActiveMessage(assistantMessage.id);
-
-          // Get current messages from store for conversation context
-          const currentMessages = useMessageStore.getState().getMessages();
-
-          // Build messages array for the provider
-          let messages: ProviderChatMessage[];
-
-          if (
-            userMessage &&
-            currentMessages.filter(m => m.role === 'user' && m.content).length === 1
-          ) {
-            // First message case - use the userMessage directly
-            messages = [
-              {
-                id: userMessage.id,
-                role: userMessage.role as 'user',
-                content: userMessage.content,
-                timestamp:
-                  userMessage.timestamp instanceof Date
-                    ? userMessage.timestamp
-                    : new Date(userMessage.timestamp),
-                metadata: userMessage.metadata, // Include metadata for attachments
-              },
-            ];
-          } else {
-            // Get messages from store for follow-up messages
-            messages = currentMessages
-              .filter(msg => {
-                // Exclude the empty assistant message we just created
-                if (msg.id === assistantMessage.id) {
-                  return false;
-                }
-                // Include all non-empty messages
-                if (!msg.content || msg.content.trim() === '') {
-                  return false;
-                }
-                return true;
-              })
-              .map(msg => ({
-                id: msg.id,
-                role: msg.role as 'user' | 'assistant',
-                content: msg.content,
-                timestamp: new Date(msg.timestamp),
-                metadata: msg.metadata, // Include metadata for attachments
-              }));
+          // Finalize User Message
+          if (userMessageId) {
+            messageStore.updateMessage(userMessageId, { status: 'sent' });
           }
-
-          // Ensure we have at least one message
-          if (messages.length === 0) {
-            throw new Error('No valid messages to send to AI provider');
-          }
-
-          // Check if we have tab content loaded
-          const loadedTabs = useTabStore.getState().getLoadedTabs();
-          const hasTabContent = Object.keys(loadedTabs).length > 0;
-
-          // Get the system prompt with the actual provider that will handle the stream.
-          // If a model override occurred, ChatService's provider may have changed.
-          const providerForPrompt =
-            chatServiceRef.current?.getProvider() || serviceGetActiveProvider() || activeProvider;
-          const systemPrompt = getSystemPrompt(providerForPrompt.type, hasTabContent);
-
-          responseIdManager.setActiveProvider(providerForPrompt.type);
-          const previousResponseId = responseIdManager.getResponseId(providerForPrompt.type);
-
-          // Ensure ChatService has an active provider (in case init just finished)
-          if (chatServiceRef.current && !chatServiceRef.current.getProvider() && activeProvider) {
-            chatServiceRef.current.setProvider(activeProvider);
-          }
-
-          // Update message tab content format for the current provider
-          // This ensures queued messages have the correct image references
-          const currentProviderType = providerForPrompt.type;
-          messages = messages.map(msg => {
-            const sections = msg.metadata?.['sections'] as any;
-            if (!sections?.tabContent) return msg;
-
-            let updatedTabContent = sections.tabContent;
-            let needsUpdate = false;
-
-            if (currentProviderType === 'gemini') {
-              // Check if tab content has OpenAI format (fileId) that needs conversion
-              if (updatedTabContent.includes('<fileId>')) {
-                // Extract all image fileIds and look up their fileUris
-                const fileIdMatches = [...updatedTabContent.matchAll(/<fileId>([^<]+)<\/fileId>/g)];
-
-                for (const match of fileIdMatches) {
-                  const fileId = match[1];
-                  // Look for the corresponding tab with this image
-                  for (const tab of Object.values(loadedTabs)) {
-                    const content = tab.extractedContent?.content;
-                    if (
-                      content &&
-                      typeof content === 'object' &&
-                      'type' in content &&
-                      content.type === 'image'
-                    ) {
-                      const imageContent = content as any;
-                      if (imageContent.fileId === fileId && imageContent.fileUri) {
-                        // Replace fileId format with fileUri format
-                        updatedTabContent = updatedTabContent.replace(
-                          `<content type="image">
-    <fileId>${fileId}</fileId>
-  </content>`,
-                          `<content type="image">
-    <fileUri>${imageContent.fileUri}</fileUri>
-    <mimeType>${imageContent.mimeType}</mimeType>
-  </content>`
-                        );
-                        needsUpdate = true;
-                      }
-                    }
-                  }
-                }
-              }
-            } else if (currentProviderType === 'openai') {
-              // Check if tab content has Gemini format (fileUri) that needs conversion
-              if (updatedTabContent.includes('<fileUri>')) {
-                // Extract all image fileUris and look up their fileIds
-                const fileUriMatches = [
-                  ...updatedTabContent.matchAll(/<fileUri>([^<]+)<\/fileUri>/g),
-                ];
-
-                for (const match of fileUriMatches) {
-                  const fileUri = match[1];
-                  // Look for the corresponding tab with this image
-                  for (const tab of Object.values(loadedTabs)) {
-                    const content = tab.extractedContent?.content;
-                    if (
-                      content &&
-                      typeof content === 'object' &&
-                      'type' in content &&
-                      content.type === 'image'
-                    ) {
-                      const imageContent = content as any;
-                      if (imageContent.fileUri === fileUri && imageContent.fileId) {
-                        // Replace fileUri format with fileId format
-                        const mimeTypeMatch = updatedTabContent.match(
-                          new RegExp(
-                            `<fileUri>${fileUri.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}</fileUri>\\s*<mimeType>([^<]+)</mimeType>`
-                          )
-                        );
-                        if (mimeTypeMatch) {
-                          updatedTabContent = updatedTabContent.replace(
-                            `<content type="image">
-    <fileUri>${fileUri}</fileUri>
-    <mimeType>${mimeTypeMatch[1]}</mimeType>
-  </content>`,
-                            `<content type="image">
-    <fileId>${imageContent.fileId}</fileId>
-  </content>`
-                          );
-                          needsUpdate = true;
-                        }
-                      }
-                    }
-                  }
-                }
-              }
-            }
-
-            if (needsUpdate) {
-              // Rebuild the full content
-              const updatedSections = {
-                ...sections,
-                tabContent: updatedTabContent,
-              };
-
-              const parts = [];
-              if (sections.systemInstruction) {
-                parts.push(sections.systemInstruction);
-                parts.push('');
-              }
-              if (updatedTabContent) {
-                parts.push(updatedTabContent);
-                parts.push('');
-              }
-              if (sections.userQuery) {
-                parts.push(sections.userQuery);
-              }
-              const updatedContent = parts.join('\n');
-
-              return {
-                ...msg,
-                content: updatedContent,
-                metadata: {
-                  ...msg.metadata,
-                  sections: updatedSections,
-                },
-              };
-            }
-
-            return msg;
-          });
-
-          // Check if any loaded tab is using URL context mode (Gemini only)
-          const providerSupportsUrlContext = providerForPrompt.type === 'gemini';
-          const urlContextTabs = providerSupportsUrlContext
-            ? Object.values(loadedTabs).filter(tab => tab?.metadata?.useUrlContext === true)
-            : [];
-          const shouldUseUrlContext = providerSupportsUrlContext && urlContextTabs.length > 0;
-
-          // Start streaming using ChatService
-          const stream = chatServiceRef.current.stream(messages, {
-            previousResponseId: previousResponseId || undefined,
-            systemPrompt,
-            providerConfig: shouldUseUrlContext ? { useUrlContext: true } : undefined,
-          });
-
-          let lastSuccessfulContent = '';
-          let thinkingContent = '';
-          let isThinkingPhase = true;
-          let streamInterrupted = false;
-          let searchMetadata: unknown = null;
-          let responseId: string | null = null;
-
-          let lastStreamError: unknown = null;
-          try {
-            for await (const chunk of stream) {
-              // Check if cancelled
-              if (chatServiceRef.current && !chatServiceRef.current.isStreaming()) {
-                streamInterrupted = true;
-                break;
-              }
-
-              // Extract thinking and content from streaming chunk
-              const thinking = chunk?.choices?.[0]?.delta?.thinking || '';
-              const content = chunk?.choices?.[0]?.delta?.content || '';
-
-              // Check for search metadata in the chunk
-              if (chunk.metadata?.['searchResults']) {
-                searchMetadata = chunk.metadata['searchResults'];
-              }
-
-              // Check for response ID in the chunk (OpenAI Response API)
-              if (chunk.metadata?.['responseId']) {
-                responseId = chunk.metadata?.['responseId'] as string;
-              }
-
-              // Handle thinking content - append deltas for real-time streaming
-              if (thinking) {
-                thinkingContent += thinking;
-                const currentMsg = messageStore.getMessageById(assistantMessage.id);
-                messageStore.updateMessage(assistantMessage.id, {
-                  metadata: {
-                    ...(currentMsg?.metadata || {}),
-                    thinking: thinkingContent,
-                    thinkingStreaming: true,
-                  },
-                });
-              }
-
-              // Handle regular content
-              if (content) {
-                // Mark end of thinking phase when content starts
-                if (isThinkingPhase && thinkingContent) {
-                  isThinkingPhase = false;
-                  const currentMsg = messageStore.getMessageById(assistantMessage.id);
-                  messageStore.updateMessage(assistantMessage.id, {
-                    metadata: {
-                      ...(currentMsg?.metadata || {}),
-                      thinking: thinkingContent,
-                      thinkingStreaming: false,
-                    },
-                  });
-                }
-                // Append the content chunk
-                messageStore.appendToMessage(assistantMessage.id, content);
-                lastSuccessfulContent += content;
-
-                // Update search metadata if we have it
-                if (searchMetadata) {
-                  const currentMsg = messageStore.getMessageById(assistantMessage.id);
-                  messageStore.updateMessage(assistantMessage.id, {
-                    metadata: {
-                      ...(currentMsg?.metadata || {}),
-                      searchResults: searchMetadata,
-                    },
-                  });
-                }
-              }
-            }
-          } catch (streamError) {
-            // Streaming was interrupted
-            streamInterrupted = true;
-            lastStreamError = streamError;
-
-            // Append recovery message if we got partial content
-            if (lastSuccessfulContent && lastSuccessfulContent.length > 0) {
-              messageStore.appendToMessage(
-                assistantMessage.id,
-                '\n\n[Stream interrupted. Message may be incomplete.]'
-              );
-            }
-          }
-
-          // Update message status based on streaming result
-          const finalMsg = messageStore.getMessageById(assistantMessage.id);
-          if (streamInterrupted && lastSuccessfulContent.length > 0) {
-            messageStore.updateMessage(assistantMessage.id, {
-              status: 'received',
-              metadata: {
-                ...(finalMsg?.metadata || {}),
-                partial: true,
-                interrupted: true,
-                thinking: thinkingContent || undefined,
-                thinkingStreaming: false,
-                ...(searchMetadata ? { searchResults: searchMetadata } : {}),
-              },
-            });
-          } else if (!streamInterrupted) {
-            messageStore.updateMessage(assistantMessage.id, {
-              status: 'received',
-              metadata: {
-                ...(finalMsg?.metadata || {}),
-                thinking: thinkingContent || undefined,
-                thinkingStreaming: false,
-                ...(searchMetadata ? { searchResults: searchMetadata } : {}),
-              },
-            });
-            // Store response ID if we got one (OpenAI Response API)
-            if (responseId) {
-              responseIdManager.storeResponseId(providerForPrompt.type, responseId);
-            }
-          } else {
-            // Stream was interrupted with no content - remove the empty assistant message
-            messageStore.deleteMessage(assistantMessage.id);
-            // Surface the underlying error if available; otherwise emit generic message
-            if (lastStreamError instanceof Error) {
-              throw lastStreamError;
-            }
-            throw new Error('Stream interrupted before receiving any content');
-          }
-
-          // Mark user message as sent on success
-          if (userMessage) {
-            messageStore.updateMessage(userMessage.id, {
-              status: 'sent',
-            });
-          }
-        } catch (error) {
-          // Handle provider errors
-          const providerError = activeProvider.formatError?.(error as Error);
-          const errorMessage = providerError ? providerError.message : (error as Error).message;
-          uiStore.setError(errorMessage);
-
-          // Mark user message as error
-          if (userMessage) {
-            messageStore.updateMessage(userMessage.id, {
-              status: 'error',
-              error: errorMessage,
-            });
-          }
-
-          throw error;
+        } else {
+          // No content received -> Error state
+          messageStore.deleteMessage(assistantMsg.id);
+          throw new Error('No content received');
         }
       } catch (error) {
-        // Handle general errors
-        const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
-        uiStore.setError(errorMessage);
-        throw error;
-      } finally {
-        // Clear loading state
-        uiStore.setLoading(false);
-        // Clear active message
-        try {
-          uiStore.clearActiveMessage();
-        } catch {
-          // Ignore cleanup errors
+        const msg = error instanceof Error ? error.message : 'Unknown error';
+        uiStore.setError(msg);
+        if (userMessageId) {
+          messageStore.updateMessage(userMessageId, { status: 'error', error: msg });
         }
-        // Restore original model if we temporarily switched for a slash command
-        if (modelOverride && originalModel) {
-          try {
-            // Restore the original model
-            await settingsStore.updateSelectedModel(originalModel);
-
-            if (switchedProvider) {
-              // Switch back to the original provider type
-              const originalProviderType = settingsStore.getProviderTypeForModel(originalModel);
-              if (originalProviderType) {
-                await serviceSwitchProvider(originalProviderType);
-              }
-            } else {
-              // Provider type didn't change; reinitialize to apply model
-              await serviceInitializeProviders();
-              const restoredProvider = serviceGetActiveProvider();
-              if (restoredProvider && chatServiceRef.current) {
-                chatServiceRef.current.setProvider(restoredProvider);
-              }
-            }
-          } catch {
-            // Don't throw - we don't want to break the chat flow
+        // Ensure assistant message is gone if it was empty
+        if (assistantMessageId) {
+          const msg = messageStore.getMessageById(assistantMessageId);
+          if (msg && !msg.content) {
+            messageStore.deleteMessage(assistantMessageId);
           }
         }
+      } finally {
+        uiStore.setLoading(false);
+        uiStore.clearActiveMessage();
       }
     },
-    [
-      enabled,
-      settingsStore,
-      uiStore,
-      serviceGetActiveProvider,
-      messageStore,
-      serviceSwitchProvider,
-      serviceInitializeProviders,
-      chatServiceRef,
-    ]
+    [enabled, hasActiveConversation, messageStore, serviceGetActiveProvider, uiStore]
   );
 
-  // Cleanup on unmount only (empty dependency array)
-  useEffect(() => {
-    return () => {
-      // Cancel any ongoing operations
-      serviceCancelMessage();
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // Empty array - only run on mount/unmount
-
-  // Memoize return object to prevent unnecessary re-renders
   return useMemo(() => {
     return {
       sendMessage: serviceSendMessage,
