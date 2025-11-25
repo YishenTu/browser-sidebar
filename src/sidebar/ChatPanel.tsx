@@ -47,7 +47,7 @@ import { createExtractionService } from '@/services/extraction/ExtractionService
 // Layout components
 import { Header } from '@components/layout/Header';
 import { Body } from '@components/layout/Body';
-import { Footer } from '@components/layout/Footer';
+import { Footer, type FooterRef } from '@components/layout/Footer';
 import { ResizeHandles } from '@components/layout/ResizeHandles';
 
 // Settings components
@@ -126,6 +126,20 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
   const loadSettings = useSettingsStore(state => state.loadSettings);
   const screenshotHotkey = useSettingsStore(state => state.settings.ui?.screenshotHotkey);
   const [settingsInitialized, setSettingsInitialized] = useState(false);
+
+  // Footer ref for auto-focus
+  const footerRef = React.useRef<FooterRef>(null);
+
+  // Auto-focus input on mount
+  useEffect(() => {
+    // Small timeout to ensure DOM is ready and transition is complete
+    const timer = setTimeout(() => {
+      if (footerRef.current) {
+        footerRef.current.focus();
+      }
+    }, 100);
+    return () => clearTimeout(timer);
+  }, []);
 
   // Load settings on mount and track when they're ready
   useEffect(() => {
@@ -718,6 +732,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
       )}
 
       <Footer
+        ref={footerRef}
         onSend={handleSendMessage}
         onMessageQueued={handleMessageQueued}
         onCancel={cancelMessage}

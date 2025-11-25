@@ -55,74 +55,98 @@ export interface FooterProps {
  * Footer component for the sidebar
  * Wraps ChatInput with proper layout styling
  */
-export const Footer: React.FC<FooterProps> = ({
-  onSend,
-  onMessageQueued,
-  onCancel,
-  loading,
-  placeholder,
-  editingMessage,
-  onClearEdit,
-  availableTabs = [],
-  loadedTabs = {},
-  onTabRemove,
-  onMentionSelectTab,
-  onImagePaste,
-}) => {
-  const inputRef = useRef<HTMLTextAreaElement>(null);
+export interface FooterRef {
+  focus: () => void;
+}
 
-  // Use key to force re-render of ChatInput when editing message changes
-  const chatInputKey = editingMessage ? `edit-${editingMessage}` : 'normal';
-
-  // Handle send with edit clearing
-  const handleSend = (
-    message: string,
-    metadata?: {
-      expandedPrompt?: string;
-      modelOverride?: string;
-      attachments?: Array<{ type: string; data?: string; fileUri?: string; mimeType?: string }>;
-    }
+/**
+ * Footer component for the sidebar
+ * Wraps ChatInput with proper layout styling
+ */
+export const Footer = React.forwardRef<FooterRef, FooterProps>(
+  (
+    {
+      onSend,
+      onMessageQueued,
+      onCancel,
+      loading,
+      placeholder,
+      editingMessage,
+      onClearEdit,
+      availableTabs = [],
+      loadedTabs = {},
+      onTabRemove,
+      onMentionSelectTab,
+      onImagePaste,
+    },
+    ref
   ) => {
-    onSend(message, metadata);
-    // Clear edit will be handled in ChatPanel after successful send
-  };
+    const inputRef = useRef<HTMLTextAreaElement>(null);
 
-  // Focus input when editing message changes
-  useEffect(() => {
-    if (editingMessage && inputRef.current) {
-      inputRef.current.focus();
-      // Move cursor to end of text
-      inputRef.current.setSelectionRange(
-        inputRef.current.value.length,
-        inputRef.current.value.length
-      );
-    }
-  }, [editingMessage]);
-
-  return (
-    <div className="ai-sidebar-footer" data-testid="sidebar-footer">
-      <ChatInput
-        key={chatInputKey}
-        ref={inputRef}
-        onSend={handleSend}
-        onMessageQueued={onMessageQueued}
-        onCancel={editingMessage ? onClearEdit : onCancel}
-        loading={loading}
-        placeholder={
-          editingMessage
-            ? 'Edit your message...'
-            : placeholder || 'Ask about webpage. @ for tabs, / for commands...'
+    // Expose focus method to parent
+    React.useImperativeHandle(ref, () => ({
+      focus: () => {
+        if (inputRef.current) {
+          inputRef.current.focus();
         }
-        defaultValue={editingMessage || ''}
-        className={editingMessage ? 'editing-mode' : ''}
-        availableTabs={availableTabs}
-        enableMentions={true}
-        enableSlashCommands={true}
-        loadedTabs={loadedTabs}
-        onTabRemove={onTabRemove}
-        onMentionSelectTab={onMentionSelectTab}
-        onImagePaste={onImagePaste}
-      />
-    </div>
-  );
-};
+      },
+    }));
+
+    // Use key to force re-render of ChatInput when editing message changes
+    const chatInputKey = editingMessage ? `edit-${editingMessage}` : 'normal';
+
+    // Handle send with edit clearing
+    const handleSend = (
+      message: string,
+      metadata?: {
+        expandedPrompt?: string;
+        modelOverride?: string;
+        attachments?: Array<{ type: string; data?: string; fileUri?: string; mimeType?: string }>;
+      }
+    ) => {
+      onSend(message, metadata);
+      // Clear edit will be handled in ChatPanel after successful send
+    };
+
+    // Focus input when editing message changes
+    useEffect(() => {
+      if (editingMessage && inputRef.current) {
+        inputRef.current.focus();
+        // Move cursor to end of text
+        inputRef.current.setSelectionRange(
+          inputRef.current.value.length,
+          inputRef.current.value.length
+        );
+      }
+    }, [editingMessage]);
+
+    return (
+      <div className="ai-sidebar-footer" data-testid="sidebar-footer">
+        <ChatInput
+          key={chatInputKey}
+          ref={inputRef}
+          onSend={handleSend}
+          onMessageQueued={onMessageQueued}
+          onCancel={editingMessage ? onClearEdit : onCancel}
+          loading={loading}
+          placeholder={
+            editingMessage
+              ? 'Edit your message...'
+              : placeholder || 'Ask about webpage. @ for tabs, / for commands...'
+          }
+          defaultValue={editingMessage || ''}
+          className={editingMessage ? 'editing-mode' : ''}
+          availableTabs={availableTabs}
+          enableMentions={true}
+          enableSlashCommands={true}
+          loadedTabs={loadedTabs}
+          onTabRemove={onTabRemove}
+          onMentionSelectTab={onMentionSelectTab}
+          onImagePaste={onImagePaste}
+        />
+      </div>
+    );
+  }
+);
+
+Footer.displayName = 'Footer';
