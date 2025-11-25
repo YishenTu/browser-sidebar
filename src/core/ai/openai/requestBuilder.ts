@@ -159,11 +159,18 @@ function buildContentParts(
       });
     }
   } else if (trimmed && !(attachments.length > 0 && isPlaceholderContent(trimmed))) {
-    // Otherwise use the regular content
-    parts.push({
-      type: role === 'assistant' ? 'output_text' : 'input_text',
-      text: trimmed,
-    });
+    // Check if the regular content contains image references
+    // This handles cases where tab content with images is in the main content field
+    if (role === 'user') {
+      const contentParts = parseTabContentForImages(trimmed);
+      parts.push(...contentParts);
+    } else {
+      // Assistant messages don't have images, use plain text
+      parts.push({
+        type: 'output_text',
+        text: trimmed,
+      });
+    }
   }
 
   if (role === 'user') {

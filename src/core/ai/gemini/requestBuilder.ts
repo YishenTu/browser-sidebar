@@ -93,8 +93,10 @@ export function convertMessages(messages: ProviderChatMessage[]): GeminiContent[
         parts.push({ text: sections.userQuery });
       }
     } else if (message.content.trim()) {
-      // Otherwise use the regular content
-      parts.push({ text: message.content });
+      // Check if the regular content contains media references (images, videos)
+      // This handles cases where tab content with images is in the main content field
+      const contentParts = parseTabContentForMedia(message.content);
+      parts.push(...contentParts);
     }
 
     // Add multimodal attachments

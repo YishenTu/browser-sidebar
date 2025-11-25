@@ -14,8 +14,10 @@ import { uploadImage } from '@core/services/imageUploadService';
 import { createFinalImageContent } from '@core/services/tabContent';
 import type { ImageExtractedContent } from '@/types/extraction';
 import type { ScreenshotPreviewData } from '@components/ScreenshotPreview';
+import type { TabContent } from '@/types/tabs';
 import { useSettingsStore } from '@store/settings';
 import { useTabStore } from '@store/chat';
+import { getTab } from '@platform/chrome/tabs';
 
 export interface UseScreenshotCaptureOptions {
   onError?: (message: string, type?: 'error' | 'warning' | 'info') => void;
@@ -111,7 +113,35 @@ export function useScreenshotCapture(
               mimeType: result.mimeType,
             };
             const finalContent = createFinalImageContent(imageReference, screenshotPreview.dataUrl);
-            tabStore.updateTabContent(tabId, finalContent);
+
+            // Check if tab exists in loaded tabs
+            if (existingTab) {
+              // Tab exists - update its content
+              tabStore.updateTabContent(tabId, finalContent);
+            } else {
+              // Tab doesn't exist - create it with screenshot as content
+              const tabInfo = await getTab(tabId);
+              if (!tabInfo) {
+                throw new Error('Unable to retrieve tab information');
+              }
+
+              const newTabContent: TabContent = {
+                tabInfo,
+                extractedContent: {
+                  content: finalContent,
+                  title: tabInfo.title || 'Screenshot',
+                  url: tabInfo.url,
+                  domain: tabInfo.domain,
+                  excerpt: '',
+                  textContent: '',
+                  extractedAt: Date.now(),
+                  extractionMethod: 'raw',
+                },
+                extractionStatus: 'completed',
+              };
+
+              tabStore.addLoadedTab(tabId, newTabContent);
+            }
 
             // Small delay to ensure store update propagates
             await new Promise(resolve => setTimeout(resolve, 10));
@@ -126,10 +156,15 @@ export function useScreenshotCapture(
       // Formatter test removed - content is updated in the callback
     } catch (error) {
       // Revert to previous content on failure
-      if (previousContent !== undefined) {
-        tabStore.updateTabContent(tabId, previousContent as string | ImageExtractedContent);
+      if (existingTab) {
+        if (previousContent !== undefined) {
+          tabStore.updateTabContent(tabId, previousContent as string | ImageExtractedContent);
+        } else {
+          tabStore.updateTabContent(tabId, '');
+        }
       } else {
-        tabStore.updateTabContent(tabId, '');
+        // If tab was newly created, remove it
+        tabStore.removeLoadedTab(tabId);
       }
 
       onError?.(error instanceof Error ? error.message : 'Failed to upload screenshot', 'error');
