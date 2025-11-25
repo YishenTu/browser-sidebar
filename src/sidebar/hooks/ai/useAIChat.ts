@@ -242,6 +242,7 @@ export function useAIChat(options: UseAIChatOptions = {}): UseAIChatReturn {
               content: finalContent,
               displayContent: options.displayContent || content.trim(),
               status: 'sending',
+              metadata: options.metadata,
             });
             userMessageId = msg.id;
           }

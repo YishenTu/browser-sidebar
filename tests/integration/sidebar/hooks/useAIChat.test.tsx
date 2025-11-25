@@ -175,4 +175,29 @@ describe('useAIChat Integration', () => {
     expect(mockEngineManager.switch).not.toHaveBeenCalled();
     expect(useUIStore.getState().getError()).toContain('Cannot switch provider');
   });
+
+  it('should include attachments in message metadata', async () => {
+    const { result } = renderHook(() => useAIChat({ enabled: true }));
+
+    const attachments = [
+      {
+        type: 'image',
+        fileUri: 'file://test.png',
+        mimeType: 'image/png',
+      },
+    ];
+
+    await act(async () => {
+      await result.current.sendMessage('Look at this', {
+        metadata: { attachments },
+      });
+    });
+
+    const messages = useMessageStore.getState().getMessages();
+    const userMsg = messages.find(m => m.role === 'user');
+
+    expect(userMsg).toBeDefined();
+    expect(userMsg?.metadata?.attachments).toEqual(attachments);
+    expect(userMsg?.content).toBe('Look at this');
+  });
 });
