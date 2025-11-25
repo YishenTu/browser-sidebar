@@ -291,9 +291,27 @@ export function useAIChat(options: UseAIChatOptions = {}): UseAIChatReturn {
               break;
             }
             const delta = chunk.choices?.[0]?.delta?.content || '';
+            const thinkingDelta = chunk.choices?.[0]?.delta?.thinking;
+
             if (delta) {
               messageStore.appendToMessage(assistantMsg.id, delta);
               lastContent += delta;
+            }
+
+            if (thinkingDelta) {
+              // We need to update metadata for thinking
+              // Since appendToMessage only handles content, we use updateMessage for metadata
+              // We need to get the current message to append to existing thinking
+              const currentMsg = messageStore.getMessageById(assistantMsg.id);
+              const currentThinking = (currentMsg?.metadata?.['thinking'] as string) || '';
+
+              messageStore.updateMessage(assistantMsg.id, {
+                metadata: {
+                  ...currentMsg?.metadata,
+                  thinking: currentThinking + thinkingDelta,
+                  thinkingStreaming: true,
+                },
+              });
             }
           }
         } catch (err) {
@@ -338,7 +356,7 @@ export function useAIChat(options: UseAIChatOptions = {}): UseAIChatReturn {
         uiStore.clearActiveMessage();
       }
     },
-    [enabled, hasActiveConversation, messageStore, serviceGetActiveProvider, uiStore]
+    [enabled, hasActiveConversation, messageStore, serviceGetActiveProvider, uiStore, settingsStore]
   );
 
   return useMemo(() => {

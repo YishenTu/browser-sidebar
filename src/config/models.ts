@@ -114,8 +114,8 @@ export const DEFAULT_MODELS: ModelConfig[] = [
   },
   // Grok models
   {
-    id: 'grok-4-fast-non-reasoning',
-    name: 'Grok 4 Fast',
+    id: 'grok-4-1-fast-non-reasoning',
+    name: 'Grok 4.1 Fast',
     provider: 'grok',
   },
   // OpenRouter models
