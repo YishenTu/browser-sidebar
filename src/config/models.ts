@@ -50,7 +50,7 @@ export const OPENAI_COMPAT_PRESETS: OpenAICompatPreset[] = [
   {
     id: 'zhipu',
     name: 'Zhipu AI',
-    baseURL: 'https://open.bigmodel.cn/api/paas/v4',
+    baseURL: 'https://open.bigmodel.cn/api/coding/paas/v4', // swap to https://open.bigmodel.cn/api/paas/v4 if your are not using coding plan
   },
   {
     id: 'kimi',
