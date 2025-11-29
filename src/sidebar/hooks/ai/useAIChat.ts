@@ -135,7 +135,11 @@ export function useAIChat(options: UseAIChatOptions = {}): UseAIChatReturn {
   }, [enabled, tabExtraction, tabStore]);
 
   const serviceGetActiveProvider = useCallback((): AIProvider | null => {
-    return providerManagerServiceRef.current?.getActive() || null;
+    try {
+      return providerManagerServiceRef.current?.getActive() || null;
+    } catch {
+      return null;
+    }
   }, []);
 
   const serviceSwitchProvider = useCallback(
