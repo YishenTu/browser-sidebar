@@ -288,6 +288,9 @@ export function useAIChat(options: UseAIChatOptions = {}): UseAIChatReturn {
         // Consume Stream
         let lastContent = '';
         let streamInterrupted = false;
+        // Track provider "thinking" phase so we can stop the timer + collapse UI
+        let thinkingContent = '';
+        let isThinkingPhase = true;
 
         try {
           for await (const chunk of stream) {
@@ -296,17 +299,11 @@ export function useAIChat(options: UseAIChatOptions = {}): UseAIChatReturn {
               break;
             }
             const delta = chunk.choices?.[0]?.delta?.content || '';
-            const thinkingDelta = chunk.choices?.[0]?.delta?.thinking;
+            const thinkingDelta = chunk.choices?.[0]?.delta?.thinking || '';
 
-            if (delta) {
-              messageStore.appendToMessage(assistantMsg.id, delta);
-              lastContent += delta;
-            }
-
+            // Append "thinking" deltas and keep the UI timer running during this phase
             if (thinkingDelta) {
-              // We need to update metadata for thinking
-              // Since appendToMessage only handles content, we use updateMessage for metadata
-              // We need to get the current message to append to existing thinking
+              thinkingContent += thinkingDelta;
               const currentMsg = messageStore.getMessageById(assistantMsg.id);
               const currentThinking = (currentMsg?.metadata?.['thinking'] as string) || '';
 
@@ -317,6 +314,25 @@ export function useAIChat(options: UseAIChatOptions = {}): UseAIChatReturn {
                   thinkingStreaming: true,
                 },
               });
+            }
+
+            if (delta) {
+              // As soon as the first content token arrives, mark thinking as finished so the
+              // wrapper can auto-collapse and the timer stops.
+              if (isThinkingPhase && thinkingContent) {
+                isThinkingPhase = false;
+                const currentMsg = messageStore.getMessageById(assistantMsg.id);
+                messageStore.updateMessage(assistantMsg.id, {
+                  metadata: {
+                    ...currentMsg?.metadata,
+                    thinking: thinkingContent,
+                    thinkingStreaming: false,
+                  },
+                });
+              }
+
+              messageStore.appendToMessage(assistantMsg.id, delta);
+              lastContent += delta;
             }
           }
         } catch (err) {
@@ -332,7 +348,12 @@ export function useAIChat(options: UseAIChatOptions = {}): UseAIChatReturn {
         if (lastContent) {
           messageStore.updateMessage(assistantMsg.id, {
             status: 'received',
-            metadata: { ...assistantMsg.metadata, partial: streamInterrupted },
+            metadata: {
+              ...assistantMsg.metadata,
+              partial: streamInterrupted,
+              ...(thinkingContent ? { thinking: thinkingContent } : {}),
+              thinkingStreaming: false,
+            },
           });
           // Finalize User Message
           if (userMessageId) {
