@@ -79,7 +79,7 @@ export const DEFAULT_MODELS: ModelConfig[] = [
     id: 'gemini-flash-lite-latest',
     name: 'Gemini 2.5 Flash Lite',
     provider: 'gemini',
-    thinkingBudget: 0, // 512 to 24576 supported; default off
+    thinkingBudget: 0, // 512 to 24576; off by default
   },
   {
     id: 'gemini-flash-latest',
@@ -91,7 +91,7 @@ export const DEFAULT_MODELS: ModelConfig[] = [
     id: 'gemini-3-pro-preview',
     name: 'Gemini 3 Pro',
     provider: 'gemini',
-    thinkingLevel: 'high', // Default to high for Gemini 3
+    thinkingLevel: 'high', // `Low` or `High`. Default to `High`
   },
   // OpenAI models
   {
@@ -129,6 +129,12 @@ export const DEFAULT_MODELS: ModelConfig[] = [
     name: 'Claude Sonnet 4.5 (OpenRouter)',
     provider: 'openrouter',
     reasoningMaxTokens: 8000, // Anthropic models use max_tokens for reasoning
+  },
+  {
+    id: 'anthropic/claude-opus-4.5',
+    name: 'Claude Opus 4.5 (OpenRouter)',
+    provider: 'openrouter',
+    reasoningMaxTokens: 16000, // Anthropic models use max_tokens for reasoning
   },
   // Add more OpenRouter models as needed - just specify either:
   // - reasoningEffort for OpenAI/DeepSeek/Grok models
