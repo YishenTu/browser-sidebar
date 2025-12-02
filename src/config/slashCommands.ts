@@ -58,7 +58,7 @@ export const SLASH_COMMANDS: SlashCommand[] = [
   {
     name: 'comment',
     description: 'Summarize comments',
-    prompt: `总结网友评论，使用中文输出`,
+    prompt: `总结网友评论，需要考虑点赞数以及网友回复之间的关系（如某个观点是在另一个观点下面的回复，那么需要考虑这个观点的背景）,使用中文输出。`,
   },
   {
     name: 'fact-check',
