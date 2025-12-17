@@ -8,8 +8,9 @@ export interface ModelConfig {
   name: string;
   provider: 'openai' | 'gemini' | 'openrouter' | 'openai_compat' | 'grok' | string;
   // Gemini 3 specific thinking level
-  //  - 'low' | 'medium' | 'high'
-  thinkingLevel?: 'low' | 'medium' | 'high';
+  //  - Flash: 'minimal' | 'low' | 'medium' | 'high'
+  //  - Pro: 'low' | 'high'
+  thinkingLevel?: 'minimal' | 'low' | 'medium' | 'high';
   // Gemini specific thinking budget (tokens)
   //  - 0  = off (where supported, e.g. Flash/Lite)
   //  - -1 = dynamic (model‑decides)
@@ -82,16 +83,16 @@ export const DEFAULT_MODELS: ModelConfig[] = [
     thinkingBudget: 0, // 512 to 24576; off by default
   },
   {
-    id: 'gemini-flash-latest',
-    name: 'Gemini 2.5 Flash',
+    id: 'gemini-3-flash-preview',
+    name: 'Gemini 3 Flash',
     provider: 'gemini',
-    thinkingBudget: -1, // 0 to 24576; dynamic by default
+    thinkingLevel: 'low', // Flash supports: minimal, low, medium, high
   },
   {
     id: 'gemini-3-pro-preview',
     name: 'Gemini 3 Pro',
     provider: 'gemini',
-    thinkingLevel: 'high', // `Low` or `High`. Default to `High`
+    thinkingLevel: 'high', // Pro supports: low, high (default: high)
   },
   // OpenAI models
   {

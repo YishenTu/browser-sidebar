@@ -106,7 +106,7 @@ export interface GeminiConfig {
   apiKey: string;
   model: string;
   thinkingBudget?: ThinkingBudget;
-  thinkingLevel?: 'low' | 'medium' | 'high';
+  thinkingLevel?: 'minimal' | 'low' | 'medium' | 'high';
   stopSequences?: string[];
   endpoint?: string; // Optional custom endpoint for testing
   [key: string]: unknown; // Index signature for compatibility with Record<string, unknown>

@@ -370,13 +370,14 @@ describe('Model Configuration Drift Detection', () => {
 
       // Expected minimum model counts based on current configuration
       const expectedMinCounts = {
-        openai: 3, // gpt-5-nano, gpt-5-mini, gpt-5
-        gemini: 3, // gemini-flash-lite-latest, gemini-flash-latest, gemini-pro-latest
-        openrouter: 3, // anthropic/claude-haiku-4.5, anthropic/claude-sonnet-4.5, x-ai/grok-4-fast
+        openai: 3, // gpt-5-nano, gpt-5-mini, gpt-5.1
+        gemini: 3, // gemini-flash-lite-latest, gemini-3-flash-preview, gemini-3-pro-preview
+        openrouter: 3, // anthropic/claude-haiku-4.5, anthropic/claude-sonnet-4.5, anthropic/claude-opus-4.5
         deepseek: 1, // deepseek-chat
-        qwen: 3, // qwen3-235b-a22b-instruct-2507, qwen3-max, qwen3-next-80b-a3b-instruct
+        qwen: 2, // qwen3-235b-a22b-instruct-2507, qwen3-max
         zhipu: 1, // glm-4.6
         kimi: 1, // kimi-k2-turbo-preview
+        grok: 1, // grok-4-1-fast-non-reasoning
       };
 
       const warnings: string[] = [];

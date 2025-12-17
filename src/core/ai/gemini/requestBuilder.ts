@@ -64,6 +64,7 @@ export function buildRequest(
 
 /**
  * Convert provider messages to Gemini format
+ * Includes Gemini 3 thought signatures for multi-turn reasoning context
  */
 export function convertMessages(messages: ProviderChatMessage[]): GeminiContent[] {
   return messages.map(message => {
@@ -115,6 +116,15 @@ export function convertMessages(messages: ProviderChatMessage[]): GeminiContent[
         } else {
           throw new Error(`Unsupported media type: ${attachment.type}`);
         }
+      }
+    }
+
+    // Include Gemini 3 thought signatures for assistant messages
+    // These must be returned exactly as received to maintain reasoning context across turns
+    if (message.role === 'assistant' && message.metadata?.['thoughtSignatures']) {
+      const thoughtSignatures = message.metadata['thoughtSignatures'] as string[];
+      for (const signature of thoughtSignatures) {
+        parts.push({ thoughtSignature: signature });
       }
     }
 

@@ -94,8 +94,8 @@ export function convertToStreamChunk(geminiResponse: unknown, model: string): St
   const candidate = response.candidates?.[0];
   const candidateTyped = candidate as GeminiCandidate | undefined;
 
-  // Extract content and thinking
-  const { content, thinking } = extractContentAndThinking(candidateTyped);
+  // Extract content, thinking, and thought signatures
+  const { content, thinking, thoughtSignatures } = extractContentAndThinking(candidateTyped);
 
   // Normalize finish reason
   const finishReason = normalizeFinishReason(candidateTyped?.finishReason);
@@ -126,26 +126,37 @@ export function convertToStreamChunk(geminiResponse: unknown, model: string): St
     };
   }
 
+  // Initialize metadata object
+  chunk.metadata = chunk.metadata || {};
+
   // Add search metadata if present
   const searchMetadata = extractStreamingSearchMetadata(geminiResponse);
   if (searchMetadata) {
-    chunk.metadata = {
-      searchResults: searchMetadata,
-    };
+    chunk.metadata['searchResults'] = searchMetadata;
+  }
+
+  // Add thought signatures if present (Gemini 3)
+  // These must be stored and returned in subsequent requests
+  if (thoughtSignatures && thoughtSignatures.length > 0) {
+    chunk.metadata['thoughtSignatures'] = thoughtSignatures;
   }
 
   return chunk;
 }
 
 /**
- * Extract content and thinking from candidate
+ * Extract content, thinking, and thought signatures from candidate
+ * Thought signatures (Gemini 3) must be preserved and returned in subsequent requests
+ * to maintain reasoning context across conversation turns.
  */
 function extractContentAndThinking(candidate?: GeminiCandidate): {
   content: string;
   thinking?: string;
+  thoughtSignatures?: string[];
 } {
   let content = '';
   let thinking: string | undefined;
+  const thoughtSignatures: string[] = [];
 
   if (candidate?.content?.parts) {
     const regularTextParts: string[] = [];
@@ -165,6 +176,10 @@ function extractContentAndThinking(candidate?: GeminiCandidate): {
       if (part.thinking) {
         thoughtParts.push(part.thinking);
       }
+      // Collect thought signatures (Gemini 3)
+      if (part.thoughtSignature) {
+        thoughtSignatures.push(part.thoughtSignature);
+      }
     }
 
     content = regularTextParts.join('');
@@ -175,7 +190,11 @@ function extractContentAndThinking(candidate?: GeminiCandidate): {
     }
   }
 
-  return { content, thinking };
+  return {
+    content,
+    thinking,
+    thoughtSignatures: thoughtSignatures.length > 0 ? thoughtSignatures : undefined,
+  };
 }
 
 /**

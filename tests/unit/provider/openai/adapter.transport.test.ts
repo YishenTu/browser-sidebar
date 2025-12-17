@@ -17,7 +17,7 @@ import type { ProviderChatMessage, OpenAIConfig, ProviderConfig } from '@types/p
 vi.mock('@core/engine/openai/requestBuilder', () => ({
   buildRequest: vi.fn().mockReturnValue({
     messages: [],
-    model: 'gpt-5',
+    model: 'gpt-5-mini',
     stream: true,
   }),
 }));
@@ -63,7 +63,7 @@ describe('OpenAI Provider Transport Integration', () => {
       provider: 'openai',
       config: {
         apiKey: 'sk-test123456789',
-        model: 'gpt-5',
+        model: 'gpt-5-mini',
         reasoningEffort: 'medium',
       } as OpenAIConfig,
     };

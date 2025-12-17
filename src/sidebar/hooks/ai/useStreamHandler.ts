@@ -54,10 +54,12 @@ export function useStreamHandler(): UseStreamHandlerReturn {
                 userMessage.timestamp instanceof Date
                   ? userMessage.timestamp
                   : new Date(userMessage.timestamp),
+              metadata: userMessage.metadata,
             },
           ];
         } else {
           // Get messages from store for follow-up messages
+          // Include metadata for Gemini 3 thought signatures support
           messages = currentMessages
             .filter(msg => {
               // Exclude the empty assistant message we just created
@@ -75,6 +77,7 @@ export function useStreamHandler(): UseStreamHandlerReturn {
               role: msg.role,
               content: msg.content,
               timestamp: new Date(msg.timestamp),
+              metadata: msg.metadata,
             }));
         }
 
@@ -109,6 +112,7 @@ export function useStreamHandler(): UseStreamHandlerReturn {
         let streamInterrupted = false;
         let searchMetadata: unknown = null; // Store search metadata from stream
         let responseId: string | null = null; // Store response ID from stream
+        let thoughtSignatures: string[] = []; // Store Gemini 3 thought signatures
 
         let lastStreamError: unknown = null;
         try {
@@ -133,6 +137,12 @@ export function useStreamHandler(): UseStreamHandlerReturn {
             // Only use the responseId from metadata, NOT the chunk.id which is locally generated
             if (chunk.metadata?.['responseId']) {
               responseId = chunk.metadata?.['responseId'] as string;
+            }
+
+            // Collect thought signatures from Gemini 3 (must be returned in subsequent requests)
+            if (chunk.metadata?.['thoughtSignatures']) {
+              const sigs = chunk.metadata['thoughtSignatures'] as string[];
+              thoughtSignatures = [...thoughtSignatures, ...sigs];
             }
 
             // Handle thinking content - append deltas for real-time streaming
@@ -210,6 +220,7 @@ export function useStreamHandler(): UseStreamHandlerReturn {
               thinking: thinkingContent || undefined,
               thinkingStreaming: false,
               ...(searchMetadata ? { searchResults: searchMetadata } : {}),
+              ...(thoughtSignatures.length > 0 ? { thoughtSignatures } : {}),
             },
           });
         } else if (!streamInterrupted) {
@@ -220,6 +231,7 @@ export function useStreamHandler(): UseStreamHandlerReturn {
               thinking: thinkingContent || undefined,
               thinkingStreaming: false,
               ...(searchMetadata ? { searchResults: searchMetadata } : {}),
+              ...(thoughtSignatures.length > 0 ? { thoughtSignatures } : {}),
             },
           });
           // Store response ID if we got one (OpenAI Response API)

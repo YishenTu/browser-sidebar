@@ -12,7 +12,7 @@ import type { ProviderChatMessage } from '@/types/providers';
 export interface BaseMessage {
   id: string;
   role: 'user' | 'assistant' | 'system';
-  content: string | { text?: string; [key: string]: any };
+  content: string | { text?: string; [key: string]: unknown };
   timestamp: Date | number;
 }
 

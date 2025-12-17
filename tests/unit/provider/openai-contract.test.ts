@@ -391,7 +391,7 @@ describe('OpenAI Provider Contract Tests', () => {
     it('should validate configuration correctly', () => {
       const validConfig = {
         apiKey: 'sk-test123',
-        model: 'gpt-5',
+        model: 'gpt-5-mini',
         reasoningEffort: 'high' as const,
       };
 

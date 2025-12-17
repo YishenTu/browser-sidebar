@@ -9,6 +9,9 @@ export interface GeminiPart {
   text?: string;
   thinking?: string;
   fileData?: { mimeType?: string; fileUri: string };
+  // Gemini 3 thought signature - encrypted representation of model's thought process
+  // Must be returned exactly as received to preserve reasoning context across turns
+  thoughtSignature?: string;
 }
 
 export interface GeminiContent {
@@ -21,7 +24,7 @@ export interface GeminiGenerationConfig {
   stopSequences?: string[];
   responseModalities?: string[];
   thinkingConfig?: { thinkingBudget: number; includeThoughts?: boolean };
-  thinkingLevel?: 'low' | 'medium' | 'high';
+  thinkingLevel?: 'minimal' | 'low' | 'medium' | 'high';
 }
 
 export interface GeminiTool {
@@ -50,6 +53,8 @@ export interface GeminiResponsePart {
   text?: string;
   thinking?: string;
   thought?: boolean;
+  // Gemini 3 thought signature - must be preserved and sent back in subsequent requests
+  thoughtSignature?: string;
 }
 
 export interface GeminiCandidate {
@@ -110,7 +115,7 @@ export interface GeminiResponse {
 // Configuration Types
 export interface GeminiChatConfig {
   thinkingBudget?: ThinkingBudget;
-  thinkingLevel?: 'low' | 'medium' | 'high';
+  thinkingLevel?: 'minimal' | 'low' | 'medium' | 'high';
   signal?: AbortSignal;
   systemPrompt?: string;
   useUrlContext?: boolean;

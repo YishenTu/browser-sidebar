@@ -382,7 +382,7 @@ export function useAIChat(options: UseAIChatOptions = {}): UseAIChatReturn {
         uiStore.clearActiveMessage();
       }
     },
-    [enabled, hasActiveConversation, messageStore, serviceGetActiveProvider, uiStore, settingsStore]
+    [enabled, messageStore, serviceGetActiveProvider, uiStore, settingsStore]
   );
 
   return useMemo(() => {
