@@ -382,11 +382,17 @@ export class EngineManagerService {
 
       // Check if settings have changed to avoid unnecessary re-initialization
       const { apiKeys } = settings;
+      const normalizedKeys = {
+        openai: apiKeys['openai'] || undefined,
+        google: apiKeys['google'] || undefined,
+        openrouter: apiKeys['openrouter'] || undefined,
+        grok: apiKeys['grok'] || undefined,
+      };
       const keysChanged =
-        apiKeys['openai'] !== this.lastInitializedKeys['openai'] ||
-        apiKeys['google'] !== this.lastInitializedKeys['google'] ||
-        apiKeys['openrouter'] !== this.lastInitializedKeys['openrouter'] ||
-        apiKeys['grok'] !== this.lastInitializedKeys['grok'];
+        normalizedKeys.openai !== this.lastInitializedKeys['openai'] ||
+        normalizedKeys.google !== this.lastInitializedKeys['google'] ||
+        normalizedKeys.openrouter !== this.lastInitializedKeys['openrouter'] ||
+        normalizedKeys.grok !== this.lastInitializedKeys['grok'];
 
       const modelChanged = settings.selectedModel !== this.lastInitializedModel;
 
@@ -406,10 +412,7 @@ export class EngineManagerService {
 
       // Update tracking state
       this.lastInitializedKeys = {
-        openai: apiKeys['openai'] || undefined,
-        google: apiKeys['google'] || undefined,
-        openrouter: apiKeys['openrouter'] || undefined,
-        grok: apiKeys['grok'] || undefined,
+        ...normalizedKeys,
       };
       this.lastInitializedModel = settings.selectedModel;
 

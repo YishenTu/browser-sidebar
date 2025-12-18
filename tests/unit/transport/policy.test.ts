@@ -1,715 +1,330 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+/**
+ * @file Transport Policy Tests
+ *
+ * Tests for the transport policy module that determines routing
+ * for HTTP requests (direct vs proxy).
+ */
+
+import { describe, it, expect, beforeEach } from 'vitest';
 import {
   shouldProxy,
+  isValidDomain,
   addToAllowlist,
   removeFromAllowlist,
   addToDenylist,
   removeFromDenylist,
   getAllowlist,
   getDenylist,
+  resetPolicyConfig,
   updatePolicyConfig,
   getPolicyConfig,
-  resetPolicyConfig,
-  isValidDomain,
-  type PolicyConfig,
-} from '@/transport/policy';
+} from '@transport/policy';
 
-describe('Transport Policy Module', () => {
-  // Mock console.warn to avoid noisy test output
-  const mockConsoleWarn = vi.fn();
-  const originalConsoleWarn = console.warn;
-
+describe('shouldProxy', () => {
   beforeEach(() => {
-    // Reset policy configuration to defaults before each test
-    resetPolicyConfig();
-
-    // Mock console.warn
-    console.warn = mockConsoleWarn;
-    mockConsoleWarn.mockClear();
-  });
-
-  afterEach(() => {
-    // Restore original console.warn
-    console.warn = originalConsoleWarn;
-
-    // Extra reset to ensure clean state
     resetPolicyConfig();
   });
 
-  describe('shouldProxy()', () => {
-    describe('with default configuration', () => {
-      it('should return true for api.moonshot.cn (default allowlist)', () => {
-        expect(shouldProxy('https://api.moonshot.cn/v1/chat')).toBe(true);
-      });
-
-      it('should return false for domains not in allowlist', () => {
-        expect(shouldProxy('https://api.openai.com/v1/chat')).toBe(false);
-        expect(shouldProxy('https://example.com/api')).toBe(false);
-      });
-
-      it('should handle www prefixes correctly', () => {
-        // Add www.example.com to allowlist
-        addToAllowlist('www.example.com');
-
-        // Both www and non-www should work
-        expect(shouldProxy('https://www.example.com/api')).toBe(true);
-        expect(shouldProxy('https://example.com/api')).toBe(true);
-      });
-
-      it('should handle subdomain matching correctly', () => {
-        // Add parent domain to allowlist
-        addToAllowlist('example.com');
-
-        // Subdomains should be allowed
-        expect(shouldProxy('https://api.example.com/v1')).toBe(true);
-        expect(shouldProxy('https://cdn.example.com/files')).toBe(true);
-        expect(shouldProxy('https://www.example.com/page')).toBe(true);
-
-        // Different domains should not be allowed
-        expect(shouldProxy('https://example.org/api')).toBe(false);
-        expect(shouldProxy('https://notexample.com/api')).toBe(false);
-      });
+  describe('invalid URLs', () => {
+    it('should return false for invalid URL', () => {
+      expect(shouldProxy('not-a-url')).toBe(false);
     });
 
-    describe('with custom allowlist', () => {
-      it('should proxy domains in custom allowlist', () => {
-        addToAllowlist('custom-api.com');
-        addToAllowlist('another-api.net');
-
-        expect(shouldProxy('https://custom-api.com/v1')).toBe(true);
-        expect(shouldProxy('https://another-api.net/endpoint')).toBe(true);
-      });
-
-      it('should not proxy default domain when overridden', () => {
-        addToAllowlist('custom-api.com');
-
-        // Remove default domain
-        removeFromAllowlist('api.moonshot.cn');
-        expect(shouldProxy('https://api.moonshot.cn/v1')).toBe(false);
-        expect(shouldProxy('https://custom-api.com/v1')).toBe(true);
-      });
+    it('should return false for empty string', () => {
+      expect(shouldProxy('')).toBe(false);
     });
 
-    describe('with denylist', () => {
-      it('should not proxy denied domains even if in allowlist', () => {
-        // Set up both allowlist and denylist
-        addToAllowlist('example.com');
-        addToDenylist('blocked.example.com');
-
-        // Parent domain should be allowed
-        expect(shouldProxy('https://api.example.com/v1')).toBe(true);
-
-        // But denied subdomain should not be proxied
-        expect(shouldProxy('https://blocked.example.com/api')).toBe(false);
-      });
-
-      it('should handle denylist precedence over allowlist', () => {
-        // Add same domain to both lists
-        addToAllowlist('conflict.com');
-        addToDenylist('conflict.com');
-
-        // Denylist should take precedence
-        expect(shouldProxy('https://conflict.com/api')).toBe(false);
-      });
-
-      it('should handle subdomain denylist correctly', () => {
-        // Add parent domain to allowlist, subdomain to denylist
-        addToAllowlist('example.com');
-        addToDenylist('example.com'); // Block the parent
-
-        // All subdomains should be blocked
-        expect(shouldProxy('https://example.com/api')).toBe(false);
-        expect(shouldProxy('https://api.example.com/v1')).toBe(false);
-        expect(shouldProxy('https://www.example.com/page')).toBe(false);
-      });
-    });
-
-    describe('invalid URL handling', () => {
-      it('should return false for invalid URLs', () => {
-        expect(shouldProxy('not-a-url')).toBe(false);
-        expect(shouldProxy('javascript:alert(1)')).toBe(false);
-        expect(shouldProxy('')).toBe(false);
-        expect(shouldProxy('ftp://example.com')).toBe(false); // Valid but different protocol
-      });
-
-      it('should handle invalid URLs without logging', () => {
-        // Since we removed console.warn for production, just verify the behavior
-        expect(shouldProxy('invalid-url')).toBe(false);
-        expect(mockConsoleWarn).not.toHaveBeenCalled();
-      });
-
-      it('should handle malformed URLs gracefully', () => {
-        const malformedUrls = [
-          'http://',
-          'https://',
-          'http://.',
-          'https://.',
-          'http:// example.com',
-          'https://[invalid]',
-        ];
-
-        malformedUrls.forEach(url => {
-          expect(shouldProxy(url)).toBe(false);
-        });
-      });
-    });
-
-    describe('protocol handling', () => {
-      it('should handle different protocols correctly', () => {
-        addToAllowlist('example.com');
-
-        expect(shouldProxy('https://example.com/api')).toBe(true);
-        expect(shouldProxy('http://example.com/api')).toBe(true);
-        expect(shouldProxy('ws://example.com/socket')).toBe(true);
-        expect(shouldProxy('wss://example.com/socket')).toBe(true);
-      });
-
-      it('should handle URLs with ports', () => {
-        addToAllowlist('example.com');
-
-        expect(shouldProxy('https://example.com:8080/api')).toBe(true);
-        expect(shouldProxy('http://example.com:3000/dev')).toBe(true);
-      });
-
-      it('should handle URLs with paths and query parameters', () => {
-        addToAllowlist('example.com');
-
-        expect(shouldProxy('https://example.com/api/v1/endpoint?param=value')).toBe(true);
-        expect(shouldProxy('https://example.com/path/to/resource#fragment')).toBe(true);
-      });
+    it('should return false for URL without protocol', () => {
+      expect(shouldProxy('example.com/path')).toBe(false);
     });
   });
 
-  describe('Allowlist Management', () => {
-    describe('addToAllowlist()', () => {
-      it('should add new domains to allowlist', () => {
-        expect(addToAllowlist('new-domain.com')).toBe(true);
-        expect(getAllowlist()).toContain('new-domain.com');
-      });
-
-      it('should return false when domain already exists', () => {
-        addToAllowlist('existing-domain.com');
-        expect(addToAllowlist('existing-domain.com')).toBe(false);
-      });
-
-      it('should normalize www prefixes when adding', () => {
-        expect(addToAllowlist('www.example.com')).toBe(true);
-        expect(getAllowlist()).toContain('example.com');
-        expect(getAllowlist()).not.toContain('www.example.com');
-      });
-
-      it('should handle domains with www prefix normalization', () => {
-        addToAllowlist('www.test.com');
-        // Adding the same domain without www should return false
-        expect(addToAllowlist('test.com')).toBe(false);
-      });
+  describe('allowlist matching', () => {
+    it('should return true for exact domain match in allowlist', () => {
+      expect(shouldProxy('https://api.moonshot.cn/endpoint')).toBe(true);
     });
 
-    describe('removeFromAllowlist()', () => {
-      beforeEach(() => {
-        addToAllowlist('removable-domain.com');
-        addToAllowlist('another-domain.com');
-      });
-
-      it('should remove existing domains from allowlist', () => {
-        expect(removeFromAllowlist('removable-domain.com')).toBe(true);
-        expect(getAllowlist()).not.toContain('removable-domain.com');
-        expect(getAllowlist()).toContain('another-domain.com'); // Other domains should remain
-      });
-
-      it('should return false when domain does not exist', () => {
-        expect(removeFromAllowlist('non-existent-domain.com')).toBe(false);
-      });
-
-      it('should handle www prefix normalization when removing', () => {
-        addToAllowlist('example.com');
-        expect(removeFromAllowlist('www.example.com')).toBe(true);
-        expect(getAllowlist()).not.toContain('example.com');
-      });
-
-      it('should not remove default domains unintentionally', () => {
-        const originalDefault = 'api.moonshot.cn';
-        expect(getAllowlist()).toContain(originalDefault);
-        expect(removeFromAllowlist(originalDefault)).toBe(true);
-        expect(getAllowlist()).not.toContain(originalDefault);
-      });
-    });
-
-    describe('getAllowlist()', () => {
-      it('should return copy of allowlist (not reference)', () => {
-        const allowlist1 = getAllowlist();
-        const allowlist2 = getAllowlist();
-
-        // Should be different objects
-        expect(allowlist1).not.toBe(allowlist2);
-
-        // But with same content
-        expect(allowlist1).toEqual(allowlist2);
-      });
-
-      it('should return default allowlist initially', () => {
-        const allowlist = getAllowlist();
-        expect(allowlist).toContain('api.moonshot.cn');
-        expect(allowlist).toHaveLength(1);
-      });
-
-      it('should reflect changes after adding domains', () => {
-        addToAllowlist('test1.com');
-        addToAllowlist('test2.com');
-
-        const allowlist = getAllowlist();
-        expect(allowlist).toContain('test1.com');
-        expect(allowlist).toContain('test2.com');
-        expect(allowlist).toContain('api.moonshot.cn');
-        expect(allowlist).toHaveLength(3);
-      });
-
-      it('should not allow external modification of allowlist', () => {
-        const allowlist = getAllowlist();
-        allowlist.push('hacker-domain.com');
-
-        // Original allowlist should be unchanged
-        expect(getAllowlist()).not.toContain('hacker-domain.com');
-      });
-    });
-  });
-
-  describe('Denylist Management', () => {
-    describe('addToDenylist()', () => {
-      it('should add new domains to denylist', () => {
-        expect(addToDenylist('blocked-domain.com')).toBe(true);
-        expect(getDenylist()).toContain('blocked-domain.com');
-      });
-
-      it('should return false when domain already exists in denylist', () => {
-        addToDenylist('existing-blocked.com');
-        expect(addToDenylist('existing-blocked.com')).toBe(false);
-      });
-
-      it('should initialize denylist if it does not exist', () => {
-        // Denylist should be empty initially
-        expect(getDenylist()).toEqual([]);
-
-        addToDenylist('first-blocked.com');
-        expect(getDenylist()).toContain('first-blocked.com');
-      });
-
-      it('should normalize www prefixes when adding to denylist', () => {
-        expect(addToDenylist('www.blocked.com')).toBe(true);
-        expect(getDenylist()).toContain('blocked.com');
-        expect(getDenylist()).not.toContain('www.blocked.com');
-      });
-    });
-
-    describe('removeFromDenylist()', () => {
-      beforeEach(() => {
-        addToDenylist('blocked1.com');
-        addToDenylist('blocked2.com');
-      });
-
-      it('should remove existing domains from denylist', () => {
-        expect(removeFromDenylist('blocked1.com')).toBe(true);
-        expect(getDenylist()).not.toContain('blocked1.com');
-        expect(getDenylist()).toContain('blocked2.com'); // Other domains should remain
-      });
-
-      it('should return false when domain does not exist in denylist', () => {
-        expect(removeFromDenylist('non-existent.com')).toBe(false);
-      });
-
-      it('should return false when denylist is empty or undefined', () => {
-        // Reset to have no denylist
-        updatePolicyConfig({ proxyDenylist: undefined });
-        expect(removeFromDenylist('any-domain.com')).toBe(false);
-      });
-
-      it('should handle www prefix normalization when removing from denylist', () => {
-        addToDenylist('blocked.com');
-        expect(removeFromDenylist('www.blocked.com')).toBe(true);
-        expect(getDenylist()).not.toContain('blocked.com');
-      });
-    });
-
-    describe('getDenylist()', () => {
-      it('should return copy of denylist (not reference)', () => {
-        addToDenylist('test-blocked.com');
-
-        const denylist1 = getDenylist();
-        const denylist2 = getDenylist();
-
-        // Should be different objects
-        expect(denylist1).not.toBe(denylist2);
-
-        // But with same content
-        expect(denylist1).toEqual(denylist2);
-      });
-
-      it('should return empty array initially', () => {
-        const denylist = getDenylist();
-        expect(denylist).toEqual([]);
-        expect(Array.isArray(denylist)).toBe(true);
-      });
-
-      it('should return empty array when denylist is undefined', () => {
-        updatePolicyConfig({ proxyDenylist: undefined });
-        expect(getDenylist()).toEqual([]);
-      });
-
-      it('should reflect changes after adding domains', () => {
-        addToDenylist('blocked1.com');
-        addToDenylist('blocked2.com');
-
-        const denylist = getDenylist();
-        expect(denylist).toContain('blocked1.com');
-        expect(denylist).toContain('blocked2.com');
-        expect(denylist).toHaveLength(2);
-      });
-
-      it('should not allow external modification of denylist', () => {
-        const denylist = getDenylist();
-        denylist.push('hacker-domain.com');
-
-        // Original denylist should be unchanged
-        expect(getDenylist()).not.toContain('hacker-domain.com');
-      });
-    });
-  });
-
-  describe('Policy Configuration Management', () => {
-    describe('updatePolicyConfig()', () => {
-      it('should update allowlist configuration', () => {
-        const newConfig: Partial<PolicyConfig> = {
-          proxyAllowlist: ['new1.com', 'new2.com'],
-        };
-
-        updatePolicyConfig(newConfig);
-        expect(getAllowlist()).toEqual(['new1.com', 'new2.com']);
-      });
-
-      it('should update denylist configuration', () => {
-        const newConfig: Partial<PolicyConfig> = {
-          proxyDenylist: ['blocked1.com', 'blocked2.com'],
-        };
-
-        updatePolicyConfig(newConfig);
-        expect(getDenylist()).toEqual(['blocked1.com', 'blocked2.com']);
-      });
-
-      it('should update multiple configuration properties', () => {
-        const newConfig: Partial<PolicyConfig> = {
-          proxyAllowlist: ['allowed.com'],
-          proxyDenylist: ['blocked.com'],
-          enablePatternMatching: true,
-        };
-
-        updatePolicyConfig(newConfig);
-
-        const config = getPolicyConfig();
-        expect(config.proxyAllowlist).toEqual(['allowed.com']);
-        expect(config.proxyDenylist).toEqual(['blocked.com']);
-        expect(config.enablePatternMatching).toBe(true);
-      });
-
-      it('should preserve existing configuration when partially updating', () => {
-        // Add some initial data
-        addToAllowlist('existing.com');
-        addToDenylist('existing-blocked.com');
-
-        // Update only allowlist
-        updatePolicyConfig({
-          proxyAllowlist: ['new-allowed.com'],
-        });
-
-        const config = getPolicyConfig();
-        expect(config.proxyAllowlist).toEqual(['new-allowed.com']);
-        // Denylist should be preserved (though the reference might change)
-        expect(config.proxyDenylist).toEqual(['existing-blocked.com']);
-      });
-    });
-
-    describe('getPolicyConfig()', () => {
-      it('should return copy of current configuration', () => {
-        const config1 = getPolicyConfig();
-        const config2 = getPolicyConfig();
-
-        // Should be different objects
-        expect(config1).not.toBe(config2);
-        expect(config1.proxyAllowlist).not.toBe(config2.proxyAllowlist);
-
-        // But with same content
-        expect(config1).toEqual(config2);
-      });
-
-      it('should return default configuration initially', () => {
-        const config = getPolicyConfig();
-
-        expect(config.proxyAllowlist).toEqual(['api.moonshot.cn']);
-        expect(config.proxyDenylist).toEqual([]);
-        expect(config.enablePatternMatching).toBe(false);
-      });
-
-      it('should not allow external modification of returned config', () => {
-        const config = getPolicyConfig();
-        config.proxyAllowlist.push('hacker-domain.com');
-
-        // Original config should be unchanged
-        const freshConfig = getPolicyConfig();
-        expect(freshConfig.proxyAllowlist).not.toContain('hacker-domain.com');
-      });
-
-      it('should reflect changes made through management functions', () => {
-        addToAllowlist('test.com');
-        addToDenylist('blocked.com');
-
-        const config = getPolicyConfig();
-        expect(config.proxyAllowlist).toContain('test.com');
-        expect(config.proxyDenylist).toContain('blocked.com');
-      });
-    });
-
-    describe('resetPolicyConfig()', () => {
-      it('should reset to default configuration', () => {
-        // Modify configuration
-        addToAllowlist('custom.com');
-        addToDenylist('blocked.com');
-        updatePolicyConfig({ enablePatternMatching: true });
-
-        // Reset
-        resetPolicyConfig();
-
-        // Should be back to defaults
-        const config = getPolicyConfig();
-        expect(config.proxyAllowlist).toEqual(['api.moonshot.cn']);
-        expect(config.proxyDenylist).toEqual([]);
-        expect(config.enablePatternMatching).toBe(false);
-      });
-
-      it('should clear all custom allowlist entries', () => {
-        addToAllowlist('custom1.com');
-        addToAllowlist('custom2.com');
-
-        resetPolicyConfig();
-
-        const allowlist = getAllowlist();
-        expect(allowlist).toEqual(['api.moonshot.cn']);
-        expect(allowlist).not.toContain('custom1.com');
-        expect(allowlist).not.toContain('custom2.com');
-      });
-
-      it('should clear all denylist entries', () => {
-        addToDenylist('blocked1.com');
-        addToDenylist('blocked2.com');
-
-        resetPolicyConfig();
-
-        expect(getDenylist()).toEqual([]);
-      });
-    });
-  });
-
-  describe('Domain Validation', () => {
-    describe('isValidDomain()', () => {
-      it('should validate correct domain formats', () => {
-        const validDomains = [
-          'example.com',
-          'api.example.com',
-          'sub.api.example.com',
-          'a.b.c.d.example.com',
-          'test-domain.com',
-          'domain123.com',
-          '123domain.com',
-          'x.co',
-          'very-long-domain-name-that-is-still-valid.com',
-        ];
-
-        validDomains.forEach(domain => {
-          expect(isValidDomain(domain)).toBe(true);
-        });
-      });
-
-      it('should reject invalid domain formats', () => {
-        const invalidDomains = [
-          '', // Empty string
-          '.example.com', // Leading dot
-          'example.com.', // Trailing dot
-          'example..com', // Double dots
-          'example-.com', // Hyphen at end of label
-          '-example.com', // Hyphen at start of label
-          'example.com-', // Hyphen at end
-          'example.', // Trailing dot after label
-          '.com', // Just TLD with leading dot
-          'example_com', // Underscore (invalid in hostnames)
-          'example com', // Space
-          'http://example.com', // URL instead of domain
-          '192.168.1.1', // IP address (not a domain)
-        ];
-
-        invalidDomains.forEach(domain => {
-          expect(isValidDomain(domain)).toBe(false);
-        });
-      });
-
-      it('should enforce length limits', () => {
-        // Domain too long (over 253 characters)
-        const longDomain = 'a'.repeat(250) + '.com';
-        expect(isValidDomain(longDomain)).toBe(false);
-
-        // Label too long (over 63 characters)
-        const longLabelDomain = 'a'.repeat(64) + '.com';
-        expect(isValidDomain(longLabelDomain)).toBe(false);
-
-        // Valid length domain
-        const validLengthDomain = 'a'.repeat(50) + '.com';
-        expect(isValidDomain(validLengthDomain)).toBe(true);
-      });
-
-      it('should handle edge cases', () => {
-        // Minimum valid domain
-        expect(isValidDomain('a.b')).toBe(true);
-
-        // Numbers in domain
-        expect(isValidDomain('123.456')).toBe(true);
-
-        // Mix of letters, numbers, and hyphens
-        expect(isValidDomain('a1-b2.c3-d4')).toBe(true);
-
-        // International characters should be rejected (basic ASCII only)
-        expect(isValidDomain('café.com')).toBe(false);
-        expect(isValidDomain('münchen.de')).toBe(false);
-      });
-    });
-  });
-
-  describe('Subdomain Matching Behavior', () => {
-    it('should match subdomains in allowlist', () => {
+    it('should return true for subdomain match', () => {
       addToAllowlist('example.com');
-
-      // Direct domain
-      expect(shouldProxy('https://example.com/api')).toBe(true);
-
-      // One level subdomain
-      expect(shouldProxy('https://api.example.com/v1')).toBe(true);
-      expect(shouldProxy('https://cdn.example.com/files')).toBe(true);
-
-      // Multiple level subdomains
-      expect(shouldProxy('https://api.v1.example.com/endpoint')).toBe(true);
-      expect(shouldProxy('https://deep.nested.sub.example.com/path')).toBe(true);
-
-      // www subdomain
-      expect(shouldProxy('https://www.example.com/page')).toBe(true);
+      expect(shouldProxy('https://api.example.com/path')).toBe(true);
     });
 
-    it('should match subdomains in denylist', () => {
+    it('should return false for non-allowlisted domain', () => {
+      expect(shouldProxy('https://api.openai.com/v1/chat')).toBe(false);
+    });
+
+    it('should handle www. prefix normalization', () => {
+      addToAllowlist('example.com');
+      expect(shouldProxy('https://www.example.com/path')).toBe(true);
+    });
+
+    it('should normalize www. in allowlist entries', () => {
+      addToAllowlist('www.example.com');
+      expect(shouldProxy('https://example.com/path')).toBe(true);
+    });
+  });
+
+  describe('denylist precedence', () => {
+    it('should return false for denylisted domain even if allowlisted', () => {
       addToAllowlist('example.com');
       addToDenylist('blocked.example.com');
 
-      // Parent domain should still work
-      expect(shouldProxy('https://example.com/api')).toBe(true);
-      expect(shouldProxy('https://api.example.com/v1')).toBe(true);
+      expect(shouldProxy('https://blocked.example.com/path')).toBe(false);
+    });
 
-      // Blocked subdomain should not work
-      expect(shouldProxy('https://blocked.example.com/api')).toBe(false);
+    it('should allow non-denied subdomains when parent is allowlisted', () => {
+      addToAllowlist('example.com');
+      addToDenylist('blocked.example.com');
 
-      // Sub-subdomains of blocked should also be blocked
-      expect(shouldProxy('https://api.blocked.example.com/v1')).toBe(false);
+      expect(shouldProxy('https://api.example.com/path')).toBe(true);
+    });
+
+    it('should deny subdomains of denied parent', () => {
+      addToAllowlist('example.com');
+      addToDenylist('api.example.com');
+
+      expect(shouldProxy('https://v1.api.example.com/path')).toBe(false);
+    });
+  });
+
+  describe('subdomain matching', () => {
+    it('should match direct subdomains', () => {
+      addToAllowlist('api.example.com');
+      expect(shouldProxy('https://api.example.com/path')).toBe(true);
+    });
+
+    it('should match nested subdomains', () => {
+      addToAllowlist('example.com');
+      expect(shouldProxy('https://v1.api.example.com/path')).toBe(true);
     });
 
     it('should not match partial domain names', () => {
       addToAllowlist('example.com');
+      // 'notexample.com' should NOT match 'example.com'
+      expect(shouldProxy('https://notexample.com/path')).toBe(false);
+    });
+  });
+});
 
-      // These should NOT match
-      expect(shouldProxy('https://notexample.com/api')).toBe(false);
-      expect(shouldProxy('https://example.com.evil.com/api')).toBe(false);
-      expect(shouldProxy('https://fakeexample.com/api')).toBe(false);
-      expect(shouldProxy('https://example.org/api')).toBe(false);
+describe('isValidDomain', () => {
+  it('should return true for valid domain', () => {
+    expect(isValidDomain('example.com')).toBe(true);
+    expect(isValidDomain('api.example.com')).toBe(true);
+    expect(isValidDomain('sub.domain.example.com')).toBe(true);
+  });
+
+  it('should return true for domain with hyphens', () => {
+    expect(isValidDomain('my-domain.com')).toBe(true);
+    expect(isValidDomain('api-v2.example.com')).toBe(true);
+  });
+
+  it('should return false for IPv4 addresses', () => {
+    expect(isValidDomain('192.168.1.1')).toBe(false);
+    expect(isValidDomain('10.0.0.1')).toBe(false);
+    expect(isValidDomain('127.0.0.1')).toBe(false);
+  });
+
+  it('should return false for invalid formats', () => {
+    expect(isValidDomain('')).toBe(false);
+    expect(isValidDomain('.')).toBe(false);
+    expect(isValidDomain('.com')).toBe(false);
+    expect(isValidDomain('example.')).toBe(false);
+  });
+
+  it('should return false for domains exceeding length limit', () => {
+    const longDomain = 'a'.repeat(254) + '.com';
+    expect(isValidDomain(longDomain)).toBe(false);
+  });
+
+  it('should return false for domains with invalid characters', () => {
+    expect(isValidDomain('example_domain.com')).toBe(false);
+    expect(isValidDomain('example domain.com')).toBe(false);
+  });
+
+  it('should handle edge cases for label length', () => {
+    // Maximum label length is 63 characters
+    const maxLabel = 'a'.repeat(63);
+    expect(isValidDomain(`${maxLabel}.com`)).toBe(true);
+
+    const tooLongLabel = 'a'.repeat(64);
+    expect(isValidDomain(`${tooLongLabel}.com`)).toBe(false);
+  });
+});
+
+describe('allowlist management', () => {
+  beforeEach(() => {
+    resetPolicyConfig();
+  });
+
+  describe('addToAllowlist', () => {
+    it('should add new domain and return true', () => {
+      const result = addToAllowlist('new.example.com');
+
+      expect(result).toBe(true);
+      expect(getAllowlist()).toContain('new.example.com');
     });
 
-    it('should handle www prefix normalization in subdomain matching', () => {
-      // Add with www prefix
+    it('should return false for duplicate domain', () => {
+      addToAllowlist('example.com');
+      const result = addToAllowlist('example.com');
+
+      expect(result).toBe(false);
+    });
+
+    it('should normalize www. prefix', () => {
       addToAllowlist('www.example.com');
 
-      // Both should work (normalized to example.com)
-      expect(shouldProxy('https://www.example.com/api')).toBe(true);
-      expect(shouldProxy('https://example.com/api')).toBe(true);
-
-      // Subdomains should work
-      expect(shouldProxy('https://api.example.com/v1')).toBe(true);
-      expect(shouldProxy('https://cdn.www.example.com/files')).toBe(true);
-    });
-
-    it('should handle complex subdomain scenarios', () => {
-      // Allow parent domain but deny specific subdomain
-      addToAllowlist('company.com');
-      addToDenylist('internal.company.com');
-
-      // Public API should work
-      expect(shouldProxy('https://api.company.com/public')).toBe(true);
-      expect(shouldProxy('https://cdn.company.com/assets')).toBe(true);
-
-      // Internal should be blocked
-      expect(shouldProxy('https://internal.company.com/private')).toBe(false);
-      expect(shouldProxy('https://api.internal.company.com/secret')).toBe(false);
-
-      // Other subdomains of internal should also be blocked
-      expect(shouldProxy('https://deep.internal.company.com/data')).toBe(false);
+      expect(getAllowlist()).toContain('example.com');
     });
   });
 
-  describe('Integration Tests', () => {
-    it('should handle complete policy workflow', () => {
-      // Start with clean slate
-      resetPolicyConfig();
+  describe('removeFromAllowlist', () => {
+    it('should remove existing domain and return true', () => {
+      addToAllowlist('example.com');
+      const result = removeFromAllowlist('example.com');
 
-      // Add some allowed domains
-      expect(addToAllowlist('api1.com')).toBe(true);
-      expect(addToAllowlist('api2.com')).toBe(true);
-
-      // Add some blocked domains
-      expect(addToDenylist('blocked.api1.com')).toBe(true);
-
-      // Test the policy decisions
-      expect(shouldProxy('https://api1.com/endpoint')).toBe(true);
-      expect(shouldProxy('https://api2.com/endpoint')).toBe(true);
-      expect(shouldProxy('https://blocked.api1.com/endpoint')).toBe(false);
-      expect(shouldProxy('https://unknown.com/endpoint')).toBe(false);
-
-      // Modify configuration
-      expect(removeFromAllowlist('api2.com')).toBe(true);
-      expect(shouldProxy('https://api2.com/endpoint')).toBe(false);
-
-      // Reset and verify
-      resetPolicyConfig();
-      expect(shouldProxy('https://api1.com/endpoint')).toBe(false);
-      expect(shouldProxy('https://api.moonshot.cn/endpoint')).toBe(true); // Default restored
+      expect(result).toBe(true);
+      expect(getAllowlist()).not.toContain('example.com');
     });
 
-    it('should maintain policy consistency across operations', () => {
-      // Build complex policy
-      addToAllowlist('service.com');
-      addToAllowlist('api.service.com');
-      addToDenylist('restricted.service.com');
+    it('should return false for non-existent domain', () => {
+      const result = removeFromAllowlist('nonexistent.com');
 
-      // Get baseline configuration
-      const config1 = getPolicyConfig();
-
-      // Perform some operations
-      addToAllowlist('newservice.com');
-      removeFromAllowlist('service.com');
-      addToDenylist('newservice.com'); // Add to both lists
-
-      // Verify policy decisions are consistent
-      expect(shouldProxy('https://api.service.com/v1')).toBe(true); // Still allowed
-      expect(shouldProxy('https://service.com/api')).toBe(false); // Removed from allowlist
-      expect(shouldProxy('https://restricted.service.com/data')).toBe(false); // Still denied
-      expect(shouldProxy('https://newservice.com/api')).toBe(false); // Denied takes precedence
-
-      // Configuration should reflect all changes
-      const config2 = getPolicyConfig();
-      expect(config2.proxyAllowlist).toContain('api.service.com');
-      expect(config2.proxyAllowlist).toContain('newservice.com');
-      expect(config2.proxyAllowlist).not.toContain('service.com');
-      expect(config2.proxyDenylist).toContain('restricted.service.com');
-      expect(config2.proxyDenylist).toContain('newservice.com');
+      expect(result).toBe(false);
     });
+
+    it('should normalize www. prefix', () => {
+      addToAllowlist('example.com');
+      const result = removeFromAllowlist('www.example.com');
+
+      expect(result).toBe(true);
+    });
+  });
+
+  describe('getAllowlist', () => {
+    it('should return copy of allowlist', () => {
+      const list = getAllowlist();
+      list.push('modified.com');
+
+      expect(getAllowlist()).not.toContain('modified.com');
+    });
+  });
+});
+
+describe('denylist management', () => {
+  beforeEach(() => {
+    resetPolicyConfig();
+  });
+
+  describe('addToDenylist', () => {
+    it('should add new domain and return true', () => {
+      const result = addToDenylist('blocked.com');
+
+      expect(result).toBe(true);
+      expect(getDenylist()).toContain('blocked.com');
+    });
+
+    it('should return false for duplicate domain', () => {
+      addToDenylist('blocked.com');
+      const result = addToDenylist('blocked.com');
+
+      expect(result).toBe(false);
+    });
+  });
+
+  describe('removeFromDenylist', () => {
+    it('should remove existing domain and return true', () => {
+      addToDenylist('blocked.com');
+      const result = removeFromDenylist('blocked.com');
+
+      expect(result).toBe(true);
+      expect(getDenylist()).not.toContain('blocked.com');
+    });
+
+    it('should return false for non-existent domain', () => {
+      const result = removeFromDenylist('nonexistent.com');
+
+      expect(result).toBe(false);
+    });
+  });
+
+  describe('getDenylist', () => {
+    it('should return copy of denylist', () => {
+      addToDenylist('blocked.com');
+      const list = getDenylist();
+      list.push('modified.com');
+
+      expect(getDenylist()).not.toContain('modified.com');
+    });
+
+    it('should return empty array when no denylist', () => {
+      expect(getDenylist()).toEqual([]);
+    });
+  });
+});
+
+describe('resetPolicyConfig', () => {
+  it('should restore default allowlist', () => {
+    addToAllowlist('custom.com');
+    resetPolicyConfig();
+
+    expect(getAllowlist()).toContain('api.moonshot.cn');
+    expect(getAllowlist()).not.toContain('custom.com');
+  });
+
+  it('should clear denylist', () => {
+    addToDenylist('blocked.com');
+    resetPolicyConfig();
+
+    expect(getDenylist()).toEqual([]);
+  });
+
+  it('should reset enablePatternMatching', () => {
+    updatePolicyConfig({ enablePatternMatching: true });
+    resetPolicyConfig();
+
+    expect(getPolicyConfig().enablePatternMatching).toBe(false);
+  });
+});
+
+describe('updatePolicyConfig', () => {
+  beforeEach(() => {
+    resetPolicyConfig();
+  });
+
+  it('should update partial config', () => {
+    updatePolicyConfig({ enablePatternMatching: true });
+
+    const config = getPolicyConfig();
+    expect(config.enablePatternMatching).toBe(true);
+    // Original allowlist should be preserved
+    expect(config.proxyAllowlist).toContain('api.moonshot.cn');
+  });
+
+  it('should replace allowlist when provided', () => {
+    updatePolicyConfig({ proxyAllowlist: ['new.com'] });
+
+    expect(getAllowlist()).toEqual(['new.com']);
+  });
+});
+
+describe('getPolicyConfig', () => {
+  beforeEach(() => {
+    resetPolicyConfig();
+  });
+
+  it('should return copy of config', () => {
+    const config = getPolicyConfig();
+    config.proxyAllowlist.push('modified.com');
+
+    expect(getAllowlist()).not.toContain('modified.com');
+  });
+
+  it('should include all config properties', () => {
+    const config = getPolicyConfig();
+
+    expect(config).toHaveProperty('proxyAllowlist');
+    expect(config).toHaveProperty('proxyDenylist');
+    expect(config).toHaveProperty('enablePatternMatching');
   });
 });

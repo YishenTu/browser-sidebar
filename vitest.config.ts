@@ -30,6 +30,7 @@ export default defineConfig({
       '@extension': resolve(__dirname, './src/extension'),
       '@data': resolve(__dirname, './src/data'),
       '@security': resolve(__dirname, './src/data/security'),
+      '@tests': resolve(__dirname, './tests'),
     },
   },
 });

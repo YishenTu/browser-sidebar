@@ -5,4 +5,6 @@
  */
 
 export * from './crypto';
+export * from './patterns';
+export * from './encryptionService';
 export * from './masking';

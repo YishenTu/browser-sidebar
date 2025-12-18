@@ -1,5 +1,3 @@
-/* eslint-disable @typescript-eslint/ban-ts-comment */
-// @ts-nocheck
 /**
  * @file Data Masking
  *
@@ -396,7 +394,9 @@ export async function maskDocument(
   try {
     // Detect patterns with timeout
     const detector = new PatternDetector({
-      enabledPatterns: Object.keys(config.patterns).filter(p => config.patterns[p].enabled),
+      enabledPatterns: Object.entries(config.patterns)
+        .filter(([, patternConfig]) => patternConfig.enabled)
+        .map(([patternType]) => patternType),
     });
 
     const detectionPromise = detector.detectAll(document);
@@ -485,7 +485,9 @@ export async function maskJSON(
     if (typeof obj === 'string') {
       // Detect patterns in the string value
       const detector = new PatternDetector({
-        enabledPatterns: Object.keys(config.patterns).filter(p => config.patterns[p].enabled),
+        enabledPatterns: Object.entries(config.patterns)
+          .filter(([, patternConfig]) => patternConfig.enabled)
+          .map(([patternType]) => patternType),
       });
 
       const detectionResult = await detector.detectAll(obj);
@@ -533,7 +535,9 @@ export async function maskHTML(
 
   // Create pattern detector
   const detector = new PatternDetector({
-    enabledPatterns: Object.keys(config.patterns).filter(p => config.patterns[p].enabled),
+    enabledPatterns: Object.entries(config.patterns)
+      .filter(([, patternConfig]) => patternConfig.enabled)
+      .map(([patternType]) => patternType),
   });
 
   // Process text content between HTML tags
@@ -541,7 +545,7 @@ export async function maskHTML(
   htmlTextPattern.lastIndex = 0;
 
   while ((textMatch = htmlTextPattern.exec(html)) !== null) {
-    const textContent = textMatch[1].trim();
+    const textContent = (textMatch[1] ?? '').trim();
     if (textContent.length === 0) continue;
 
     const detectionResult = await detector.detectAll(textContent);
@@ -571,6 +575,7 @@ export async function maskHTML(
 
   while ((attrMatch = attributeValuePattern.exec(html)) !== null) {
     const attributeValue = attrMatch[2];
+    if (attributeValue === undefined) continue;
 
     const detectionResult = await detector.detectAll(attributeValue);
 
@@ -586,7 +591,7 @@ export async function maskHTML(
         textReplacements.push({
           original: attributeValue,
           masked: maskingResult.maskedText,
-          index: attrMatch.index + attrMatch[1].length + 2, // Position after 'attr="'
+          index: attrMatch.index + (attrMatch[1] ?? '').length + 2, // Position after 'attr="'
         });
         totalMasked += maskingResult.totalMasked;
       }

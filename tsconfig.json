@@ -54,7 +54,8 @@
       "@transport/*": ["src/transport/*"],
       "@platform/*": ["src/platform/*"],
       "@config/*": ["src/config/*"],
-      "@shared/*": ["src/shared/*"]
+      "@shared/*": ["src/shared/*"],
+      "@tests/*": ["tests/*"]
     }
   },
   "include": ["src", "site-plugins", "tests"],

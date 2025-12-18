@@ -22,6 +22,10 @@ export class DirectFetchTransport implements Transport {
    * Make a standard HTTP request using fetch
    */
   async request(request: TransportRequest): Promise<TransportResponse> {
+    if (request.signal?.aborted) {
+      throw new TransportAbortError('Request was aborted');
+    }
+
     try {
       const fetchOptions: RequestInit = {
         method: request.method,
@@ -30,32 +34,22 @@ export class DirectFetchTransport implements Transport {
         signal: request.signal,
       };
 
-      // Create timeout signal if no abort signal provided
-      const timeoutController = new AbortController();
-      const timeoutId = setTimeout(() => {
-        timeoutController.abort();
-      }, this.defaultTimeout);
-
-      // Combine signals if both exist
-      if (request.signal) {
-        // If request is already aborted, throw immediately
-        if (request.signal.aborted) {
-          throw new TransportAbortError('Request was aborted');
-        }
-
-        // Listen for abort on the request signal
-        request.signal.addEventListener('abort', () => {
-          timeoutController.abort();
-        });
-      } else {
-        fetchOptions.signal = timeoutController.signal;
-      }
-
       let response: Response;
-      try {
+      if (request.signal) {
         response = await fetch(request.url, fetchOptions);
-      } finally {
-        clearTimeout(timeoutId);
+      } else {
+        const timeoutController = new AbortController();
+        const timeoutId = setTimeout(() => {
+          timeoutController.abort();
+        }, this.defaultTimeout);
+
+        fetchOptions.signal = timeoutController.signal;
+
+        try {
+          response = await fetch(request.url, fetchOptions);
+        } finally {
+          clearTimeout(timeoutId);
+        }
       }
 
       // Convert fetch Response to TransportResponse
@@ -68,7 +62,11 @@ export class DirectFetchTransport implements Transport {
 
       return transportResponse;
     } catch (error) {
-      return this.handleFetchError(error);
+      if (this.isTransportError(error)) {
+        throw error;
+      }
+
+      this.handleFetchError(error);
     }
   }
 

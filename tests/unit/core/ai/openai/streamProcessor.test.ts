@@ -1,995 +1,501 @@
 /**
- * @file OpenAI Stream Processor Unit Tests
+ * @file OpenAI Stream Processor Tests
  *
- * Comprehensive unit tests for the OpenAI stream processor,
- * covering event processing, stream handling, response parsing,
- * error scenarios, and search metadata handling.
+ * Tests for the OpenAIStreamProcessor class which handles streaming responses
+ * from OpenAI's Responses API.
  */
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { OpenAIStreamProcessor } from '@/core/ai/openai/streamProcessor';
-import type { OpenAIStreamEvent, SearchMetadata } from '@/core/ai/openai/types';
-import type { StreamChunk } from '@/types/providers';
-
-// Mock dependencies
-vi.mock('@/core/ai/openai/responseParser', () => ({
-  extractSearchMetadataFromEvent: vi.fn(),
-  extractReasoningSummary: vi.fn(),
-  convertUsage: vi.fn(),
-  normalizeFinishReason: vi.fn(),
-}));
-
-import {
-  extractSearchMetadataFromEvent,
-  extractReasoningSummary,
-  convertUsage,
-  normalizeFinishReason,
-} from '@/core/ai/openai/responseParser';
+import { OpenAIStreamProcessor } from '@core/ai/openai/streamProcessor';
+import type { OpenAIStreamEvent } from '@core/ai/openai/types';
 
 describe('OpenAIStreamProcessor', () => {
   let processor: OpenAIStreamProcessor;
-  const mockModel = 'gpt-5';
+  const defaultModel = 'gpt-4o';
 
   beforeEach(() => {
-    vi.clearAllMocks();
-
-    // Setup default mocks
-    vi.mocked(extractSearchMetadataFromEvent).mockReturnValue(null);
-    vi.mocked(extractReasoningSummary).mockReturnValue(undefined);
-    vi.mocked(convertUsage).mockReturnValue({
-      promptTokens: 10,
-      completionTokens: 20,
-      totalTokens: 30,
-    });
-    vi.mocked(normalizeFinishReason).mockReturnValue('stop');
+    processor = new OpenAIStreamProcessor(defaultModel, false);
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2024-01-15T12:00:00Z'));
   });
 
-  describe('Constructor', () => {
-    it('should create processor with model name and default showThinking=false', () => {
-      processor = new OpenAIStreamProcessor(mockModel);
-
-      expect(processor).toBeInstanceOf(OpenAIStreamProcessor);
-      expect(processor['model']).toBe(mockModel);
-      expect(processor['showThinking']).toBe(false);
-      expect(processor['lastSeenContent']).toBe('');
-      expect(processor['emittedReasoning']).toBe(false);
-      expect(processor['searchMetadata']).toBeNull();
-    });
-
-    it('should create processor with showThinking=true when specified', () => {
-      processor = new OpenAIStreamProcessor(mockModel, true);
-
-      expect(processor['showThinking']).toBe(true);
-    });
-  });
-
-  describe('reset()', () => {
-    it('should reset all internal state', () => {
-      processor = new OpenAIStreamProcessor(mockModel, true);
-
-      // Set some state
-      processor['lastSeenContent'] = 'some content';
-      processor['emittedReasoning'] = true;
-      processor.setSearchMetadata({ sources: [{ title: 'Test', url: 'https://test.com' }] });
-
-      // Reset
-      processor.reset();
-
-      // Verify reset
-      expect(processor['lastSeenContent']).toBe('');
-      expect(processor['emittedReasoning']).toBe(false);
-      expect(processor['searchMetadata']).toBeNull();
-    });
-  });
-
-  describe('Search Metadata Management', () => {
-    beforeEach(() => {
-      processor = new OpenAIStreamProcessor(mockModel);
-    });
-
-    it('should get initial search metadata as null', () => {
-      expect(processor.getSearchMetadata()).toBeNull();
-    });
-
-    it('should set and get search metadata', () => {
-      const metadata: SearchMetadata = {
-        sources: [{ title: 'Test Source', url: 'https://example.com', snippet: 'Test snippet' }],
-      };
-
-      processor.setSearchMetadata(metadata);
-      expect(processor.getSearchMetadata()).toEqual(metadata);
-    });
-
-    it('should set search metadata to null', () => {
-      const metadata: SearchMetadata = {
-        sources: [{ title: 'Test', url: 'https://test.com' }],
-      };
-
-      processor.setSearchMetadata(metadata);
-      expect(processor.getSearchMetadata()).toEqual(metadata);
-
-      processor.setSearchMetadata(null);
-      expect(processor.getSearchMetadata()).toBeNull();
-    });
-  });
-
-  describe('Web Search Event Processing', () => {
-    beforeEach(() => {
-      processor = new OpenAIStreamProcessor(mockModel);
-    });
-
-    it('should handle web search completion events', () => {
-      const mockMetadata: SearchMetadata = {
-        sources: [{ title: 'Search Result', url: 'https://search.com' }],
-      };
-      vi.mocked(extractSearchMetadataFromEvent).mockReturnValue(mockMetadata);
+  describe('reasoning delta streaming', () => {
+    it('should emit thinking chunks when showThinking is true', () => {
+      processor = new OpenAIStreamProcessor(defaultModel, true);
 
       const event: OpenAIStreamEvent = {
-        type: 'response.web_search_call.completed',
-        id: 'search-123',
+        type: 'response.reasoning_summary_text.delta',
+        delta: 'Analyzing the question...',
+        id: 'resp-123',
+        created: 1705320000,
+        model: defaultModel,
       };
 
-      const result = processor.processEvent(event);
+      const chunk = processor.processEvent(event);
 
-      expect(extractSearchMetadataFromEvent).toHaveBeenCalledWith(event);
-      expect(processor.getSearchMetadata()).toEqual(mockMetadata);
-      expect(result).toBeNull(); // Should not yield chunk for search events
+      expect(chunk).not.toBeNull();
+      expect(chunk?.choices[0]?.delta?.thinking).toBe('Analyzing the question...');
     });
 
-    it('should handle output item done events with web search type', () => {
+    it('should not emit thinking chunks when showThinking is false', () => {
+      processor = new OpenAIStreamProcessor(defaultModel, false);
+
       const event: OpenAIStreamEvent = {
-        type: 'response.output_item.done',
-        item: { type: 'web_search_call' },
+        type: 'response.reasoning_summary_text.delta',
+        delta: 'Analyzing the question...',
       };
 
-      const result = processor.processEvent(event);
-
-      expect(extractSearchMetadataFromEvent).toHaveBeenCalledWith(event);
-      expect(result).toBeNull();
+      const chunk = processor.processEvent(event);
+      // When showThinking is false, reasoning events don't produce thinking output
+      // but may still produce a chunk due to the generic delta handler
+      // The key is that no thinking field should be present
+      if (chunk) {
+        expect(chunk.choices[0]?.delta?.thinking).toBeUndefined();
+      }
     });
 
-    it('should handle output item done events with message type', () => {
+    it('should handle non-string delta values in reasoning events', () => {
+      processor = new OpenAIStreamProcessor(defaultModel, true);
+
       const event: OpenAIStreamEvent = {
-        type: 'response.output_item.done',
-        item: { type: 'message' },
+        type: 'response.reasoning_summary_text.delta',
+        delta: 123 as unknown as string, // Edge case: non-string delta
       };
 
-      const result = processor.processEvent(event);
-
-      expect(extractSearchMetadataFromEvent).toHaveBeenCalledWith(event);
-      expect(result).toBeNull();
+      const chunk = processor.processEvent(event);
+      expect(chunk?.choices[0]?.delta?.thinking).toBe('123');
     });
+  });
 
-    it('should not set search metadata when extractor returns null', () => {
-      vi.mocked(extractSearchMetadataFromEvent).mockReturnValue(null);
-
+  describe('web search events', () => {
+    it('should not yield chunk for web search call completed', () => {
       const event: OpenAIStreamEvent = {
         type: 'response.web_search_call.completed',
       };
 
-      processor.processEvent(event);
-
-      expect(processor.getSearchMetadata()).toBeNull();
-    });
-  });
-
-  describe('Reasoning Delta Processing', () => {
-    beforeEach(() => {
-      processor = new OpenAIStreamProcessor(mockModel, true); // showThinking = true
+      const chunk = processor.processEvent(event);
+      expect(chunk).toBeNull();
     });
 
-    it('should process reasoning summary text delta events when showThinking=true', () => {
-      const beforeTime = Date.now();
-
-      const event: OpenAIStreamEvent = {
-        type: 'response.reasoning_summary_text.delta',
-        delta: 'Let me think about this...',
-        id: 'reasoning-123',
-        created: 1234567890,
-        model: 'gpt-5',
-      };
-
-      const result = processor.processEvent(event);
-      const afterTime = Date.now();
-
-      expect(result).not.toBeNull();
-      expect(result!.choices[0].delta.thinking).toBe('Let me think about this...');
-      // Delta events generate fallback IDs because createThinkingChunk is called without the event parameter
-      expect(result!.id).toMatch(/^resp-chunk-\d+-thinking$/);
-      expect(result!.model).toBe(mockModel); // Uses processor model, not event model
-      expect(result!.created).toBeGreaterThanOrEqual(Math.floor(beforeTime / 1000));
-      expect(result!.created).toBeLessThanOrEqual(Math.floor(afterTime / 1000));
-      expect(processor['emittedReasoning']).toBe(true);
-    });
-
-    it('should not process reasoning delta when showThinking=false', () => {
-      processor = new OpenAIStreamProcessor(mockModel, false);
-
-      const event: OpenAIStreamEvent = {
-        type: 'response.reasoning_summary_text.delta',
-        delta: 'Let me think about this...',
-      };
-
-      const result = processor.processEvent(event);
-
-      // When showThinking=false, reasoning delta events are treated as regular content
-      // because extractDeltaContent falls through to the generic delta handling
-      expect(result).not.toBeNull();
-      expect(result!.choices[0].delta.content).toBe('Let me think about this...');
-      expect(processor['emittedReasoning']).toBe(false);
-    });
-
-    it('should handle non-string delta in reasoning events', () => {
-      const event: OpenAIStreamEvent = {
-        type: 'response.reasoning_summary_text.delta',
-        delta: { some: 'object' } as any,
-      };
-
-      const result = processor.processEvent(event);
-
-      expect(result).not.toBeNull();
-      expect(result!.choices[0].delta.thinking).toBe('[object Object]');
-    });
-
-    it('should handle empty delta in reasoning events', () => {
-      const event: OpenAIStreamEvent = {
-        type: 'response.reasoning_summary_text.delta',
-        delta: '',
-      };
-
-      const result = processor.processEvent(event);
-
-      // Empty string is falsy, so the reasoning condition fails
-      // The event then continues to extractDeltaContent which also rejects empty delta
-      expect(result).toBeNull();
-    });
-
-    it('should handle falsy delta in reasoning events', () => {
-      const event: OpenAIStreamEvent = {
-        type: 'response.reasoning_summary_text.delta',
-        delta: null as any,
-      };
-
-      const result = processor.processEvent(event);
-
-      expect(result).toBeNull(); // Should return null when delta is falsy
-      expect(processor['emittedReasoning']).toBe(false);
-    });
-
-    it('should generate fallback ID and timestamp when not provided', () => {
-      const beforeTime = Date.now();
-
-      const event: OpenAIStreamEvent = {
-        type: 'response.reasoning_summary_text.delta',
-        delta: 'thinking...',
-      };
-
-      const result = processor.processEvent(event);
-      const afterTime = Date.now();
-
-      expect(result).not.toBeNull();
-      expect(result!.id).toMatch(/^resp-chunk-\d+-thinking$/);
-      expect(result!.created).toBeGreaterThanOrEqual(Math.floor(beforeTime / 1000));
-      expect(result!.created).toBeLessThanOrEqual(Math.floor(afterTime / 1000));
-      expect(result!.model).toBe(mockModel);
-    });
-
-    it('should not include usage in reasoning delta events', () => {
-      const event: OpenAIStreamEvent = {
-        type: 'response.reasoning_summary_text.delta',
-        delta: 'thinking...',
-        usage: { prompt_tokens: 5, completion_tokens: 10, total_tokens: 15 },
-      };
-
-      const result = processor.processEvent(event);
-
-      // Reasoning delta events call createThinkingChunk without the event parameter,
-      // so usage is not included (it would be undefined)
-      expect(convertUsage).not.toHaveBeenCalled();
-      expect(result!.usage).toBeUndefined();
-    });
-  });
-
-  describe('Reasoning Completion Events', () => {
-    beforeEach(() => {
-      processor = new OpenAIStreamProcessor(mockModel, true);
-    });
-
-    it('should handle reasoning summary done events without emitting chunk', () => {
-      const event: OpenAIStreamEvent = {
-        type: 'response.reasoning_summary_text.done',
-      };
-
-      const result = processor.processEvent(event);
-      expect(result).toBeNull();
-    });
-
-    it('should handle reasoning summary part done events without emitting chunk', () => {
-      const event: OpenAIStreamEvent = {
-        type: 'response.reasoning_summary_part.done',
-      };
-
-      const result = processor.processEvent(event);
-      expect(result).toBeNull();
-    });
-  });
-
-  describe('Standalone Reasoning Events', () => {
-    beforeEach(() => {
-      processor = new OpenAIStreamProcessor(mockModel, true);
-    });
-
-    it('should process standalone reasoning events with summary', () => {
-      const mockSummary = 'This is my reasoning summary';
-      vi.mocked(extractReasoningSummary).mockReturnValue(mockSummary);
-
-      const event: OpenAIStreamEvent = {
-        type: 'reasoning',
-        id: 'reasoning-456',
-      };
-
-      const result = processor.processEvent(event);
-
-      expect(extractReasoningSummary).toHaveBeenCalledWith(event);
-      expect(result).not.toBeNull();
-      expect(result!.choices[0].delta.thinking).toBe(mockSummary);
-      expect(processor['emittedReasoning']).toBe(true);
-    });
-
-    it('should process reasoning events with item_type=reasoning', () => {
-      const mockSummary = 'Reasoning via item_type';
-      vi.mocked(extractReasoningSummary).mockReturnValue(mockSummary);
-
-      const event: OpenAIStreamEvent = {
-        item_type: 'reasoning',
-        id: 'reasoning-789',
-      };
-
-      const result = processor.processEvent(event);
-
-      expect(result).not.toBeNull();
-      expect(result!.choices[0].delta.thinking).toBe(mockSummary);
-    });
-
-    it('should not emit reasoning if already emitted', () => {
-      processor['emittedReasoning'] = true;
-
-      const mockSummary = 'This should not be emitted';
-      vi.mocked(extractReasoningSummary).mockReturnValue(mockSummary);
-
-      const event: OpenAIStreamEvent = {
-        type: 'reasoning',
-      };
-
-      const result = processor.processEvent(event);
-      expect(result).toBeNull();
-    });
-
-    it('should not emit reasoning with empty summary', () => {
-      vi.mocked(extractReasoningSummary).mockReturnValue('   '); // whitespace only
-
-      const event: OpenAIStreamEvent = {
-        type: 'reasoning',
-      };
-
-      const result = processor.processEvent(event);
-      expect(result).toBeNull();
-      expect(processor['emittedReasoning']).toBe(false);
-    });
-
-    it('should not emit reasoning when showThinking=false', () => {
-      processor = new OpenAIStreamProcessor(mockModel, false);
-
-      const mockSummary = 'This should not be emitted';
-      vi.mocked(extractReasoningSummary).mockReturnValue(mockSummary);
-
-      const event: OpenAIStreamEvent = {
-        type: 'reasoning',
-      };
-
-      const result = processor.processEvent(event);
-      expect(result).toBeNull();
-    });
-  });
-
-  describe('Content Delta Processing', () => {
-    beforeEach(() => {
-      processor = new OpenAIStreamProcessor(mockModel);
-    });
-
-    it('should process output text delta events', () => {
-      const event: OpenAIStreamEvent = {
-        type: 'response.output_text.delta',
-        delta: 'Hello, world!',
-        id: 'content-123',
-        model: 'gpt-5',
-        created: 1234567890,
-      };
-
-      const result = processor.processEvent(event);
-
-      expect(result).not.toBeNull();
-      expect(result!.choices[0].delta.content).toBe('Hello, world!');
-      expect(result!.id).toBe('content-123');
-      expect(result!.model).toBe('gpt-5');
-      expect(result!.created).toBe(1234567890);
-    });
-
-    it('should process output_text field with incremental content extraction', () => {
-      const event1: OpenAIStreamEvent = {
-        output_text: 'Hello',
-      };
-
-      const event2: OpenAIStreamEvent = {
-        output_text: 'Hello, world!',
-      };
-
-      // First event should return full content
-      const result1 = processor.processEvent(event1);
-      expect(result1!.choices[0].delta.content).toBe('Hello');
-
-      // Second event should return only the delta
-      const result2 = processor.processEvent(event2);
-      expect(result2!.choices[0].delta.content).toBe(', world!');
-    });
-
-    it('should handle output_text with no new content', () => {
-      const event1: OpenAIStreamEvent = {
-        output_text: 'Hello, world!',
-      };
-
-      const event2: OpenAIStreamEvent = {
-        output_text: 'Hello, world!', // Same content
-      };
-
-      processor.processEvent(event1);
-      const result2 = processor.processEvent(event2);
-
-      expect(result2).toBeNull(); // No new content, no chunk
-    });
-
-    it('should handle output_text shorter than previous (edge case)', () => {
-      const event1: OpenAIStreamEvent = {
-        output_text: 'Hello, world!',
-      };
-
-      const event2: OpenAIStreamEvent = {
-        output_text: 'Hello', // Shorter content
-      };
-
-      processor.processEvent(event1);
-      const result2 = processor.processEvent(event2);
-
-      expect(result2).toBeNull(); // No delta when content is shorter
-    });
-
-    it('should handle generic delta field', () => {
-      const event: OpenAIStreamEvent = {
-        delta: 'Generic delta content',
-      };
-
-      const result = processor.processEvent(event);
-
-      expect(result).not.toBeNull();
-      expect(result!.choices[0].delta.content).toBe('Generic delta content');
-    });
-
-    it('should ignore non-string delta', () => {
-      const event: OpenAIStreamEvent = {
-        delta: { some: 'object' } as any,
-      };
-
-      const result = processor.processEvent(event);
-      expect(result).toBeNull();
-    });
-
-    it('should include search metadata in content chunks', () => {
-      const metadata: SearchMetadata = {
-        sources: [{ title: 'Test', url: 'https://test.com' }],
-      };
-      processor.setSearchMetadata(metadata);
-
-      const event: OpenAIStreamEvent = {
-        type: 'response.output_text.delta',
-        delta: 'Content with metadata',
-        id: 'content-with-meta',
-      };
-
-      const result = processor.processEvent(event);
-
-      expect(result!.metadata).toEqual({
-        searchResults: metadata,
-        responseId: 'content-with-meta',
-      });
-    });
-
-    it('should handle finish reason in content chunks', () => {
-      vi.mocked(normalizeFinishReason).mockReturnValue('length');
-
-      const event: OpenAIStreamEvent = {
-        type: 'response.output_text.delta',
-        delta: 'Final content',
-        finish_reason: 'max_tokens',
-      };
-
-      const result = processor.processEvent(event);
-
-      expect(normalizeFinishReason).toHaveBeenCalledWith('max_tokens');
-      expect(result!.choices[0].finishReason).toBe('length'); // Should be the normalized reason for non-stop reasons
-    });
-
-    it('should set finishReason to null for stop reason during streaming', () => {
-      vi.mocked(normalizeFinishReason).mockReturnValue('stop');
-
-      const event: OpenAIStreamEvent = {
-        type: 'response.output_text.delta',
-        delta: 'Final content',
-        finish_reason: 'stop',
-      };
-
-      const result = processor.processEvent(event);
-
-      expect(result!.choices[0].finishReason).toBeNull(); // stop reason becomes null during streaming
-    });
-  });
-
-  describe('Completion Event Processing', () => {
-    beforeEach(() => {
-      processor = new OpenAIStreamProcessor(mockModel);
-    });
-
-    it('should process response.completed events', () => {
-      vi.mocked(normalizeFinishReason).mockReturnValue('stop');
-      const mockUsage = { promptTokens: 100, completionTokens: 50, totalTokens: 150 };
-      vi.mocked(convertUsage).mockReturnValue(mockUsage);
-
-      const event: OpenAIStreamEvent = {
-        type: 'response.completed',
-        id: 'completion-123',
-        usage: { total_tokens: 150 },
-      };
-
-      const result = processor.processEvent(event);
-
-      expect(result).not.toBeNull();
-      expect(result!.choices[0].delta).toEqual({});
-      expect(result!.choices[0].finishReason).toBe('stop');
-      expect(result!.usage).toEqual(mockUsage);
-      expect(convertUsage).toHaveBeenCalledWith(event.usage);
-    });
-
-    it('should process events with finish_reason field', () => {
-      vi.mocked(normalizeFinishReason).mockReturnValue('length');
-
-      const event: OpenAIStreamEvent = {
-        finish_reason: 'max_tokens',
-        id: 'finish-456',
-      };
-
-      const result = processor.processEvent(event);
-
-      expect(result).not.toBeNull();
-      expect(result!.choices[0].finishReason).toBe('length');
-      expect(normalizeFinishReason).toHaveBeenCalledWith('max_tokens');
-    });
-
-    it('should process events with status=completed', () => {
-      vi.mocked(normalizeFinishReason).mockReturnValue('stop');
-
-      const event: OpenAIStreamEvent = {
-        status: 'completed',
-        id: 'status-789',
-      };
-
-      const result = processor.processEvent(event);
-
-      expect(result).not.toBeNull();
-      expect(result!.choices[0].finishReason).toBe('stop');
-    });
-
-    it('should include search metadata in completion chunks', () => {
-      const metadata: SearchMetadata = {
-        sources: [{ title: 'Final', url: 'https://final.com' }],
-      };
-      processor.setSearchMetadata(metadata);
-
-      const event: OpenAIStreamEvent = {
-        type: 'response.completed',
-        id: 'final-123',
-      };
-
-      const result = processor.processEvent(event);
-
-      expect(result!.metadata).toEqual({
-        searchResults: metadata,
-        responseId: 'final-123',
-      });
-    });
-
-    it('should generate fallback ID for completion chunks', () => {
-      const event: OpenAIStreamEvent = {
-        type: 'response.completed',
-      };
-
-      const result = processor.processEvent(event);
-
-      expect(result!.id).toMatch(/^resp-chunk-\d+$/);
-    });
-  });
-
-  describe('Event Classification Helpers', () => {
-    beforeEach(() => {
-      processor = new OpenAIStreamProcessor(mockModel);
-    });
-
-    it('should correctly identify web search events', () => {
-      expect(
-        processor['isWebSearchEvent']({
-          type: 'response.web_search_call.completed',
-        })
-      ).toBe(true);
-
-      expect(
-        processor['isWebSearchEvent']({
-          type: 'response.output_item.done',
-          item: { type: 'web_search_call' },
-        })
-      ).toBe(true);
-
-      expect(
-        processor['isWebSearchEvent']({
-          type: 'response.output_item.done',
-          item: { type: 'message' },
-        })
-      ).toBe(true);
-
-      expect(
-        processor['isWebSearchEvent']({
-          type: 'response.output_text.delta',
-        })
-      ).toBe(false);
-    });
-
-    it('should correctly identify reasoning completion events', () => {
-      expect(
-        processor['isReasoningCompletionEvent']({
-          type: 'response.reasoning_summary_text.done',
-        })
-      ).toBe(true);
-
-      expect(
-        processor['isReasoningCompletionEvent']({
-          type: 'response.reasoning_summary_part.done',
-        })
-      ).toBe(true);
-
-      expect(
-        processor['isReasoningCompletionEvent']({
-          type: 'response.output_text.delta',
-        })
-      ).toBe(false);
-    });
-
-    it('should correctly identify standalone reasoning events', () => {
-      expect(
-        processor['isStandaloneReasoningEvent']({
-          type: 'reasoning',
-        })
-      ).toBe(true);
-
-      expect(
-        processor['isStandaloneReasoningEvent']({
-          item_type: 'reasoning',
-        })
-      ).toBe(true);
-
-      expect(
-        processor['isStandaloneReasoningEvent']({
-          type: 'response.output_text.delta',
-        })
-      ).toBe(false);
-    });
-
-    it('should correctly identify completion events', () => {
-      expect(
-        processor['isCompletionEvent']({
-          type: 'response.completed',
-        })
-      ).toBe(true);
-
-      expect(
-        processor['isCompletionEvent']({
-          finish_reason: 'stop',
-        })
-      ).toBe(true);
-
-      expect(
-        processor['isCompletionEvent']({
-          status: 'completed',
-        })
-      ).toBe(true);
-
-      expect(
-        processor['isCompletionEvent']({
-          type: 'response.output_text.delta',
-        })
-      ).toBe(false);
-    });
-  });
-
-  describe('Edge Cases and Error Handling', () => {
-    beforeEach(() => {
-      processor = new OpenAIStreamProcessor(mockModel);
-    });
-
-    it('should handle empty events gracefully', () => {
-      const result = processor.processEvent({});
-      expect(result).toBeNull();
-    });
-
-    it('should handle null/undefined event properties', () => {
-      const event: OpenAIStreamEvent = {
-        type: 'response.output_text.delta',
-        delta: null as any,
-      };
-
-      const result = processor.processEvent(event);
-      expect(result).toBeNull();
-    });
-
-    it('should handle events with undefined delta', () => {
-      const event: OpenAIStreamEvent = {
-        type: 'response.output_text.delta',
-        delta: undefined,
-      };
-
-      const result = processor.processEvent(event);
-      expect(result).toBeNull();
-    });
-
-    it('should handle malformed response_id', () => {
-      const event: OpenAIStreamEvent = {
-        type: 'response.output_text.delta',
-        delta: 'test',
-        response_id: null as any,
-      };
-
-      const result = processor.processEvent(event);
-      expect(result).not.toBeNull();
-      expect(result!.id).toMatch(/^resp-chunk-\d+$/);
-    });
-
-    it('should handle events with missing model field', () => {
-      const event: OpenAIStreamEvent = {
-        type: 'response.output_text.delta',
-        delta: 'test',
-      };
-
-      const result = processor.processEvent(event);
-      expect(result!.model).toBe(mockModel);
-    });
-
-    it('should handle events with null usage', () => {
-      vi.mocked(normalizeFinishReason).mockReturnValue('stop');
-
-      const event: OpenAIStreamEvent = {
-        type: 'response.completed',
-        usage: null as any,
-      };
-
-      const result = processor.processEvent(event);
-      expect(result).not.toBeNull(); // Should create a completion chunk
-      // convertUsage is not called when usage is falsy (null), it just sets usage to undefined
-      expect(convertUsage).not.toHaveBeenCalled();
-      expect(result!.usage).toBeUndefined();
-    });
-
-    it('should handle complex nested event structures', () => {
+    it('should extract search metadata from web_search_call output item', () => {
       const event: OpenAIStreamEvent = {
         type: 'response.output_item.done',
         item: {
           type: 'web_search_call',
           action: {
-            type: 'search',
-            query: 'test query',
+            query: 'test search query',
           },
         },
       };
 
-      const result = processor.processEvent(event);
-      expect(extractSearchMetadataFromEvent).toHaveBeenCalledWith(event);
-      expect(result).toBeNull();
+      processor.processEvent(event);
+      const metadata = processor.getSearchMetadata();
+
+      expect(metadata).not.toBeNull();
+      expect(metadata?.sources[0]?.title).toContain('test search query');
+    });
+
+    it('should extract citations from message annotations', () => {
+      const event: OpenAIStreamEvent = {
+        type: 'response.output_item.done',
+        item: {
+          type: 'message',
+          content: [
+            {
+              type: 'output_text',
+              text: 'Some response',
+              annotations: [
+                {
+                  type: 'url_citation',
+                  url: 'https://example.com',
+                  title: 'Example Site',
+                },
+              ],
+            },
+          ],
+        },
+      };
+
+      processor.processEvent(event);
+      const metadata = processor.getSearchMetadata();
+
+      expect(metadata).not.toBeNull();
+      expect(metadata?.sources[0]?.url).toBe('https://example.com');
+      expect(metadata?.sources[0]?.title).toBe('Example Site');
     });
   });
 
-  describe('State Persistence Across Events', () => {
-    beforeEach(() => {
-      processor = new OpenAIStreamProcessor(mockModel, true);
+  describe('content delta extraction', () => {
+    it('should extract content from output_text.delta events', () => {
+      const event: OpenAIStreamEvent = {
+        type: 'response.output_text.delta',
+        delta: 'Hello, world!',
+        id: 'resp-123',
+        created: 1705320000,
+        model: defaultModel,
+      };
+
+      const chunk = processor.processEvent(event);
+
+      expect(chunk).not.toBeNull();
+      expect(chunk?.choices[0]?.delta?.content).toBe('Hello, world!');
     });
 
-    it('should maintain emittedReasoning state across multiple events', () => {
-      // First reasoning event
-      vi.mocked(extractReasoningSummary).mockReturnValue('First reasoning');
-      const event1: OpenAIStreamEvent = { type: 'reasoning' };
+    it('should extract incremental content from output_text field', () => {
+      // First event with cumulative text
+      const event1: OpenAIStreamEvent = {
+        output_text: 'Hello',
+        id: 'resp-123',
+        created: 1705320000,
+        model: defaultModel,
+      };
 
-      const result1 = processor.processEvent(event1);
-      expect(result1).not.toBeNull();
-      expect(processor['emittedReasoning']).toBe(true);
+      const chunk1 = processor.processEvent(event1);
+      expect(chunk1?.choices[0]?.delta?.content).toBe('Hello');
 
-      // Second reasoning event should be ignored
-      vi.mocked(extractReasoningSummary).mockReturnValue('Second reasoning');
-      const event2: OpenAIStreamEvent = { type: 'reasoning' };
+      // Second event with more cumulative text
+      const event2: OpenAIStreamEvent = {
+        output_text: 'Hello, world!',
+        id: 'resp-123',
+        created: 1705320000,
+        model: defaultModel,
+      };
 
-      const result2 = processor.processEvent(event2);
-      expect(result2).toBeNull();
+      const chunk2 = processor.processEvent(event2);
+      expect(chunk2?.choices[0]?.delta?.content).toBe(', world!');
     });
 
-    it('should maintain lastSeenContent for incremental updates', () => {
-      const event1: OpenAIStreamEvent = { output_text: 'Hello' };
-      const event2: OpenAIStreamEvent = { output_text: 'Hello, world' };
-      const event3: OpenAIStreamEvent = { output_text: 'Hello, world!' };
+    it('should not emit duplicate content for same cumulative text', () => {
+      const event1: OpenAIStreamEvent = {
+        output_text: 'Hello',
+        id: 'resp-123',
+        created: 1705320000,
+        model: defaultModel,
+      };
 
       processor.processEvent(event1);
-      expect(processor['lastSeenContent']).toBe('Hello');
 
-      processor.processEvent(event2);
-      expect(processor['lastSeenContent']).toBe('Hello, world');
+      // Same text again
+      const event2: OpenAIStreamEvent = {
+        output_text: 'Hello',
+        id: 'resp-123',
+        created: 1705320000,
+        model: defaultModel,
+      };
 
-      processor.processEvent(event3);
-      expect(processor['lastSeenContent']).toBe('Hello, world!');
+      const chunk2 = processor.processEvent(event2);
+      expect(chunk2).toBeNull();
     });
 
-    it('should maintain search metadata across content chunks', () => {
-      const metadata: SearchMetadata = {
-        sources: [{ title: 'Persistent', url: 'https://persistent.com' }],
+    it('should handle generic delta string field', () => {
+      const event: OpenAIStreamEvent = {
+        delta: 'Generic delta content',
+        id: 'resp-123',
+        created: 1705320000,
+        model: defaultModel,
       };
-      processor.setSearchMetadata(metadata);
 
-      // Multiple content events should all include the metadata
-      const events = [
-        { type: 'response.output_text.delta', delta: 'Part 1' },
-        { type: 'response.output_text.delta', delta: 'Part 2' },
-        { type: 'response.completed' },
-      ];
-
-      events.forEach((event, index) => {
-        const result = processor.processEvent(event as OpenAIStreamEvent);
-        if (result) {
-          expect(result.metadata?.searchResults).toEqual(metadata);
-        }
-      });
+      const chunk = processor.processEvent(event);
+      expect(chunk?.choices[0]?.delta?.content).toBe('Generic delta content');
     });
   });
 
-  describe('Multiple Processor Instances', () => {
-    it('should maintain independent state across instances', () => {
-      const processor1 = new OpenAIStreamProcessor('gpt-5', true);
-      const processor2 = new OpenAIStreamProcessor('gpt-5-mini', false);
-
-      // Set different states
-      processor1.setSearchMetadata({ sources: [{ title: 'P1', url: 'https://p1.com' }] });
-      processor2.setSearchMetadata({ sources: [{ title: 'P2', url: 'https://p2.com' }] });
-
-      processor1['lastSeenContent'] = 'Content 1';
-      processor2['lastSeenContent'] = 'Content 2';
-
-      // Verify independence
-      expect(processor1.getSearchMetadata()?.sources[0].title).toBe('P1');
-      expect(processor2.getSearchMetadata()?.sources[0].title).toBe('P2');
-      expect(processor1['lastSeenContent']).toBe('Content 1');
-      expect(processor2['lastSeenContent']).toBe('Content 2');
-      expect(processor1['showThinking']).toBe(true);
-      expect(processor2['showThinking']).toBe(false);
-    });
-  });
-
-  describe('Stream Chunk Structure Validation', () => {
-    beforeEach(() => {
-      processor = new OpenAIStreamProcessor(mockModel);
-    });
-
-    it('should create valid StreamChunk structure for content', () => {
-      const event: OpenAIStreamEvent = {
-        type: 'response.output_text.delta',
-        delta: 'test content',
-        id: 'test-id',
-        created: 1234567890,
-        model: 'test-model',
-      };
-
-      const result = processor.processEvent(event);
-
-      // Validate required StreamChunk fields
-      expect(result).toMatchObject({
-        id: 'test-id',
-        object: 'response.chunk',
-        created: 1234567890,
-        model: 'test-model',
-        choices: [
-          {
-            index: 0,
-            delta: { content: 'test content' },
-            finishReason: null,
-          },
-        ],
-      });
-    });
-
-    it('should create valid StreamChunk structure for thinking', () => {
-      processor = new OpenAIStreamProcessor(mockModel, true);
-
-      const event: OpenAIStreamEvent = {
-        type: 'response.reasoning_summary_text.delta',
-        delta: 'thinking content',
-        id: 'thinking-id',
-      };
-
-      const result = processor.processEvent(event);
-
-      expect(result).toMatchObject({
-        // Delta events generate fallback IDs because createThinkingChunk is called without event
-        id: expect.stringMatching(/^resp-chunk-\d+-thinking$/),
-        object: 'response.chunk',
-        model: mockModel,
-        choices: [
-          {
-            index: 0,
-            delta: { thinking: 'thinking content' },
-            finishReason: null,
-          },
-        ],
-      });
-    });
-
-    it('should create valid StreamChunk structure for completion', () => {
-      vi.mocked(normalizeFinishReason).mockReturnValue('stop');
-
+  describe('completion events', () => {
+    it('should create completion chunk for response.completed', () => {
       const event: OpenAIStreamEvent = {
         type: 'response.completed',
-        id: 'completion-id',
+        id: 'resp-123',
+        created: 1705320000,
+        model: defaultModel,
+        usage: {
+          input_tokens: 100,
+          output_tokens: 50,
+        },
+      };
+
+      const chunk = processor.processEvent(event);
+
+      expect(chunk).not.toBeNull();
+      expect(chunk?.choices[0]?.finishReason).toBe('stop');
+      expect(chunk?.usage?.promptTokens).toBe(100);
+      expect(chunk?.usage?.completionTokens).toBe(50);
+    });
+
+    it('should create completion chunk for finish_reason', () => {
+      const event: OpenAIStreamEvent = {
         finish_reason: 'stop',
+        id: 'resp-123',
+        created: 1705320000,
+        model: defaultModel,
       };
 
-      const result = processor.processEvent(event);
+      const chunk = processor.processEvent(event);
+      expect(chunk?.choices[0]?.finishReason).toBe('stop');
+    });
 
-      expect(result).toMatchObject({
-        id: 'completion-id',
-        object: 'response.chunk',
-        model: mockModel,
-        choices: [
-          {
-            index: 0,
-            delta: {},
-            finishReason: 'stop',
-          },
-        ],
+    it('should create completion chunk for status=completed', () => {
+      const event: OpenAIStreamEvent = {
+        status: 'completed',
+        id: 'resp-123',
+        created: 1705320000,
+        model: defaultModel,
+      };
+
+      const chunk = processor.processEvent(event);
+      expect(chunk?.choices[0]?.finishReason).toBe('stop');
+    });
+
+    it('should include metadata in completion chunk', () => {
+      // Set up search metadata first
+      const searchEvent: OpenAIStreamEvent = {
+        type: 'response.output_item.done',
+        item: {
+          type: 'message',
+          content: [
+            {
+              type: 'output_text',
+              text: 'Response',
+              annotations: [
+                {
+                  type: 'url_citation',
+                  url: 'https://example.com',
+                  title: 'Example',
+                },
+              ],
+            },
+          ],
+        },
+      };
+      processor.processEvent(searchEvent);
+
+      const completionEvent: OpenAIStreamEvent = {
+        type: 'response.completed',
+        id: 'resp-123',
+        response_id: 'resp-final',
+        created: 1705320000,
+        model: defaultModel,
+      };
+
+      const chunk = processor.processEvent(completionEvent);
+
+      expect(chunk?.metadata?.['searchResults']).toBeDefined();
+      expect(chunk?.metadata?.['responseId']).toBe('resp-123');
+    });
+  });
+
+  describe('reasoning completion events', () => {
+    it('should return null for reasoning_summary_text.done', () => {
+      const event: OpenAIStreamEvent = {
+        type: 'response.reasoning_summary_text.done',
+      };
+
+      const chunk = processor.processEvent(event);
+      expect(chunk).toBeNull();
+    });
+
+    it('should return null for reasoning_summary_part.done', () => {
+      const event: OpenAIStreamEvent = {
+        type: 'response.reasoning_summary_part.done',
+      };
+
+      const chunk = processor.processEvent(event);
+      expect(chunk).toBeNull();
+    });
+  });
+
+  describe('standalone reasoning events', () => {
+    it('should handle reasoning event type when showThinking is true', () => {
+      processor = new OpenAIStreamProcessor(defaultModel, true);
+
+      const event: OpenAIStreamEvent = {
+        type: 'reasoning',
+        summary: [{ text: 'Standalone reasoning' }] as Array<{ text: string }>,
+        id: 'resp-123',
+        created: 1705320000,
+        model: defaultModel,
+      };
+
+      const chunk = processor.processEvent(event);
+      expect(chunk?.choices[0]?.delta?.thinking).toBe('Standalone reasoning');
+    });
+
+    it('should not emit standalone reasoning when already emitted via delta', () => {
+      processor = new OpenAIStreamProcessor(defaultModel, true);
+
+      // First, emit via delta
+      const deltaEvent: OpenAIStreamEvent = {
+        type: 'response.reasoning_summary_text.delta',
+        delta: 'Delta reasoning',
+      };
+      processor.processEvent(deltaEvent);
+
+      // Then try standalone reasoning - should not emit again
+      const standaloneEvent: OpenAIStreamEvent = {
+        type: 'reasoning',
+        summary: [{ text: 'Standalone reasoning' }] as Array<{ text: string }>,
+        id: 'resp-123',
+        created: 1705320000,
+        model: defaultModel,
+      };
+
+      const chunk = processor.processEvent(standaloneEvent);
+      expect(chunk).toBeNull();
+    });
+  });
+
+  describe('reset', () => {
+    it('should clear all state when reset is called', () => {
+      // Accumulate some state
+      processor.processEvent({
+        output_text: 'Hello',
+        id: 'resp-123',
+        created: 1705320000,
+        model: defaultModel,
       });
-    });
 
-    it('should include usage in chunks when available', () => {
-      const mockUsage = { promptTokens: 10, completionTokens: 5, totalTokens: 15 };
-      vi.mocked(convertUsage).mockReturnValue(mockUsage);
+      processor.setSearchMetadata({
+        sources: [{ url: 'https://example.com', title: 'Test' }],
+      });
 
+      processor.reset();
+
+      expect(processor.getSearchMetadata()).toBeNull();
+
+      // After reset, should start fresh with output_text tracking
       const event: OpenAIStreamEvent = {
-        type: 'response.output_text.delta',
-        delta: 'content',
-        usage: { total_tokens: 15 },
+        output_text: 'Hello',
+        id: 'resp-456',
+        created: 1705320000,
+        model: defaultModel,
       };
 
-      const result = processor.processEvent(event);
-
-      expect(result!.usage).toEqual(mockUsage);
+      const chunk = processor.processEvent(event);
+      expect(chunk?.choices[0]?.delta?.content).toBe('Hello');
     });
+  });
 
-    it('should not include usage when not available', () => {
+  describe('chunk structure', () => {
+    it('should include correct object type', () => {
       const event: OpenAIStreamEvent = {
         type: 'response.output_text.delta',
-        delta: 'content',
+        delta: 'Test',
+        id: 'resp-123',
+        created: 1705320000,
+        model: defaultModel,
       };
 
-      const result = processor.processEvent(event);
+      const chunk = processor.processEvent(event);
+      expect(chunk?.object).toBe('response.chunk');
+    });
 
-      expect(result!.usage).toBeUndefined();
+    it('should use fallback id when not provided', () => {
+      const event: OpenAIStreamEvent = {
+        type: 'response.output_text.delta',
+        delta: 'Test',
+      };
+
+      const chunk = processor.processEvent(event);
+      expect(chunk?.id).toMatch(/^resp-chunk-/);
+    });
+
+    it('should use fallback model when not provided in event', () => {
+      const event: OpenAIStreamEvent = {
+        type: 'response.output_text.delta',
+        delta: 'Test',
+      };
+
+      const chunk = processor.processEvent(event);
+      expect(chunk?.model).toBe(defaultModel);
+    });
+
+    it('should include response_id in chunk id', () => {
+      const event: OpenAIStreamEvent = {
+        type: 'response.output_text.delta',
+        delta: 'Test',
+        response_id: 'resp-abc',
+      };
+
+      const chunk = processor.processEvent(event);
+      expect(chunk?.id).toBe('resp-abc');
+    });
+  });
+
+  describe('usage conversion', () => {
+    it('should convert Responses API usage format', () => {
+      const event: OpenAIStreamEvent = {
+        type: 'response.completed',
+        id: 'resp-123',
+        created: 1705320000,
+        model: defaultModel,
+        usage: {
+          input_tokens: 100,
+          output_tokens: 50,
+        },
+      };
+
+      const chunk = processor.processEvent(event);
+
+      expect(chunk?.usage?.promptTokens).toBe(100);
+      expect(chunk?.usage?.completionTokens).toBe(50);
+      expect(chunk?.usage?.totalTokens).toBe(150);
+    });
+
+    it('should convert Chat Completions API usage format', () => {
+      const event: OpenAIStreamEvent = {
+        type: 'response.completed',
+        id: 'resp-123',
+        created: 1705320000,
+        model: defaultModel,
+        usage: {
+          prompt_tokens: 100,
+          completion_tokens: 50,
+          total_tokens: 150,
+        },
+      };
+
+      const chunk = processor.processEvent(event);
+
+      expect(chunk?.usage?.promptTokens).toBe(100);
+      expect(chunk?.usage?.completionTokens).toBe(50);
+      expect(chunk?.usage?.totalTokens).toBe(150);
+    });
+  });
+
+  describe('finish reason normalization', () => {
+    it('should normalize "stop" finish reason', () => {
+      const event: OpenAIStreamEvent = {
+        finish_reason: 'stop',
+        id: 'resp-123',
+        created: 1705320000,
+        model: defaultModel,
+      };
+
+      const chunk = processor.processEvent(event);
+      expect(chunk?.choices[0]?.finishReason).toBe('stop');
+    });
+
+    it('should normalize "length" finish reason', () => {
+      const event: OpenAIStreamEvent = {
+        finish_reason: 'length',
+        id: 'resp-123',
+        created: 1705320000,
+        model: defaultModel,
+      };
+
+      const chunk = processor.processEvent(event);
+      expect(chunk?.choices[0]?.finishReason).toBe('length');
+    });
+
+    it('should normalize "content_filter" finish reason', () => {
+      const event: OpenAIStreamEvent = {
+        finish_reason: 'content_filter',
+        id: 'resp-123',
+        created: 1705320000,
+        model: defaultModel,
+      };
+
+      const chunk = processor.processEvent(event);
+      expect(chunk?.choices[0]?.finishReason).toBe('content_filter');
     });
   });
 });

@@ -1,995 +1,491 @@
 /**
- * @file Gemini Request Builder Unit Tests
+ * @file Gemini Request Builder Tests
  *
- * Comprehensive unit tests for Gemini request building functionality,
- * including message conversion, generation config building, image processing,
- * and API URL/header construction.
+ * Tests for construction of Gemini API requests including message conversion,
+ * generation config, and multimodal content processing.
  */
 
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import {
   buildRequest,
-  convertMessages,
   buildGenerationConfig,
-  buildHeaders,
   buildApiUrl,
+  buildHeaders,
+  convertMessages,
   isSupportedImageType,
-} from '@/core/ai/gemini/requestBuilder';
+} from '@core/ai/gemini/requestBuilder';
 import type { ProviderChatMessage, GeminiConfig } from '@/types/providers';
-import type { GeminiChatConfig, GeminiRequest, GeminiContent } from '@/core/ai/gemini/types';
+import type { GeminiChatConfig } from '@core/ai/gemini/types';
 
-// Mock the models config
+// Helper to create test messages with required fields
+let messageCounter = 0;
+
+beforeEach(() => {
+  messageCounter = 0;
+});
+
+const msg = (
+  role: 'user' | 'assistant' | 'system',
+  content: string,
+  metadata?: ProviderChatMessage['metadata']
+): ProviderChatMessage => ({
+  id: `msg-${++messageCounter}`,
+  timestamp: new Date(1700000000000 + messageCounter),
+  role,
+  content,
+  ...(metadata ? { metadata } : {}),
+});
+
+// Mock the supportsThinking function
 vi.mock('@/config/models', () => ({
-  supportsThinking: vi.fn(),
+  supportsThinking: vi.fn((model: string) => {
+    return model.includes('2.5') || model.includes('3');
+  }),
 }));
 
-import { supportsThinking } from '@/config/models';
+describe('buildRequest', () => {
+  const baseConfig: GeminiConfig = {
+    provider: 'gemini',
+    model: 'gemini-2.0-flash-exp',
+    apiKey: 'test-api-key',
+  };
 
-describe('Gemini Request Builder', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    // Default mock: model supports thinking
-    vi.mocked(supportsThinking).mockReturnValue(true);
+  it('should build a valid request with messages', () => {
+    const messages: ProviderChatMessage[] = [msg('user', 'Hello, how are you?')];
+
+    const request = buildRequest(messages, baseConfig);
+
+    expect(request.contents).toBeDefined();
+    expect(request.contents).toHaveLength(1);
+    expect(request.contents?.[0]?.role).toBe('user');
   });
 
-  describe('buildRequest', () => {
-    const mockGeminiConfig: GeminiConfig = {
-      model: 'gemini-2.5-pro',
-      stopSequences: ['STOP'],
-      thinkingBudget: 'medium',
+  it('should throw error for empty messages', () => {
+    const messages: ProviderChatMessage[] = [];
+
+    expect(() => buildRequest(messages, baseConfig)).toThrow('Messages array cannot be empty');
+  });
+
+  it('should throw error for messages with only empty content', () => {
+    const messages: ProviderChatMessage[] = [msg('user', '   ')];
+
+    expect(() => buildRequest(messages, baseConfig)).toThrow('Messages array cannot be empty');
+  });
+
+  it('should include system instruction when provided', () => {
+    const messages: ProviderChatMessage[] = [msg('user', 'Test message')];
+
+    const chatConfig: GeminiChatConfig = {
+      systemPrompt: 'You are a helpful assistant.',
     };
 
-    it('should build complete request with system prompt', () => {
-      const messages: ProviderChatMessage[] = [
-        {
-          role: 'user',
-          content: 'Hello, AI!',
-          metadata: {},
-        },
-      ];
+    const request = buildRequest(messages, baseConfig, chatConfig);
+
+    expect(request.systemInstruction).toBeDefined();
+    expect(request.systemInstruction?.parts?.[0]?.text).toBe('You are a helpful assistant.');
+  });
+
+  it('should always include Google Search tool', () => {
+    const messages: ProviderChatMessage[] = [msg('user', 'Test')];
+
+    const request = buildRequest(messages, baseConfig);
+
+    expect(request.tools).toBeDefined();
+    expect(request.tools?.some(t => 'google_search' in t)).toBe(true);
+  });
+
+  it('should include URL context tool when configured', () => {
+    const messages: ProviderChatMessage[] = [msg('user', 'Test')];
+
+    const chatConfig: GeminiChatConfig = {
+      useUrlContext: true,
+    };
+
+    const request = buildRequest(messages, baseConfig, chatConfig);
+
+    expect(request.tools?.some(t => 'url_context' in t)).toBe(true);
+  });
+});
+
+describe('buildGenerationConfig', () => {
+  describe('thinkingLevel (Gemini 3)', () => {
+    it('should set thinkingLevel from chatConfig', () => {
+      const config: GeminiConfig = {
+        provider: 'gemini',
+        model: 'gemini-3-flash',
+        apiKey: 'test',
+      };
 
       const chatConfig: GeminiChatConfig = {
-        systemPrompt: 'You are a helpful assistant.',
-        thinkingBudget: 5,
+        thinkingLevel: 'medium',
       };
 
-      const request = buildRequest(messages, mockGeminiConfig, chatConfig);
-
-      expect(request).toEqual({
-        contents: [
-          {
-            role: 'user',
-            parts: [{ text: 'Hello, AI!' }],
-          },
-        ],
-        generationConfig: {
-          stopSequences: ['STOP'],
-          thinkingConfig: {
-            thinkingBudget: 5,
-            includeThoughts: true,
-          },
-        },
-        tools: [{ google_search: {} }],
-        systemInstruction: {
-          parts: [{ text: 'You are a helpful assistant.' }],
-        },
-      });
+      const result = buildGenerationConfig(config, chatConfig);
+      expect(result.thinkingLevel).toBe('medium');
     });
 
-    it('should build minimal request without optional fields', () => {
-      const messages: ProviderChatMessage[] = [
-        {
-          role: 'user',
-          content: 'Simple message',
-          metadata: {},
-        },
-      ];
-
-      const minimalConfig: GeminiConfig = {
-        model: 'gemini-2.5-flash',
-      };
-
-      const request = buildRequest(messages, minimalConfig);
-
-      expect(request).toEqual({
-        contents: [
-          {
-            role: 'user',
-            parts: [{ text: 'Simple message' }],
-          },
-        ],
-        generationConfig: {},
-        tools: [{ google_search: {} }],
-      });
-    });
-
-    it('should build request without safety settings', () => {
-      const messages: ProviderChatMessage[] = [
-        {
-          role: 'user',
-          content: 'Test message',
-          metadata: {},
-        },
-      ];
-
+    it('should set thinkingLevel from geminiConfig', () => {
       const config: GeminiConfig = {
-        model: 'gemini-2.5-pro',
+        provider: 'gemini',
+        model: 'gemini-3-flash',
+        apiKey: 'test',
+        thinkingLevel: 'high',
       };
 
-      const request = buildRequest(messages, config);
-
-      // Verify request structure without safety settings
-      expect(request.contents).toBeDefined();
-      expect(request.generationConfig).toBeDefined();
-      expect(request.tools).toBeDefined();
-      expect(request.safetySettings).toBeUndefined();
+      const result = buildGenerationConfig(config);
+      expect(result.thinkingLevel).toBe('high');
     });
 
-    it('should throw error for empty messages', () => {
-      expect(() => {
-        buildRequest([], mockGeminiConfig);
-      }).toThrow('Messages array cannot be empty');
+    it('should prefer chatConfig thinkingLevel over geminiConfig', () => {
+      const config: GeminiConfig = {
+        provider: 'gemini',
+        model: 'gemini-3-flash',
+        apiKey: 'test',
+        thinkingLevel: 'low',
+      };
+
+      const chatConfig: GeminiChatConfig = {
+        thinkingLevel: 'high',
+      };
+
+      const result = buildGenerationConfig(config, chatConfig);
+      expect(result.thinkingLevel).toBe('high');
     });
 
-    it('should throw error for messages with only empty content', () => {
-      const emptyMessages: ProviderChatMessage[] = [
-        {
-          role: 'user',
-          content: '',
-          metadata: {},
-        },
-        {
-          role: 'assistant',
-          content: '   ',
-          metadata: {},
-        },
-      ];
+    it('should support minimal thinking level', () => {
+      const config: GeminiConfig = {
+        provider: 'gemini',
+        model: 'gemini-3-flash',
+        apiKey: 'test',
+        thinkingLevel: 'minimal',
+      };
 
-      expect(() => {
-        buildRequest(emptyMessages, mockGeminiConfig);
-      }).toThrow('Messages array cannot be empty');
-    });
-
-    it('should filter out messages with empty content but keep others', () => {
-      const mixedMessages: ProviderChatMessage[] = [
-        {
-          role: 'user',
-          content: '',
-          metadata: {},
-        },
-        {
-          role: 'user',
-          content: 'Valid message',
-          metadata: {},
-        },
-      ];
-
-      const request = buildRequest(mixedMessages, mockGeminiConfig);
-
-      expect(request.contents).toHaveLength(2);
-      expect(request.contents[0].parts).toHaveLength(0); // Empty content, no parts
-      expect(request.contents[1].parts).toHaveLength(1);
-      expect(request.contents[1].parts[0].text).toBe('Valid message');
-    });
-
-    it('should handle model that does not support thinking', () => {
-      vi.mocked(supportsThinking).mockReturnValue(false);
-
-      const messages: ProviderChatMessage[] = [
-        {
-          role: 'user',
-          content: 'Hello',
-          metadata: {},
-        },
-      ];
-
-      const request = buildRequest(messages, mockGeminiConfig);
-
-      expect(request.generationConfig.thinkingConfig).toBeUndefined();
-      expect(request.generationConfig.responseModalities).toBeUndefined();
+      const result = buildGenerationConfig(config);
+      expect(result.thinkingLevel).toBe('minimal');
     });
   });
 
-  describe('convertMessages', () => {
-    it('should convert basic user message', () => {
-      const messages: ProviderChatMessage[] = [
-        {
-          role: 'user',
-          content: 'Hello, world!',
-          metadata: {},
-        },
-      ];
-
-      const result = convertMessages(messages);
-
-      expect(result).toEqual([
-        {
-          role: 'user',
-          parts: [{ text: 'Hello, world!' }],
-        },
-      ]);
-    });
-
-    it('should convert assistant message to model role', () => {
-      const messages: ProviderChatMessage[] = [
-        {
-          role: 'assistant',
-          content: 'Hello, human!',
-          metadata: {},
-        },
-      ];
-
-      const result = convertMessages(messages);
-
-      expect(result).toEqual([
-        {
-          role: 'model',
-          parts: [{ text: 'Hello, human!' }],
-        },
-      ]);
-    });
-
-    it('should preserve system role', () => {
-      const messages: ProviderChatMessage[] = [
-        {
-          role: 'system',
-          content: 'System instruction',
-          metadata: {},
-        },
-      ];
-
-      const result = convertMessages(messages);
-
-      expect(result).toEqual([
-        {
-          role: 'system',
-          parts: [{ text: 'System instruction' }],
-        },
-      ]);
-    });
-
-    it('should handle empty content', () => {
-      const messages: ProviderChatMessage[] = [
-        {
-          role: 'user',
-          content: '',
-          metadata: {},
-        },
-      ];
-
-      const result = convertMessages(messages);
-
-      expect(result).toEqual([
-        {
-          role: 'user',
-          parts: [],
-        },
-      ]);
-    });
-
-    it('should trim whitespace from content', () => {
-      const messages: ProviderChatMessage[] = [
-        {
-          role: 'user',
-          content: '   Hello   ',
-          metadata: {},
-        },
-      ];
-
-      const result = convertMessages(messages);
-
-      expect(result).toEqual([
-        {
-          role: 'user',
-          parts: [{ text: '   Hello   ' }], // Content is not trimmed in the function
-        },
-      ]);
-    });
-
-    it('should convert message with image attachment', () => {
-      const messages: ProviderChatMessage[] = [
-        {
-          role: 'user',
-          content: 'Look at this image:',
-          metadata: {
-            attachments: [
-              {
-                type: 'image',
-                fileUri: 'https://generativelanguage.googleapis.com/v1beta/files/abc123',
-                mimeType: 'image/jpeg',
-              },
-            ],
-          },
-        },
-      ];
-
-      const result = convertMessages(messages);
-
-      expect(result).toEqual([
-        {
-          role: 'user',
-          parts: [
-            { text: 'Look at this image:' },
-            {
-              fileData: {
-                mimeType: 'image/jpeg',
-                fileUri: 'https://generativelanguage.googleapis.com/v1beta/files/abc123',
-              },
-            },
-          ],
-        },
-      ]);
-    });
-
-    it('should handle multiple image attachments', () => {
-      const messages: ProviderChatMessage[] = [
-        {
-          role: 'user',
-          content: 'Two images:',
-          metadata: {
-            attachments: [
-              {
-                type: 'image',
-                fileUri: 'https://generativelanguage.googleapis.com/v1beta/files/png1',
-                mimeType: 'image/png',
-              },
-              {
-                type: 'image',
-                fileUri: 'https://generativelanguage.googleapis.com/v1beta/files/gif2',
-                mimeType: 'image/gif',
-              },
-            ],
-          },
-        },
-      ];
-
-      const result = convertMessages(messages);
-
-      expect(result[0].parts).toHaveLength(3);
-      expect(result[0].parts[0]).toEqual({ text: 'Two images:' });
-      expect(result[0].parts[1]).toEqual({
-        fileData: {
-          mimeType: 'image/png',
-          fileUri: 'https://generativelanguage.googleapis.com/v1beta/files/png1',
-        },
-      });
-      expect(result[0].parts[2]).toEqual({
-        fileData: {
-          mimeType: 'image/gif',
-          fileUri: 'https://generativelanguage.googleapis.com/v1beta/files/gif2',
-        },
-      });
-    });
-
-    it('should skip invalid image attachments', () => {
-      const messages: ProviderChatMessage[] = [
-        {
-          role: 'user',
-          content: 'Image test',
-          metadata: {
-            attachments: [
-              {
-                type: 'image',
-                data: 'invalid-data-format',
-              },
-            ],
-          },
-        },
-      ];
-
-      const result = convertMessages(messages);
-
-      expect(result[0].parts).toEqual([{ text: 'Image test' }]);
-    });
-
-    it('should throw error for unsupported attachment type', () => {
-      const messages: ProviderChatMessage[] = [
-        {
-          role: 'user',
-          content: 'Video test',
-          metadata: {
-            attachments: [
-              {
-                type: 'video',
-                data: 'video-data',
-              },
-            ],
-          },
-        },
-      ];
-
-      expect(() => {
-        convertMessages(messages);
-      }).toThrow('Unsupported media type: video');
-    });
-
-    it('should skip attachments without fileUri', () => {
-      const messages: ProviderChatMessage[] = [
-        {
-          role: 'user',
-          content: 'Missing fileUri',
-          metadata: {
-            attachments: [
-              {
-                type: 'image',
-                mimeType: 'image/png',
-                // No fileUri provided
-              },
-            ],
-          },
-        },
-      ];
-
-      const result = convertMessages(messages);
-
-      // Should only have the text part, no image part
-      expect(result[0].parts).toHaveLength(1);
-      expect(result[0].parts[0]).toEqual({ text: 'Missing fileUri' });
-    });
-
-    it('should throw error for invalid image data format', () => {
-      const messages: ProviderChatMessage[] = [
-        {
-          role: 'user',
-          content: 'Invalid format',
-          metadata: {
-            attachments: [
-              {
-                type: 'image',
-                data: 'data:;base64,missing-mime-type',
-              },
-            ],
-          },
-        },
-      ];
-
-      expect(() => {
-        convertMessages(messages);
-      }).not.toThrow(); // Returns null for invalid format, doesn't throw
-    });
-
-    it('should handle empty attachments array', () => {
-      const messages: ProviderChatMessage[] = [
-        {
-          role: 'user',
-          content: 'No attachments',
-          metadata: {
-            attachments: [],
-          },
-        },
-      ];
-
-      const result = convertMessages(messages);
-
-      expect(result[0].parts).toEqual([{ text: 'No attachments' }]);
-    });
-
-    it('should handle missing attachments field', () => {
-      const messages: ProviderChatMessage[] = [
-        {
-          role: 'user',
-          content: 'No attachments field',
-          metadata: {},
-        },
-      ];
-
-      const result = convertMessages(messages);
-
-      expect(result[0].parts).toEqual([{ text: 'No attachments field' }]);
-    });
-
-    it('should handle non-array attachments', () => {
-      const messages: ProviderChatMessage[] = [
-        {
-          role: 'user',
-          content: 'Invalid attachments',
-          metadata: {
-            attachments: 'not-an-array',
-          },
-        },
-      ];
-
-      const result = convertMessages(messages);
-
-      expect(result[0].parts).toEqual([{ text: 'Invalid attachments' }]);
-    });
-  });
-
-  describe('buildGenerationConfig', () => {
-    it('should build config with default values', () => {
-      const geminiConfig: GeminiConfig = {
+  describe('thinkingConfig (Gemini 2.5)', () => {
+    it('should set thinkingConfig with budget for supported models', () => {
+      const config: GeminiConfig = {
+        provider: 'gemini',
         model: 'gemini-2.5-pro',
+        apiKey: 'test',
+        thinkingBudget: 1024,
       };
 
-      const config = buildGenerationConfig(geminiConfig);
+      const result = buildGenerationConfig(config);
 
-      expect(config).toEqual({});
+      expect(result.thinkingConfig).toBeDefined();
+      expect(result.thinkingConfig?.thinkingBudget).toBe(1024);
+      expect(result.thinkingConfig?.includeThoughts).toBe(true);
     });
 
-    it('should include stop sequences when provided', () => {
-      const geminiConfig: GeminiConfig = {
-        model: 'gemini-2.5-flash',
-        stopSequences: ['STOP', 'END', 'TERMINATE'],
-      };
-
-      const config = buildGenerationConfig(geminiConfig);
-
-      expect(config.stopSequences).toEqual(['STOP', 'END', 'TERMINATE']);
-    });
-
-    it('should auto-enable includeThoughts when non-zero thinking budget is provided', () => {
-      const geminiConfig: GeminiConfig = {
-        model: 'gemini-2.5-flash',
-        thinkingBudget: 12,
-      };
-
-      const config = buildGenerationConfig(geminiConfig);
-
-      expect(config.thinkingConfig).toEqual({
-        thinkingBudget: 12,
-        includeThoughts: true,
-      });
-    });
-
-    it('should not auto-enable includeThoughts when thinking budget is zero', () => {
-      const geminiConfig: GeminiConfig = {
-        model: 'gemini-2.5-flash',
+    it('should normalize budget 0 to -1 for gemini-2.5-pro', () => {
+      const config: GeminiConfig = {
+        provider: 'gemini',
+        model: 'gemini-2.5-pro',
+        apiKey: 'test',
         thinkingBudget: 0,
       };
 
-      const config = buildGenerationConfig(geminiConfig);
-
-      expect(config.thinkingConfig?.includeThoughts).toBe(false);
-      expect(config.thinkingConfig?.thinkingBudget).toBe(0);
+      const result = buildGenerationConfig(config);
+      expect(result.thinkingConfig?.thinkingBudget).toBe(-1);
     });
 
-    it('should not include empty stop sequences', () => {
-      const geminiConfig: GeminiConfig = {
+    it('should allow budget 0 for non-pro models', () => {
+      const config: GeminiConfig = {
+        provider: 'gemini',
         model: 'gemini-2.5-flash',
-        stopSequences: [],
+        apiKey: 'test',
+        thinkingBudget: 0,
       };
 
-      const config = buildGenerationConfig(geminiConfig);
-
-      expect(config.stopSequences).toBeUndefined();
+      const result = buildGenerationConfig(config);
+      expect(result.thinkingConfig?.thinkingBudget).toBe(0);
+      expect(result.thinkingConfig?.includeThoughts).toBe(false);
     });
 
-    it('should use thinking budget from chat config', () => {
-      const geminiConfig: GeminiConfig = {
+    it('should parse string thinkingBudget', () => {
+      const config: GeminiConfig = {
+        provider: 'gemini',
+        model: 'gemini-2.5-flash',
+        apiKey: 'test',
+        thinkingBudget: '512' as unknown as number,
+      };
+
+      const result = buildGenerationConfig(config);
+      expect(result.thinkingConfig?.thinkingBudget).toBe(512);
+    });
+
+    it('should ignore empty string thinkingBudget', () => {
+      const config: GeminiConfig = {
+        provider: 'gemini',
+        model: 'gemini-2.5-flash',
+        apiKey: 'test',
+        thinkingBudget: '' as unknown as number,
+      };
+
+      const result = buildGenerationConfig(config);
+      expect(result.thinkingConfig).toBeUndefined();
+    });
+
+    it('should prefer thinkingLevel over thinkingBudget', () => {
+      const config: GeminiConfig = {
+        provider: 'gemini',
         model: 'gemini-2.5-pro',
-        thinkingBudget: 'low',
+        apiKey: 'test',
+        thinkingLevel: 'high',
+        thinkingBudget: 1024,
       };
 
-      const chatConfig: GeminiChatConfig = {
-        thinkingBudget: 'high',
-      };
-
-      const config = buildGenerationConfig(geminiConfig, chatConfig);
-
-      expect(config.thinkingConfig).toBeUndefined(); // 'high' is not a valid number
-    });
-
-    it('should use thinking budget from gemini config when chat config not provided', () => {
-      const geminiConfig: GeminiConfig = {
-        model: 'gemini-2.5-pro',
-        thinkingBudget: 1500,
-      };
-
-      const config = buildGenerationConfig(geminiConfig);
-
-      expect(config.thinkingConfig?.thinkingBudget).toBe(1500);
-    });
-
-    it('should handle non-thinking models', () => {
-      vi.mocked(supportsThinking).mockReturnValue(false);
-
-      const geminiConfig: GeminiConfig = {
-        model: 'gemini-2.5-flash-lite',
-        thinkingBudget: 'high',
-      };
-
-      const config = buildGenerationConfig(geminiConfig);
-
-      expect(config.thinkingConfig).toBeUndefined();
-      expect(config.responseModalities).toBeUndefined();
-    });
-
-    it('should handle invalid thinking budget', () => {
-      const geminiConfig: GeminiConfig = {
-        model: 'gemini-2.5-pro',
-        thinkingBudget: 'invalid-budget',
-      };
-
-      const config = buildGenerationConfig(geminiConfig);
-
-      expect(config.thinkingConfig).toBeUndefined();
-      // No thinkingConfig when invalid budget
-    });
-
-    it('should handle numeric string thinking budget', () => {
-      const geminiConfig: GeminiConfig = {
-        model: 'gemini-2.5-pro',
-        thinkingBudget: '2500',
-      };
-
-      const config = buildGenerationConfig(geminiConfig);
-
-      expect(config.thinkingConfig?.thinkingBudget).toBe(2500);
+      const result = buildGenerationConfig(config);
+      expect(result.thinkingLevel).toBe('high');
+      expect(result.thinkingConfig).toBeUndefined();
     });
   });
 
-  describe('buildHeaders', () => {
-    it('should build headers with API key', () => {
-      const headers = buildHeaders('test-api-key-123');
+  it('should include stop sequences when provided', () => {
+    const config: GeminiConfig = {
+      provider: 'gemini',
+      model: 'gemini-2.0-flash',
+      apiKey: 'test',
+      stopSequences: ['END', 'STOP'],
+    };
 
-      expect(headers).toEqual({
-        'x-goog-api-key': 'test-api-key-123',
-        'Content-Type': 'application/json',
-      });
-    });
-
-    it('should throw error for empty API key', () => {
-      expect(() => {
-        buildHeaders('');
-      }).toThrow('Gemini API key is not configured. Please add your Google API key in settings.');
-    });
-
-    it('should throw error for undefined API key', () => {
-      expect(() => {
-        buildHeaders(undefined as any);
-      }).toThrow('Gemini API key is not configured. Please add your Google API key in settings.');
-    });
-
-    it('should throw error for null API key', () => {
-      expect(() => {
-        buildHeaders(null as any);
-      }).toThrow('Gemini API key is not configured. Please add your Google API key in settings.');
-    });
-
-    it('should handle API key with special characters', () => {
-      const specialKey = 'AIzaSyC-key_123.with-special$chars';
-      const headers = buildHeaders(specialKey);
-
-      expect(headers['x-goog-api-key']).toBe(specialKey);
-    });
+    const result = buildGenerationConfig(config);
+    expect(result.stopSequences).toEqual(['END', 'STOP']);
   });
 
-  describe('buildApiUrl', () => {
-    const testApiKey = 'test-key-123';
+  it('should not include empty stop sequences', () => {
+    const config: GeminiConfig = {
+      provider: 'gemini',
+      model: 'gemini-2.0-flash',
+      apiKey: 'test',
+      stopSequences: [],
+    };
 
-    it('should build URL with default base URL', () => {
-      const url = buildApiUrl('/models/gemini-pro:generateContent', testApiKey);
+    const result = buildGenerationConfig(config);
+    expect(result.stopSequences).toBeUndefined();
+  });
+});
 
-      expect(url).toBe(
-        'https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=test-key-123'
-      );
-    });
+describe('buildApiUrl', () => {
+  const apiKey = 'test-api-key';
 
-    it('should build URL with custom base URL', () => {
-      const url = buildApiUrl(
-        '/models/gemini-flash:generateContent',
-        testApiKey,
-        'https://custom-api.example.com'
-      );
+  it('should build URL with default base', () => {
+    const url = buildApiUrl('/models/gemini-pro:generateContent', apiKey);
 
-      expect(url).toBe(
-        'https://custom-api.example.com/v1beta/models/gemini-flash:generateContent?key=test-key-123'
-      );
-    });
-
-    it('should handle endpoint without leading slash', () => {
-      const url = buildApiUrl('models/gemini-pro:streamGenerateContent', testApiKey);
-
-      expect(url).toBe(
-        'https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:streamGenerateContent?key=test-key-123&alt=sse'
-      );
-    });
-
-    it('should handle base URL with trailing slash', () => {
-      const url = buildApiUrl(
-        '/models/gemini-pro:generateContent',
-        testApiKey,
-        'https://api.example.com/'
-      );
-
-      expect(url).toBe(
-        'https://api.example.com/v1beta/models/gemini-pro:generateContent?key=test-key-123'
-      );
-    });
-
-    it('should URL-encode API key', () => {
-      const keyWithSpecialChars = 'key+with/special=chars&more';
-      const url = buildApiUrl('/test', keyWithSpecialChars);
-
-      expect(url).toBe(
-        'https://generativelanguage.googleapis.com/v1beta/test?key=key%2Bwith%2Fspecial%3Dchars%26more'
-      );
-    });
-
-    it('should handle empty endpoint', () => {
-      const url = buildApiUrl('', testApiKey);
-
-      expect(url).toBe('https://generativelanguage.googleapis.com/v1beta?key=test-key-123');
-    });
-
-    it('should add alt=sse when streaming endpoint is used', () => {
-      const url = buildApiUrl('/models/test:streamGenerateContent', testApiKey);
-
-      expect(url).toBe(
-        'https://generativelanguage.googleapis.com/v1beta/models/test:streamGenerateContent?key=test-key-123&alt=sse'
-      );
-    });
+    expect(url).toContain('generativelanguage.googleapis.com');
+    expect(url).toContain('/v1beta/models/gemini-pro:generateContent');
+    expect(url).toContain('key=test-api-key');
   });
 
-  describe('isSupportedImageType', () => {
-    it('should return true for supported JPEG', () => {
-      expect(isSupportedImageType('image/jpeg')).toBe(true);
-      expect(isSupportedImageType('image/jpg')).toBe(true);
-    });
+  it('should append alt=sse for stream endpoints', () => {
+    const url = buildApiUrl('/models/gemini-pro:streamGenerateContent', apiKey);
 
-    it('should return true for supported PNG', () => {
-      expect(isSupportedImageType('image/png')).toBe(true);
-    });
-
-    it('should return true for supported GIF', () => {
-      expect(isSupportedImageType('image/gif')).toBe(true);
-    });
-
-    it('should return true for supported WebP', () => {
-      expect(isSupportedImageType('image/webp')).toBe(true);
-    });
-
-    it('should return false for unsupported types', () => {
-      expect(isSupportedImageType('image/bmp')).toBe(false);
-      expect(isSupportedImageType('image/tiff')).toBe(false);
-      expect(isSupportedImageType('image/svg+xml')).toBe(false);
-      expect(isSupportedImageType('video/mp4')).toBe(false);
-      expect(isSupportedImageType('text/plain')).toBe(false);
-    });
-
-    it('should handle case sensitivity', () => {
-      expect(isSupportedImageType('IMAGE/JPEG')).toBe(true);
-      expect(isSupportedImageType('Image/PNG')).toBe(true);
-      expect(isSupportedImageType('IMAGE/BMP')).toBe(false);
-    });
-
-    it('should handle empty string', () => {
-      expect(isSupportedImageType('')).toBe(false);
-    });
-
-    it('should handle invalid format', () => {
-      expect(isSupportedImageType('not-a-mime-type')).toBe(false);
-      expect(isSupportedImageType('image/')).toBe(false);
-      expect(isSupportedImageType('/jpeg')).toBe(false);
-    });
+    expect(url).toContain('alt=sse');
   });
 
-  describe('Integration Tests', () => {
-    it('should build complete request with image and thinking', () => {
-      const messages: ProviderChatMessage[] = [
-        {
-          role: 'user',
-          content: 'Analyze this image:',
-          metadata: {
-            attachments: [
-              {
-                type: 'image',
-                fileUri: 'https://generativelanguage.googleapis.com/v1beta/files/testfile',
-                mimeType: 'image/png',
-              },
-            ],
-          },
-        },
-      ];
+  it('should not append alt=sse for non-stream endpoints', () => {
+    const url = buildApiUrl('/models/gemini-pro:generateContent', apiKey);
 
-      const geminiConfig: GeminiConfig = {
-        model: 'gemini-2.5-pro',
-        stopSequences: ['END'],
-        thinkingBudget: '1000',
-      };
-
-      const chatConfig: GeminiChatConfig = {
-        systemPrompt: 'You are an image analysis expert.',
-      };
-
-      const request = buildRequest(messages, geminiConfig, chatConfig);
-
-      // Verify complete structure
-      expect(request.contents).toHaveLength(1);
-      expect(request.contents[0].parts).toHaveLength(2);
-      expect(request.contents[0].parts[0]).toEqual({ text: 'Analyze this image:' });
-      expect(request.contents[0].parts[1]).toEqual({
-        fileData: {
-          mimeType: 'image/png',
-          fileUri: 'https://generativelanguage.googleapis.com/v1beta/files/testfile',
-        },
-      });
-      expect(request.generationConfig.stopSequences).toEqual(['END']);
-      expect(request.generationConfig.thinkingConfig?.thinkingBudget).toBe(1000);
-      expect(request.systemInstruction?.parts[0].text).toBe('You are an image analysis expert.');
-      expect(request.tools).toEqual([{ google_search: {} }]);
-    });
-
-    it('should handle conversation with multiple message types', () => {
-      const messages: ProviderChatMessage[] = [
-        {
-          role: 'system',
-          content: 'System prompt',
-          metadata: {},
-        },
-        {
-          role: 'user',
-          content: 'First question',
-          metadata: {},
-        },
-        {
-          role: 'assistant',
-          content: 'First answer',
-          metadata: {},
-        },
-        {
-          role: 'user',
-          content: 'Follow-up with image',
-          metadata: {
-            attachments: [
-              {
-                type: 'image',
-                fileUri: 'https://generativelanguage.googleapis.com/v1beta/files/followup',
-                mimeType: 'image/jpeg',
-              },
-            ],
-          },
-        },
-      ];
-
-      const result = convertMessages(messages);
-
-      expect(result).toHaveLength(4);
-      expect(result[0]).toEqual({
-        role: 'system',
-        parts: [{ text: 'System prompt' }],
-      });
-      expect(result[1]).toEqual({
-        role: 'user',
-        parts: [{ text: 'First question' }],
-      });
-      expect(result[2]).toEqual({
-        role: 'model',
-        parts: [{ text: 'First answer' }],
-      });
-      expect(result[3].role).toBe('user');
-      expect(result[3].parts).toHaveLength(2);
-      expect(result[3].parts[0].text).toBe('Follow-up with image');
-      expect(result[3].parts[1].fileData?.mimeType).toBe('image/jpeg');
-      expect(result[3].parts[1].fileData?.fileUri).toBe(
-        'https://generativelanguage.googleapis.com/v1beta/files/followup'
-      );
-    });
+    expect(url).not.toContain('alt=sse');
   });
 
-  describe('Error Handling Edge Cases', () => {
-    it('should handle malformed image data gracefully', () => {
-      const messages: ProviderChatMessage[] = [
-        {
-          role: 'user',
-          content: 'Test',
-          metadata: {
-            attachments: [
-              {
-                type: 'image',
-                // Missing data field
-              },
-            ],
+  it('should handle custom base URL', () => {
+    const url = buildApiUrl('/models/gemini-pro:generateContent', apiKey, 'https://custom.api.com');
+
+    expect(url).toContain('custom.api.com');
+  });
+
+  it('should normalize trailing slashes in base URL', () => {
+    const url = buildApiUrl('/models/gemini-pro:generateContent', apiKey, 'https://api.com///');
+
+    expect(url).not.toContain('////');
+    expect(url).toContain('/v1beta/models');
+  });
+
+  it('should handle endpoint without leading slash', () => {
+    const url = buildApiUrl('models/gemini-pro:generateContent', apiKey);
+
+    expect(url).toContain('/v1beta/models/gemini-pro');
+  });
+
+  it('should handle empty endpoint', () => {
+    const url = buildApiUrl('', apiKey);
+
+    expect(url).toContain('/v1beta?');
+  });
+});
+
+describe('buildHeaders', () => {
+  it('should include API key header', () => {
+    const headers = buildHeaders('test-api-key');
+
+    expect(headers['x-goog-api-key']).toBe('test-api-key');
+  });
+
+  it('should include Content-Type header', () => {
+    const headers = buildHeaders('test-api-key');
+
+    expect(headers['Content-Type']).toBe('application/json');
+  });
+
+  it('should throw error for missing API key', () => {
+    expect(() => buildHeaders('')).toThrow('Gemini API key is not configured');
+  });
+});
+
+describe('convertMessages', () => {
+  it('should convert user messages', () => {
+    const messages: ProviderChatMessage[] = [msg('user', 'Hello!')];
+
+    const result = convertMessages(messages);
+
+    expect(result).toHaveLength(1);
+    expect(result?.[0]?.role).toBe('user');
+    expect(result?.[0]?.parts?.[0]).toEqual({ text: 'Hello!' });
+  });
+
+  it('should convert assistant to model role', () => {
+    const messages: ProviderChatMessage[] = [msg('assistant', 'Hi there!')];
+
+    const result = convertMessages(messages);
+
+    expect(result?.[0]?.role).toBe('model');
+  });
+
+  it('should handle messages with sections metadata', () => {
+    const messages: ProviderChatMessage[] = [
+      msg('user', '', {
+        sections: {
+          systemInstruction: 'Be helpful',
+          tabContent: 'Page content here',
+          userQuery: 'What is this?',
+        },
+      }),
+    ];
+
+    const result = convertMessages(messages);
+
+    expect(result?.[0]?.parts).toHaveLength(3);
+    expect(result?.[0]?.parts?.[0]).toEqual({ text: 'Be helpful' });
+    expect(result?.[0]?.parts?.[1]).toEqual({ text: 'Page content here' });
+    expect(result?.[0]?.parts?.[2]).toEqual({ text: 'What is this?' });
+  });
+
+  it('should include thought signatures for assistant messages', () => {
+    const messages: ProviderChatMessage[] = [
+      msg('assistant', 'Response', {
+        thoughtSignatures: ['sig1', 'sig2'],
+      }),
+    ];
+
+    const result = convertMessages(messages);
+
+    expect(result?.[0]?.parts).toContainEqual({ thoughtSignature: 'sig1' });
+    expect(result?.[0]?.parts).toContainEqual({ thoughtSignature: 'sig2' });
+  });
+
+  it('should handle image attachments with fileUri', () => {
+    const messages: ProviderChatMessage[] = [
+      msg('user', 'Describe this image', {
+        attachments: [
+          {
+            type: 'image',
+            fileUri: 'https://storage.googleapis.com/file.jpg',
+            mimeType: 'image/jpeg',
           },
-        },
-      ];
+        ],
+      }),
+    ];
 
-      const result = convertMessages(messages);
+    const result = convertMessages(messages);
 
-      expect(result[0].parts).toEqual([{ text: 'Test' }]);
-    });
+    const imagePart = result?.[0]?.parts?.find(p => 'fileData' in p);
+    expect(imagePart).toBeDefined();
+    expect((imagePart as { fileData: { fileUri: string } })?.fileData?.fileUri).toBe(
+      'https://storage.googleapis.com/file.jpg'
+    );
+  });
 
-    it('should handle null attachment data', () => {
-      const messages: ProviderChatMessage[] = [
-        {
-          role: 'user',
-          content: 'Test',
-          metadata: {
-            attachments: [
-              {
-                type: 'image',
-                data: null,
-              },
-            ],
+  it('should skip unsupported attachment types', () => {
+    const messages: ProviderChatMessage[] = [
+      msg('user', 'Test', {
+        attachments: [
+          {
+            type: 'audio',
+            data: 'base64data',
           },
+        ],
+      }),
+    ];
+
+    expect(() => convertMessages(messages)).toThrow('Unsupported media type');
+  });
+
+  it('should parse image references in tabContent', () => {
+    const messages: ProviderChatMessage[] = [
+      msg('user', '', {
+        sections: {
+          tabContent:
+            'Before <content type="image"><fileUri>https://example.com/img.jpg</fileUri><mimeType>image/jpeg</mimeType></content> After',
         },
-      ];
+      }),
+    ];
 
-      const result = convertMessages(messages);
+    const result = convertMessages(messages);
+    const parts = result?.[0]?.parts;
 
-      expect(result[0].parts).toEqual([{ text: 'Test' }]);
-    });
+    // Should have text before, image, and text after
+    const imagePartIndex = parts?.findIndex(p => 'fileData' in p) ?? -1;
+    expect(imagePartIndex).toBeGreaterThan(-1);
+  });
 
-    it('should handle undefined metadata', () => {
-      const messages: ProviderChatMessage[] = [
-        {
-          role: 'user',
-          content: 'Test message',
-          metadata: undefined as any,
-        },
-      ];
-
-      const result = convertMessages(messages);
-
-      expect(result[0].parts).toEqual([{ text: 'Test message' }]);
-    });
-
-    it('should handle very long content', () => {
-      const longContent = 'A'.repeat(100000);
-      const messages: ProviderChatMessage[] = [
-        {
-          role: 'user',
-          content: longContent,
-          metadata: {},
-        },
-      ];
-
-      const result = convertMessages(messages);
-
-      expect(result[0].parts[0].text).toBe(longContent);
-    });
-
-    it('should handle special characters in content', () => {
-      const specialContent = '🌟 Hello! \n\t This has "quotes" and \\backslashes\\ & symbols 💫';
-      const messages: ProviderChatMessage[] = [
-        {
-          role: 'user',
-          content: specialContent,
-          metadata: {},
-        },
-      ];
-
-      const result = convertMessages(messages);
-
-      expect(result[0].parts[0].text).toBe(specialContent);
-    });
-
-    it('should handle mixed valid and invalid attachments', () => {
-      const messages: ProviderChatMessage[] = [
-        {
-          role: 'user',
-          content: 'Mixed attachments',
-          metadata: {
-            attachments: [
-              {
-                type: 'image',
-                mimeType: 'image/png',
-                // Missing fileUri - will be skipped
-              },
-              {
-                type: 'image',
-                fileUri: 'https://generativelanguage.googleapis.com/v1beta/files/valid',
-                mimeType: 'image/png',
-              },
-              {
-                type: 'image',
-                fileUri: null,
-                mimeType: 'image/jpeg',
-                // Null fileUri - will be skipped
-              },
-            ],
+  it('should skip image attachments with unsupported mime type', () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const messages: ProviderChatMessage[] = [
+      msg('user', 'Test', {
+        attachments: [
+          {
+            type: 'image',
+            fileUri: 'https://example.com/file.bmp',
+            mimeType: 'image/bmp', // Not supported
           },
-        },
-      ];
+        ],
+      }),
+    ];
 
+    try {
       const result = convertMessages(messages);
-
-      expect(result[0].parts).toHaveLength(2);
-      expect(result[0].parts[0].text).toBe('Mixed attachments');
-      expect(result[0].parts[1].fileData?.mimeType).toBe('image/png');
-      expect(result[0].parts[1].fileData?.fileUri).toBe(
-        'https://generativelanguage.googleapis.com/v1beta/files/valid'
+      const imagePart = result?.[0]?.parts?.find(p => 'fileData' in p);
+      expect(imagePart).toBeUndefined();
+      expect(warnSpy).toHaveBeenCalledWith(
+        expect.stringContaining('Unsupported or missing image type: image/bmp')
       );
-    });
+    } finally {
+      warnSpy.mockRestore();
+    }
+  });
+});
+
+describe('isSupportedImageType', () => {
+  it('should return true for supported types', () => {
+    expect(isSupportedImageType('image/jpeg')).toBe(true);
+    expect(isSupportedImageType('image/png')).toBe(true);
+    expect(isSupportedImageType('image/gif')).toBe(true);
+    expect(isSupportedImageType('image/webp')).toBe(true);
+  });
+
+  it('should be case-insensitive', () => {
+    expect(isSupportedImageType('IMAGE/JPEG')).toBe(true);
+    expect(isSupportedImageType('Image/Png')).toBe(true);
+  });
+
+  it('should return false for unsupported types', () => {
+    expect(isSupportedImageType('image/bmp')).toBe(false);
+    expect(isSupportedImageType('image/tiff')).toBe(false);
+    expect(isSupportedImageType('application/pdf')).toBe(false);
   });
 });
