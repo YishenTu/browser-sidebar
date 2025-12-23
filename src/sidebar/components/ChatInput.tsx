@@ -679,7 +679,8 @@ export const ChatInput = React.forwardRef<HTMLTextAreaElement, ChatInputProps>(
         }
 
         // Enter to send (unless Shift+Enter or Ctrl+Enter for new line)
-        if (event.key === 'Enter') {
+        // Skip if composing (IME input for CJK languages)
+        if (event.key === 'Enter' && !event.nativeEvent.isComposing) {
           if (!event.shiftKey && !event.ctrlKey && !event.metaKey) {
             event.preventDefault();
             handleSend();
